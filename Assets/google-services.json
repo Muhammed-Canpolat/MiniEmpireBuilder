@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "812063279491",
+    "project_id": "miniempirebuilder",
+    "storage_bucket": "miniempirebuilder.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812063279491:android:01e77943ec58f6573d8eb6",
+        "android_client_info": {
+          "package_name": "com.kingdomforgegames.minikingdombuilder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJLD8pBBet0hkycGmAN85LBXwi3XCmTU4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
