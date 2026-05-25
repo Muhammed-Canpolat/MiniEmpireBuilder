@@ -137,10 +137,10 @@ TextureImporter:
       name: env_tree_0
       rect:
         serializedVersion: 2
-        x: 36
-        y: 14
-        width: 121
-        height: 192
+        x: 40
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -159,10 +159,10 @@ TextureImporter:
       name: env_tree_1
       rect:
         serializedVersion: 2
-        x: 229
-        y: 14
-        width: 121
-        height: 192
+        x: 168
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -181,10 +181,10 @@ TextureImporter:
       name: env_tree_2
       rect:
         serializedVersion: 2
-        x: 422
-        y: 14
-        width: 121
-        height: 192
+        x: 296
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -203,10 +203,10 @@ TextureImporter:
       name: env_tree_3
       rect:
         serializedVersion: 2
-        x: 614
-        y: 14
-        width: 121
-        height: 192
+        x: 424
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -225,10 +225,10 @@ TextureImporter:
       name: env_tree_4
       rect:
         serializedVersion: 2
-        x: 805
-        y: 14
-        width: 121
-        height: 192
+        x: 552
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -247,10 +247,10 @@ TextureImporter:
       name: env_tree_5
       rect:
         serializedVersion: 2
-        x: 997
-        y: 14
-        width: 121
-        height: 192
+        x: 680
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -269,10 +269,10 @@ TextureImporter:
       name: env_tree_6
       rect:
         serializedVersion: 2
-        x: 1188
-        y: 14
-        width: 121
-        height: 192
+        x: 808
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -291,10 +291,10 @@ TextureImporter:
       name: env_tree_7
       rect:
         serializedVersion: 2
-        x: 1380
-        y: 14
-        width: 121
-        height: 192
+        x: 936
+        y: 51
+        width: 48
+        height: 36
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

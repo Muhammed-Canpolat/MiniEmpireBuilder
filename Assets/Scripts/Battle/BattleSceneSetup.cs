@@ -1,8 +1,9 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
+using DG.Tweening;
 
 /// <summary>
 /// Savaş sahnesini otomatik olarak kurar — test etmek için kolaylık
@@ -11,6 +12,11 @@ using System.Collections;
 /// </summary>
 public class BattleSceneSetup : MonoBehaviour
 {
+    [HideInInspector] public float worldWidth;
+    [HideInInspector] public float worldHeight;
+
+    private static readonly Color PrimaryGold = new Color32(0xD4, 0xA0, 0x17, 0xFF);
+    private static readonly Color DarkBg = new Color32(0x1A, 0x1A, 0x2E, 0xFF);
     private Canvas mainCanvas;
     private GameObject weaponSelectPanel;
     private bool battleStarted = false;
@@ -38,6 +44,17 @@ public class BattleSceneSetup : MonoBehaviour
         Camera.main.orthographic = true;
         Camera.main.orthographicSize = 8f;
         Camera.main.backgroundColor = new Color(0.15f, 0.15f, 0.2f);
+
+        // Dünya boyutunu hesapla (Ekranın 3x3 katı)
+        float camHeight = Camera.main.orthographicSize * 2f;
+        float camWidth = camHeight * Camera.main.aspect;
+        worldWidth = camWidth * 3f;
+        worldHeight = camHeight * 3f;
+
+        // CameraFollow ekle (hedefini sonra bulacak)
+        BattleCameraFollow camFollow = Camera.main.gameObject.GetComponent<BattleCameraFollow>();
+        if (camFollow == null)
+            camFollow = Camera.main.gameObject.AddComponent<BattleCameraFollow>();
 
         // EventSystem yoksa oluştur
         if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
@@ -387,8 +404,59 @@ public class BattleSceneSetup : MonoBehaviour
 
         // Savaş UI oluştur
         SetupBattleUI();
+        AnimateBattleHudEntrance();
+
+        StartCoroutine(SetupCameraFollowAndMinimap());
 
         Debug.Log("[BattleSceneSetup] Savaş sahnesi hazır!");
+    }
+
+    private IEnumerator SetupCameraFollowAndMinimap()
+    {
+        // Objelerin Start()'ını bekle
+        yield return null;
+
+        HeroController hero = FindFirstObjectByType<HeroController>();
+        MainBaseController mainBase = FindFirstObjectByType<MainBaseController>();
+
+        BattleCameraFollow camFollow = Camera.main.GetComponent<BattleCameraFollow>();
+        if (camFollow != null && hero != null)
+        {
+            camFollow.Setup(hero.transform, worldWidth, worldHeight);
+        }
+
+        MinimapController minimap = FindFirstObjectByType<MinimapController>();
+        if (minimap != null && hero != null && mainBase != null)
+        {
+            RawImage img = minimap.GetComponent<RawImage>();
+            minimap.Setup(img, worldWidth, worldHeight, hero.transform, mainBase.transform);
+        }
+    }
+
+    private void AnimateBattleHudEntrance()
+    {
+        Transform[] nodes = FindObjectsByType<Transform>(FindObjectsSortMode.None);
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            if (nodes[i].name == "TopBar")
+            {
+                RectTransform rt = nodes[i] as RectTransform;
+                if (rt != null)
+                {
+                    Vector2 target = rt.anchoredPosition;
+                    rt.anchoredPosition = target + new Vector2(0f, 120f);
+                    rt.DOAnchorPos(target, 0.35f).SetEase(Ease.OutCubic);
+                }
+            }
+
+            if (nodes[i].name == "HeroBarBg" || nodes[i].name == "BaseBarBg")
+            {
+                CanvasGroup cg = nodes[i].GetComponent<CanvasGroup>();
+                if (cg == null) cg = nodes[i].gameObject.AddComponent<CanvasGroup>();
+                cg.alpha = 0f;
+                cg.DOFade(1f, 0.3f).SetDelay(0.1f);
+            }
+        }
     }
 
     private void SetupBattleUI()
@@ -409,83 +477,104 @@ public class BattleSceneSetup : MonoBehaviour
         GameObject topBar = CreatePanel(canvasObj.transform, "TopBar",
             new Vector2(0, 0.93f), new Vector2(1, 1),
             Vector2.zero, Vector2.zero,
-            new Color(0.05f, 0.05f, 0.1f, 0.85f));
+            Color.white); // Rengi UIGradient yönetecek
+
+        UIGradient grad = topBar.AddComponent<UIGradient>();
+        grad.colorTop = new Color(0.02f, 0.02f, 0.05f, 0.98f);
+        grad.colorBottom = new Color(0.05f, 0.05f, 0.1f, 0f);
 
         // Alt çizgi
         CreatePanel(topBar.transform, "BarLine",
             new Vector2(0, 0), new Vector2(1, 0.03f),
             Vector2.zero, Vector2.zero,
-            new Color(0.8f, 0.2f, 0.2f, 0.8f));
+            new Color(1f, 0.2f, 0.2f, 0.95f));
 
         // Level yazısı — sol üst
         TextMeshProUGUI levelText = CreateText(topBar.transform, "LevelText",
             new Vector2(0.02f, 0.55f), new Vector2(0.35f, 0.95f),
             Vector2.zero, Vector2.zero,
-            "Level 1", 24, TextAlignmentOptions.Left);
+            "Level 1", 28, TextAlignmentOptions.Left);
+        levelText.fontStyle = FontStyles.Bold;
 
         // Dalga yazısı — orta
         TextMeshProUGUI waveText = CreateText(topBar.transform, "WaveText",
             new Vector2(0.35f, 0.55f), new Vector2(0.65f, 0.95f),
             Vector2.zero, Vector2.zero,
-            "Dalga 1/3", 24, TextAlignmentOptions.Center);
+            "Dalga 1/3", 28, TextAlignmentOptions.Center);
+        waveText.fontStyle = FontStyles.Bold;
 
         // Düşman sayısı — sağ üst
         TextMeshProUGUI enemyText = CreateText(topBar.transform, "EnemyText",
             new Vector2(0.65f, 0.55f), new Vector2(0.98f, 0.95f),
             Vector2.zero, Vector2.zero,
-            "Dusman: 0", 22, TextAlignmentOptions.Right);
+            "Dusman: 0", 24, TextAlignmentOptions.Right);
+        enemyText.fontStyle = FontStyles.Bold;
 
         // Altın — alt satır
         TextMeshProUGUI goldText = CreateText(topBar.transform, "GoldText",
             new Vector2(0.02f, 0.08f), new Vector2(0.98f, 0.50f),
             Vector2.zero, Vector2.zero,
-            "Altin: +0", 18, TextAlignmentOptions.Center);
+            "Altin: +0", 21, TextAlignmentOptions.Center);
         goldText.color = new Color(1f, 0.85f, 0.2f);
+        goldText.fontStyle = FontStyles.Bold;
 
         // ===== KAHRAMAN CAN BARI — sol alt =====
         GameObject heroBarBg = CreatePanel(canvasObj.transform, "HeroBarBg",
-            new Vector2(0.02f, 0.02f), new Vector2(0.48f, 0.065f),
+            new Vector2(0.02f, 0.018f), new Vector2(0.48f, 0.078f),
             Vector2.zero, Vector2.zero,
-            new Color(0, 0, 0, 0.7f));
+            new Color(0, 0, 0, 0.82f));
 
         TextMeshProUGUI heroLabel = CreateText(heroBarBg.transform, "HeroLabel",
             new Vector2(0, 1), new Vector2(1, 1.6f),
             Vector2.zero, Vector2.zero,
-            "Savasci", 14, TextAlignmentOptions.Left);
+            "Savasci", 16, TextAlignmentOptions.Left);
         heroLabel.color = Color.cyan;
 
         Slider heroHealthBar = CreateHealthBar(heroBarBg.transform, "HeroHealthBar",
-            new Vector2(5, 5), new Vector2(280, 25),
+            new Vector2(5, 8), new Vector2(280, 28),
             Color.green);
 
         TextMeshProUGUI heroHpText = CreateText(heroBarBg.transform, "HeroHpText",
             new Vector2(0, 0), new Vector2(1, 1),
             Vector2.zero, Vector2.zero,
-            "100/100", 14, TextAlignmentOptions.Center);
+            "100/100", 16, TextAlignmentOptions.Center);
 
         // ===== ANA ÜS CAN BARI — sağ alt =====
         GameObject baseBarBg = CreatePanel(canvasObj.transform, "BaseBarBg",
-            new Vector2(0.52f, 0.02f), new Vector2(0.98f, 0.065f),
+            new Vector2(0.52f, 0.018f), new Vector2(0.98f, 0.078f),
             Vector2.zero, Vector2.zero,
-            new Color(0, 0, 0, 0.7f));
+            new Color(0, 0, 0, 0.82f));
 
         TextMeshProUGUI baseLabel = CreateText(baseBarBg.transform, "BaseLabel",
             new Vector2(0, 1), new Vector2(1, 1.6f),
             Vector2.zero, Vector2.zero,
-            "Ana Us", 14, TextAlignmentOptions.Left);
+            "Ana Us", 16, TextAlignmentOptions.Left);
         baseLabel.color = Color.yellow;
 
         Slider baseHealthBar = CreateHealthBar(baseBarBg.transform, "BaseHealthBar",
-            new Vector2(5, 5), new Vector2(280, 25),
+            new Vector2(5, 8), new Vector2(280, 28),
             Color.yellow);
 
         TextMeshProUGUI baseHpText = CreateText(baseBarBg.transform, "BaseHpText",
             new Vector2(0, 0), new Vector2(1, 1),
             Vector2.zero, Vector2.zero,
-            "200/200", 14, TextAlignmentOptions.Center);
+            "200/200", 16, TextAlignmentOptions.Center);
 
         // ===== JOYSTICK (sag alt) =====
         CreateVirtualJoystick(canvasObj.transform);
+
+        // ===== MINIMAP (sag alt) =====
+        GameObject minimapObj = new GameObject("Minimap");
+        minimapObj.transform.SetParent(canvasObj.transform, false);
+        RectTransform mmRt = minimapObj.AddComponent<RectTransform>();
+        mmRt.anchorMin = new Vector2(0.74f, 0.22f);
+        mmRt.anchorMax = new Vector2(0.96f, 0.35f);
+        mmRt.offsetMin = Vector2.zero;
+        mmRt.offsetMax = Vector2.zero;
+
+        RawImage minimapImg = minimapObj.AddComponent<RawImage>();
+        minimapImg.color = Color.white;
+        minimapObj.AddComponent<MinimapController>();
 
         // ===== SAVAŞ SONU PANELİ =====
         // Tam ekran koyu arka plan (savaş alanını gizler)
@@ -537,32 +626,70 @@ public class BattleSceneSetup : MonoBehaviour
 
     private void CreateVirtualJoystick(Transform parent)
     {
-        GameObject joystickRoot = new GameObject("VirtualJoystick");
-        joystickRoot.transform.SetParent(parent, false);
-        RectTransform rootRt = joystickRoot.AddComponent<RectTransform>();
-        rootRt.anchorMin = new Vector2(0.74f, 0.08f);
-        rootRt.anchorMax = new Vector2(0.96f, 0.20f);
-        rootRt.offsetMin = Vector2.zero;
-        rootRt.offsetMax = Vector2.zero;
+        GameObject inputRoot = new GameObject("VirtualJoystickInput");
+        inputRoot.transform.SetParent(parent, false);
+        inputRoot.transform.SetAsFirstSibling();
+        RectTransform inputRt = inputRoot.AddComponent<RectTransform>();
+        inputRt.anchorMin = Vector2.zero;
+        inputRt.anchorMax = Vector2.one;
+        inputRt.offsetMin = Vector2.zero;
+        inputRt.offsetMax = Vector2.zero;
 
-        Image bg = joystickRoot.AddComponent<Image>();
-        bg.color = new Color(1f, 1f, 1f, 0.14f);
-        bg.raycastTarget = true;
+        Image inputImg = inputRoot.AddComponent<Image>();
+        inputImg.color = new Color(0f, 0f, 0f, 0f);
+        inputImg.raycastTarget = true;
+
+        GameObject visualRoot = new GameObject("VirtualJoystick");
+        visualRoot.transform.SetParent(parent, false);
+        RectTransform rootRt = visualRoot.AddComponent<RectTransform>();
+        rootRt.anchorMin = new Vector2(0.5f, 0.5f);
+        rootRt.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRt.pivot = new Vector2(0.5f, 0.5f);
+        rootRt.sizeDelta = new Vector2(220f, 220f);
+        rootRt.anchoredPosition = new Vector2(180f, 180f);
+
+        Image bg = visualRoot.AddComponent<Image>();
+        bg.sprite = CreateCircleSprite(128);
+        bg.color = new Color(0.05f, 0.05f, 0.05f, 0.5f);
+        bg.raycastTarget = false;
 
         GameObject handleObj = new GameObject("Handle");
-        handleObj.transform.SetParent(joystickRoot.transform, false);
+        handleObj.transform.SetParent(visualRoot.transform, false);
         RectTransform handleRt = handleObj.AddComponent<RectTransform>();
         handleRt.anchorMin = new Vector2(0.5f, 0.5f);
         handleRt.anchorMax = new Vector2(0.5f, 0.5f);
-        handleRt.sizeDelta = new Vector2(70f, 70f);
+        handleRt.sizeDelta = new Vector2(90f, 90f);
         handleRt.anchoredPosition = Vector2.zero;
 
         Image handleImg = handleObj.AddComponent<Image>();
-        handleImg.color = new Color(1f, 1f, 1f, 0.4f);
+        handleImg.sprite = CreateCircleSprite(64);
+        handleImg.color = new Color(0.8f, 0.8f, 0.8f, 0.9f);
         handleImg.raycastTarget = false;
 
-        VirtualJoystick joystick = joystickRoot.AddComponent<VirtualJoystick>();
-        joystick.Setup(handleRt, 80f);
+        VirtualJoystick joystick = inputRoot.AddComponent<VirtualJoystick>();
+        joystick.Setup(rootRt, handleRt, 100f);
+
+        visualRoot.transform.SetAsLastSibling();
+        inputRoot.transform.SetAsFirstSibling();
+    }
+
+    private Sprite CreateCircleSprite(int size)
+    {
+        Texture2D tex = new Texture2D(size, size);
+        Color[] colors = new Color[size * size];
+        float radius = size / 2f;
+        Vector2 center = new Vector2(radius, radius);
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dist = Vector2.Distance(new Vector2(x, y), center);
+                colors[y * size + x] = dist <= radius ? Color.white : Color.clear;
+            }
+        }
+        tex.SetPixels(colors);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
     }
 
     // ==================== UI YARDIMCI FONKSİYONLARI ====================
@@ -680,16 +807,23 @@ public class BattleSceneSetup : MonoBehaviour
         rt.offsetMax = offsetMax;
 
         Image btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = bgColor;
+        btnImg.color = PrimaryGold;
 
         Button btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = btnImg;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = PrimaryGold;
+        cb.highlightedColor = PrimaryGold * 1.08f;
+        cb.pressedColor = PrimaryGold * 0.85f;
+        cb.selectedColor = PrimaryGold;
+        btn.colors = cb;
 
         // Buton yazısı
         TextMeshProUGUI btnText = CreateText(btnObj.transform, "Text",
             Vector2.zero, Vector2.one,
             Vector2.zero, Vector2.zero,
             text, 20, TextAlignmentOptions.Center);
+        btnText.color = DarkBg;
         btnText.rectTransform.anchorMin = Vector2.zero;
         btnText.rectTransform.anchorMax = Vector2.one;
         btnText.rectTransform.offsetMin = Vector2.zero;

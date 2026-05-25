@@ -116,10 +116,10 @@ TextureImporter:
       name: building_cannontower_0
       rect:
         serializedVersion: 2
-        x: 2
-        y: 15
-        width: 185
-        height: 181
+        x: 3
+        y: 25
+        width: 122
+        height: 186
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

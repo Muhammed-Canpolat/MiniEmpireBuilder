@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 /// <summary>
 /// Savas sahnesi UI yonetimi.
@@ -24,8 +25,11 @@ public class BattleUI : MonoBehaviour
 
     private HeroController heroController;
     private MainBaseController mainBaseController;
+    private WaveAnnouncer waveAnnouncer;
     private bool refsReady;
     private bool subscribed;
+    
+    private int displayedGold = 0;
 
     public void SetReferences(
         TextMeshProUGUI wave, TextMeshProUGUI enemy, TextMeshProUGUI gold, TextMeshProUGUI level,
@@ -80,6 +84,7 @@ public class BattleUI : MonoBehaviour
         bm.OnEnemiesCountChanged += UpdateEnemyCount;
         bm.OnGoldEarnedChanged += UpdateGoldDisplay;
         bm.OnBattleEnded += ShowBattleResult;
+        bm.OnWaveIncoming += ShowIncomingWave;
         subscribed = true;
 
         if (levelText != null && GameManager.Instance?.PlayerData != null)
@@ -118,7 +123,17 @@ public class BattleUI : MonoBehaviour
     private void UpdateGoldDisplay(int gold)
     {
         if (goldText != null)
-            goldText.text = $"Altin: {gold}";
+        {
+            DOTween.To(() => displayedGold, x => 
+            {
+                displayedGold = x;
+                goldText.text = $"Altin: {displayedGold}";
+            }, gold, 0.5f).SetEase(Ease.OutQuad);
+            
+            // Text scale animasyonu
+            goldText.transform.DOKill(true);
+            goldText.transform.DOPunchScale(Vector3.one * 0.2f, 0.3f, 5, 1f);
+        }
     }
 
     private void ShowBattleResult(bool won)
@@ -154,5 +169,14 @@ public class BattleUI : MonoBehaviour
     {
         if (GameManager.Instance != null)
             GameManager.Instance.LoadBaseWorld();
+    }
+
+    private void ShowIncomingWave(int waveNumber)
+    {
+        if (waveAnnouncer == null)
+            waveAnnouncer = FindFirstObjectByType<WaveAnnouncer>();
+
+        if (waveAnnouncer != null)
+            waveAnnouncer.AnnounceIncomingWave(waveNumber);
     }
 }

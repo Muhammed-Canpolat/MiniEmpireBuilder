@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -35,6 +35,7 @@ public class BattleManager : MonoBehaviour
     public event System.Action<int> OnEnemiesCountChanged;       // kalan düşman
     public event System.Action<int> OnGoldEarnedChanged;         // kazanılan altın
     public event System.Action<bool> OnBattleEnded;              // true=kazandı, false=kaybetti
+    public event System.Action<int> OnWaveIncoming;              // gelecek dalga duyurusu
 
     // Singleton (sadece savaş sahnesi boyunca)
     public static BattleManager Instance { get; private set; }
@@ -89,27 +90,46 @@ public class BattleManager : MonoBehaviour
         CreateSimpleSprite("Arena", new Color(0.12f, 0.16f, 0.07f),
             new Vector3(0, 0, 0.9f), new Vector3(14f, 14f, 1f));
 
-        // === ÇEVRE DEKORASYONU ===
-        if (sm != null)
+        // === ÇEVRE DEKORASYONU (Rastgele) ===
+        // Geniş bir alana (örn: -15 to 15) rastgele kaya, çalı, kuru ot yerleştirelim.
+        int propCount = 60; // Etrafa yayılacak obje sayısı
+        for (int i = 0; i < propCount; i++)
         {
-            Sprite treeSpr = sm.Tree;
-            Sprite rockSpr = sm.Rock;
+            float rx = Random.Range(-15f, 15f);
+            float ry = Random.Range(-15f, 15f);
 
-            // Ağaçlar — savaş alanı kenarlarında
-            CreateSpriteObject("BTree1", treeSpr, new Vector3(-5.5f, 4.5f, 0.3f), new Vector3(0.4f, 0.4f, 1f));
-            CreateSpriteObject("BTree2", treeSpr, new Vector3(5.5f, 4f, 0.3f), new Vector3(0.38f, 0.38f, 1f));
-            CreateSpriteObject("BTree3", treeSpr, new Vector3(-5f, -3.5f, 0.3f), new Vector3(0.35f, 0.35f, 1f));
-            CreateSpriteObject("BTree4", treeSpr, new Vector3(5.5f, -4f, 0.3f), new Vector3(0.4f, 0.4f, 1f));
-            CreateSpriteObject("BTree5", treeSpr, new Vector3(-6f, 0.5f, 0.3f), new Vector3(0.3f, 0.3f, 1f));
-            CreateSpriteObject("BTree6", treeSpr, new Vector3(6f, -1f, 0.3f), new Vector3(0.33f, 0.33f, 1f));
-            CreateSpriteObject("BTree7", treeSpr, new Vector3(0, 5.5f, 0.3f), new Vector3(0.35f, 0.35f, 1f));
-            CreateSpriteObject("BTree8", treeSpr, new Vector3(-3f, 5f, 0.3f), new Vector3(0.32f, 0.32f, 1f));
+            // Ana üsse veya başlangıç noktasına çok yakınsa koyma
+            if (Vector2.Distance(new Vector2(rx, ry), Vector2.zero) < 3f) continue;
 
-            // Kayalar — alanda dağınık
-            CreateSpriteObject("BRock1", rockSpr, new Vector3(-4f, 2.5f, 0.4f), new Vector3(0.5f, 0.5f, 1f));
-            CreateSpriteObject("BRock2", rockSpr, new Vector3(4.5f, -2f, 0.4f), new Vector3(0.45f, 0.45f, 1f));
-            CreateSpriteObject("BRock3", rockSpr, new Vector3(-3.5f, -4.5f, 0.4f), new Vector3(0.4f, 0.4f, 1f));
-            CreateSpriteObject("BRock4", rockSpr, new Vector3(3f, 4.5f, 0.4f), new Vector3(0.35f, 0.35f, 1f));
+            int propType = Random.Range(0, 3); // 0: Kaya, 1: Çalı, 2: Kuru Ot
+            Sprite propSprite = null;
+            Color propColor = Color.white;
+            float propScale = Random.Range(0.2f, 0.5f);
+
+            if (sm != null)
+            {
+                if (propType == 0) propSprite = sm.Rock;
+                else if (propType == 1) propSprite = sm.Tree; // Çalı/ağaç
+            }
+
+            GameObject propObj;
+            if (propSprite != null)
+            {
+                propObj = CreateSpriteObject($"Prop_{i}", propSprite, new Vector3(rx, ry, 0.8f), new Vector3(propScale, propScale, 1f));
+            }
+            else
+            {
+                if (propType == 0) propColor = new Color(0.4f, 0.4f, 0.4f); // Kaya (gri)
+                else if (propType == 1) propColor = new Color(0.15f, 0.35f, 0.15f); // Çalı (koyu yeşil)
+                else propColor = new Color(0.6f, 0.55f, 0.2f); // Kuru ot (sarı/kahve)
+
+                propObj = CreateSimpleSprite($"Prop_{i}", propColor, new Vector3(rx, ry, 0.8f), new Vector3(propScale, propScale, 1f));
+                if (propType == 2) propObj.transform.localScale = new Vector3(0.05f, 0.3f, 1f); // Kuru ot ince uzun
+            }
+
+            propObj.transform.rotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
+            SpriteRenderer sr = propObj.GetComponent<SpriteRenderer>();
+            if (sr != null) sr.sortingOrder = 1;
         }
 
         // Ana Üs yoksa oluştur
@@ -139,8 +159,12 @@ public class BattleManager : MonoBehaviour
             if (sm != null && GameManager.Instance != null && GameManager.Instance.PlayerData != null)
             {
                 Sprite heroSprite = sm.GetHeroSprite(GameManager.Instance.PlayerData.hero.weaponType);
+                Vector3 scale = new Vector3(0.85f, 0.85f, 1f);
+                if (GameManager.Instance.PlayerData.hero.weaponType == WeaponType.Spear)
+                    scale = new Vector3(1.0f, 1.0f, 1f);
+
                 heroObj = CreateSpriteObject("AnaSavasci", heroSprite,
-                    new Vector3(-2f, 0, 0), new Vector3(0.85f, 0.85f, 1f));
+                    new Vector3(-2f, 0, 0), scale);
             }
             else
             {
@@ -279,20 +303,20 @@ public class BattleManager : MonoBehaviour
 
         Vector3[] archerPositions =
         {
-            new Vector3(2f, 1.8f, 0f),
-            new Vector3(-2f, 1.8f, 0f)
+            new Vector3(3f, 2.5f, 0f),
+            new Vector3(-3f, 2.5f, 0f)
         };
         Vector3[] cannonPositions =
         {
-            new Vector3(-2f, -1.8f, 0f),
-            new Vector3(2f, -1.8f, 0f)
+            new Vector3(-3f, -2.5f, 0f),
+            new Vector3(3f, -2.5f, 0f)
         };
         Vector3[] wallPositions =
         {
-            new Vector3(0f, 3f, 0f),
-            new Vector3(3f, 0f, 0f),
-            new Vector3(0f, -3f, 0f),
-            new Vector3(-3f, 0f, 0f)
+            new Vector3(0f, 5f, 0f),
+            new Vector3(5f, 0f, 0f),
+            new Vector3(0f, -5f, 0f),
+            new Vector3(-5f, 0f, 0f)
         };
 
         for (int i = 0; i < archerSlots && i < archerPositions.Length; i++)
@@ -413,6 +437,13 @@ public class BattleManager : MonoBehaviour
 
             currentWaveIndex = w;
             WaveData wave = currentLevel.waves[w];
+            OnWaveIncoming?.Invoke(w + 1);
+
+            // Ekranda DALGA X banner'ını göster
+            if (BattleVfxManager.Instance != null)
+                BattleVfxManager.Instance.ShowWaveBanner(w + 1);
+
+            yield return new WaitForSeconds(3f);
 
             Debug.Log($"[BattleManager] Dalga {w + 1}/{currentLevel.waves.Count} başlıyor!");
             OnWaveChanged?.Invoke(w + 1, currentLevel.waves.Count);
@@ -459,13 +490,37 @@ public class BattleManager : MonoBehaviour
 
     private void SpawnEnemy(EnemyType type)
     {
-        // Rastgele yön — dışarıdan gelecekler
-        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        Vector3 spawnPos = new Vector3(
-            Mathf.Cos(angle) * spawnRadius,
-            Mathf.Sin(angle) * spawnRadius,
-            0
-        );
+        Vector3 spawnPos = Vector3.zero;
+        BattleSceneSetup setup = FindFirstObjectByType<BattleSceneSetup>();
+
+        if (setup != null)
+        {
+            float halfW = setup.worldWidth / 2f;
+            float halfH = setup.worldHeight / 2f;
+
+            // Rastgele bir kenar seç (0: üst, 1: sağ, 2: alt, 3: sol)
+            int edge = Random.Range(0, 4);
+            switch (edge)
+            {
+                case 0: // Üst
+                    spawnPos = new Vector3(Random.Range(-halfW, halfW), halfH + 2f, 0);
+                    break;
+                case 1: // Sağ
+                    spawnPos = new Vector3(halfW + 2f, Random.Range(-halfH, halfH), 0);
+                    break;
+                case 2: // Alt
+                    spawnPos = new Vector3(Random.Range(-halfW, halfW), -halfH - 2f, 0);
+                    break;
+                case 3: // Sol
+                    spawnPos = new Vector3(-halfW - 2f, Random.Range(-halfH, halfH), 0);
+                    break;
+            }
+        }
+        else
+        {
+            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            spawnPos = new Vector3(Mathf.Cos(angle) * 10f, Mathf.Sin(angle) * 10f, 0);
+        }
 
         GameObject enemyObj = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
         enemyObj.SetActive(true);

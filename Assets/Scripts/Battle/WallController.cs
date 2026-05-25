@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// Savaş sahnesindeki Duvar segmenti — düşmanlar önce bunu kırmaya çalışır
@@ -9,6 +9,7 @@ public class WallController : MonoBehaviour
     [Header("Statlar")]
     [SerializeField] private float maxHealth = 100f;
     private float currentHealth;
+    private HealthBar healthBar;
 
     private SpriteRenderer spriteRenderer;
 
@@ -30,12 +31,16 @@ public class WallController : MonoBehaviour
         }
 
         currentHealth = maxHealth;
+        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.6f, 0));
     }
 
     public void TakeDamage(float damage)
     {
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
+
+        if (healthBar != null)
+            healthBar.UpdateHealth(currentHealth);
 
         if (spriteRenderer != null)
         {

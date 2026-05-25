@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
@@ -8,7 +8,10 @@ using System.Collections.Generic;
 /// </summary>
 public class BaseWorldUI : MonoBehaviour
 {
+    public static BaseWorldUI Instance { get; private set; }
+
     [Header("Üst Bilgi Çubuğu")]
+
     [SerializeField] private TextMeshProUGUI goldText;
     [SerializeField] private TextMeshProUGUI battleLevelText;
     [SerializeField] private TextMeshProUGUI goldPerSecText;
@@ -22,6 +25,9 @@ public class BaseWorldUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI upgradeCostText;
     [SerializeField] private Button upgradeButton;
     [SerializeField] private Button closePanelButton;
+
+    [Header("İnşa Sistemi")]
+    [SerializeField] private Button buildMenuButton;
 
     [Header("Kahraman Bilgi Paneli")]
     [SerializeField] private GameObject heroInfoPanel;
@@ -46,7 +52,7 @@ public class BaseWorldUI : MonoBehaviour
         Button upgradeBtn, Button closeBtn,
         GameObject hPanel, TextMeshProUGUI hName, TextMeshProUGUI hLevel, TextMeshProUGUI hStats, TextMeshProUGUI hCost,
         Button heroUpBtn, Button heroCloseBtn,
-        Button battleBtn)
+        Button battleBtn, Button buildBtn)
     {
         goldText = gold;
         battleLevelText = level;
@@ -66,7 +72,14 @@ public class BaseWorldUI : MonoBehaviour
         heroUpgradeButton = heroUpBtn;
         heroCloseButton = heroCloseBtn;
         battleButton = battleBtn;
+        buildMenuButton = buildBtn;
         mineStoredText = null;
+    }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
     }
 
     private void Start()
@@ -75,9 +88,13 @@ public class BaseWorldUI : MonoBehaviour
         if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
         if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
 
+
         // Buton listener'ları
         if (battleButton != null)
             battleButton.onClick.AddListener(OnBattleClicked);
+
+        if (buildMenuButton != null)
+            buildMenuButton.onClick.AddListener(OnBuildMenuClicked);
 
         if (upgradeButton != null)
             upgradeButton.onClick.AddListener(OnUpgradeClicked);
@@ -104,6 +121,8 @@ public class BaseWorldUI : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (Instance == this) Instance = null;
+
         // Event'lerden çık
         if (GameManager.Instance != null)
         {
@@ -113,7 +132,14 @@ public class BaseWorldUI : MonoBehaviour
         }
     }
 
+    public void ToggleBottomButtons(bool show)
+    {
+        if (battleButton != null) battleButton.gameObject.SetActive(show);
+        if (buildMenuButton != null) buildMenuButton.gameObject.SetActive(show);
+    }
+
     // ==================== UI GÜNCELLEME ====================
+
 
     private void UpdateAllUI()
     {
@@ -309,6 +335,20 @@ public class BaseWorldUI : MonoBehaviour
     {
         if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
         if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
+        BuildMenuController.Instance?.Hide();
+    }
+    
+    public void HideAllPanelsPublic()
+    {
+        CloseAllPanels();
+    }
+
+    private void OnBuildMenuClicked()
+    {
+        if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
+        if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
+        
+        BuildMenuController.Instance?.Show();
     }
 
     // ==================== YARDIMCI ====================

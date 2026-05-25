@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections;
@@ -20,11 +20,11 @@ public class GameManager : MonoBehaviour
     public Dictionary<BuildingType, BuildingData> Buildings { get; private set; }
 
     // ==================== EVENT'LER ====================
-    public event Action<int> OnGoldChanged;             // altın değişince
-    public event Action<BuildingType, int> OnBuildingUpgraded;  // bina seviye atınca
-    public event Action<int> OnHeroLevelUp;             // kahraman seviye atınca
-    public event Action<int> OnBattleLevelChanged;      // savaş level değişince
-    public event Action<int, int> OnGoldMineStoredChanged; // (stored, capacity)
+    public event Action<int> OnGoldChanged;                         // altın değişince
+    public event Action<BuildingType, int> OnBuildingUpgraded;      // bina seviye atınca
+    public event Action<int> OnHeroLevelUp;                         // kahraman seviye atınca
+    public event Action<int> OnBattleLevelChanged;                  // savaş level değişince
+    public event Action<int, int> OnGoldMineStoredChanged;          // (stored, capacity)
 
     // ==================== DURUMLAR ====================
     public bool IsInBattle { get; private set; } = false;
@@ -242,8 +242,8 @@ public class GameManager : MonoBehaviour
         {
             BuildingData bd = new BuildingData();
             bd.buildingType = entry.buildingType;
-            bd.level = entry.level;
-            bd.isUnlocked = entry.isUnlocked;
+            bd.level        = entry.level;
+            bd.isUnlocked   = entry.isUnlocked;
             bd.ApplyLevelStats();
 
             Buildings[entry.buildingType] = bd;
@@ -324,7 +324,7 @@ public class GameManager : MonoBehaviour
                 if (mainBaseLevel >= required)
                 {
                     kvp.Value.isUnlocked = true;
-                    kvp.Value.level = 1;
+                    kvp.Value.level      = 1;
                     kvp.Value.ApplyLevelStats();
                     UpdateBuildingSaveEntry(kvp.Key, 1, true);
                     Debug.Log($"[GameManager] {kvp.Key} açıldı! (Ana Üs Lv.{mainBaseLevel})");
@@ -346,7 +346,7 @@ public class GameManager : MonoBehaviour
         {
             if (entry.buildingType == type)
             {
-                entry.level = level;
+                entry.level     = level;
                 entry.isUnlocked = unlocked;
                 return;
             }
@@ -442,10 +442,16 @@ public class GameManager : MonoBehaviour
         Debug.Log("[GameManager] Ana menüye geçiliyor...");
     }
 
+    public void LoadHeroSelect()
+    {
+        StartCoroutine(FadeAndLoadScene("HeroSelectScene"));
+        Debug.Log("[GameManager] Kahraman seçimine geçiliyor...");
+    }
+
     /// <summary>
     /// Sahne geçişi sırasında fade-out efekti uygular
     /// </summary>
-    private System.Collections.IEnumerator FadeAndLoadScene(string sceneName)
+    private IEnumerator FadeAndLoadScene(string sceneName)
     {
         // Fade-out canvas oluştur
         GameObject fadeObj = new GameObject("SceneFade");
@@ -462,7 +468,7 @@ public class GameManager : MonoBehaviour
         rt.offsetMax = Vector2.zero;
 
         UnityEngine.UI.Image img = panel.AddComponent<UnityEngine.UI.Image>();
-        img.color = new Color(0, 0, 0, 0);
+        img.color         = new Color(0, 0, 0, 0);
         img.raycastTarget = true; // Fade sırasında tıklamayı engelle
 
         // Fade to black

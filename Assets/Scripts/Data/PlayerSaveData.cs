@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 
@@ -22,6 +22,12 @@ public class PlayerSaveData
     // Offline altın madeni zamanı
     public long goldMineLastCollectTime = 0; // Unix timestamp (ticks)
     public int goldMineStoredGold = 0;       // Madende biriken altın (cüzdana otomatik eklenmez)
+
+    // Haritaya yerleştirilen binalar
+    public List<PlacedBuildingData> placedBuildings = new List<PlacedBuildingData>();
+
+    // İnşaatçı durumu (sahne kapanınca kaydedilir)
+    public BuilderSaveData builderState = new BuilderSaveData();
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
@@ -82,9 +88,35 @@ public class PlayerSaveData
         data.highestBattleLevel = 1;
         data.goldMineLastCollectTime = System.DateTime.UtcNow.Ticks;
         data.goldMineStoredGold = 0;
+        data.placedBuildings = new List<PlacedBuildingData>();
+        data.builderState = new BuilderSaveData();
 
         return data;
     }
+}
+
+/// <summary>
+/// Haritaya yerleştirilen bir binanın konum + tip kaydı
+/// </summary>
+[Serializable]
+public class PlacedBuildingData
+{
+    public string id;           // Unique kimlik
+    public string buildingType; // BuildingType enum string'i
+    public float x;
+    public float y;
+}
+
+/// <summary>
+/// İnşaatçı durumu kaydı
+/// </summary>
+[Serializable]
+public class BuilderSaveData
+{
+    public bool isAvailable = true;
+    public string currentTask = "";
+    public float timeRemaining = 0f;
+    public float totalTime = 0f;
 }
 
 /// <summary>

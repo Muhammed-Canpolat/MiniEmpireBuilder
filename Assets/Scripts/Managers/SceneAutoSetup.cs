@@ -31,14 +31,20 @@ public static class SceneAutoSetup
         {
             case "MainMenuScene":
                 EnsureComponent<IntroSceneSetup>("IntroSetup");
+                EnsureComponent<ScenePolishInstaller>("PolishInstaller");
+                EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 break;
 
             case "BaseScene":
                 EnsureComponent<BaseSceneSetup>("BaseSetup");
+                EnsureComponent<ScenePolishInstaller>("PolishInstaller");
+                EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 break;
 
             case "BattleScene":
                 EnsureComponent<BattleSceneSetup>("BattleSetup");
+                EnsureComponent<ScenePolishInstaller>("PolishInstaller");
+                EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 break;
 
             default:
@@ -49,6 +55,8 @@ public static class SceneAutoSetup
                 {
                     Debug.Log($"[SceneAutoSetup] Bilinmeyen sahne: {sceneName}, IntroSetup ekleniyor...");
                     EnsureComponent<IntroSceneSetup>("IntroSetup");
+                    EnsureComponent<ScenePolishInstaller>("PolishInstaller");
+                    EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 }
                 break;
         }

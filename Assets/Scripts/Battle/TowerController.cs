@@ -18,6 +18,7 @@ public class TowerController : MonoBehaviour
     private float currentHealth;
     private float lastAttackTime;
     private SpriteRenderer spriteRenderer;
+    private HealthBar healthBar;
 
     public float HealthPercent => currentHealth / maxHealth;
     public bool IsDestroyed => currentHealth <= 0;
@@ -48,8 +49,11 @@ public class TowerController : MonoBehaviour
 
         currentHealth = maxHealth;
 
-        // Kule rengini ayarla (geçici)
-        if (spriteRenderer != null)
+        // Health bar'ı oluştur
+        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.8f, 0));
+
+        // Kule rengini ayarla (geçici, gerçek sprite yoksa)
+        if (spriteRenderer != null && (spriteRenderer.sprite == null || spriteRenderer.sprite.name == "Square"))
         {
             spriteRenderer.color = towerType == BuildingType.ArcherTower
                 ? new Color(0.2f, 0.6f, 1f)   // Mavi — Okçu
@@ -96,19 +100,31 @@ public class TowerController : MonoBehaviour
 
     private void Attack(EnemyController target)
     {
-        // Her birim ayrı saldırır
-        float totalDamage = damage * unitCount;
-        target.TakeDamage(totalDamage);
-        if (BattleVfxManager.Instance != null)
-            BattleVfxManager.Instance.SpawnHit(target.transform.position, 0.6f);
+        // Kule tipine göre mermi tipi belirle
+        ProjectileType pType = towerType == BuildingType.ArcherTower ? ProjectileType.Arrow : ProjectileType.Axe;
 
-        Debug.Log($"[Tower] {towerType} → {totalDamage} hasar! ({unitCount} birim)");
+        GameObject projObj = new GameObject("TowerProjectile");
+        ProjectileController proj = projObj.AddComponent<ProjectileController>();
+
+        // Her birim ayrı saldırır (örneğin 3 okçu varsa 3 katı hasar, görsel olarak tek mermi fırlatılır)
+        float totalDamage = damage * unitCount;
+
+        proj.Launch(transform.position + Vector3.up * 0.5f, target.transform.position, pType, () =>
+        {
+            if (target != null && !target.IsDead)
+            {
+                target.TakeDamage(totalDamage);
+            }
+        });
     }
 
     public void TakeDamage(float dmg)
     {
         currentHealth -= dmg;
         currentHealth = Mathf.Max(0, currentHealth);
+
+        if (healthBar != null)
+            healthBar.UpdateHealth(currentHealth);
 
         if (currentHealth <= 0)
         {

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
+using DG.Tweening;
 
 /// <summary>
 /// Düşman davranışı — Ana Üs'e doğru yürür, yolda engel varsa saldırır
@@ -7,6 +8,8 @@
 /// </summary>
 public class EnemyController : MonoBehaviour
 {
+    private const int EliteWaveInterval = 3;
+
     [Header("Statlar")]
     [SerializeField] private float maxHealth = 30f;
     [SerializeField] private float damage = 5f;
@@ -34,6 +37,7 @@ public class EnemyController : MonoBehaviour
     // Hedef referansları (BattleManager tarafından atanır)
     private Transform mainBaseTransform;
     private EnemyType enemyType;
+    private int battleLevelValue;
 
     private void Start()
     {
@@ -47,13 +51,13 @@ public class EnemyController : MonoBehaviour
     public void Initialize(EnemyType type, int battleLevel, Transform baseTarget)
     {
         enemyType = type;
+        battleLevelValue = battleLevel;
         mainBaseTransform = baseTarget;
         currentTarget = baseTarget;
 
         // spriteRenderer'ı hemen al (Start'tan önce çağrılabilir)
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
-
         // Statları hesapla
         EnemyStats stats = EnemyStats.GetBaseStats(type);
         stats.ScaleToLevel(battleLevel);
@@ -67,7 +71,7 @@ public class EnemyController : MonoBehaviour
         goldReward = stats.goldReward;
 
         // Can barı oluştur
-        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.6f, 0));
+        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.6f, 0), new Color(0.8f, 0.15f, 0.15f));
 
         // Düşman tipine göre sprite ve boyut
         if (spriteRenderer != null)
@@ -106,6 +110,16 @@ public class EnemyController : MonoBehaviour
                     transform.localScale = new Vector3(0.8f, 0.8f, 1f); // Boss büyük
                     break;
             }
+        }
+
+        EnemyVisuals visuals = GetComponent<EnemyVisuals>();
+        if (visuals != null)
+        {
+            int finalWave = Mathf.Max(1, Mathf.CeilToInt(battleLevelValue / 2f) + 2);
+            int currentWave = BattleManager.Instance != null ? BattleManager.Instance.CurrentWave : 1;
+            bool isBoss = currentWave >= finalWave && type == EnemyType.Troll;
+            bool isElite = !isBoss && currentWave % EliteWaveInterval == 0;
+            visuals.ApplyTier(isElite, isBoss);
         }
     }
 
@@ -249,20 +263,23 @@ public class EnemyController : MonoBehaviour
         currentHealth -= dmg;
         currentHealth = Mathf.Max(0, currentHealth);
 
-        // Hasar efekti
+        // Hasar flash efekti
         if (spriteRenderer != null)
-        {
             StartCoroutine(DamageFlash());
-        }
+
+        // Hasar sayısı (yeni VFX)
+        if (BattleVfxManager.Instance != null)
+            BattleVfxManager.Instance.ShowDamageNumber(
+                transform.position + Vector3.up * 0.8f,
+                dmg,
+                damage);
 
         // Can barını güncelle
         if (healthBar != null)
             healthBar.UpdateHealth(currentHealth);
 
         if (currentHealth <= 0)
-        {
             Die();
-        }
     }
 
     private System.Collections.IEnumerator DamageFlash()
@@ -281,43 +298,35 @@ public class EnemyController : MonoBehaviour
     {
         isDead = true;
 
-        // BattleManager'a bildir (savaş içi altın havuzuna eklenir)
+        // BattleManager'a bildir
         BattleManager battleManager = FindFirstObjectByType<BattleManager>();
         if (battleManager != null)
-        {
             battleManager.OnEnemyKilled(goldReward);
-        }
-
-        if (BattleVfxManager.Instance != null)
-            BattleVfxManager.Instance.SpawnDeath(transform.position, 0.8f);
 
         Debug.Log($"[Enemy] {enemyType} öldü! +{goldReward} altın");
 
-        // Ölüm efekti: hemen küçült ve soluklaştır
         StartCoroutine(DeathEffect());
     }
 
     private System.Collections.IEnumerator DeathEffect()
     {
-        // Hemen sprite'ı kırmızıya çevir
+        // 1. Sprite kırmızıya dönsün (0.1s)
         if (spriteRenderer != null)
-            spriteRenderer.color = new Color(1f, 0.2f, 0.1f, 0.8f);
+            spriteRenderer.DOColor(new Color(1f, 0.15f, 0.1f), 0.1f);
 
-        Vector3 startScale = transform.localScale;
-        float t = 0;
-        while (t < 0.25f)
-        {
-            t += Time.deltaTime;
-            float progress = t / 0.25f;
-            transform.localScale = startScale * (1f - progress * 0.8f);
-            if (spriteRenderer != null)
-            {
-                Color c = spriteRenderer.color;
-                c.a = 1f - progress;
-                spriteRenderer.color = c;
-            }
-            yield return null;
-        }
+        yield return new WaitForSeconds(0.1f);
+
+        // 2. Parçacık dağılsın
+        Color particleColor = new Color(0.8f, 0.15f, 0.1f);
+        if (BattleVfxManager.Instance != null)
+            BattleVfxManager.Instance.SpawnDeathParticles(transform.position, particleColor);
+
+        // 3. Scale 1 → 0 (0.3s, InBack)
+        transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack);
+        if (spriteRenderer != null)
+            spriteRenderer.DOFade(0f, 0.3f);
+
+        yield return new WaitForSeconds(0.35f);
 
         Destroy(gameObject);
     }
