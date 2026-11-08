@@ -80,6 +80,25 @@ public static class DarkFantasyHudPolish
             Vector2.zero, Vector2.zero, ReferenceUiVisuals.Hex(0x3A3020));
         ReferenceUiVisuals.Image(levelTrack.transform, "Fill", Vector2.zero,
             new Vector2(0, 1), Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
+        // Çubuğun anlamı: altın / sonraki Ana Üs yükseltmesi. Metni BaseWorldUI günceller.
+        ReferenceUiVisuals.Text(hud, "BaseLevelCaption", "", 11, SoftGold,
+            TextAlignmentOptions.Center, new Vector2(0.30f, 0.897f), new Vector2(0.70f, 0.918f),
+            Vector2.zero, Vector2.zero, bodyBold: true);
+
+        // İnşaatçı göstergesi dokununca ne olduğunu söyler.
+        var builderPill = hud.Find("BuilderPill");
+        if (builderPill != null && builderPill.GetComponent<Button>() == null)
+        {
+            var pillImage = builderPill.GetComponent<Image>();
+            if (pillImage != null) pillImage.raycastTarget = true;
+            builderPill.gameObject.AddComponent<Button>().onClick.AddListener(() =>
+            {
+                bool free = BuilderSystem.Instance == null || BuilderSystem.Instance.HasAvailableBuilder();
+                Object.FindFirstObjectByType<BaseSceneSetup>()?.ShowHudToast(free
+                    ? "İnşaatçın boşta: yeni yapı kurabilir ya da yükseltebilirsin"
+                    : "İnşaatçın çalışıyor: iş bitince yeni yapı başlatabilirsin");
+            });
+        }
         var lockedToast = ReferenceUiVisuals.Image(hud, "LockedLandToast",
             new Vector2(0.08f, 1), new Vector2(0.92f, 1),
             new Vector2(0, -238), new Vector2(0, -190), Color.white);
@@ -320,14 +339,23 @@ public static class DarkFantasyHudPolish
             outline.effectDistance = new Vector2(2, -2);
         }
 
-        ReferenceUiVisuals.Text(safe, "BattleNetText", "Şu anki net kazanç: 0 − 0 = 0", 34,
+        // Formül biçimli net kazanç metni gizli tutulur: güncel altın üst çipte,
+        // döküm zafer ekranında. BattleUI nesneyi adıyla bulduğu için oluşturulur.
+        var netText = ReferenceUiVisuals.Text(safe, "BattleNetText", "", 34,
             ReferenceUiVisuals.Gold, TextAlignmentOptions.Center, new Vector2(0, 0.025f),
             new Vector2(1, 0.07f), Vector2.zero, Vector2.zero, bodyBold: true);
-        var buildHint = ReferenceUiVisuals.Text(safe, "BattleBuildHint", UiStrings.BattleBuildHint, 27,
-            SoftGold, TextAlignmentOptions.Center, Vector2.zero, new Vector2(1, 0.03f),
-            Vector2.zero, Vector2.zero);
-        if (GameManager.Instance?.PlayerData?.firstBattleTowerBuilt == true)
+        netText.gameObject.SetActive(false);
+        var buildHint = ReferenceUiVisuals.Text(safe, "BattleBuildHint", UiStrings.BattleBuildHint, 30,
+            SoftGold, TextAlignmentOptions.Center, new Vector2(0, 0.02f), new Vector2(1, 0.065f),
+            Vector2.zero, Vector2.zero, bodyBold: true);
+        // Kule hakkı olmayan oyuncuya yapamayacağı bir şeyi önermeyiz.
+        var player = GameManager.Instance?.PlayerData;
+        bool ownsTower = player?.placedBuildings != null && player.placedBuildings.Exists(b =>
+            b != null && (b.buildingType == "ArcherTower" || b.buildingType == "CannonTower"
+                || b.buildingType == "Monastery"));
+        if (player?.firstBattleTowerBuilt == true || !ownsTower)
             buildHint.gameObject.SetActive(false);
+        MoveHint.TryShow(safe);
     }
 
     private static void StyleBattleHealth(RectTransform root, Vector2 min, Vector2 max,

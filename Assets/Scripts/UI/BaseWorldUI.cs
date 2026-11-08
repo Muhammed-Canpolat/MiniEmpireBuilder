@@ -232,7 +232,13 @@ public class BaseWorldUI : MonoBehaviour
             && GameManager.Instance.Buildings.TryGetValue(BuildingType.MainBase, out var mainBase))
         {
             int cost = mainBase.GetUpgradeCost();
-            levelFill.anchorMax = new Vector2(cost > 0 ? Mathf.Clamp01((float)gold / cost) : 1f, 1f);
+            bool maxed = mainBase.level >= mainBase.GetMaxLevel(mainBase.level);
+            levelFill.anchorMax = new Vector2(maxed || cost <= 0 ? 1f : Mathf.Clamp01((float)gold / cost), 1f);
+            var caption = levelFill.parent.parent.Find("BaseLevelCaption")?.GetComponent<TMPro.TextMeshProUGUI>();
+            if (caption != null)
+                caption.text = maxed ? "En yüksek seviye"
+                    : gold >= cost ? $"<color=#F0C24A>Sev. {mainBase.level + 1} yükseltmesine hazır!</color>"
+                    : $"Sev. {mainBase.level + 1} için {gold}/{cost} altın";
         }
         if (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
             ShowBuildingInfo(selectedBuilding);

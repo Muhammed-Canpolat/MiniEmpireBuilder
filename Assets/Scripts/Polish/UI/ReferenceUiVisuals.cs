@@ -206,26 +206,47 @@ public static class ReferenceUiVisuals
             button.gameObject.AddComponent<ReferenceButtonPress>();
     }
 
+    /// <summary>
+    /// Kabartmalı düğme: koyu dış hat, metal/altın kenarlık (üstü parlak), içte üst ışık
+    /// ve alt gölge. 9-slice kenarı 16 piksel; tüm düğmeler aynı dili paylaşır.
+    /// </summary>
     private static Sprite MakeButtonSprite(bool gold)
     {
-        var tex = new Texture2D(32, 64, TextureFormat.RGBA32, false);
+        const int w = 48, h = 96, radius = 14;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Bilinear;
-        for (int y = 0; y < 64; y++)
-        for (int x = 0; x < 32; x++)
+        Color outer = Hex(0x120D08);
+        Color rimLow = gold ? Hex(0x7A4E16) : Hex(0x4E3518);
+        Color rimHigh = gold ? Hex(0xF6D77A) : Hex(0xA07A44);
+        Color fillLow = gold ? Hex(0xB0711A) : Hex(0x221A12);
+        Color fillHigh = gold ? Hex(0xF3C651) : Hex(0x3C2E20);
+        var pixels = new Color[w * h];
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
         {
-            bool inside = x >= 2 && x < 30 && y >= 2 && y < 62;
-            if ((x < 10 || x >= 22) && (y < 10 || y >= 54))
+            // Yuvarlak köşeli dikdörtgene uzaklık (içeride negatif).
+            float cx = Mathf.Clamp(x + 0.5f, radius, w - radius);
+            float cy = Mathf.Clamp(y + 0.5f, radius, h - radius);
+            float dist = Mathf.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy)) - radius;
+            float depth = -dist; // kenardan içeri piksel
+            if (depth <= 0f) { pixels[y * w + x] = Color.clear; continue; }
+            float t = y / (float)(h - 1);
+            Color c;
+            if (depth < 1.5f) c = outer;
+            else if (depth < 4.5f) c = Color.Lerp(rimLow, rimHigh, Mathf.SmoothStep(0.15f, 0.95f, t));
+            else
             {
-                float dx = x < 10 ? 10 - x : x - 21;
-                float dy = y < 10 ? 10 - y : y - 53;
-                inside = dx * dx + dy * dy <= 100;
+                c = Color.Lerp(fillLow, fillHigh, Mathf.SmoothStep(0f, 1f, t));
+                if (depth < 6.5f && t > 0.5f) c = Color.Lerp(c, Color.white, gold ? 0.35f : 0.12f); // üst ışık
+                if (depth < 7.5f && t < 0.35f) c = Color.Lerp(c, outer, 0.35f);                      // alt gölge
             }
-            Color fill = gold ? Color.Lerp(Hex(0xB97A1C), Gold, y / 63f) : Panel;
-            bool edge = inside && (x < 4 || x >= 28 || y < 4 || y >= 60);
-            tex.SetPixel(x, y, !inside ? Color.clear : edge ? (gold ? Hex(0x8A5A1E) : Border) : fill);
+            c.a = Mathf.Clamp01(depth);
+            pixels[y * w + x] = c;
         }
+        tex.SetPixels(pixels);
         tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, 32, 64), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100, 0,
+            SpriteMeshType.FullRect, new Vector4(16, 16, 16, 16));
     }
 }
 

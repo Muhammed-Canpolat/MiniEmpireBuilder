@@ -1114,15 +1114,27 @@ public class BaseSceneSetup : MonoBehaviour
         GetComponent<BaseWorldUI>()?.HideAllPanelsPublic();
     }
 
+    /// <summary>Üst barın altındaki kısa bilgi balonu (kilitli arazi, inşaatçı vb.).</summary>
+    public void ShowHudToast(string message)
+    {
+        if (_lockedLandToastRoutine != null) StopCoroutine(_lockedLandToastRoutine);
+        _lockedLandToastRoutine = StartCoroutine(ShowToastRoutine(message));
+    }
+
     private System.Collections.IEnumerator ShowLockedLandToast()
+    {
+        int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
+        return ShowToastRoutine(level >= 5 ? "Kalıcı doğal sınır"
+            : $"Ana Üs Sev. {level + 1} ile temizlenir");
+    }
+
+    private System.Collections.IEnumerator ShowToastRoutine(string message)
     {
         var pill = _mainCanvas?.transform.Find("SafeArea/HudRoot/LockedLandToast");
         var label = pill?.Find("Text")?.GetComponent<TextMeshProUGUI>();
         var group = pill?.GetComponent<CanvasGroup>();
         if (label == null || group == null) yield break;
-        int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
-        label.text = level >= 5 ? "Kalıcı doğal sınır"
-            : $"Ana Üs Sev. {level + 1} ile temizlenir";
+        label.text = message;
         var panel = pill.GetComponent<PanelController>();
         panel.Show();
         yield return new WaitForSeconds(1.25f);

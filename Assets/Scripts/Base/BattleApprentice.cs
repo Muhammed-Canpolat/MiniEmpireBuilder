@@ -164,20 +164,21 @@ public sealed class BattleApprentice : MonoBehaviour
         box.raycastTarget = false;
         ReferenceUiVisuals.Text(rect, "Name", "Çırak", 28,
             ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
-            new Vector2(0.04f, 0.66f), new Vector2(0.46f, 0.98f),
+            new Vector2(0.04f, 0.66f), new Vector2(0.96f, 0.98f),
             Vector2.zero, Vector2.zero);
         var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
         label.transform.SetParent(rect, false);
         var labelRect = label.GetComponent<RectTransform>();
-        labelRect.anchorMin = new Vector2(0.46f, 0.66f);
-        labelRect.anchorMax = new Vector2(0.96f, 0.98f);
+        labelRect.anchorMin = new Vector2(0.04f, 0.37f);
+        labelRect.anchorMax = new Vector2(0.96f, 0.68f);
         labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
         var text = label.GetComponent<TextMeshProUGUI>();
         text.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";
         healthLabel = text;
         ReferenceUiVisuals.ApplyFont(text, 26f, ReferenceUiVisuals.Light);
-        text.alignment = TextAlignmentOptions.Right;
-        text.color = new Color(1f, 0.85f, 0.5f);
+        text.alignment = TextAlignmentOptions.Center;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.color = ReferenceUiVisuals.Light;
         text.raycastTarget = false;
         var background = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         background.transform.SetParent(rect, false);

@@ -44,10 +44,11 @@ public sealed class AudioSettingsUI : MonoBehaviour
         if (battleScene)
         {
             var hit = (RectTransform)gear.transform;
-            hit.anchorMin = hit.anchorMax = new Vector2(1f, 0.95f);
+            // Üst bar 0.90–1.0; düşman/altın çipleri bunun %49–%91'inde → merkez ≈ 0.97.
+            hit.anchorMin = hit.anchorMax = new Vector2(1f, 0.97f);
             hit.pivot = new Vector2(1f, 0.5f);
-            hit.anchoredPosition = new Vector2(-10f, 0f);
-            hit.sizeDelta = new Vector2(48f, 48f);
+            hit.anchoredPosition = new Vector2(-8f, 0f);
+            hit.sizeDelta = new Vector2(42f, 42f);
         }
         var gearLabel = gear.GetComponentInChildren<TextMeshProUGUI>();
         if (gearLabel != null) gearLabel.text = string.Empty;

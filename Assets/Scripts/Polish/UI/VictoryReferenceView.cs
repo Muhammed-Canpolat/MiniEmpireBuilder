@@ -13,6 +13,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
     private Button returnButton;
     private Button retryButton;
     private Image[] campaignStars;
+    private TextMeshProUGUI starReason;
 
     public void Initialize(RectTransform inner, TextMeshProUGUI existingTitle, TextMeshProUGUI existingReward, Button existingReturn)
     {
@@ -58,8 +59,10 @@ public sealed class VictoryReferenceView : MonoBehaviour
         for (int i = 0; i < 4; i++)
         {
             // Satırlar 40 birim aralıklı; toplam satırı ayraçla birlikte 48 birim aşağıda.
-            float first = campaign ? -258f : -226f;
-            float y = i == 3 ? first - 2 * 40f - 48f : first - i * 40f;
+            // Seferde yıldız ve yıldız açıklaması için satırlar biraz aşağıda başlar.
+            float first = campaign ? -282f : -226f;
+            float step = campaign ? 38f : 40f;
+            float y = i == 3 ? first - 2 * step - 46f : first - i * step;
             var row = ReferenceUiVisuals.Rect(inner, "ResultRow" + i, new Vector2(0.5f, 1), new Vector2(0.5f, 1),
                 new Vector2(-112, y - 34), new Vector2(112, y));
             rows[i] = row.gameObject.AddComponent<CanvasGroup>();
@@ -96,15 +99,35 @@ public sealed class VictoryReferenceView : MonoBehaviour
             {
                 campaignStars[i] = ReferenceUiVisuals.Image(inner, "VictoryStar" + i,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1),
-                    new Vector2(-42 + i * 30, -231), new Vector2(-18 + i * 30, -207),
+                    new Vector2(-51 + i * 36, -238), new Vector2(-21 + i * 36, -208),
                     ReferenceUiVisuals.Border);
                 campaignStars[i].sprite = CampaignSceneSetup.GetStarSprite();
             }
+            starReason = ReferenceUiVisuals.Text(inner, "VictoryStarReason", "", 13,
+                ReferenceUiVisuals.Muted, TextAlignmentOptions.Center,
+                new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-120, -276), new Vector2(120, -241),
+                bodyBold: true);
             retryButton = ReferenceUiVisuals.Button(inner, "RetryCampaignBattle", "TEKRAR OYNA", false,
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0),
                 new Vector2(-118, 66), new Vector2(118, 118), 17);
             retryButton.onClick.AddListener(() => GameManager.Instance.StartBattle());
         }
+    }
+
+    /// <summary>
+    /// Kaçan yıldızların sebebi. Kural BattleManager ile aynı: can oranı %50'nin üstündeyse +1.
+    /// </summary>
+    private static string StarReasonText()
+    {
+        float baseHealth = FindFirstObjectByType<MainBaseController>()?.HealthPercent ?? 0f;
+        float heroHealth = FindFirstObjectByType<HeroController>()?.HealthPercent ?? 0f;
+        bool baseStar = baseHealth > 0.5f, heroStar = heroHealth > 0.5f;
+        if (baseStar && heroStar) return "<color=#F0C24A>Kusursuz zafer!</color>";
+        string Part(string name, float value, bool ok) => ok
+            ? $"<color=#7BC67B>{name} %{Mathf.RoundToInt(value * 100f)}</color>"
+            : $"<color=#E07A5F>{name} %{Mathf.RoundToInt(value * 100f)}</color>";
+        return $"{Part("Ana Üs", baseHealth, baseStar)}  ·  {Part("Savaşçı", heroHealth, heroStar)}\n" +
+               "Her biri %50'nin üstünde kalırsa +1 yıldız";
     }
 
     private const float FrameFillInset = 0.55f;
@@ -182,8 +205,13 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 {
                     campaignStars[i].gameObject.SetActive(won);
                     campaignStars[i].color = won && BattleManager.Instance != null
-                        && i < BattleManager.Instance.LastStars ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Border;
+                        && i < BattleManager.Instance.LastStars ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x4A3C28);
                 }
+            if (starReason != null)
+            {
+                starReason.gameObject.SetActive(won);
+                if (won) starReason.text = StarReasonText();
+            }
             if (returnButton != null)
             {
                 ReferenceUiVisuals.ApplyButtonSkin(returnButton, won);

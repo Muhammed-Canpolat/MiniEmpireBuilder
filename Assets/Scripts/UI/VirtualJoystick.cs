@@ -159,7 +159,11 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
             return;
         }
         ProcessPointer(eventData);
+        if (currentInput.sqrMagnitude > 0.04f) Dragged?.Invoke();
     }
+
+    /// <summary>Oyuncu joystick'i gerçekten sürüklediğinde (ipucu bileşenleri için).</summary>
+    public static event System.Action Dragged;
 
     public void OnPointerUp(PointerEventData eventData)
     {

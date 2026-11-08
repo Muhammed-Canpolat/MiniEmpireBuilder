@@ -233,6 +233,7 @@ public class IntroSceneSetup : MonoBehaviour
             if (old != null)
             {
                 ReferenceUiVisuals.ApplyButtonSkin(old.GetComponent<Button>(), hasSave);
+                AddDepthShadow(old.gameObject);
                 var label = old.GetComponentInChildren<TextMeshProUGUI>();
                 label.text = hasSave ? "DEVAM ET" : "YENİ OYUN";
                 label.fontSize = hasSave ? 22 : 18;
@@ -253,6 +254,7 @@ public class IntroSceneSetup : MonoBehaviour
             if (old != null)
             {
                 ReferenceUiVisuals.ApplyButtonSkin(old.GetComponent<Button>(), false);
+                AddDepthShadow(old.gameObject);
                 var label = old.GetComponentInChildren<TextMeshProUGUI>();
                 label.text = "YENİ OYUN";
                 label.fontSize = label.fontSizeMax = 18;
@@ -263,6 +265,17 @@ public class IntroSceneSetup : MonoBehaviour
         }
         var version = mainCanvas.transform.Find("VersionLabel");
         if (version != null) version.gameObject.SetActive(false);
+    }
+
+    private static void AddDepthShadow(GameObject button)
+    {
+        // Outline de Shadow'dan türediği için tam tür eşleşmesi aranır.
+        Shadow shadow = null;
+        foreach (var existing in button.GetComponents<Shadow>())
+            if (existing.GetType() == typeof(Shadow)) shadow = existing;
+        if (shadow == null) shadow = button.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+        shadow.effectDistance = new Vector2(0f, -4f);
     }
 
     // ──────────────────────────────────────────────────────────────────────
