@@ -144,6 +144,7 @@ public static class DarkFantasyHudPolish
             new Vector2(0.07f, 0.59f), new Vector2(0.93f, 0.69f));
         SetAnchors(heroPanel?.Find("Stats") as RectTransform,
             new Vector2(0.07f, 0.33f), new Vector2(0.93f, 0.58f));
+        BaseHudRedesign.Apply(hud);
     }
 
     public static void PolishBuildMenu(Transform panel)

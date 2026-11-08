@@ -213,7 +213,7 @@ public class BaseWorldUI : MonoBehaviour
         if (goldPerSecText != null)
         {
             float gps = GameManager.Instance.GetGoldPerSecond();
-            goldPerSecText.text = gps > 0 ? $"+{gps:F1} altin/sn" : "";
+            goldPerSecText.text = gps > 0 ? $"+{gps:F1}/sn" : "";
         }
 
         OnGoldMineStoredChanged(GameManager.Instance.GoldMineStored, GameManager.Instance.GetGoldMineStorageCapacity());
@@ -263,9 +263,9 @@ public class BaseWorldUI : MonoBehaviour
         if (mineStoredText == null)
         {
             // Ayrı referans bağlanmadıysa mevcut gps satırına ikinci satır ekle.
+            // Tek satır: saniyelik gelir. Depo doluluğu madenin üstündeki balonda gösterilir.
             float gps = GameManager.Instance != null ? GameManager.Instance.GetGoldPerSecond() : 0f;
-            string gpsText = gps > 0 ? $"+{gps:F1} altin/sn" : "";
-            goldPerSecText.text = $"{gpsText}\nMaden: {stored}/{capacity}";
+            goldPerSecText.text = gps > 0 ? $"+{gps:F1}/sn" : "";
             return;
         }
 
@@ -308,7 +308,6 @@ public class BaseWorldUI : MonoBehaviour
         if (buildingNameText != null)
             buildingNameText.text = GetBuildingDisplayName(type);
 
-        int maxLvl = building.GetMaxLevel(gm.GetMainBaseLevel());
         if (buildingLevelText != null)
             buildingLevelText.text = !typeData.isUnlocked ? "KİLİTLİ"
                 : $"Seviye {building.level} / {Progression.MaxLevel}";
