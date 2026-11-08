@@ -120,6 +120,7 @@ public class BaseSceneSetup : MonoBehaviour
 
         if (BaseMapManager.Instance == null) gameObject.AddComponent<BaseMapManager>();
         if (BuilderSystem.Instance == null) gameObject.AddComponent<BuilderSystem>();
+        if (GetComponent<BuilderTaskMarker>() == null) gameObject.AddComponent<BuilderTaskMarker>();
         if (PlacementController.Instance == null) gameObject.AddComponent<PlacementController>();
         if (DecorPlacementController.Instance == null) gameObject.AddComponent<DecorPlacementController>();
         if (LongPressHandler.Instance == null) gameObject.AddComponent<LongPressHandler>();
@@ -1063,8 +1064,41 @@ public class BaseSceneSetup : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Kahramanın çarpışma dairesi yürüme için küçük tutulur; dokunma ise görünen gövdeye
+    /// (biraz pay ile) ve sarı kamp bayrağına göre algılanır.
+    /// </summary>
+    private bool IsHeroTap(Vector3 worldPos)
+    {
+        Vector2 point = worldPos;
+        if (_heroObj != null)
+        {
+            foreach (var renderer in _heroObj.GetComponentsInChildren<SpriteRenderer>())
+            {
+                if (!renderer.enabled || renderer.sprite == null) continue;
+                var bounds = renderer.bounds;
+                bounds.Expand(new Vector3(0.3f, 0.3f, 10f));
+                if (bounds.Contains(new Vector3(point.x, point.y, bounds.center.z))) return true;
+            }
+        }
+        var camp = GameObject.Find("HeroCamp")?.GetComponent<SpriteRenderer>();
+        if (camp != null)
+        {
+            var bounds = camp.bounds;
+            bounds.Expand(new Vector3(0.2f, 0.2f, 10f));
+            if (bounds.Contains(new Vector3(point.x, point.y, bounds.center.z))) return true;
+        }
+        return false;
+    }
+
     private void HandleTap(Vector3 worldPos)
     {
+        if (IsHeroTap(worldPos))
+        {
+            HideRemovePrompt();
+            GetComponent<BaseWorldUI>()?.ShowHeroInfo();
+            return;
+        }
         if (BaseWorldLayout.Buildable.Contains(new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y)))
             && BaseMapManager.Instance != null && !BaseMapManager.Instance.IsBuildablePosition(worldPos))
         {
@@ -1114,7 +1148,7 @@ public class BaseSceneSetup : MonoBehaviour
                 var ui = GetComponent<BaseWorldUI>();
                 if (ui != null && mapObj.buildingType.HasValue)
                 {
-                    ui.ShowBuildingInfo(mapObj.buildingType.Value);
+                    ui.ShowBuildingInfo(mapObj.buildingType.Value, mapObj.id);
                 }
                 return;
             }
@@ -1162,8 +1196,9 @@ public class BaseSceneSetup : MonoBehaviour
     private System.Collections.IEnumerator ShowLockedLandToast()
     {
         int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
-        return ShowToastRoutine(level >= 5 ? "Kalıcı doğal sınır"
-            : $"Ana Üs Sev. {level + 1} ile temizlenir");
+        int next = BaseWorldLayout.NextLandLevel(level);
+        return ShowToastRoutine(next == 0 ? "Kalıcı doğal sınır"
+            : $"Ana Üs Sev. {next} ile temizlenir");
     }
 
     private System.Collections.IEnumerator ShowToastRoutine(string message)

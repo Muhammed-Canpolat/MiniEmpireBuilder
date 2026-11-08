@@ -80,7 +80,9 @@ public sealed class BaseMineVisual : MonoBehaviour
         Sprite gold = goldVeinSprite ?? (catalog?.goldStones != null && catalog.goldStones.Length > 2
             ? catalog.goldStones[2] : BaseMapManager.MakeCircleSprite(Color.white));
 
-        int artLevel = Mathf.Clamp(level, 1, 8);
+        // 8 çizim aşaması 15 seviyeye yayılır (yaklaşık her 2 seviyede bir yeni aşama).
+        int artLevel = Mathf.Clamp(1 + Mathf.RoundToInt((Mathf.Clamp(level, 1, Progression.MaxLevel) - 1)
+            * 7f / (Progression.MaxLevel - 1)), 1, 8);
         Sprite authored = mainSprite != null ? mainSprite
             : levelSprites != null && artLevel - 1 < levelSprites.Length &&
                 levelSprites[artLevel - 1] != null ? levelSprites[artLevel - 1]

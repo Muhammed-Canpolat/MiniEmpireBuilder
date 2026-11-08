@@ -305,10 +305,29 @@ public class BattleManager : MonoBehaviour
         if (GameManager.Instance == null)
             return;
         // Ana Üs görseli yaklaşık x∈[-1.9, 1.9], y∈[-1.0, 1.6] kaplar (BattleActorPresentation).
-        // Yuvalar (yarıçap 0.95 + alt etiket) bu alanın dışında, üssün iki üst köşesi ve altında.
-        CreateBuildSlot(new Vector3(-2.9f, 2.4f, 0f), BuildingType.ArcherTower, archerBattleBuildCost);
-        CreateBuildSlot(new Vector3(2.9f, 2.4f, 0f), BuildingType.CannonTower, cannonBattleBuildCost);
-        CreateBuildSlot(new Vector3(0f, -2.9f, 0f), BuildingType.Monastery, monasteryBattleBuildCost);
+        // Yuvalar (yarıçap 0.95 + alt etiket) bu alanın dışında. Sayı bölgeye göre 3–5.
+        int count = CampaignCatalog.BattleSlotCount(BattleSession.IsCampaign ? BattleSession.RegionId : 1);
+        for (int i = 0; i < count && i < SlotPositions.Length; i++)
+            CreateBuildSlot(SlotPositions[i], BuildingType.ArcherTower, archerBattleBuildCost);
+    }
+
+    // Sıra önemli: ilk üçü her bölgede, 4. ve 5. ileri bölgelerde açılır.
+    private static readonly Vector3[] SlotPositions =
+    {
+        new Vector3(-2.9f, 2.4f, 0f),   // üst sol
+        new Vector3(2.9f, 2.4f, 0f),    // üst sağ
+        new Vector3(0f, -2.9f, 0f),     // alt
+        new Vector3(-3.0f, -2.2f, 0f),  // alt sol (Bölge 3+)
+        new Vector3(0f, 4.4f, 0f)       // üst orta (Bölge 5+)
+    };
+
+    /// <summary>Bu türden şu ana kadar kaç kule kuruldu (savaştaki sıra = binanın seviye sırası).</summary>
+    private int BuiltCount(BuildingType type)
+    {
+        int built = 0;
+        foreach (var slot in FindObjectsByType<BattleBuildSlot>(FindObjectsSortMode.None))
+            if (slot.IsBuilt && slot.BuiltType == type) built++;
+        return built;
     }
 
     private void CreateBuildSlot(Vector3 position, BuildingType type, int cost)
@@ -353,12 +372,14 @@ public class BattleManager : MonoBehaviour
             towerObj = CreateSimpleSprite(type.ToString(), c, position, new Vector3(0.7f, 1f, 1f));
         }
 
+        // İlk kurulan kule en yüksek seviyeli binanın, ikincisi sonrakinin seviyesini alır.
+        int level = GameManager.Instance != null ? GameManager.Instance.GetBattleTowerLevel(type, BuiltCount(type)) : 1;
         TowerController tower = towerObj.AddComponent<TowerController>();
-        tower.Initialize(type);
+        tower.Initialize(type, level);
         if (GameManager.Instance?.Buildings != null &&
             GameManager.Instance.Buildings.TryGetValue(type, out var building))
         {
-            var visual = building.VisualForLevel(building.level);
+            var visual = building.VisualForLevel(level);
             var renderer = towerObj.GetComponent<SpriteRenderer>();
             if (renderer != null && visual != null)
             {
@@ -370,12 +391,14 @@ public class BattleManager : MonoBehaviour
 
     private void CreateMonastery(Vector3 position)
     {
+        int level = GameManager.Instance != null
+            ? GameManager.Instance.GetBattleTowerLevel(BuildingType.Monastery, BuiltCount(BuildingType.Monastery)) : 1;
         var visual = GameManager.Instance?.Buildings != null &&
             GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var data)
-            ? data.VisualForLevel(data.level) : null;
+            ? data.VisualForLevel(level) : null;
         var monastery = CreateSpriteObject("Monastery", visual?.sprite,
             position, new Vector3(0.4f, 0.4f, 1f));
-        monastery.AddComponent<MonasteryHealer>();
+        monastery.AddComponent<MonasteryHealer>().Level = level;
     }
 
     private GameObject CreateEnemyPrefab()

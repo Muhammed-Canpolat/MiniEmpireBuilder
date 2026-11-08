@@ -45,7 +45,8 @@ public class BaseVisualCatalog : ScriptableObject
         return null;
     }
 
-    public static int ColorIndex(int level) => Mathf.Clamp(level - 1, 0, 4);
+    // Renk her 3 seviyede değişir: 1-3 mavi, 4-6 sarı, 7-9 kırmızı, 10-12 mor, 13-15 siyah.
+    public static int ColorIndex(int level) => Progression.ColorTier(level);
 
     public RuntimeAnimatorController GetUnitController(BuildingType type, int level)
     {

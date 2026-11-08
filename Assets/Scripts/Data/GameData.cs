@@ -194,116 +194,41 @@ public class BuildingData
         }
     }
 
-    /// <summary>
-    /// Bir sonraki seviye için gereken altın
-    /// </summary>
-    public int GetUpgradeCost()
-    {
-        int nextLevel = level + 1;
+    /// <summary>Bir sonraki seviye için gereken altın (Progression tablosu).</summary>
+    public int GetUpgradeCost() => Progression.UpgradeCost(buildingType, level + 1);
 
-        switch (buildingType)
-        {
-            case BuildingType.MainBase:
-                return nextLevel * 100;
+    /// <summary>Bu türün ilk binası için gereken Ana Üs seviyesi.</summary>
+    public int GetRequiredMainBaseLevel() => Progression.FirstUnlockLevel(buildingType);
 
-            case BuildingType.ArcherTower:
-                return nextLevel * 50;
-
-            case BuildingType.CannonTower:
-                return nextLevel * 80;    // Okçudan pahalı
-
-            case BuildingType.GoldMine:
-                return nextLevel * 60;
-
-            case BuildingType.Monastery:
-                return nextLevel * 60;
-
-            default:
-                return nextLevel * 50;
-        }
-    }
-
-    /// <summary>
-    /// Bu bina için gereken minimum Ana Üs seviyesi
-    /// </summary>
-    public int GetRequiredMainBaseLevel()
-    {
-        switch (buildingType)
-        {
-            case BuildingType.MainBase:
-                return 0;   // Her zaman var
-
-            case BuildingType.ArcherTower:
-                return 2;   // Ana Üs Lv.2'de açılır
-
-            case BuildingType.CannonTower:
-                return 3;   // Ana Üs Lv.3'te açılır
-
-            case BuildingType.GoldMine:
-                return 1;   // Ana Üs Lv.1'de açılır (baştan)
-
-            case BuildingType.Monastery:
-                return 4;   // Ana Üs Lv.4'te açılır
-
-            default:
-                return 1;
-        }
-    }
-
-    /// <summary>
-    /// Bu binanın maksimum seviyesi (Ana Üs seviyesine bağlı)
-    /// </summary>
+    /// <summary>Bu binanın çıkabileceği en yüksek seviye (Ana Üs seviyesine bağlı).</summary>
     public int GetMaxLevel(int mainBaseLevel)
     {
         switch (buildingType)
         {
-            case BuildingType.MainBase:
-                return 5;
-
-            case BuildingType.ArcherTower:
-                return Mathf.Min(mainBaseLevel, 8);
-
-            case BuildingType.CannonTower:
-                return Mathf.Min(mainBaseLevel - 1, 6);
-
-            case BuildingType.GoldMine:
-                return Mathf.Min(mainBaseLevel + 1, 8);
-
-            case BuildingType.Monastery:
-                return Mathf.Min(mainBaseLevel, 5);
-
-            default:
-                return mainBaseLevel;
+            case BuildingType.MainBase: return Progression.MaxLevel;
+            case BuildingType.GoldMine: return Mathf.Min(mainBaseLevel + 1, Progression.MaxLevel);
+            default: return Mathf.Clamp(mainBaseLevel, 1, Progression.MaxLevel);
         }
     }
 
-    /// <summary>
-    /// Ana üs seviyesine göre bu binadan kaç tane inşa edilebilir
-    /// </summary>
+    /// <summary>Ana Üs seviyesine göre bu türden kaç bina kurulabilir.</summary>
     public static int GetMaxBuildCount(BuildingType type, int mainBaseLevel)
     {
-        if (type == BuildingType.ArcherTower)
-            return mainBaseLevel < 2 ? 0 : mainBaseLevel < 4 ? 1 : 2;
-        if (type == BuildingType.CannonTower)
-            return mainBaseLevel < 3 ? 0 : mainBaseLevel < 5 ? 1 : 2;
-        if (type == BuildingType.Monastery)
-            return mainBaseLevel < 4 ? 0 : 1;
         switch (type)
         {
             case BuildingType.MainBase:
-                return 1;   // Sadece 1 ana üs
-
             case BuildingType.GoldMine:
-                return Mathf.Min(1 + mainBaseLevel / 3, 4); // Lv1:1, Lv3:2, Lv6:3, Lv9:4
-
-            default:
                 return 1;
+            default:
+                int first = Progression.FirstUnlockLevel(type);
+                int second = Progression.SecondUnlockLevel(type);
+                return mainBaseLevel < first ? 0 : mainBaseLevel < second ? 1 : 2;
         }
     }
 
     public void SetBuildLimits()
     {
-        maxCountByBaseLevel = new int[11];
+        maxCountByBaseLevel = new int[Progression.MaxLevel + 1];
         for (int level = 0; level < maxCountByBaseLevel.Length; level++)
             maxCountByBaseLevel[level] = GetMaxBuildCount(buildingType, level);
     }
@@ -314,6 +239,101 @@ public class BuildingData
         return maxCountByBaseLevel[Mathf.Clamp(level, 0, maxCountByBaseLevel.Length - 1)];
     }
 
+}
+
+/// <summary>
+/// Ana Üs ve yapı ilerlemesinin tek kaynağı: seviye tavanı, açılma seviyeleri,
+/// yükseltme bedeli ve süresi. Denge ayarı yalnız bu tablolardan yapılır.
+/// </summary>
+public static class Progression
+{
+    public const int MaxLevel = 15;
+    public const int LevelsPerColorTier = 3;
+
+    // Hedef seviyeye göre (index = hedef seviye). 1→2: 15 sn, 2→3: 1 dk, 3→4: 30 dk ...
+    private static readonly int[] UpgradeSeconds =
+    {
+        0, 0,
+        15,            // → 2
+        60,            // → 3
+        30 * 60,       // → 4
+        1 * 3600,      // → 5
+        3 * 3600,      // → 6
+        6 * 3600,      // → 7
+        12 * 3600,     // → 8
+        18 * 3600,     // → 9
+        24 * 3600,     // → 10
+        30 * 3600,     // → 11
+        36 * 3600,     // → 12
+        42 * 3600,     // → 13
+        48 * 3600,     // → 14
+        48 * 3600      // → 15
+    };
+
+    // Ana Üs bedeli (index = hedef seviye); diğer yapılar bunun oranıyla ölçeklenir.
+    private static readonly int[] MainBaseCosts =
+    {
+        0, 0, 150, 250, 400, 600, 850, 1150, 1500, 1900, 2400, 3000, 3700, 4500, 5400, 6500
+    };
+
+    public static int ColorTier(int level) => Mathf.Clamp((level - 1) / LevelsPerColorTier, 0, 4);
+
+    public static int UpgradeSecondsTo(int targetLevel) =>
+        UpgradeSeconds[Mathf.Clamp(targetLevel, 0, UpgradeSeconds.Length - 1)];
+
+    public static int UpgradeCost(BuildingType type, int targetLevel)
+    {
+        int baseCost = MainBaseCosts[Mathf.Clamp(targetLevel, 0, MainBaseCosts.Length - 1)];
+        float factor = type == BuildingType.MainBase ? 1f
+            : type == BuildingType.CannonTower ? 0.7f
+            : type == BuildingType.Monastery ? 0.6f
+            : type == BuildingType.GoldMine ? 0.55f
+            : 0.5f; // Okçu
+        return Mathf.Max(10, Mathf.RoundToInt(baseCost * factor / 10f) * 10);
+    }
+
+    public static int FirstUnlockLevel(BuildingType type)
+    {
+        switch (type)
+        {
+            case BuildingType.ArcherTower: return 2;
+            case BuildingType.CannonTower: return 4;
+            case BuildingType.Monastery: return 6;
+            default: return 1;
+        }
+    }
+
+    public static int SecondUnlockLevel(BuildingType type)
+    {
+        switch (type)
+        {
+            case BuildingType.ArcherTower: return 5;
+            case BuildingType.CannonTower: return 8;
+            case BuildingType.Monastery: return 10;
+            default: return int.MaxValue;
+        }
+    }
+
+    /// <summary>Kahraman yükseltme bedeli (anında; seviye tavanı Ana Üs seviyesi).</summary>
+    public static int HeroUpgradeCost(int currentLevel) =>
+        Mathf.RoundToInt(60f * Mathf.Pow(1.28f, currentLevel - 1) / 10f) * 10;
+
+    /// <summary>Çırak yükseltme bedeli (anında; seviye tavanı Ana Üs seviyesi).</summary>
+    public static int ApprenticeUpgradeCost(int currentLevel) =>
+        Mathf.RoundToInt(80f * Mathf.Pow(1.3f, currentLevel - 1) / 10f) * 10;
+
+    /// <summary>Kısa Türkçe süre: "15 sn", "30 dk", "2 sa 15 dk", "1 g 6 sa".</summary>
+    public static string FormatDuration(double seconds)
+    {
+        long s = (long)System.Math.Ceiling(System.Math.Max(0d, seconds));
+        if (s < 60) return s + " sn";
+        long m = s / 60, sec = s % 60;
+        if (m < 60) return sec > 0 && m < 10 ? m + " dk " + sec + " sn" : m + " dk";
+        long h = m / 60, min = m % 60;
+        if (h < 24) return min > 0 ? h + " sa " + min + " dk" : h + " sa";
+        long d = h / 24, hr = h % 24;
+        return hr > 0 ? d + " g " + hr + " sa" : d + " g";
+    }
 }
 
 /// <summary>

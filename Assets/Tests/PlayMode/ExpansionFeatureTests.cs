@@ -94,7 +94,8 @@ public class ExpansionFeatureTests
                 apprenticeLevel.SetValue(activeSave, level);
                 int cost = (int)gameManager.GetType().GetMethod("GetApprenticeUpgradeCost")
                     .Invoke(gameManager, null);
-                Assert.AreEqual(level == 5 ? 0 : 80 << (level - 1), cost);
+                // 15 seviyelik eğri: 80 × 1.3^(sev-1), 10'a yuvarlı.
+                Assert.AreEqual(new[] { 80, 100, 140, 180, 230 }[level - 1], cost);
                 float income = (float)gameManager.GetType().GetMethod("GetGoldPerSecond")
                     .Invoke(gameManager, null);
                 if (level == 1) baseIncome = income / 1.1f;

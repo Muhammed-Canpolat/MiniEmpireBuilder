@@ -90,23 +90,10 @@ public class GameManager : MonoBehaviour
         PlayerData = SaveSystem.Load();
         if (PlayerData != null)
         {
-            bool cappedBaseLevel = false;
-            foreach (var entry in PlayerData.buildings)
-                if (entry.buildingType == BuildingType.MainBase && entry.level > 5)
-                {
-                    entry.level = 5;
-                    cappedBaseLevel = true;
-                }
-            if (PlayerData.placedBuildings != null)
-                foreach (var placed in PlayerData.placedBuildings)
-                    if (placed.buildingType == BuildingType.MainBase.ToString() && placed.level > 5)
-                    {
-                        placed.level = 5;
-                        cappedBaseLevel = true;
-                    }
-            if (cappedBaseLevel) SaveGame();
             PlayerData.hero.ApplyLevelStats();
             RebuildBuildingData();
+            // Oyun kapalıyken süresi dolan yükseltme hemen uygulanır.
+            CheckBuilderTask();
             if (PlayerData.buildableSize <= 0)
             {
                 PlayerData.buildableSize = 10;
@@ -130,8 +117,11 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public int GetMaxGoldCapacity()
     {
+        // Bir sonraki Ana Üs yükseltmesinin 1.5 katı (en az 500): biriktirilebilir hedef.
         int mainBaseLevel = GetMainBaseLevel();
-        return 500 + (mainBaseLevel - 1) * 300; // Lv1: 500, Lv2: 800, Lv3: 1100...
+        int next = Progression.UpgradeCost(BuildingType.MainBase,
+            Mathf.Min(mainBaseLevel + 1, Progression.MaxLevel));
+        return Mathf.Max(500, Mathf.CeilToInt(next * 1.5f / 100f) * 100);
     }
 
     /// <summary>
@@ -256,7 +246,8 @@ public class GameManager : MonoBehaviour
     // ==================== BİNA YÖNETİMİ ====================
 
     /// <summary>
-    /// Kayıtlı bina verilerinden çalışma zamanı BuildingData oluştur
+    /// Kayıtlı bina verilerinden çalışma zamanı BuildingData oluştur.
+    /// Türün seviyesi = o türdeki en yüksek binanın seviyesi (her bina kendi seviyesini taşır).
     /// </summary>
     private void RebuildBuildingData()
     {
@@ -273,66 +264,188 @@ public class GameManager : MonoBehaviour
 
             Buildings[entry.buildingType] = bd;
         }
+        foreach (var type in new List<BuildingType>(Buildings.Keys)) RecomputeTypeLevel(type);
 
         OnGoldMineStoredChanged?.Invoke(PlayerData?.goldMineStoredGold ?? 0, GetGoldMineStorageCapacity());
     }
 
-    /// <summary>
-    /// Bina seviye yükselt
-    /// </summary>
+    private void RecomputeTypeLevel(BuildingType type)
+    {
+        if (!Buildings.TryGetValue(type, out var data)) return;
+        int best = 0;
+        if (PlayerData?.placedBuildings != null)
+            foreach (var placed in PlayerData.placedBuildings)
+                if (placed != null && placed.buildingType == type.ToString())
+                    best = Mathf.Max(best, placed.level);
+        if (best > 0) data.level = best;
+        data.ApplyLevelStats();
+        var entry = PlayerData?.buildings?.Find(e => e.buildingType == type);
+        if (entry != null) entry.level = data.level;
+    }
+
+    public PlacedBuildingData FindPlaced(string slotId) =>
+        string.IsNullOrEmpty(slotId) ? null
+            : PlayerData?.placedBuildings?.Find(p => p != null && p.slotId == slotId);
+
+    /// <summary>Belirli bir binanın seviyesi; kayıt yoksa türün seviyesi.</summary>
+    public int GetInstanceLevel(string slotId, BuildingType type)
+    {
+        var placed = FindPlaced(slotId);
+        if (placed != null && placed.level > 0) return placed.level;
+        return Buildings.TryGetValue(type, out var data) ? Mathf.Max(1, data.level) : 1;
+    }
+
+    /// <summary>Bir binanın seviyesine göre hesaplanmış istatistikler (tür verisinin kopyası).</summary>
+    public BuildingData GetInstanceData(string slotId, BuildingType type) =>
+        CreateLevelData(type, GetInstanceLevel(slotId, type));
+
+    public BuildingData CreateLevelData(BuildingType type, int level)
+    {
+        Buildings.TryGetValue(type, out var source);
+        var copy = new BuildingData
+        {
+            buildingType = type,
+            isUnlocked = source == null || source.isUnlocked,
+            level = Mathf.Max(1, level)
+        };
+        copy.SetBuildLimits();
+        copy.ApplyLevelStats();
+        return copy;
+    }
+
+    /// <summary>Savaşta bu türden kurulan index'inci kule: binalar seviyeye göre azalan sırada.</summary>
+    public int GetBattleTowerLevel(BuildingType type, int index)
+    {
+        var levels = new List<int>();
+        if (PlayerData?.placedBuildings != null)
+            foreach (var placed in PlayerData.placedBuildings)
+                if (placed != null && placed.buildingType == type.ToString())
+                    levels.Add(Mathf.Max(1, placed.level));
+        if (levels.Count == 0)
+            return Buildings.TryGetValue(type, out var data) ? Mathf.Max(1, data.level) : 1;
+        levels.Sort((a, b) => b.CompareTo(a));
+        return levels[Mathf.Clamp(index, 0, levels.Count - 1)];
+    }
+
+    public enum UpgradeBlock { None, Missing, Locked, MaxLevel, BuilderBusy, NoGold }
+
+    public UpgradeBlock CanUpgrade(string slotId, BuildingType type)
+    {
+        if (!Buildings.TryGetValue(type, out var data)) return UpgradeBlock.Missing;
+        if (!data.isUnlocked) return UpgradeBlock.Locked;
+        int level = GetInstanceLevel(slotId, type);
+        if (level >= data.GetMaxLevel(GetMainBaseLevel())) return UpgradeBlock.MaxLevel;
+        if (IsBuilderBusy) return UpgradeBlock.BuilderBusy;
+        if (Gold < Progression.UpgradeCost(type, level + 1)) return UpgradeBlock.NoGold;
+        return UpgradeBlock.None;
+    }
+
+    /// <summary>Altını öder ve inşaatçıyı süreli yükseltmeye gönderir. Seviye süre bitince artar.</summary>
+    public bool StartUpgrade(string slotId, BuildingType type)
+    {
+        if (CanUpgrade(slotId, type) != UpgradeBlock.None) return false;
+        int level = GetInstanceLevel(slotId, type);
+        if (!SpendGold(Progression.UpgradeCost(type, level + 1))) return false;
+        var placed = FindPlaced(slotId);
+        Vector3 position = placed != null && placed.hasPosition ? new Vector3(placed.x, placed.y, 0f) : Vector3.zero;
+        StartBuilderTask("upgrade", $"{BaseMapManager.GetBuildingDisplayName(type)} Sev. {level + 1}",
+            Progression.UpgradeSecondsTo(level + 1), position, slotId, type.ToString());
+        return true;
+    }
+
+    /// <summary>Geriye uyum: türün en düşük seviyeli binasını yükseltmeye başlatır.</summary>
     public bool UpgradeBuilding(BuildingType type)
     {
-        if (!Buildings.ContainsKey(type))
+        string slotId = null;
+        int lowest = int.MaxValue;
+        if (PlayerData?.placedBuildings != null)
+            foreach (var placed in PlayerData.placedBuildings)
+                if (placed != null && placed.buildingType == type.ToString() && placed.level < lowest)
+                {
+                    lowest = placed.level;
+                    slotId = placed.slotId;
+                }
+        return StartUpgrade(slotId, type);
+    }
+
+    private void ApplyInstanceUpgrade(string slotId, BuildingType type)
+    {
+        if (!Buildings.TryGetValue(type, out var data)) return;
+        var placed = FindPlaced(slotId);
+        int newLevel;
+        if (placed != null)
         {
-            Debug.LogWarning($"[GameManager] Bina bulunamadı: {type}");
-            return false;
+            placed.level = Mathf.Max(1, placed.level) + 1;
+            newLevel = placed.level;
         }
-
-        BuildingData building = Buildings[type];
-
-        // Kilitli mi?
-        if (!building.isUnlocked)
+        else
         {
-            int requiredLevel = building.GetRequiredMainBaseLevel();
-            int mainBaseLevel = GetMainBaseLevel();
-            Debug.Log($"[GameManager] {type} kilitli! Ana Üs Lv.{requiredLevel} gerekli (şu an Lv.{mainBaseLevel})");
-            return false;
+            newLevel = data.level + 1;
+            data.level = newLevel;
+            UpdateBuildingSaveEntry(type, newLevel, data.isUnlocked);
         }
-
-        // Max seviyeye ulaşmış mı?
-        int maxLvl = building.GetMaxLevel(GetMainBaseLevel());
-        if (building.level >= maxLvl)
-        {
-            Debug.Log($"[GameManager] {type} max seviyeye ulaştı! (Lv.{building.level}/{maxLvl})");
-            return false;
-        }
-
-        // Altın yeterli mi?
-        int cost = building.GetUpgradeCost();
-        if (!SpendGold(cost))
-        {
-            return false;
-        }
-
-        // Seviye yükselt
-        building.level++;
-        building.ApplyLevelStats();
-
-        // Kayıt verisini güncelle
-        UpdateBuildingSaveEntry(type, building.level, building.isUnlocked);
-
-        // Ana Üs seviye atınca yeni binaları aç
-        if (type == BuildingType.MainBase)
-        {
-            CheckUnlockBuildings();
-        }
-
-        OnBuildingUpgraded?.Invoke(type, building.level);
+        RecomputeTypeLevel(type);
+        if (type == BuildingType.MainBase) CheckUnlockBuildings();
+        OnBuildingUpgraded?.Invoke(type, newLevel);
         AudioManager.Instance?.PlaySfx("levelUp");
-        SaveGame();
+        Debug.Log($"[GameManager] {type} ({slotId}) Sev. {newLevel} tamamlandı.");
+    }
 
-        Debug.Log($"[GameManager] {type} seviye yükseltildi! Lv.{building.level}");
+    // ==================== İNŞAATÇI (gerçek saat) ====================
+
+    public event Action OnBuilderTaskStarted;
+    public event Action<BuilderTaskSave> OnBuilderTaskCompleted;
+
+    public BuilderTaskSave BuilderTask => PlayerData?.builderTask;
+    public bool IsBuilderBusy => PlayerData?.builderTask != null && PlayerData.builderTask.IsActive;
+
+    public double BuilderSecondsRemaining => IsBuilderBusy
+        ? Math.Max(0d, new TimeSpan(PlayerData.builderTask.endTicks - DateTime.UtcNow.Ticks).TotalSeconds)
+        : 0d;
+
+    public float BuilderProgress
+    {
+        get
+        {
+            if (!IsBuilderBusy) return 0f;
+            var task = PlayerData.builderTask;
+            double total = task.endTicks - task.startTicks;
+            return total <= 0 ? 1f : Mathf.Clamp01((float)((DateTime.UtcNow.Ticks - task.startTicks) / total));
+        }
+    }
+
+    public bool StartBuilderTask(string kind, string label, float seconds, Vector3 position,
+        string slotId = "", string buildingType = "")
+    {
+        if (PlayerData == null || IsBuilderBusy) return false;
+        long now = DateTime.UtcNow.Ticks;
+        PlayerData.builderTask = new BuilderTaskSave
+        {
+            kind = kind,
+            label = label,
+            slotId = slotId ?? "",
+            buildingType = buildingType ?? "",
+            startTicks = now,
+            endTicks = now + TimeSpan.FromSeconds(Mathf.Max(0.1f, seconds)).Ticks,
+            x = position.x,
+            y = position.y
+        };
+        SaveGame();
+        OnBuilderTaskStarted?.Invoke();
         return true;
+    }
+
+    private void Update() => CheckBuilderTask();
+
+    private void CheckBuilderTask()
+    {
+        if (!IsBuilderBusy || DateTime.UtcNow.Ticks < PlayerData.builderTask.endTicks) return;
+        var task = PlayerData.builderTask;
+        PlayerData.builderTask = new BuilderTaskSave();
+        if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
+            ApplyInstanceUpgrade(task.slotId, type);
+        SaveGame();
+        OnBuilderTaskCompleted?.Invoke(task);
     }
 
     /// <summary>
@@ -353,7 +466,7 @@ public class GameManager : MonoBehaviour
                     kvp.Value.level = 1;
                     kvp.Value.ApplyLevelStats();
                     UpdateBuildingSaveEntry(kvp.Key, 1, true);
-                    Debug.Log($"[GameManager] {kvp.Key} açıldı! (Ana Üs Lv.{mainBaseLevel})");
+                    Debug.Log($"[GameManager] {kvp.Key} açıldı! (Ana Üs Sev. {mainBaseLevel})");
                 }
             }
         }
@@ -366,11 +479,9 @@ public class GameManager : MonoBehaviour
         return 1;
     }
 
+    /// <summary>Tür kaydını günceller. Binaların kendi seviyelerine dokunmaz.</summary>
     private void UpdateBuildingSaveEntry(BuildingType type, int level, bool unlocked)
     {
-        if (PlayerData?.placedBuildings != null)
-            foreach (var placed in PlayerData.placedBuildings)
-                if (placed.buildingType == type.ToString()) placed.level = level;
         foreach (var entry in PlayerData.buildings)
         {
             if (entry.buildingType == type)
@@ -384,25 +495,19 @@ public class GameManager : MonoBehaviour
 
     // ==================== KAHRAMAN YÖNETİMİ ====================
 
+    /// <summary>Kahraman ve Çırak en fazla Ana Üs seviyesine çıkabilir.</summary>
+    public int GetHeroMaxLevel() => Mathf.Clamp(GetMainBaseLevel(), 1, Progression.MaxLevel);
+    public int GetHeroUpgradeCost() => Progression.HeroUpgradeCost(PlayerData?.hero?.level ?? 1);
+    public int GetApprenticeMaxLevel() => GetHeroMaxLevel();
+
     /// <summary>
-    /// Ana Savaşçı seviye yükselt
+    /// Ana Savaşçı seviye yükselt (anında)
     /// </summary>
     public bool UpgradeHero()
     {
         if (PlayerData == null) return false;
-
-        int maxHeroLevel = GetMainBaseLevel() + 1; // Ana Üs seviyesi + 1
-        if (PlayerData.hero.level >= maxHeroLevel)
-        {
-            Debug.Log($"[GameManager] Kahraman max seviyede! (Lv.{PlayerData.hero.level}/{maxHeroLevel})");
-            return false;
-        }
-
-        int cost = PlayerData.hero.level * 40; // Seviye başına 40 altın
-        if (!SpendGold(cost))
-        {
-            return false;
-        }
+        if (PlayerData.hero.level >= GetHeroMaxLevel()) return false;
+        if (!SpendGold(GetHeroUpgradeCost())) return false;
 
         PlayerData.hero.level++;
         PlayerData.hero.ApplyLevelStats();
@@ -410,19 +515,19 @@ public class GameManager : MonoBehaviour
         OnHeroLevelUp?.Invoke(PlayerData.hero.level);
         SaveGame();
 
-        Debug.Log($"[GameManager] Kahraman seviye atladı! Lv.{PlayerData.hero.level}");
+        Debug.Log($"[GameManager] Kahraman seviye atladı! Sev. {PlayerData.hero.level}");
         return true;
     }
 
     public int GetApprenticeUpgradeCost()
     {
-        int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, 5) : 1;
-        return level >= 5 ? 0 : 80 << (level - 1);
+        int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;
+        return level >= Progression.MaxLevel ? 0 : Progression.ApprenticeUpgradeCost(level);
     }
 
     public bool UpgradeApprentice()
     {
-        if (PlayerData == null || PlayerData.apprenticeLevel >= 5) return false;
+        if (PlayerData == null || PlayerData.apprenticeLevel >= GetApprenticeMaxLevel()) return false;
         int cost = GetApprenticeUpgradeCost();
         if (!SpendGold(cost)) return false;
         PlayerData.apprenticeLevel++;
@@ -561,7 +666,7 @@ public class GameManager : MonoBehaviour
     {
         if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked)
         {
-            int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, 5) : 1;
+            int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;
             var progression = ApprenticeProgressionData.Instance;
             return Buildings[BuildingType.GoldMine].goldPerSecond *
                 (1f + (progression != null ? progression.MineBonus(level) : 10) / 100f);

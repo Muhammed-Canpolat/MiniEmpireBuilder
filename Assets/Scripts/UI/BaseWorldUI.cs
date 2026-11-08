@@ -241,7 +241,7 @@ public class BaseWorldUI : MonoBehaviour
                     : $"Sev. {mainBase.level + 1} için {gold}/{cost} altın";
         }
         if (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
-            ShowBuildingInfo(selectedBuilding);
+            ShowBuildingInfo(selectedBuilding, selectedSlotId);
 
         // Altın değişikliğini popup olarak göster
         if (lastKnownGold >= 0 && gold != lastKnownGold)
@@ -277,77 +277,107 @@ public class BaseWorldUI : MonoBehaviour
     /// <summary>
     /// Bir binaya tıklayınca çağır — bina bilgilerini gösterir
     /// </summary>
-    public void ShowBuildingInfo(BuildingType type)
+    public void ShowBuildingInfo(BuildingType type) => ShowBuildingInfo(type, null);
+
+    /// <summary>
+    /// Bir binanın bilgisini göster. slotId verilmezse türün en yüksek seviyeli binası seçilir.
+    /// Seviye, istatistik ve yükseltme bu binaya aittir (aynı türden iki bina ayrı seviyelenir).
+    /// </summary>
+    public void ShowBuildingInfo(BuildingType type, string slotId)
     {
-        if (GameManager.Instance == null) return;
-        if (!GameManager.Instance.Buildings.ContainsKey(type)) return;
+        var gm = GameManager.Instance;
+        if (gm == null || !gm.Buildings.ContainsKey(type)) return;
 
+        if (string.IsNullOrEmpty(slotId)) slotId = HighestSlotOf(type);
+        bool reopen = buildingInfoPanel == null || !buildingInfoPanel.activeSelf
+            || selectedBuilding != type || selectedSlotId != slotId;
         selectedBuilding = type;
-        BuildMenuController.Instance?.Hide();
-        BuildingData building = GameManager.Instance.Buildings[type];
+        selectedSlotId = slotId;
+        BuildingData typeData = gm.Buildings[type];
+        BuildingData building = gm.GetInstanceData(slotId, type);
+        building.isUnlocked = typeData.isUnlocked;
 
-        if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.HideImmediate();
-        if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.Show();
-        SetModalBlocker(true);
+        if (reopen)
+        {
+            BuildMenuController.Instance?.Hide();
+            if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.HideImmediate();
+            if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.Show();
+            SetModalBlocker(true);
+        }
 
-        // Bina adı
         if (buildingNameText != null)
-        {
             buildingNameText.text = GetBuildingDisplayName(type);
-        }
 
-        // Seviye
+        int maxLvl = building.GetMaxLevel(gm.GetMainBaseLevel());
         if (buildingLevelText != null)
-        {
-            if (!building.isUnlocked)
-                buildingLevelText.text = "KİLİTLİ";
-            else
-                buildingLevelText.text = $"Seviye {building.level}";
-        }
+            buildingLevelText.text = !typeData.isUnlocked ? "KİLİTLİ"
+                : $"Seviye {building.level} / {Progression.MaxLevel}";
 
-        // Statlar
         if (buildingStatsText != null)
-        {
             buildingStatsText.text = GetBuildingStatsText(building);
-        }
 
-        // Yükseltme maliyeti
-        int maxLvl = building.GetMaxLevel(GameManager.Instance.GetMainBaseLevel());
+        var task = gm.BuilderTask;
+        bool thisUpgrading = gm.IsBuilderBusy && task.kind == "upgrade" && task.slotId == slotId;
+        int cost = building.GetUpgradeCost();
+        string duration = Progression.FormatDuration(Progression.UpgradeSecondsTo(building.level + 1));
+        var block = gm.CanUpgrade(slotId, type);
+
         if (upgradeCostText != null)
         {
-            if (!building.isUnlocked)
-            {
-                int reqLvl = building.GetRequiredMainBaseLevel();
-                upgradeCostText.text = $"Ana Üs Sev. {reqLvl} gerekli";
-            }
-            else if (building.level >= maxLvl)
-            {
-                upgradeCostText.text = "MAX SEVİYE";
-            }
+            if (!typeData.isUnlocked)
+                upgradeCostText.text = $"Ana Üs Sev. {typeData.GetRequiredMainBaseLevel()} gerekli";
+            else if (thisUpgrading)
+                upgradeCostText.text = $"YÜKSELTİLİYOR · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
+            else if (building.level >= Progression.MaxLevel)
+                upgradeCostText.text = "EN YÜKSEK SEVİYE";
+            else if (block == GameManager.UpgradeBlock.MaxLevel)
+                upgradeCostText.text = $"Önce Ana Üs Sev. {building.level + (type == BuildingType.GoldMine ? 0 : 1)}";
+            else if (block == GameManager.UpgradeBlock.BuilderBusy)
+                upgradeCostText.text = $"İNŞAATÇI MEŞGUL · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
+            else if (block == GameManager.UpgradeBlock.NoGold)
+                upgradeCostText.text = $"YÜKSELT · <color=#C2452D>{cost}</color> · {duration}";
             else
-            {
-                upgradeCostText.text = $"YÜKSELT · {building.GetUpgradeCost()}";
-            }
+                upgradeCostText.text = $"YÜKSELT · {cost} · {duration}";
         }
 
-        // Buton aktiflik
         if (upgradeButton != null)
         {
-            bool canUpgrade = building.isUnlocked
-                && building.level < maxLvl
-                && GameManager.Instance.Gold >= building.GetUpgradeCost();
+            bool canUpgrade = block == GameManager.UpgradeBlock.None;
             upgradeButton.interactable = canUpgrade;
             var buttonImage = upgradeButton.GetComponent<Image>();
             if (buttonImage != null) buttonImage.color = canUpgrade ? Color.white : new Color(0.65f, 0.65f, 0.65f, 0.75f);
-            if (upgradeCostText != null && !canUpgrade && building.isUnlocked && building.level < maxLvl)
-                upgradeCostText.text = $"YÜKSELT · <color=#C2452D>{building.GetUpgradeCost()}</color>";
         }
 
         var next = buildingInfoPanel?.transform.Find("NextUnlock")?.GetComponent<TextMeshProUGUI>();
         if (next != null)
-        {
             next.text = type == BuildingType.MainBase ? GetNextMainBaseUnlock(building.level) : "";
-        }
+    }
+
+    private string selectedSlotId;
+    private float nextInfoRefresh;
+
+    /// <summary>Panel açıkken geri sayım ve inşaatçı durumu saniyede iki kez yenilenir.</summary>
+    private void Update()
+    {
+        if (Time.unscaledTime < nextInfoRefresh) return;
+        nextInfoRefresh = Time.unscaledTime + 0.5f;
+        if (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
+            ShowBuildingInfo(selectedBuilding, selectedSlotId);
+    }
+
+    private static string HighestSlotOf(BuildingType type)
+    {
+        string best = null;
+        int bestLevel = -1;
+        var placed = GameManager.Instance?.PlayerData?.placedBuildings;
+        if (placed != null)
+            foreach (var entry in placed)
+                if (entry != null && entry.buildingType == type.ToString() && entry.level > bestLevel)
+                {
+                    bestLevel = entry.level;
+                    best = entry.slotId;
+                }
+        return best;
     }
 
     /// <summary>
@@ -383,7 +413,7 @@ public class BaseWorldUI : MonoBehaviour
                 var progression = ApprenticeProgressionData.Instance;
                 if (progression != null)
                 {
-                    int next = Mathf.Min(5, apprenticeLevel + 1);
+                    int next = Mathf.Min(GameManager.Instance.GetApprenticeMaxLevel(), apprenticeLevel + 1);
                     string Arrow(int from, int to) => next == apprenticeLevel ? from.ToString()
                         : $"{from} → {to} ▲";
                     heroStatsText.text = $"Can {Arrow(progression.Health(hero.weaponType, apprenticeLevel), progression.Health(hero.weaponType, next))}\n" +
@@ -393,10 +423,11 @@ public class BaseWorldUI : MonoBehaviour
                 }
             }
             if (heroUpgradeCostText != null)
-                heroUpgradeCostText.text = apprenticeLevel >= 5 ? "MAKSİMUM SEVİYE" :
-                    $"YÜKSELT · {apprenticeCost}";
+                heroUpgradeCostText.text = apprenticeLevel >= Progression.MaxLevel ? "EN YÜKSEK SEVİYE"
+                    : apprenticeLevel >= GameManager.Instance.GetApprenticeMaxLevel()
+                        ? "Ana Üs seviyesini yükselt!" : $"YÜKSELT · {apprenticeCost}";
             if (heroUpgradeButton != null)
-                heroUpgradeButton.interactable = apprenticeLevel < 5 &&
+                heroUpgradeButton.interactable = apprenticeLevel < GameManager.Instance.GetApprenticeMaxLevel() &&
                     GameManager.Instance.Gold >= apprenticeCost;
             return;
         }
@@ -415,14 +446,16 @@ public class BaseWorldUI : MonoBehaviour
                                  $"Saldırı Hızı: {hero.attackSpeed:F1}/sn";
         }
 
-        int maxHeroLvl = GameManager.Instance.GetMainBaseLevel() + 1;
-        int cost = hero.level * 40;
+        int maxHeroLvl = GameManager.Instance.GetHeroMaxLevel();
+        int cost = GameManager.Instance.GetHeroUpgradeCost();
         if (heroUpgradeCostText != null)
         {
-            if (hero.level >= maxHeroLvl)
+            if (hero.level >= Progression.MaxLevel)
+                heroUpgradeCostText.text = "EN YÜKSEK SEVİYE";
+            else if (hero.level >= maxHeroLvl)
                 heroUpgradeCostText.text = "Ana Üs seviyesini yükselt!";
             else
-                heroUpgradeCostText.text = $"Yükselt: {cost} Altın";
+                heroUpgradeCostText.text = $"YÜKSELT · {cost}";
         }
 
         if (heroUpgradeButton != null)
@@ -442,9 +475,10 @@ public class BaseWorldUI : MonoBehaviour
 
     private void OnUpgradeClicked()
     {
-        if (GameManager.Instance.UpgradeBuilding(selectedBuilding))
+        if (GameManager.Instance.StartUpgrade(selectedSlotId, selectedBuilding))
         {
-            ShowBuildingInfo(selectedBuilding); // UI'ı güncelle
+            AudioManager.Instance?.PlaySfx("buildingPlace");
+            ShowBuildingInfo(selectedBuilding, selectedSlotId); // UI'ı güncelle
         }
     }
 
@@ -568,12 +602,16 @@ public class BaseWorldUI : MonoBehaviour
     private string GetNextMainBaseUnlock(int currentLevel)
     {
         int nextLevel = currentLevel + 1;
+        if (nextLevel > Progression.MaxLevel) return "";
         var unlocked = new List<string>();
-        foreach (var entry in GameManager.Instance.Buildings)
-            if (entry.Key != BuildingType.MainBase && entry.Value.GetRequiredMainBaseLevel() == nextLevel)
-                unlocked.Add(GetBuildingDisplayName(entry.Key));
-        if (nextLevel >= 3 && nextLevel % 2 == 1)
-            unlocked.Add("yeni arazi");
+        foreach (var type in new[] { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery })
+        {
+            if (Progression.FirstUnlockLevel(type) == nextLevel) unlocked.Add(GetBuildingDisplayName(type));
+            else if (Progression.SecondUnlockLevel(type) == nextLevel) unlocked.Add("2. " + GetBuildingDisplayName(type));
+        }
+        if (BaseWorldLayout.NextLandLevel(currentLevel) == nextLevel) unlocked.Add("yeni arazi");
+        foreach (var region in CampaignCatalog.Regions)
+            if (region.requiredBaseLevel == nextLevel) unlocked.Add(region.displayName);
         return unlocked.Count > 0 ? $"Sev. {nextLevel}: {string.Join(" + ", unlocked)}" : "";
     }
 

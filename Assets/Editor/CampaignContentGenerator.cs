@@ -54,7 +54,7 @@ public static class CampaignContentGenerator
             }
             region.id = i + 1;
             region.displayName = names[i];
-            region.requiredBaseLevel = i + 1;
+            region.requiredBaseLevel = new[] { 1, 3, 6, 9, 12 }[i]; // 15 seviyelik Ana Üs
             ColorUtility.TryParseHtmlString(tones[i], out region.colorTone);
             region.groundTile = i == 1 ? forestTile : battleTile;
             region.enemyTypes = i == 1 ? new[] { EnemyType.Wolf, EnemyType.ShadowWolf, EnemyType.Zombie }

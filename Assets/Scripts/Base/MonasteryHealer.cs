@@ -7,13 +7,15 @@ public sealed class MonasteryHealer : MonoBehaviour
     private const float Interval = 3f;
     private Animator monk;
     private float nextHeal;
+    // Savaşta kurulduğu binanın seviyesi; ayarlanmazsa türün seviyesi kullanılır.
+    public int Level { get; set; }
 
     private void Start()
     {
         int level = 1;
         if (GameManager.Instance?.Buildings != null &&
             GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var data))
-            level = Mathf.Max(1, data.level);
+            level = Mathf.Max(1, Level > 0 ? Level : data.level);
         var controllers = BaseVisualCatalog.Instance?.monkControllers;
         int index = BaseVisualCatalog.ColorIndex(level);
         if (controllers != null && index < controllers.Length && controllers[index] != null)
@@ -55,7 +57,7 @@ public sealed class MonasteryHealer : MonoBehaviour
         }
         if (healed && monk != null)
         {
-            int level = GameManager.Instance?.Buildings != null &&
+            int level = Level > 0 ? Level : GameManager.Instance?.Buildings != null &&
                 GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var data)
                 ? data.level : 1;
             string color = new[] { "Blue", "Yellow", "Red", "Purple", "Black" }

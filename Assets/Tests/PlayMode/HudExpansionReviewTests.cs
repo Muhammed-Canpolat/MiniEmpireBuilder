@@ -102,9 +102,14 @@ public class HudExpansionReviewTests
         }
         var visualAtOne = archerData.GetType().GetMethod("VisualForLevel").Invoke(archerData,
             new object[] { 1 });
-        archerData.GetType().GetField("level").SetValue(archerData, 3);
+        // Renk 3 seviyede bir değişir: 4. seviye ikinci (sarı) kademe. Savaş kulesi
+        // binanın kendi seviyesini kullanır, bu yüzden kayıtlı Okçu binaları da 4 yapılır.
+        archerData.GetType().GetField("level").SetValue(archerData, 4);
+        foreach (var entry in placed)
+            if ((string)recordType.GetField("buildingType").GetValue(entry) == "ArcherTower")
+                recordType.GetField("level").SetValue(entry, 4);
         var visualAtThree = archerData.GetType().GetMethod("VisualForLevel").Invoke(archerData,
-            new object[] { 3 });
+            new object[] { 4 });
         Assert.AreNotEqual(visualAtOne.GetType().GetField("sprite").GetValue(visualAtOne),
             visualAtThree.GetType().GetField("sprite").GetValue(visualAtThree));
         manager.GetType().GetMethod("CreateTower", BindingFlags.NonPublic | BindingFlags.Instance)
@@ -143,9 +148,12 @@ public class HudExpansionReviewTests
         var layout = Type("BaseWorldLayout");
         var atLevel = layout.GetMethod("CleanAtLevel");
         var first = (RectInt)atLevel.Invoke(null, new object[] { 1 });
-        var fifth = (RectInt)atLevel.Invoke(null, new object[] { 5 });
+        // Arazi renk kademesiyle genişler: 1–3 aynı, 13'te tamamen açık.
+        var third = (RectInt)atLevel.Invoke(null, new object[] { 3 });
+        var full = (RectInt)atLevel.Invoke(null, new object[] { 13 });
         Assert.AreEqual(new RectInt(2, 12, 18, 14), first);
-        Assert.AreEqual(new RectInt(2, 2, 18, 34), fifth);
+        Assert.AreEqual(first, third);
+        Assert.AreEqual(new RectInt(2, 2, 18, 34), full);
         Capture("land-item-03.png");
 
         var menu = Object.FindFirstObjectByType(Type("BuildMenuController"));

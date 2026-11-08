@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RegionData
   id: 2
   displayName: Sisli Orman
-  requiredBaseLevel: 2
+  requiredBaseLevel: 3
   colorTone: {r: 0.18431373, g: 0.41960785, b: 0.22745098, a: 1}
   groundTile: {fileID: 21300000, guid: e590fd60152e7e54b9c379d5eed3115b, type: 3}
   enemyTypes: 000000000400000001000000

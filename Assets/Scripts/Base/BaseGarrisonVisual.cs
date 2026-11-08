@@ -76,9 +76,7 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
         foreach (var actor in actors) if (actor != null) Destroy(actor.gameObject);
         actors.Clear();
         actorRoles.Clear();
-        int level = GameManager.Instance?.Buildings != null &&
-            GameManager.Instance.Buildings.TryGetValue(type, out var building)
-            ? building.level : 1;
+        int level = BuildingInstance.LevelOf(gameObject, type);
         Vector2 footprint = BaseWorldLayout.Footprint(type);
         float parentScale = Mathf.Max(0.01f, transform.lossyScale.x);
         var catalog = BaseVisualCatalog.Instance;
@@ -143,9 +141,7 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(UnityEngine.Random.Range(4f, 6f));
-            int level = GameManager.Instance?.Buildings != null &&
-                GameManager.Instance.Buildings.TryGetValue(type, out var building)
-                ? building.level : 1;
+            int level = BuildingInstance.LevelOf(gameObject, type);
             for (int i = 0; i < actors.Count; i++)
             {
                 if (actors[i] == null) continue;

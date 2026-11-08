@@ -40,7 +40,7 @@ public sealed class BattleApprentice : MonoBehaviour
         }
         yield return null;
         battle = FindFirstObjectByType<BattleManager>();
-        int level = Mathf.Clamp(GameManager.Instance.PlayerData.apprenticeLevel, 1, 5);
+        int level = Mathf.Clamp(GameManager.Instance.PlayerData.apprenticeLevel, 1, Progression.MaxLevel);
         var progression = ApprenticeProgressionData.Instance;
         color = new[] { "Blue", "Yellow", "Red", "Purple", "Black" }[level - 1];
         var weapon = GameManager.Instance.PlayerData.hero.weaponType;

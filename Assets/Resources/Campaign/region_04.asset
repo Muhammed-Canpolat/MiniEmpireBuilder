@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RegionData
   id: 4
   displayName: "Donmu\u015F Ge\xE7it"
-  requiredBaseLevel: 4
+  requiredBaseLevel: 9
   colorTone: {r: 0.24313726, g: 0.49803922, b: 0.6901961, a: 1}
   groundTile: {fileID: 21300000, guid: 8592c4d543adc074b93fb12e80515978, type: 3}
   enemyTypes: 00000000010000000200000003000000

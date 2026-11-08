@@ -203,15 +203,15 @@ public class ViewportRevisionTests
         debug.GetType().GetMethod("SetVisible").Invoke(debug, new object[] { true });
         Capture("revision-07-base-ui-debug.png");
         Assert.AreEqual(layout.GetField("Buildable").GetValue(null),
-            layout.GetMethod("CleanAtLevel").Invoke(null, new object[] { 5 }));
+            layout.GetMethod("CleanAtLevel").Invoke(null, new object[] { 13 }));
         var baseSetup = Object.FindFirstObjectByType(Type("BaseSceneSetup"));
-        baseSetup.GetType().GetMethod("ClearUnlockedLand").Invoke(baseSetup, new object[] { 5 });
+        baseSetup.GetType().GetMethod("ClearUnlockedLand").Invoke(baseSetup, new object[] { 13 });
         Assert.IsNull(GameObject.Find("NaturalBoundaryBand"));
         var gameManager = managerType.GetProperty("Instance").GetValue(null) as Component;
         var buildings = managerType.GetProperty("Buildings").GetValue(gameManager)
             as System.Collections.IDictionary;
         var mainData = buildings[Enum.Parse(Type("BuildingType"), "MainBase")];
-        mainData.GetType().GetField("level").SetValue(mainData, 5);
+        mainData.GetType().GetField("level").SetValue(mainData, 13); // tam açık arazi
         SceneManager.LoadScene("BaseScene");
         yield return Frames(50);
         Assert.IsNull(GameObject.Find("NaturalBoundaryBand"));

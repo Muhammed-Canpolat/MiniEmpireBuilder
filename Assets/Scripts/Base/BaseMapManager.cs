@@ -21,6 +21,34 @@ public class PlacedMapObject
     public bool isBeingRemoved;
 }
 
+/// <summary>
+/// Sahnedeki bir binanın kayıt satırı (slot) ve seviyesi. Kayıtta varsa seviye oradan
+/// okunur; henüz kaydedilmemiş yeni binada başlangıç seviyesi kullanılır.
+/// </summary>
+public class BuildingInstance : MonoBehaviour
+{
+    public string SlotId;
+    public BuildingType Type;
+    public int InitialLevel = 1;
+
+    public int Level
+    {
+        get
+        {
+            var placed = GameManager.Instance?.FindPlaced(SlotId);
+            return placed != null && placed.level > 0 ? placed.level : Mathf.Max(1, InitialLevel);
+        }
+    }
+
+    public static int LevelOf(GameObject building, BuildingType type)
+    {
+        var instance = building != null ? building.GetComponentInParent<BuildingInstance>() : null;
+        if (instance != null) return instance.Level;
+        return GameManager.Instance?.Buildings != null &&
+            GameManager.Instance.Buildings.TryGetValue(type, out var data) ? Mathf.Max(1, data.level) : 1;
+    }
+}
+
 /// <summary>Ağaç veya kayaya eklenir — tipini işaretler</summary>
 public class MapObjectTag : MonoBehaviour
 {
@@ -137,11 +165,12 @@ public class BaseMapManager : MonoBehaviour
         foreach (var building in _mapObjects)
         {
             if (building.buildingType != type || building.gameObject == null) continue;
+            int level = BuildingInstance.LevelOf(building.gameObject, type);
             var label = building.gameObject.transform.Find("ReadableLabel/Text")?.GetComponent<TextMeshProUGUI>();
-            if (type == BuildingType.MainBase && label != null) label.text = $"{newLevel}";
+            if (type == BuildingType.MainBase && label != null) label.text = $"{level}";
             var badge = building.gameObject.transform.Find("ReadableLabel/LevelBadge/Text")
                 ?.GetComponent<TextMeshProUGUI>();
-            if (badge != null) badge.text = $"Sev. {newLevel}";
+            if (badge != null) badge.text = $"Sev. {level}";
         }
         if (type != BuildingType.MainBase) return;
         if (BaseSceneSetup.Instance == null) return;
@@ -420,13 +449,13 @@ public class BaseMapManager : MonoBehaviour
 
     /// <summary>Haritaya bina spawn et (kayıt sisteminden veya placement'tan)</summary>
     public PlacedMapObject SpawnBuilding(BuildingType type, Vector3 pos, string id = null)
-        => SpawnBuildingInternal(type, pos, id, false);
+        => SpawnBuildingInternal(type, pos, id, false, 0);
 
-    private PlacedMapObject SpawnSavedBuilding(BuildingType type, Vector3 pos, string id)
-        => SpawnBuildingInternal(type, pos, id, true);
+    private PlacedMapObject SpawnSavedBuilding(BuildingType type, Vector3 pos, string id, int level)
+        => SpawnBuildingInternal(type, pos, id, true, level);
 
     private PlacedMapObject SpawnBuildingInternal(BuildingType type, Vector3 pos, string id,
-        bool savedPosition)
+        bool savedPosition, int savedLevel)
     {
         BaseWorldLayout.Slot slot;
         if (string.IsNullOrEmpty(id) || !BaseWorldLayout.TryGet(id, out slot)
@@ -441,6 +470,15 @@ public class BaseMapManager : MonoBehaviour
 
         GameObject go = new GameObject($"Building_{type}_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0f);
+        // Yeni kule/manastır 1. seviyeden başlar; Ana Üs ve maden tek kopya: türün seviyesi.
+        int typeLevel = GameManager.Instance?.Buildings != null &&
+            GameManager.Instance.Buildings.TryGetValue(type, out var typeData) ? Mathf.Max(1, typeData.level) : 1;
+        var instance = go.AddComponent<BuildingInstance>();
+        instance.SlotId = id;
+        instance.Type = type;
+        instance.InitialLevel = savedLevel > 0 ? savedLevel
+            : type == BuildingType.MainBase || type == BuildingType.GoldMine ? typeLevel : 1;
+        int instanceLevel = instance.Level;
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         Sprite s = type == BuildingType.GoldMine
@@ -469,7 +507,7 @@ public class BaseMapManager : MonoBehaviour
         if (type != BuildingType.GoldMine && GameManager.Instance?.Buildings != null &&
             GameManager.Instance.Buildings.TryGetValue(type, out var placedBuilding))
         {
-            var levelSprite = placedBuilding.VisualForLevel(placedBuilding.level)?.sprite;
+            var levelSprite = placedBuilding.VisualForLevel(instanceLevel)?.sprite;
             if (levelSprite != null) s = levelSprite;
         }
 
@@ -525,9 +563,7 @@ public class BaseMapManager : MonoBehaviour
         }
         if (type == BuildingType.GoldMine)
         {
-            int mineLevel = GameManager.Instance?.Buildings != null &&
-                GameManager.Instance.Buildings.TryGetValue(type, out var mineData)
-                ? mineData.level : 1;
+            int mineLevel = instanceLevel;
             var template = Resources.Load<BaseMineVisual>("BaseMineVisual");
             var mineVisual = template != null ? Instantiate(template, go.transform)
                 : go.AddComponent<BaseMineVisual>();
@@ -549,7 +585,7 @@ public class BaseMapManager : MonoBehaviour
             ? $"{GameManager.Instance?.GetMainBaseLevel() ?? 1}"
             : GetBuildingDisplayName(type), type == BuildingType.MainBase,
             sr.sprite.bounds.extents.y * targetScale.y + 0.34f, targetScale.x,
-            type == BuildingType.MainBase ? null : GetBuildingLevelText(type));
+            type == BuildingType.MainBase ? null : $"Sev. {instanceLevel}");
         if (type != BuildingType.MainBase)
             go.transform.Find("ReadableLabel")?.gameObject.SetActive(false);
 
@@ -939,8 +975,7 @@ public class BaseMapManager : MonoBehaviour
                 hasPosition = true,
                 x = obj.gameObject.transform.position.x,
                 y = obj.gameObject.transform.position.y,
-                level = obj.buildingType.HasValue && GameManager.Instance.Buildings.TryGetValue(obj.buildingType.Value, out var state)
-                    ? state.level : 1
+                level = obj.gameObject.GetComponent<BuildingInstance>()?.Level ?? 1
             });
         }
 
@@ -958,7 +993,7 @@ public class BaseMapManager : MonoBehaviour
             if (Enum.TryParse<BuildingType>(data.buildingType, out BuildingType type))
                 SpawnSavedBuilding(type, data.hasPosition ? new Vector2(data.x, data.y)
                     : BaseWorldLayout.TryGet(data.slotId, out var slot)
-                        ? slot.center : Vector2.zero, data.slotId);
+                        ? slot.center : Vector2.zero, data.slotId, data.level);
         }
         SaveAll();
     }
@@ -999,6 +1034,7 @@ public class BaseMapManager : MonoBehaviour
         foreach (var slot in BaseWorldLayout.ForBuilding(type))
         {
             if (slot.id != movingSlotId && IsSlotOccupied(slot.id)) continue;
+            if (!SlotInsideClean(slot)) continue;
             float distance = Vector2.SqrMagnitude(slot.center - pointer);
             if (distance >= best) continue;
             best = distance;
@@ -1007,7 +1043,21 @@ public class BaseMapManager : MonoBehaviour
         return !string.IsNullOrEmpty(selected.id);
     }
 
+    /// <summary>Slotun tüm hücreleri açılmış arazide mi (kilitli araziye bina kurulmaz).</summary>
+    private bool SlotInsideClean(BaseWorldLayout.Slot slot)
+    {
+        if (_buildableRect.width <= 0 || _buildableRect.height <= 0) return true;
+        Vector2 min = slot.center - (Vector2)slot.footprint * 0.5f;
+        return min.x >= _buildableRect.xMin - 0.01f && min.y >= _buildableRect.yMin - 0.01f
+            && min.x + slot.footprint.x <= _buildableRect.xMax + 0.01f
+            && min.y + slot.footprint.y <= _buildableRect.yMax + 0.01f;
+    }
+
     // ==================== SORGULAR ====================
+
+    public PlacedMapObject GetMapObjectBySlot(string slotId)
+        => _mapObjects.Find(o => o.objectType == MapObjectType.Building && o.id == slotId
+            && o.gameObject != null && !o.isBeingRemoved);
 
     public PlacedMapObject GetMapObject(GameObject go)
         => _mapObjects.Find(o => o.gameObject == go);
@@ -1025,7 +1075,7 @@ public class BaseMapManager : MonoBehaviour
         if (label == null) return;
         var badge = label.Find("LevelBadge/Text")?.GetComponent<TextMeshProUGUI>();
         if (badge != null && building.buildingType.HasValue)
-            badge.text = GetBuildingLevelText(building.buildingType.Value);
+            badge.text = $"Sev. {BuildingInstance.LevelOf(building.gameObject, building.buildingType.Value)}";
         label.gameObject.SetActive(true);
         StartCoroutine(HideBuildingLabelAfterDelay(label.gameObject));
     }

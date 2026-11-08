@@ -119,7 +119,7 @@ public class BaseShadowRevisionTests
         var entries = save.GetType().GetField("buildings").GetValue(save) as System.Collections.IEnumerable;
         foreach (var entry in entries)
             if (entry.GetType().GetField("buildingType").GetValue(entry).ToString() == "MainBase")
-                entry.GetType().GetField("level").SetValue(entry, 5);
+                entry.GetType().GetField("level").SetValue(entry, 13); // tam açık arazi
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance)
             .Invoke(manager, null);

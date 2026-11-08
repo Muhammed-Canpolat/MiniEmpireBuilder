@@ -24,6 +24,15 @@ public class TowerController : MonoBehaviour
     public bool IsDestroyed => currentHealth <= 0;
     public float AttackRange => attackRange;
 
+    private int level = -1;
+
+    /// <summary>Kule, onu sağlayan Ana Üs binasının seviyesiyle kurulur.</summary>
+    public void Initialize(BuildingType type, int towerLevel)
+    {
+        level = towerLevel;
+        Initialize(type);
+    }
+
     public void Initialize(BuildingType type)
     {
         towerType = type;
@@ -36,7 +45,8 @@ public class TowerController : MonoBehaviour
         // GameManager'dan stat al
         if (GameManager.Instance != null && GameManager.Instance.Buildings.ContainsKey(towerType))
         {
-            var towerData = GameManager.Instance.Buildings[towerType];
+            var towerData = level > 0 ? GameManager.Instance.CreateLevelData(towerType, level)
+                : GameManager.Instance.Buildings[towerType];
             if (towerData.isUnlocked && towerData.level > 0)
             {
                 towerData.ApplyLevelStats();

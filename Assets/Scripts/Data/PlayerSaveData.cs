@@ -37,8 +37,10 @@ public class PlayerSaveData
     public List<string> removedFenceIds = new List<string>();
 
 
-    // İnşaatçı durumu (sahne kapanınca kaydedilir)
+    // Eski (v3) inşaatçı durumu: yalnız geçiş için okunur.
     public BuilderSaveData builderState = new BuilderSaveData();
+    // v4: gerçek saate bağlı inşaatçı görevi; oyun kapalıyken de ilerler.
+    public BuilderTaskSave builderTask = new BuilderTaskSave();
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
@@ -46,7 +48,7 @@ public class PlayerSaveData
     public static PlayerSaveData CreateNew(WeaponType selectedWeapon)
     {
         PlayerSaveData data = new PlayerSaveData();
-        data.saveVersion = 3;
+        data.saveVersion = 4;
 
         // Ana Savaşçı
         data.hero = new HeroData();
@@ -105,6 +107,7 @@ public class PlayerSaveData
         data.placedDecor = new List<PlacedDecorSave>();
         data.campaignProgress = new List<CampaignLevelProgress>();
         data.builderState = new BuilderSaveData();
+        data.builderTask = new BuilderTaskSave();
         data.buildableSize = 17;
         data.removedFenceIds = new List<string>();
 
@@ -163,6 +166,25 @@ public class BuilderSaveData
 }
 
 /// <summary>
+/// Tek inşaatçının görevi. kind: "build" (yeni yapı), "upgrade" (slotId'deki yapıyı
+/// bir seviye yükselt), "remove" (kaldırma). Süre UTC tick ile tutulur.
+/// </summary>
+[Serializable]
+public class BuilderTaskSave
+{
+    public string kind = "";
+    public string label = "";
+    public string slotId = "";
+    public string buildingType = "";
+    public long startTicks;
+    public long endTicks;
+    public float x;
+    public float y;
+
+    public bool IsActive => endTicks > 0;
+}
+
+/// <summary>
 /// Bina kayıt girişi
 /// </summary>
 [Serializable]
@@ -204,7 +226,8 @@ public static class SaveSystem
                 data.campaignProgress = new List<CampaignLevelProgress>();
             if (data.placedDecor == null)
                 data.placedDecor = new List<PlacedDecorSave>();
-            data.apprenticeLevel = Mathf.Clamp(data.apprenticeLevel, 1, 5);
+            data.apprenticeLevel = Mathf.Clamp(data.apprenticeLevel, 1, Progression.MaxLevel);
+            if (data.builderTask == null) data.builderTask = new BuilderTaskSave();
             // The old enum occupied the same numeric value; migrate string slot ids too.
             if (data.placedBuildings != null)
                 foreach (var building in data.placedBuildings)
@@ -251,6 +274,32 @@ public static class SaveSystem
             {
                 data.firstBaseGuideDone = true;
                 data.saveVersion = 3;
+                Save(data);
+            }
+            if (data.saveVersion < 4)
+            {
+                // Eski inşaatçı geri sayımı oyun kapalıyken durmuştu: kalan süre şimdiden başlar.
+                var old = data.builderState;
+                if (old != null && !old.isAvailable && old.timeRemaining > 0f)
+                {
+                    long now = DateTime.UtcNow.Ticks;
+                    data.builderTask = new BuilderTaskSave
+                    {
+                        kind = "build",
+                        label = old.currentTask,
+                        startTicks = now,
+                        endTicks = now + TimeSpan.FromSeconds(old.timeRemaining).Ticks
+                    };
+                }
+                data.builderState = new BuilderSaveData();
+                // Her binanın kendi seviyesi: eski kayıtta türün seviyesi tüm kopyalara yazılmıştı.
+                if (data.placedBuildings != null)
+                    foreach (var placed in data.placedBuildings)
+                    {
+                        var state = data.buildings?.Find(entry => entry.buildingType.ToString() == placed.buildingType);
+                        if (placed.level <= 0) placed.level = state != null ? Mathf.Max(1, state.level) : 1;
+                    }
+                data.saveVersion = 4;
                 Save(data);
             }
             return data;

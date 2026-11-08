@@ -8,11 +8,19 @@ public static class BaseWorldLayout
     public static readonly RectInt Buildable = new RectInt(2, 2, 18, 34);
     public static readonly RectInt InitialClean = new RectInt(2, 12, 18, 14);
 
+    /// <summary>Arazi renk kademesiyle birlikte genişler: Ana Üs 4, 7, 10 ve 13'te.</summary>
     public static RectInt CleanAtLevel(int level)
     {
-        if (level >= 5) return Buildable;
-        int expansions = Mathf.Clamp(level - 1, 0, 4);
+        int expansions = Progression.ColorTier(level);
+        if (expansions >= 4) return Buildable;
         return new RectInt(2, 12 - expansions * 2, 18, 14 + expansions * 4);
+    }
+
+    /// <summary>Bir sonraki arazi genişlemesinin olacağı Ana Üs seviyesi (yoksa 0).</summary>
+    public static int NextLandLevel(int level)
+    {
+        int tier = Progression.ColorTier(level);
+        return tier >= 4 ? 0 : (tier + 1) * Progression.LevelsPerColorTier + 1;
     }
 
     public struct Slot
@@ -48,7 +56,11 @@ public static class BaseWorldLayout
         new Slot("archer_2", BuildingType.ArcherTower, 1, 7, 4, 4),
         new Slot("archer_3", BuildingType.ArcherTower, 3, 27, 4, 4),
         new Slot("cannon_2", BuildingType.CannonTower, 8, 3, 3, 2),
-        new Slot("monastery_1", BuildingType.Monastery, 13, 8, 3, 3)
+        new Slot("monastery_1", BuildingType.Monastery, 13, 8, 3, 3),
+        // 15 seviyelik ilerleme: her yapının açıldığı seviyede açık arazide bir slotu olur.
+        new Slot("cannon_3", BuildingType.CannonTower, 2, 11, 3, 2),     // 1. Topçu, Ana Üs 4
+        new Slot("archer_4", BuildingType.ArcherTower, 13, 13, 4, 4),    // 2. Okçu, Ana Üs 5
+        new Slot("monastery_2", BuildingType.Monastery, 8, 20, 3, 3)     // 2. Manastır, Ana Üs 10
     };
 
     public static Slot Get(string id)

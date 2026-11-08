@@ -15,8 +15,7 @@ public sealed class BaseBuildingVisual : MonoBehaviour
         type = buildingType;
         body = renderer;
         restScale = scale;
-        currentLevel = GameManager.Instance?.Buildings != null
-            && GameManager.Instance.Buildings.TryGetValue(type, out var data) ? data.level : 1;
+        currentLevel = BuildingInstance.LevelOf(gameObject, type);
         ApplyLevel(currentLevel);
         if (GameManager.Instance != null)
             GameManager.Instance.OnBuildingUpgraded += OnUpgraded;
@@ -57,9 +56,12 @@ public sealed class BaseBuildingVisual : MonoBehaviour
         if (selected != null && body.sprite != selected) body.sprite = selected;
     }
 
-    private void OnUpgraded(BuildingType upgradedType, int level)
+    private void OnUpgraded(BuildingType upgradedType, int eventLevel)
     {
-        if (type != upgradedType || level == currentLevel) return;
+        // Aynı türden iki bina olabilir: yalnız bu binanın seviyesi değiştiyse tepki ver.
+        if (type != upgradedType) return;
+        int level = BuildingInstance.LevelOf(gameObject, type);
+        if (level == currentLevel) return;
         currentLevel = level;
         if (type != BuildingType.GoldMine && body != null)
         {

@@ -67,6 +67,9 @@ public static class CampaignCatalog
         return null;
     }
 
+    /// <summary>Savaş yuvası sayısı: Bölge 1–2: 3, Bölge 3–4: 4, Bölge 5 ve Sonsuz Sefer: 5.</summary>
+    public static int BattleSlotCount(int regionId) => regionId >= 5 ? 5 : regionId >= 3 ? 4 : 3;
+
     public static string KindName(CampaignLevelKind kind)
     {
         switch (kind)
