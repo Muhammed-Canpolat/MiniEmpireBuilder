@@ -1,0 +1,520 @@
+fileFormatVersion: 2
+guid: cd889eb0465a1d94da75324734606b7e
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -2371426220716918022
+    second: fence_stone_pillar_0
+  - first:
+      213: -1180362658682054444
+    second: fence_stone_pillar_1
+  - first:
+      213: -424660477302114856
+    second: fence_stone_pillar_2
+  - first:
+      213: 2436550493478230258
+    second: fence_stone_pillar_3
+  - first:
+      213: 4348006702264926038
+    second: fence_stone_pillar_4
+  - first:
+      213: -7728610115813699761
+    second: fence_stone_pillar_5
+  - first:
+      213: -4210677421529842808
+    second: fence_stone_pillar_6
+  - first:
+      213: -4966178012841808039
+    second: fence_stone_pillar_7
+  - first:
+      213: -631846773518728314
+    second: fence_stone_pillar_8
+  - first:
+      213: 1604259536096687313
+    second: fence_stone_pillar_9
+  - first:
+      213: -4275346745932931916
+    second: fence_stone_pillar_10
+  - first:
+      213: -3589652237269965040
+    second: fence_stone_pillar_11
+  - first:
+      213: -8290433011799509587
+    second: fence_stone_pillar_12
+  - first:
+      213: -8658697036792162130
+    second: fence_stone_pillar_13
+  - first:
+      213: -4693551560532805145
+    second: fence_stone_pillar_14
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 1
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 0
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 1024
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: fence_stone_pillar_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 15
+        width: 693
+        height: 2028
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: afafe17aa60071fd0800000000000000
+      internalID: -2371426220716918022
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_1
+      rect:
+        serializedVersion: 2
+        x: 619
+        y: 1905
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d8de1f6a628e9fe0800000000000000
+      internalID: -1180362658682054444
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_2
+      rect:
+        serializedVersion: 2
+        x: 629
+        y: 1803
+        width: 22
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8d5724cbb8d4b1af0800000000000000
+      internalID: -424660477302114856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_3
+      rect:
+        serializedVersion: 2
+        x: 581
+        y: 1631
+        width: 12
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2f89211b3cd50d120800000000000000
+      internalID: 2436550493478230258
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_4
+      rect:
+        serializedVersion: 2
+        x: 583
+        y: 1515
+        width: 13
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65fb4891f09375c30800000000000000
+      internalID: 4348006702264926038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_5
+      rect:
+        serializedVersion: 2
+        x: 595
+        y: 1519
+        width: 7
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f4f0f6f2c067eb490800000000000000
+      internalID: -7728610115813699761
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_6
+      rect:
+        serializedVersion: 2
+        x: 601
+        y: 1519
+        width: 6
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88bb4f9b13ba095c0800000000000000
+      internalID: -4210677421529842808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_7
+      rect:
+        serializedVersion: 2
+        x: 72
+        y: 1262
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 95f6535c867941bb0800000000000000
+      internalID: -4966178012841808039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_8
+      rect:
+        serializedVersion: 2
+        x: 595
+        y: 1244
+        width: 15
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 68380f705ba3b37f0800000000000000
+      internalID: -631846773518728314
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_9
+      rect:
+        serializedVersion: 2
+        x: 619
+        y: 1262
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d473906c89734610800000000000000
+      internalID: 1604259536096687313
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_10
+      rect:
+        serializedVersion: 2
+        x: 583
+        y: 665
+        width: 11
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4bc9b0d49caeaa4c0800000000000000
+      internalID: -4275346745932931916
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_11
+      rect:
+        serializedVersion: 2
+        x: 585
+        y: 634
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 017665a1f4efe2ec0800000000000000
+      internalID: -3589652237269965040
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_12
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 518
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: da5b481b91772fc80800000000000000
+      internalID: -8290433011799509587
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_13
+      rect:
+        serializedVersion: 2
+        x: 617
+        y: 435
+        width: 12
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea89648bbe026d780800000000000000
+      internalID: -8658697036792162130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: fence_stone_pillar_14
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 31
+        width: 77
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7e9367329b72ddeb0800000000000000
+      internalID: -4693551560532805145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      fence_stone_pillar_0: -2371426220716918022
+      fence_stone_pillar_1: -1180362658682054444
+      fence_stone_pillar_10: -4275346745932931916
+      fence_stone_pillar_11: -3589652237269965040
+      fence_stone_pillar_12: -8290433011799509587
+      fence_stone_pillar_13: -8658697036792162130
+      fence_stone_pillar_14: -4693551560532805145
+      fence_stone_pillar_2: -424660477302114856
+      fence_stone_pillar_3: 2436550493478230258
+      fence_stone_pillar_4: 4348006702264926038
+      fence_stone_pillar_5: -7728610115813699761
+      fence_stone_pillar_6: -4210677421529842808
+      fence_stone_pillar_7: -4966178012841808039
+      fence_stone_pillar_8: -631846773518728314
+      fence_stone_pillar_9: 1604259536096687313
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

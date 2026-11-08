@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 329f2c6840111d34f88e6a1a2be0640a, type: 3}
+  m_Name: BaseVisualCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::BaseVisualCatalog
+  buildings:
+  - type: 0
+    levels:
+    - color: {r: 0.43, g: 0.69, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: 5fef2d88b09824faba4be40a870c347e, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 6d953b9290d3f674e9dd2c205b5136e8, type: 2}
+    - color: {r: 1, g: 0.84, b: 0.37, a: 1}
+      sprite: {fileID: 21300000, guid: ba6e4899ce2184481b037df5cb76ef31, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 8274c03595524094b9711fa97c56fc19, type: 2}
+    - color: {r: 1, g: 0.42, b: 0.4, a: 1}
+      sprite: {fileID: 21300000, guid: ebc3f75c6f0fa49c38b57b0d8b13968e, type: 3}
+      animatorOverride: {fileID: 22100000, guid: f4055cebf9602d943a6f3eb520e4db89, type: 2}
+    - color: {r: 0.74, g: 0.53, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: 03b438cc1edb849a7978ee3571c43887, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 20dc9359409d0f74ca19174375b466cc, type: 2}
+    - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
+      sprite: {fileID: 21300000, guid: d0349d8d3a04044f7a4810157b116b14, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 44845df1df6e0dc41aa99a4f91a81dd6, type: 2}
+  - type: 1
+    levels:
+    - color: {r: 0.43, g: 0.69, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: 2bb7266a2b9e4494db34c60ba04a19a4, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 156351cf319a9f54b891fd7738a0d15d, type: 2}
+    - color: {r: 1, g: 0.84, b: 0.37, a: 1}
+      sprite: {fileID: 21300000, guid: c57a41b4b0b14434e9e3dc5a426febef, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 31f7c5fcaa813c842879f688f6e48d57, type: 2}
+    - color: {r: 1, g: 0.42, b: 0.4, a: 1}
+      sprite: {fileID: 21300000, guid: 1d779a0d7152745999fafde02345208d, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 0793e6d04b7fe20498e934fbbb2a6b18, type: 2}
+    - color: {r: 0.74, g: 0.53, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: 40fa9502a6dcb4bdf8829c8654ceecb0, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 6253e3f2e2f25384083a3dda8af7dda6, type: 2}
+    - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
+      sprite: {fileID: 21300000, guid: 5bdc3e2b64c8049f4a66e1061f28dd70, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 6c3c496da230ae64c973c6c4ca059b0d, type: 2}
+  - type: 2
+    levels:
+    - color: {r: 0.43, g: 0.69, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: 9150ff9a3f88646ddaf1ed327afa1315, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 786997e889c3b544d90cd0e5f96e8060, type: 2}
+    - color: {r: 1, g: 0.84, b: 0.37, a: 1}
+      sprite: {fileID: 21300000, guid: defebd30b7d2e4bff960711bed04e54f, type: 3}
+      animatorOverride: {fileID: 22100000, guid: ae390bc43bba4ff49b9ade820c81c25f, type: 2}
+    - color: {r: 1, g: 0.42, b: 0.4, a: 1}
+      sprite: {fileID: 21300000, guid: da5bd5128607d42b58a0100672bc61d3, type: 3}
+      animatorOverride: {fileID: 22100000, guid: ab6867a2394b7504c9cb950cc8cdf47f, type: 2}
+    - color: {r: 0.74, g: 0.53, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: c84d25441265a4e42b000f20f8fb20d8, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 4e0825cc17d6377498b96a95716ad566, type: 2}
+    - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
+      sprite: {fileID: 21300000, guid: 3cbd575d4968745d3a7f79a654fae04a, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 037b7e774650dbd499f65bf2c66714d2, type: 2}
+  - type: 4
+    levels:
+    - color: {r: 0.43, g: 0.69, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: a45aff6aa2c5d4d5f879c10f0231ba12, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 1ae85ac4d2c0019469655b19a823beae, type: 2}
+    - color: {r: 1, g: 0.84, b: 0.37, a: 1}
+      sprite: {fileID: 21300000, guid: 1b31b5c18d1114c22b3cc92b7cecc6a3, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 4f39431642011d94faf7e8bde3d91b2e, type: 2}
+    - color: {r: 1, g: 0.42, b: 0.4, a: 1}
+      sprite: {fileID: 21300000, guid: 9d04bb2c5630042c7b93442ef26a6843, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 59edf4d7a9b19b7449c671dfd9630dcf, type: 2}
+    - color: {r: 0.74, g: 0.53, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: dba6a0ea45c49416fa947ae23f50275d, type: 3}
+      animatorOverride: {fileID: 22100000, guid: debd8df38e227d845a6e4f2808d24dda, type: 2}
+    - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
+      sprite: {fileID: 21300000, guid: d8438425f07ba4e019d15b79cb6ce389, type: 3}
+      animatorOverride: {fileID: 22100000, guid: 827601160f988bf42b448db4ac1cfcce, type: 2}
+  - type: 3
+    levels:
+    - color: {r: 0.43, g: 0.69, b: 1, a: 1}
+      sprite: {fileID: 0}
+      animatorOverride: {fileID: 22100000, guid: cd4fb46c2573b734faf7415a5289bbc4, type: 2}
+    - color: {r: 1, g: 0.84, b: 0.37, a: 1}
+      sprite: {fileID: 0}
+      animatorOverride: {fileID: 22100000, guid: 959b9d41f257f6143bf74c9bce5c11c9, type: 2}
+    - color: {r: 1, g: 0.42, b: 0.4, a: 1}
+      sprite: {fileID: 0}
+      animatorOverride: {fileID: 22100000, guid: 6089f5cbc226014479bad0b5dd3a8258, type: 2}
+    - color: {r: 0.74, g: 0.53, b: 1, a: 1}
+      sprite: {fileID: 0}
+      animatorOverride: {fileID: 22100000, guid: b688b9d90c51df545a16c6c2b361cd53, type: 2}
+    - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
+      sprite: {fileID: 0}
+      animatorOverride: {fileID: 22100000, guid: 59d45d2d3fb213e40a293f19803732c6, type: 2}
+  archerControllers:
+  - {fileID: 9100000, guid: e69e54e6f75584bf382ddbe934f532b6, type: 2}
+  - {fileID: 9100000, guid: 4ba6eb628742f4b56929badd18c4b61a, type: 2}
+  - {fileID: 9100000, guid: 098910b1e815348e6bba028403bec1e8, type: 2}
+  - {fileID: 9100000, guid: 9000152e1a8584e06b9325b9ec599654, type: 2}
+  - {fileID: 9100000, guid: 67607d04b5eb24b1c9c95ff8d255a34d, type: 2}
+  warriorControllers:
+  - {fileID: 9100000, guid: aa1112b337436413a9e3f0f07d8475c2, type: 2}
+  - {fileID: 9100000, guid: 393ec7aeaf3f44807ade83fd3843fa04, type: 2}
+  - {fileID: 9100000, guid: f172b4eeb829d4ec2b9b7a42f3efa3ef, type: 2}
+  - {fileID: 9100000, guid: 12285b2ad229e465ca21363a5ff750b0, type: 2}
+  - {fileID: 9100000, guid: b96f062c1d073496fb335d14ea81c2ec, type: 2}
+  monkControllers:
+  - {fileID: 9100000, guid: 010817759ac3943d8a63d1698ab7d60e, type: 2}
+  - {fileID: 9100000, guid: 96c592f8a437543f4ad9a10ec628d1b5, type: 2}
+  - {fileID: 9100000, guid: 89982da2b368f41848074f38ca2f2e0a, type: 2}
+  - {fileID: 9100000, guid: 9d562d4c9c07b48d2aedad38e30acaa7, type: 2}
+  - {fileID: 9100000, guid: 7e606214963c74e2abeac068dfaea9ba, type: 2}
+  pawnControllers:
+  - {fileID: 9100000, guid: 392949dc7dc664ffa92fa29ae687d347, type: 2}
+  - {fileID: 9100000, guid: 92054fb571ee944779da6b21c16e206f, type: 2}
+  - {fileID: 9100000, guid: 451d5f1d5330e42218c98e0f70cea694, type: 2}
+  - {fileID: 9100000, guid: 8d3fe39a90ee64414acfeb504f2c8ec1, type: 2}
+  - {fileID: 9100000, guid: 937790c58fb4444bbaa0c141d3e05a5a, type: 2}
+  dustController: {fileID: 9100000, guid: 421be1d3663de40b78469de2c863cc11, type: 2}
+  heroControllers:
+  - {fileID: 9100000, guid: 5cf31468147265144ae73de6a2863b2f, type: 2}
+  - {fileID: 9100000, guid: 6ee16baf2125caa4d82fadcb1d4eb287, type: 2}
+  - {fileID: 9100000, guid: 588917e85680d0a4bb0adddff0df75d7, type: 2}
+  goldStones:
+  - {fileID: 21300000, guid: 67d30015e15234b60a2097cd3001c423, type: 3}
+  - {fileID: 21300000, guid: 79eb76530889a4283aab87921fff68cf, type: 3}
+  - {fileID: 21300000, guid: 08b428e680bf14435ad32f565d39377a, type: 3}
+  - {fileID: 21300000, guid: 9f6c33a01ddca41df86e012fd10f4d76, type: 3}
+  - {fileID: 21300000, guid: 099a3e9fd39fd40efa61fb2fa8acf5f6, type: 3}
+  - {fileID: 21300000, guid: 5a4aa1c2f2ac84011bdacd0445d7cf5b, type: 3}
+  goldIcon: {fileID: 21300000, guid: b9b23c4ec748b4bc7bb3afb24a2ed197, type: 3}
+  cloudShadows:
+  - {fileID: 21300000, guid: f6f0e53d863ee47e59f269cada8e711a, type: 3}
+  - {fileID: 21300000, guid: ed913e18216254ce6a098078c02ef683, type: 3}
+  - {fileID: 21300000, guid: 1e7e70e696d2b4a02bfd5355f801766f, type: 3}
+  bushes:
+  - {fileID: -7511650321784113099, guid: a84dffbcf25d54440af977606896fc46, type: 3}
+  - {fileID: -9069723417043114871, guid: 3974238adf8a646d6a2b3ad76793ae41, type: 3}
+  - {fileID: -2460423728298319197, guid: 72dc8fc77fc8f43bb9ce7f50bbf11d67, type: 3}
+  - {fileID: -7590220760718205482, guid: 35328aa4331c645f39768db2fd54501e, type: 3}
+  bushControllers:
+  - {fileID: 9100000, guid: 7e5e4de9c96f445e6b70d2ca04ada62b, type: 2}
+  - {fileID: 9100000, guid: 81e374865d0a44fc3833c6dc9040b1d7, type: 2}
+  - {fileID: 9100000, guid: 5876823563b294090818a0892c9cc77d, type: 2}
+  - {fileID: 9100000, guid: 32f1bb8ea40c249bc80a02eca9c5a449, type: 2}
+  garrisonPrefab: {fileID: 8143114522711915737, guid: 0b5e988bb94a1744180e0007df305e08, type: 3}

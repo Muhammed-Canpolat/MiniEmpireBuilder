@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c52e97efd190be46bc7c6dabcf9d9d9, type: 3}
+  m_Name: stone_path
+  m_EditorClassIdentifier: Assembly-CSharp::DecorData
+  id: stone_path
+  displayName: "Ta\u015F yol"
+  footprint: {x: 1, y: 1}
+  cost: 3
+  unlockMainBaseLevel: 1
+  sprite: {fileID: 7648309204254109863, guid: 7b3d55a4ec38f75409651d529acc959c, type: 3}
+  animated: 0
+  animatorController: {fileID: 0}

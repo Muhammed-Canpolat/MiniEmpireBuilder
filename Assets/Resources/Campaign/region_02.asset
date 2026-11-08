@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d9f82664931d524d8b3e96544fa0881, type: 3}
+  m_Name: region_02
+  m_EditorClassIdentifier: Assembly-CSharp::RegionData
+  id: 2
+  displayName: Sisli Orman
+  requiredBaseLevel: 2
+  colorTone: {r: 0.18431373, g: 0.41960785, b: 0.22745098, a: 1}
+  groundTile: {fileID: 21300000, guid: e590fd60152e7e54b9c379d5eed3115b, type: 3}
+  enemyTypes: 000000000100000002000000
+  specialMechanic: Sis
+  bossName: "Orman Cad\u0131s\u0131"
+  description: "Sis g\xF6r\xFC\u015F alan\u0131n\u0131 daralt\u0131r; yarat\u0131klar
+    a\u011Fa\xE7lar\u0131n aras\u0131ndan yakla\u015F\u0131r."
+  levels:
+  - number: 1
+    kind: 0
+    waveCount: 1
+    enemyCounts: 09000000
+    reward: 70
+    modifier: "S\u0130S"
+    description: "Dalgalar bitene kadar hayatta kal ve Ana \xDCs'\xFC koru."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs can\u0131 %50 \xFCzerinde kals\u0131n"
+    - "Kahraman can\u0131 %50 \xFCzerinde kals\u0131n"
+  - number: 2
+    kind: 1
+    waveCount: 2
+    enemyCounts: 0900000007000000
+    reward: 88
+    modifier: "S\u0130S"
+    description: "D\xFC\u015Fmanlar\u0131 Ana \xDCs'e ula\u015Fmadan durdur."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs can\u0131 %50 \xFCzerinde kals\u0131n"
+    - "Kahraman can\u0131 %50 \xFCzerinde kals\u0131n"
+  - number: 3
+    kind: 2
+    waveCount: 2
+    enemyCounts: 0a00000008000000
+    reward: 106
+    modifier: "S\u0130S"
+    description: "Madene y\xF6nelen d\xFC\u015Fman ak\u0131n\u0131n\u0131 p\xFCsk\xFCrt."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs can\u0131 %50 \xFCzerinde kals\u0131n"
+    - "Kahraman can\u0131 %50 \xFCzerinde kals\u0131n"
+  - number: 4
+    kind: 3
+    waveCount: 2
+    enemyCounts: 0b00000009000000
+    reward: 124
+    modifier: "S\u0130S"
+    description: "S\xFCre dolmadan b\xFCt\xFCn d\xFC\u015Fmanlar\u0131 temizle."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs can\u0131 %50 \xFCzerinde kals\u0131n"
+    - "Kahraman can\u0131 %50 \xFCzerinde kals\u0131n"
+  - number: 5
+    kind: 4
+    waveCount: 3
+    enemyCounts: 0a0000000a00000003000000
+    reward: 142
+    modifier: "S\u0130S"
+    description: "B\xF6lgenin bossunu ve korumalar\u0131n\u0131 yen."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs can\u0131 %50 \xFCzerinde kals\u0131n"
+    - "Kahraman can\u0131 %50 \xFCzerinde kals\u0131n"
