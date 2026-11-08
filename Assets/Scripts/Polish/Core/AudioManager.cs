@@ -1,125 +1,210 @@
-﻿// [AUDIO MANAGER] — Mini Empire Builder
+using System.Collections;
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
-public class AudioManager : MonoBehaviour
+/// <summary>Optional audio slots. Empty clips are silent until art is supplied.</summary>
+public sealed class AudioManager : MonoBehaviour
 {
     private const string MusicEnabledKey = "audio_music_enabled";
     private const string SfxEnabledKey = "audio_sfx_enabled";
 
-    [SerializeField] private AudioSource musicA;
-    [SerializeField] private AudioSource musicB;
-    [SerializeField] private AudioSource[] sfxPool = new AudioSource[4];
-
-    [Header("BGM")]
+    [Header("Music - assign clips in Inspector")]
     [SerializeField] private AudioClip introBGM;
+    [SerializeField] private AudioClip baseBGM;
     [SerializeField] private AudioClip worldBGM;
     [SerializeField] private AudioClip battleBGM;
+    [SerializeField] private AudioClip baseWindLoop;
+    [SerializeField] private AudioClip baseBirdLoop;
 
-    [Header("SFX")]
+    [Header("Effects - assign clips in Inspector")]
     [SerializeField] private AudioClip buttonClick;
     [SerializeField] private AudioClip buildingPlace;
+    [SerializeField] private AudioClip goldCollect;
+    [SerializeField] private AudioClip levelUp;
     [SerializeField] private AudioClip swordHit;
+    [SerializeField] private AudioClip enemyDeath;
+    [SerializeField] private AudioClip victory;
     [SerializeField] private AudioClip arrowShoot;
 
+    [SerializeField] private AudioSource musicA;
+    [SerializeField] private AudioSource musicB;
+    [SerializeField] private AudioSource windSource;
+    [SerializeField] private AudioSource birdSource;
+    [SerializeField] private AudioSource[] sfxPool;
+
+    private readonly HashSet<int> wiredButtons = new HashSet<int>();
     private bool isMusicAActive = true;
+    private AudioClip currentMusic;
+    private AudioListener fallbackListener;
+    private AudioSource[] effects;
+    private Coroutine buttonScan;
     public static AudioManager Instance { get; private set; }
+    public bool MusicEnabled => PlayerPrefs.GetInt(MusicEnabledKey, 1) == 1;
+    public bool SfxEnabled => PlayerPrefs.GetInt(SfxEnabledKey, 1) == 1;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        fallbackListener = gameObject.AddComponent<AudioListener>();
+        UpdateListener();
+        musicA = EnsureSource(musicA, "MusicA", true);
+        musicB = EnsureSource(musicB, "MusicB", true);
+        windSource = EnsureSource(windSource, "BaseWind", true);
+        birdSource = EnsureSource(birdSource, "BaseBirds", true);
+        if (sfxPool == null || sfxPool.Length == 0) sfxPool = new AudioSource[4];
+        effects = new AudioSource[sfxPool.Length];
+        for (int i = 0; i < sfxPool.Length; i++)
+            effects[i] = sfxPool[i] = EnsureSource(sfxPool[i], "Effect" + i, false);
+        SceneManager.activeSceneChanged += OnSceneChanged;
+        buttonScan = StartCoroutine(WireUiButtons());
+        OnSceneChanged(default, SceneManager.GetActiveScene());
     }
 
-    /// <summary>
-    /// Cross-fades to selected BGM clip.
-    /// </summary>
+    private AudioSource EnsureSource(AudioSource source, string name, bool loop)
+    {
+        if (source == null)
+        {
+            var child = new GameObject(name);
+            child.transform.SetParent(transform, false);
+            source = child.AddComponent<AudioSource>();
+        }
+        source.playOnAwake = false;
+        source.loop = loop;
+        source.spatialBlend = 0f;
+        return source;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance != this) return;
+        SceneManager.activeSceneChanged -= OnSceneChanged;
+        if (buttonScan != null) StopCoroutine(buttonScan);
+        Instance = null;
+    }
+
+    private void OnSceneChanged(Scene oldScene, Scene newScene)
+    {
+        UpdateListener();
+        wiredButtons.Clear();
+        switch (newScene.name)
+        {
+            case "BaseScene": PlayBaseBgm(); break;
+            case "BattleScene": PlayBattleBgm(); break;
+            case "MainMenuScene": PlayIntroBgm(); break;
+            default: PlayWorldBgm(); break;
+        }
+    }
+
+    private void UpdateListener()
+    {
+        if (fallbackListener == null) return;
+        foreach (var listener in FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None))
+            if (listener != fallbackListener && listener.enabled)
+            { fallbackListener.enabled = false; return; }
+        fallbackListener.enabled = true;
+    }
+
+    private IEnumerator WireUiButtons()
+    {
+        while (true)
+        {
+            UpdateListener();
+            foreach (var button in FindObjectsByType<Button>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None))
+            {
+                if (button == null || !wiredButtons.Add(button.GetInstanceID())) continue;
+                button.onClick.AddListener(() => PlaySfx("buttonClick"));
+            }
+            yield return new WaitForSecondsRealtime(0.8f);
+        }
+    }
+
     public void PlayBgm(AudioClip clip)
     {
-        if (!IsMusicEnabled() || clip == null || musicA == null || musicB == null)
+        if (clip == currentMusic) return;
+        currentMusic = clip;
+        if (clip == null)
+        {
+            musicA.DOKill();
+            musicB.DOKill();
+            musicA.DOFade(0f, 1f).OnComplete(musicA.Stop);
+            musicB.DOFade(0f, 1f).OnComplete(musicB.Stop);
             return;
-
+        }
         AudioSource from = isMusicAActive ? musicA : musicB;
         AudioSource to = isMusicAActive ? musicB : musicA;
-
-        to.clip = clip;
-        to.volume = 0f;
-        to.Play();
-
         from.DOKill();
         to.DOKill();
+        to.clip = clip;
+        to.volume = 0f;
+        if (MusicEnabled) to.Play();
         from.DOFade(0f, 1f).OnComplete(from.Stop);
-        to.DOFade(1f, 1f);
-
+        to.DOFade(MusicEnabled ? 1f : 0f, 1f);
         isMusicAActive = !isMusicAActive;
     }
 
-    /// <summary>
-    /// Plays a one-shot SFX by logical key.
-    /// </summary>
-    public void PlaySfx(string key)
+    public void PlayIntroBgm() { StopBaseAmbience(); PlayBgm(introBGM); }
+    public void PlayWorldBgm() { StopBaseAmbience(); PlayBgm(worldBGM); }
+    public void PlayBattleBgm() { StopBaseAmbience(); PlayBgm(battleBGM); }
+    public void PlayBaseBgm()
     {
-        if (!IsSfxEnabled())
-            return;
-
-        AudioClip clip = ResolveSfx(key);
-        if (clip == null)
-            return;
-
-        for (int i = 0; i < sfxPool.Length; i++)
-        {
-            if (sfxPool[i] != null && !sfxPool[i].isPlaying)
-            {
-                sfxPool[i].PlayOneShot(clip);
-                return;
-            }
-        }
-
-        if (sfxPool.Length > 0 && sfxPool[0] != null)
-            sfxPool[0].PlayOneShot(clip);
+        PlayBgm(baseBGM);
+        PlayAmbient(windSource, baseWindLoop, 0.22f);
+        PlayAmbient(birdSource, baseBirdLoop, 0.14f);
     }
 
-    /// <summary>
-    /// Persists music enabled preference.
-    /// </summary>
+    private void PlayAmbient(AudioSource source, AudioClip clip, float volume)
+    {
+        if (source == null || clip == null) return;
+        source.clip = clip;
+        source.volume = MusicEnabled ? volume : 0f;
+        if (MusicEnabled && !source.isPlaying) source.Play();
+    }
+
+    private void StopBaseAmbience()
+    {
+        if (windSource != null) windSource.Stop();
+        if (birdSource != null) birdSource.Stop();
+    }
+
+    public void PlaySfx(string key)
+    {
+        if (!SfxEnabled) return;
+        AudioClip clip = ResolveSfx(key);
+        if (clip == null || effects == null || effects.Length == 0) return;
+        foreach (var source in effects)
+            if (source != null && !source.isPlaying) { source.PlayOneShot(clip); return; }
+        effects[0]?.PlayOneShot(clip);
+    }
+
     public void SetMusicEnabled(bool enabled)
     {
         PlayerPrefs.SetInt(MusicEnabledKey, enabled ? 1 : 0);
         PlayerPrefs.Save();
+        if (!enabled)
+        {
+            musicA.Pause(); musicB.Pause(); StopBaseAmbience();
+        }
+        else
+        {
+            AudioSource active = isMusicAActive ? musicA : musicB;
+            if (active.clip == currentMusic && currentMusic != null)
+            { active.volume = 1f; active.UnPause(); if (!active.isPlaying) active.Play(); }
+            if (SceneManager.GetActiveScene().name == "BaseScene") PlayBaseBgm();
+        }
     }
 
-    /// <summary>
-    /// Persists SFX enabled preference.
-    /// </summary>
     public void SetSfxEnabled(bool enabled)
     {
         PlayerPrefs.SetInt(SfxEnabledKey, enabled ? 1 : 0);
         PlayerPrefs.Save();
     }
-
-    /// <summary>
-    /// Plays intro music if assigned.
-    /// </summary>
-    public void PlayIntroBgm() => PlayBgm(introBGM);
-
-    /// <summary>
-    /// Plays world map music if assigned.
-    /// </summary>
-    public void PlayWorldBgm() => PlayBgm(worldBGM);
-
-    /// <summary>
-    /// Plays battle music if assigned.
-    /// </summary>
-    public void PlayBattleBgm() => PlayBgm(battleBGM);
-
-    private bool IsMusicEnabled() => PlayerPrefs.GetInt(MusicEnabledKey, 1) == 1;
-    private bool IsSfxEnabled() => PlayerPrefs.GetInt(SfxEnabledKey, 1) == 1;
 
     private AudioClip ResolveSfx(string key)
     {
@@ -127,7 +212,11 @@ public class AudioManager : MonoBehaviour
         {
             case "buttonClick": return buttonClick;
             case "buildingPlace": return buildingPlace;
+            case "goldCollect": return goldCollect;
+            case "levelUp": return levelUp;
             case "swordHit": return swordHit;
+            case "enemyDeath": return enemyDeath;
+            case "victory": return victory;
             case "arrowShoot": return arrowShoot;
             default: return null;
         }

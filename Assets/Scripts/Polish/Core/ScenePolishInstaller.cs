@@ -30,6 +30,13 @@ public class ScenePolishInstaller : MonoBehaviour
 
     private void InstallGlobal()
     {
+        if (AudioManager.Instance == null)
+            new GameObject("AudioManager").AddComponent<AudioManager>();
+        if (FindFirstObjectByType<AudioSettingsUI>() == null)
+            new GameObject("AudioSettingsUI").AddComponent<AudioSettingsUI>();
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "BattleScene" &&
+            FindFirstObjectByType<BattleAudioObserver>() == null)
+            new GameObject("BattleAudioObserver").AddComponent<BattleAudioObserver>();
         if (FindFirstObjectByType<MobilePerformanceConfig>() == null)
         {
             new GameObject("MobilePerformanceConfig").AddComponent<MobilePerformanceConfig>();
@@ -168,55 +175,8 @@ public class ScenePolishInstaller : MonoBehaviour
 
             GameObject poolObj = new GameObject("DamageNumberPool");
             DamageNumberPool pool = poolObj.AddComponent<DamageNumberPool>();
-            SetSerializedField(pool, "damageNumberPrefab", dmg);
+            pool.Initialize(dmg);
             prefabObj.SetActive(false);
-        }
-
-        if (FindFirstObjectByType<WaveAnnouncer>() == null)
-        {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas != null)
-            {
-                GameObject announcerObj = new GameObject("WaveAnnouncer");
-                announcerObj.transform.SetParent(canvas.transform, false);
-                WaveAnnouncer wa = announcerObj.AddComponent<WaveAnnouncer>();
-
-                GameObject bannerObj = new GameObject("WaveBanner");
-                bannerObj.transform.SetParent(announcerObj.transform, false);
-                Image bannerBg = bannerObj.AddComponent<Image>();
-                bannerBg.color = new Color(0f, 0f, 0f, 0.75f);
-                RectTransform br = bannerObj.GetComponent<RectTransform>();
-                br.anchorMin = new Vector2(0.2f, 0.7f);
-                br.anchorMax = new Vector2(0.8f, 0.82f);
-                br.offsetMin = Vector2.zero;
-                br.offsetMax = Vector2.zero;
-
-                GameObject textObj = new GameObject("WaveBannerText");
-                textObj.transform.SetParent(bannerObj.transform, false);
-                TextMeshProUGUI txt = textObj.AddComponent<TextMeshProUGUI>();
-                txt.alignment = TextAlignmentOptions.Center;
-                txt.fontSize = 44f;
-                txt.color = new Color(1f, 0.85f, 0.2f);
-                RectTransform tr = txt.rectTransform;
-                tr.anchorMin = Vector2.zero;
-                tr.anchorMax = Vector2.one;
-                tr.offsetMin = Vector2.zero;
-                tr.offsetMax = Vector2.zero;
-
-                GameObject vignetteObj = new GameObject("Vignette");
-                vignetteObj.transform.SetParent(announcerObj.transform, false);
-                Image vignette = vignetteObj.AddComponent<Image>();
-                vignette.color = new Color(0.6f, 0f, 0f, 0f);
-                RectTransform vr = vignette.rectTransform;
-                vr.anchorMin = Vector2.zero;
-                vr.anchorMax = Vector2.one;
-                vr.offsetMin = Vector2.zero;
-                vr.offsetMax = Vector2.zero;
-
-                SetSerializedField(wa, "banner", br);
-                SetSerializedField(wa, "bannerText", txt);
-                SetSerializedField(wa, "vignette", vignette);
-            }
         }
 
         EnemyController[] enemies = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);

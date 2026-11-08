@@ -31,6 +31,11 @@ public class IntroSceneSetup : MonoBehaviour
     private CanvasGroup   playBtnCG;
     private CanvasGroup   newGameBtnCG;   // Sadece kayıt varsa dolu olur
 
+    private Sprite introBgSprite;
+    private Sprite introLogoSprite;
+    private Sprite introStoryPanelSprite;
+    private Sprite introButtonSprite;
+
     // Parallax katmanları
     private RectTransform[] parallaxLayers;
     private float[]          parallaxSpeeds;
@@ -67,8 +72,17 @@ public class IntroSceneSetup : MonoBehaviour
             esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
         }
 
+        LoadIntroSprites();
         BuildUI();
         StartCoroutine(PlayIntroSequence());
+    }
+
+    private void LoadIntroSprites()
+    {
+        introBgSprite = Resources.Load<Sprite>("Sprites/Intro/intro_bg");
+        introLogoSprite = Resources.Load<Sprite>("Sprites/Intro/intro_logo");
+        introStoryPanelSprite = Resources.Load<Sprite>("Sprites/Intro/intro_story_panel");
+        introButtonSprite = Resources.Load<Sprite>("Sprites/Intro/intro_button");
     }
 
     // ==================== UI KURULUMU ====================
@@ -79,21 +93,43 @@ public class IntroSceneSetup : MonoBehaviour
         GameObject canvasObj = new GameObject("IntroCanvas");
         mainCanvas = canvasObj.AddComponent<Canvas>();
         mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        mainCanvas.sortingOrder = 100;
+        mainCanvas.overrideSorting = true;
+        mainCanvas.sortingOrder = 5000;
 
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
         scaler.uiScaleMode        = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
-        scaler.matchWidthOrHeight  = 1f;
+        ReferenceUiVisuals.ConfigureCanvas(scaler);
 
         canvasObj.AddComponent<GraphicRaycaster>();
 
-        // ── Tam ekran koyu arka plan ─────────────────────────────────────────
-        CreatePanel(canvasObj.transform, "DarkBg",
-            Vector2.zero, Vector2.one, DarkBg).GetComponent<Image>().raycastTarget = false;
+        DisableOtherCanvases();
 
-        // ── PARALLAX BÖLGE (üst %30) ─────────────────────────────────────────
-        BuildParallaxSection(canvasObj.transform);
+        // ── Tam ekran arka plan ─────────────────────────────────────────────
+        GameObject bgObj = CreatePanel(canvasObj.transform, "IntroBackground",
+            Vector2.zero, Vector2.one, Color.white);
+        Image bgImg = bgObj.GetComponent<Image>();
+        bgImg.raycastTarget = false;
+        if (introBgSprite != null)
+        {
+            bgImg.sprite = introBgSprite;
+            bgImg.type = Image.Type.Simple;
+            bgImg.preserveAspect = false;
+        }
+        else
+        {
+            bgImg.color = DarkBg;
+        }
+
+        // ── PARALLAX BÖLGE (opsiyonel) ──────────────────────────────────────
+        if (introBgSprite == null)
+        {
+            BuildParallaxSection(canvasObj.transform);
+        }
+        else
+        {
+            parallaxCG = null;
+            parallaxLayers = null;
+        }
 
         // ── ORTA BÖLGE: Logo + Kale (y: %30 → %70) ─────────────────────────
         BuildLogoSection(canvasObj.transform);
@@ -106,6 +142,127 @@ public class IntroSceneSetup : MonoBehaviour
 
         // ── VERSİYON ETİKETİ (sağ alt) ──────────────────────────────────────
         BuildVersionLabel(canvasObj.transform);
+        ApplyReferenceIntroLayout();
+    }
+
+    private void ApplyReferenceIntroLayout()
+    {
+        var safe = ReferenceUiVisuals.SafeArea(mainCanvas.transform);
+        var bg = mainCanvas.transform.Find("IntroBackground") as RectTransform;
+        if (bg != null && introBgSprite != null)
+        {
+            var image = bg.GetComponent<Image>();
+            // Oversized centered image gives an aspect-preserving cover crop.
+            var fitter = bg.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fitter.aspectRatio = introBgSprite.rect.width / introBgSprite.rect.height;
+        }
+
+        // Transparent at 35% of the screen, near opaque at the foot of the image.
+        var gradient = ReferenceUiVisuals.Image(mainCanvas.transform, "BottomShade",
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, Color.white);
+        var texture = new Texture2D(1, 128, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 128; y++)
+        {
+            float h = y / 127f;
+            float a = h >= 0.65f ? 0f : Mathf.Lerp(0.93f, 0f, Mathf.InverseLerp(0.15f, 0.65f, h));
+            var c = ReferenceUiVisuals.Background; c.a = a;
+            texture.SetPixel(0, y, c);
+        }
+        texture.Apply();
+        gradient.sprite = Sprite.Create(texture, new Rect(0, 0, 1, 128), new Vector2(0.5f, 0.5f));
+        gradient.transform.SetSiblingIndex(1);
+
+        var mid = mainCanvas.transform.Find("MidSection");
+        if (mid != null) mid.SetParent(safe, false);
+        if (logoRt != null)
+        {
+            logoRt.SetParent(safe, false);
+            logoRt.anchorMin = logoRt.anchorMax = new Vector2(0.5f, 1f);
+            logoRt.pivot = new Vector2(0.5f, 1f);
+            logoRt.sizeDelta = new Vector2(350, 205);
+            logoRt.anchoredPosition = new Vector2(0, -70);
+        }
+
+        var narrative = mainCanvas.transform.Find("NarrativeBg") as RectTransform;
+        if (narrative != null)
+        {
+            narrative.SetParent(safe, false);
+            narrative.anchorMin = narrative.anchorMax = new Vector2(0.5f, 1f);
+            narrative.pivot = new Vector2(0.5f, 1f);
+            narrative.sizeDelta = new Vector2(320, 170);
+            narrative.anchoredPosition = new Vector2(0, -310);
+            var img = narrative.GetComponent<Image>();
+            Sprite source = introButtonSprite != null ? introButtonSprite : introStoryPanelSprite;
+            if (source != null)
+            {
+                img.sprite = source;
+                img.type = Image.Type.Simple;
+            }
+            var parchment = ReferenceUiVisuals.Image(safe, "NarrativeParchment", new Vector2(0.5f, 1),
+                new Vector2(0.5f, 1), new Vector2(-117, -445), new Vector2(117, -345),
+                ReferenceUiVisuals.Hex(0xEAD9AE));
+            parchment.transform.SetSiblingIndex(narrative.GetSiblingIndex());
+        }
+        if (typewriterText != null)
+        {
+            var rt = typewriterText.rectTransform;
+            rt.SetParent(safe, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(228, 64);
+            rt.anchoredPosition = new Vector2(0, -366);
+            typewriterText.fontSize = 14.5f;
+            typewriterText.fontSizeMin = 14;
+            typewriterText.fontSizeMax = 14.5f;
+            typewriterText.color = ReferenceUiVisuals.Hex(0x3A2410);
+            var font = Resources.Load<Font>("Fonts/AlegreyaSans-Bold");
+            if (font != null) typewriterText.font = TMP_FontAsset.CreateFontAsset(font);
+        }
+
+        var play = mainCanvas.transform.Find("PlayBtnContainer") as RectTransform;
+        var newGame = mainCanvas.transform.Find("NewGameBtnContainer") as RectTransform;
+        bool hasSave = SaveSystem.HasSave();
+        if (play != null)
+        {
+            play.SetParent(safe, false);
+            play.anchorMin = play.anchorMax = new Vector2(0.5f, 0f);
+            play.sizeDelta = new Vector2(290, hasSave ? 64 : 56);
+            play.anchoredPosition = new Vector2(0, hasSave ? 140 : 56);
+            var old = play.Find("PlayBtn");
+            if (old != null)
+            {
+                ReferenceUiVisuals.ApplyButtonSkin(old.GetComponent<Button>(), hasSave);
+                var label = old.GetComponentInChildren<TextMeshProUGUI>();
+                label.text = hasSave ? "DEVAM ET" : "YENİ OYUN";
+                label.fontSize = hasSave ? 22 : 18;
+                label.fontSizeMax = label.fontSize;
+                label.color = hasSave ? ReferenceUiVisuals.Hex(0x2A1A08) : ReferenceUiVisuals.Light;
+                var font = Resources.Load<Font>("Fonts/Cinzel-Bold");
+                if (font != null) label.font = TMP_FontAsset.CreateFontAsset(font);
+                old.DOKill();
+            }
+        }
+        if (newGame != null)
+        {
+            newGame.SetParent(safe, false);
+            newGame.anchorMin = newGame.anchorMax = new Vector2(0.5f, 0f);
+            newGame.sizeDelta = new Vector2(290, 56);
+            newGame.anchoredPosition = new Vector2(0, 56);
+            var old = newGame.Find("NewGameBtn");
+            if (old != null)
+            {
+                ReferenceUiVisuals.ApplyButtonSkin(old.GetComponent<Button>(), false);
+                var label = old.GetComponentInChildren<TextMeshProUGUI>();
+                label.text = "YENİ OYUN";
+                label.fontSize = label.fontSizeMax = 18;
+                label.color = ReferenceUiVisuals.Light;
+                var font = Resources.Load<Font>("Fonts/Cinzel-Bold");
+                if (font != null) label.font = TMP_FontAsset.CreateFontAsset(font);
+            }
+        }
+        var version = mainCanvas.transform.Find("VersionLabel");
+        if (version != null) version.gameObject.SetActive(false);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -237,66 +394,75 @@ public class IntroSceneSetup : MonoBehaviour
         mrt.offsetMin = Vector2.zero;
         mrt.offsetMax = Vector2.zero;
 
-        // ── Logo metni (üst %45) ────────────────────────────────
+        // ── Logo (üst %45) ─────────────────────────────────────
         GameObject logoObj = new GameObject("Logo");
         logoObj.transform.SetParent(mid.transform, false);
         logoRt = logoObj.AddComponent<RectTransform>();
-        logoRt.anchorMin = new Vector2(0.05f, 0.62f);
-        logoRt.anchorMax = new Vector2(0.95f, 1.00f);
-        logoRt.offsetMin = Vector2.zero;
-        logoRt.offsetMax = Vector2.zero;
+        logoRt.anchorMin = new Vector2(0.12f, 0.72f);
+        logoRt.anchorMax = new Vector2(0.88f, 0.95f);
+        logoRt.offsetMin = new Vector2(0f, -250f);
+        logoRt.offsetMax = new Vector2(0f, 450f);
         logoRt.localScale = Vector3.zero; // Başlangıç: gizli (scale animasyonu)
 
-        TextMeshProUGUI logoTmp = logoObj.AddComponent<TextMeshProUGUI>();
-        logoTmp.text              = "MINI EMPIRE\nBUILDER";
-        logoTmp.fontSize          = 72f;
-        logoTmp.alignment         = TextAlignmentOptions.Center;
-        logoTmp.color             = Gold;
-        logoTmp.fontStyle         = FontStyles.Bold;
-        logoTmp.characterSpacing  = 8f;  // Geniş letter spacing
-        logoTmp.enableAutoSizing  = true;
-        logoTmp.fontSizeMin       = 36f;
-        logoTmp.fontSizeMax       = 80f;
-
-        // Glow efekti — Outline component
-        Outline logoOutline = logoObj.AddComponent<Outline>();
-        logoOutline.effectColor    = new Color(1f, 0.85f, 0f, 0.7f);
-        logoOutline.effectDistance = new Vector2(3f, -3f);
-
-        // ── Kale sprite (alt %55) ───────────────────────────────
-        GameObject castleObj = new GameObject("Castle");
-        castleObj.transform.SetParent(mid.transform, false);
-        castleRt = castleObj.AddComponent<RectTransform>();
-        castleRt.anchorMin = new Vector2(0.30f, 0.00f);
-        castleRt.anchorMax = new Vector2(0.70f, 0.55f);
-        castleRt.offsetMin = Vector2.zero;
-        castleRt.offsetMax = Vector2.zero;
-
-        Image castleImg = castleObj.AddComponent<Image>();
-        var sm = SpriteManager.Instance;
-        if (sm != null && sm.MainBase != null)
+        if (introLogoSprite != null)
         {
-            castleImg.sprite            = sm.MainBase;
-            castleImg.color             = new Color(0.9f, 0.85f, 0.7f, 1f);
-            castleImg.preserveAspect    = true;
+            Image logoImg = logoObj.AddComponent<Image>();
+            logoImg.sprite = introLogoSprite;
+            logoImg.color = Color.white;
+            logoImg.preserveAspect = true;
+            logoImg.raycastTarget = false;
         }
         else
         {
-            castleImg.color = new Color(0.7f, 0.65f, 0.3f, 1f);
+            TextMeshProUGUI logoTmp = logoObj.AddComponent<TextMeshProUGUI>();
+            logoTmp.text              = "MINI EMPIRE\nBUILDER";
+            logoTmp.fontSize          = 72f;
+            logoTmp.alignment         = TextAlignmentOptions.Center;
+            logoTmp.color             = Gold;
+            logoTmp.fontStyle         = FontStyles.Bold;
+            logoTmp.characterSpacing  = 8f;
+            logoTmp.enableAutoSizing  = true;
+            logoTmp.fontSizeMin       = 36f;
+            logoTmp.fontSizeMax       = 80f;
+
+            Outline logoOutline = logoObj.AddComponent<Outline>();
+            logoOutline.effectColor    = new Color(1f, 0.85f, 0f, 0.7f);
+            logoOutline.effectDistance = new Vector2(3f, -3f);
         }
 
-        // Kale başlangıçta ekran dışı aşağıda (animasyon için)
-        castleRt.anchoredPosition = new Vector2(0f, -120f);
+        // ── Kale sprite (alt %55) — arka plan yoksa göster ──────
+        if (introBgSprite == null)
+        {
+            GameObject castleObj = new GameObject("Castle");
+            castleObj.transform.SetParent(mid.transform, false);
+            castleRt = castleObj.AddComponent<RectTransform>();
+            castleRt.anchorMin = new Vector2(0.30f, 0.00f);
+            castleRt.anchorMax = new Vector2(0.70f, 0.55f);
+            castleRt.offsetMin = Vector2.zero;
+            castleRt.offsetMax = Vector2.zero;
 
-        // ── Altın dekoratif çizgi ───────────────────────────────
-        GameObject divider = new GameObject("GoldDivider");
-        divider.transform.SetParent(mid.transform, false);
-        RectTransform drt = divider.AddComponent<RectTransform>();
-        drt.anchorMin = new Vector2(0.15f, 0.585f);
-        drt.anchorMax = new Vector2(0.85f, 0.600f);
-        drt.offsetMin = Vector2.zero;
-        drt.offsetMax = Vector2.zero;
-        divider.AddComponent<Image>().color = new Color(1f, 0.85f, 0.2f, 0.6f);
+            Image castleImg = castleObj.AddComponent<Image>();
+            var sm = SpriteManager.Instance;
+            if (sm != null && sm.MainBase != null)
+            {
+                castleImg.sprite            = sm.MainBase;
+                castleImg.color             = new Color(0.9f, 0.85f, 0.7f, 1f);
+                castleImg.preserveAspect    = true;
+            }
+            else
+            {
+                castleImg.color = new Color(0.7f, 0.65f, 0.3f, 1f);
+            }
+
+            // Kale başlangıçta ekran dışı aşağıda (animasyon için)
+            castleRt.anchoredPosition = new Vector2(0f, -120f);
+        }
+        else
+        {
+            castleRt = null;
+        }
+
+        // GoldDivider kaldırıldı.
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -305,29 +471,44 @@ public class IntroSceneSetup : MonoBehaviour
 
     private void BuildNarrativeSection(Transform canvasRoot)
     {
-        // Hafif karartılmış kutu
+        // Hikaye paneli
         GameObject narrativeBg = CreatePanel(canvasRoot, "NarrativeBg",
-            new Vector2(0.06f, 0.22f), new Vector2(0.94f, 0.42f),
-            new Color(0f, 0f, 0f, 0.45f));
-        narrativeBg.GetComponent<Image>().raycastTarget = false;
+            new Vector2(0.18f, 0.26f), new Vector2(0.82f, 0.42f),
+            Color.white);
+        RectTransform narrativeRt = narrativeBg.GetComponent<RectTransform>();
+        narrativeRt.offsetMin = new Vector2(-100f, -50f);
+        narrativeRt.offsetMax = new Vector2(100f, 50f);
+        Image narrativeImg = narrativeBg.GetComponent<Image>();
+        narrativeImg.raycastTarget = false;
+        if (introStoryPanelSprite != null)
+        {
+            narrativeImg.sprite = introStoryPanelSprite;
+            narrativeImg.type = Image.Type.Simple;
+            narrativeImg.preserveAspect = false;
+        }
+        else
+        {
+            narrativeImg.color = new Color(0f, 0f, 0f, 0.45f);
+        }
 
         // Metin
         GameObject txtObj = new GameObject("TypewriterText");
         txtObj.transform.SetParent(canvasRoot, false);
         RectTransform trt = txtObj.AddComponent<RectTransform>();
-        trt.anchorMin = new Vector2(0.08f, 0.23f);
-        trt.anchorMax = new Vector2(0.92f, 0.41f);
+        trt.anchorMin = new Vector2(0.24f, 0.275f);
+        trt.anchorMax = new Vector2(0.76f, 0.405f);
         trt.offsetMin = Vector2.zero;
         trt.offsetMax = Vector2.zero;
 
         typewriterText = txtObj.AddComponent<TextMeshProUGUI>();
         typewriterText.text            = "";
-        typewriterText.fontSize        = 28f;
-        typewriterText.alignment       = TextAlignmentOptions.Top;
-        typewriterText.color           = new Color(0.88f, 0.88f, 0.94f, 1f);
+        typewriterText.fontSize        = 30f;
+        typewriterText.alignment       = TextAlignmentOptions.Center;
+        typewriterText.color           = new Color(0.28f, 0.2f, 0.12f, 1f);
+        typewriterText.fontStyle       = FontStyles.Bold;
         typewriterText.enableAutoSizing = true;
-        typewriterText.fontSizeMin     = 14f;
-        typewriterText.fontSizeMax     = 30f;
+        typewriterText.fontSizeMin     = 18f;
+        typewriterText.fontSizeMax     = 34f;
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -347,8 +528,8 @@ public class IntroSceneSetup : MonoBehaviour
         GameObject btnContainer = new GameObject("PlayBtnContainer");
         btnContainer.transform.SetParent(canvasRoot, false);
         RectTransform bcrt = btnContainer.AddComponent<RectTransform>();
-        bcrt.anchorMin = new Vector2(0.12f, playBot);
-        bcrt.anchorMax = new Vector2(0.88f, playTop);
+        bcrt.anchorMin = new Vector2(0.28f, playBot);
+        bcrt.anchorMax = new Vector2(0.72f, playTop);
         bcrt.offsetMin = Vector2.zero;
         bcrt.offsetMax = Vector2.zero;
 
@@ -356,16 +537,6 @@ public class IntroSceneSetup : MonoBehaviour
         playBtnCG.alpha       = 0f;
         playBtnCG.interactable   = false;
         playBtnCG.blocksRaycasts = false;
-
-        // Dış border
-        GameObject border = new GameObject("Border");
-        border.transform.SetParent(btnContainer.transform, false);
-        RectTransform brdRt = border.AddComponent<RectTransform>();
-        brdRt.anchorMin = new Vector2(-0.01f, -0.05f);
-        brdRt.anchorMax = new Vector2( 1.01f,  1.05f);
-        brdRt.offsetMin = Vector2.zero;
-        brdRt.offsetMax = Vector2.zero;
-        border.AddComponent<Image>().color = new Color(0.4f, 0.3f, 0.0f, 1f);
 
         // Ana buton
         GameObject btnObj = new GameObject("PlayBtn");
@@ -377,15 +548,25 @@ public class IntroSceneSetup : MonoBehaviour
         btnRt.offsetMax = Vector2.zero;
 
         Image btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = Gold;
+        btnImg.color = Color.white;
+        if (introButtonSprite != null)
+        {
+            btnImg.sprite = introButtonSprite;
+            btnImg.type = Image.Type.Simple;
+            btnImg.preserveAspect = false;
+        }
+        else
+        {
+            btnImg.color = Gold;
+        }
 
         Button btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = btnImg;
         ColorBlock cb = btn.colors;
-        cb.normalColor      = Gold;
-        cb.highlightedColor = Gold * 1.1f;
-        cb.pressedColor     = Gold * 0.8f;
-        cb.selectedColor    = Gold;
+        cb.normalColor      = Color.white;
+        cb.highlightedColor = new Color(1f, 0.95f, 0.85f, 1f);
+        cb.pressedColor     = new Color(0.9f, 0.85f, 0.75f, 1f);
+        cb.selectedColor    = Color.white;
         btn.colors = cb;
         // Kayıt varsa DEVAM ET, yoksa HeroSelect
         btn.onClick.AddListener(hasSave ? (UnityEngine.Events.UnityAction)OnContinueClicked
@@ -402,11 +583,14 @@ public class IntroSceneSetup : MonoBehaviour
 
         TextMeshProUGUI btnTmp = txtObj.AddComponent<TextMeshProUGUI>();
         btnTmp.text             = hasSave ? "DEVAM ET" : "OYNA";
-        btnTmp.fontSize         = 50f;
+        btnTmp.fontSize         = 42f;
         btnTmp.alignment        = TextAlignmentOptions.Center;
-        btnTmp.color            = DarkBg;
+        btnTmp.color            = Gold;
         btnTmp.fontStyle        = FontStyles.Bold;
-        btnTmp.characterSpacing = 5f;
+        btnTmp.characterSpacing = 2f;
+        btnTmp.enableAutoSizing = true;
+        btnTmp.fontSizeMin      = 22f;
+        btnTmp.fontSizeMax      = 46f;
 
         // Pulse animasyonu
         btnObj.transform.DOScale(1.05f, 0.7f)
@@ -445,28 +629,28 @@ public class IntroSceneSetup : MonoBehaviour
             nbrt.offsetMax = Vector2.zero;
 
             Image newImg = newBtnObj.AddComponent<Image>();
-            Color newBtnColor = new Color(0.22f, 0.22f, 0.30f, 1f);
-            newImg.color = newBtnColor;
+            if (introButtonSprite != null)
+            {
+                newImg.sprite = introButtonSprite;
+                newImg.type = Image.Type.Simple;
+                newImg.preserveAspect = false;
+                newImg.color = Color.white;
+            }
+            else
+            {
+                Color newBtnColor = new Color(0.22f, 0.22f, 0.30f, 1f);
+                newImg.color = newBtnColor;
+            }
 
             Button newBtn = newBtnObj.AddComponent<Button>();
             newBtn.targetGraphic = newImg;
             ColorBlock ncb = newBtn.colors;
-            ncb.normalColor      = newBtnColor;
-            ncb.highlightedColor = newBtnColor + new Color(0.08f, 0.08f, 0.08f);
-            ncb.pressedColor     = newBtnColor - new Color(0.05f, 0.05f, 0.05f);
-            ncb.selectedColor    = newBtnColor;
+            ncb.normalColor      = Color.white;
+            ncb.highlightedColor = new Color(1f, 0.95f, 0.85f, 1f);
+            ncb.pressedColor     = new Color(0.9f, 0.85f, 0.75f, 1f);
+            ncb.selectedColor    = Color.white;
             newBtn.colors = ncb;
             newBtn.onClick.AddListener(OnNewGameClicked);
-
-            // İnce üst çizgi (altın)
-            GameObject stripe = new GameObject("Stripe");
-            stripe.transform.SetParent(newBtnObj.transform, false);
-            RectTransform srt = stripe.AddComponent<RectTransform>();
-            srt.anchorMin = new Vector2(0f, 0.88f);
-            srt.anchorMax = Vector2.one;
-            srt.offsetMin = Vector2.zero;
-            srt.offsetMax = Vector2.zero;
-            stripe.AddComponent<Image>().color = new Color(0.5f, 0.42f, 0.0f, 0.7f);
 
             GameObject newTxtObj = new GameObject("NewBtnText");
             newTxtObj.transform.SetParent(newBtnObj.transform, false);
@@ -478,14 +662,14 @@ public class IntroSceneSetup : MonoBehaviour
 
             TextMeshProUGUI newTmp = newTxtObj.AddComponent<TextMeshProUGUI>();
             newTmp.text             = "YENİ OYUN";
-            newTmp.fontSize         = 26f;
+            newTmp.fontSize         = 28f;
             newTmp.alignment        = TextAlignmentOptions.Center;
-            newTmp.color            = new Color(0.75f, 0.75f, 0.85f, 1f);
+            newTmp.color            = Gold;
             newTmp.fontStyle        = FontStyles.Bold;
-            newTmp.characterSpacing = 3f;
+            newTmp.characterSpacing = 2f;
             newTmp.enableAutoSizing = true;
-            newTmp.fontSizeMin      = 14f;
-            newTmp.fontSizeMax      = 28f;
+            newTmp.fontSizeMin      = 18f;
+            newTmp.fontSizeMax      = 32f;
         }
     }
 
@@ -517,7 +701,10 @@ public class IntroSceneSetup : MonoBehaviour
     private IEnumerator PlayIntroSequence()
     {
         // 1. Arka plan katmanları fade-in (0.5s)
-        yield return parallaxCG.DOFade(1f, 0.5f).WaitForCompletion();
+        if (parallaxCG != null)
+        {
+            yield return parallaxCG.DOFade(1f, 0.5f).WaitForCompletion();
+        }
 
         // 2. Logo scale 0 → 1 (0.8s, OutBack)
         yield return logoRt.DOScale(Vector3.one, 0.8f)
@@ -525,12 +712,15 @@ public class IntroSceneSetup : MonoBehaviour
             .WaitForCompletion();
 
         // 3. Kale aşağıdan yukarı (0.5s, OutQuart)
-        yield return castleRt.DOAnchorPosY(0f, 0.5f)
-            .SetEase(Ease.OutQuart)
-            .WaitForCompletion();
+        if (castleRt != null)
+        {
+            yield return castleRt.DOAnchorPosY(0f, 0.5f)
+                .SetEase(Ease.OutQuart)
+                .WaitForCompletion();
+        }
 
         // 4. Typewriter metni
-        string fullText = "Karanlik bir cagda imparatorlugun yikildi...\n\nYikintilar arasinda tek umut: sen.";
+        string fullText = UiStrings.IntroStory;
         yield return StartCoroutine(TypewriterEffect(fullText, 0.05f));
 
         // 5. OYNA / DEVAM ET butonu fade-in (0.6s)
@@ -565,7 +755,7 @@ public class IntroSceneSetup : MonoBehaviour
 
     private void Update()
     {
-        if (parallaxLayers == null) return;
+        if (parallaxLayers == null || parallaxLayers.Length == 0) return;
 
         float dt = Time.deltaTime;
         for (int i = 0; i < parallaxLayers.Length; i++)
@@ -581,6 +771,17 @@ public class IntroSceneSetup : MonoBehaviour
 
             Vector2 cur = parallaxLayers[i].anchoredPosition;
             parallaxLayers[i].anchoredPosition = new Vector2(parallaxStartX[i], cur.y);
+        }
+    }
+
+    private void DisableOtherCanvases()
+    {
+        var canvases = FindObjectsOfType<Canvas>(true);
+        foreach (var canvas in canvases)
+        {
+            if (canvas == null || canvas.gameObject == null) continue;
+            if (canvas.gameObject.name == "IntroCanvas") continue;
+            canvas.gameObject.SetActive(false);
         }
     }
 
@@ -610,6 +811,88 @@ public class IntroSceneSetup : MonoBehaviour
     private Image bgImage;
     private ScrollRect scrollRect;
     private RectTransform contentRt;
+    private WeaponType selectedWeapon = WeaponType.Axe;
+    private TextMeshProUGUI startLabel;
+    private Image[] selectionBorders;
+
+    private void BuildReferenceWeaponPanel()
+    {
+        weaponPanel = new GameObject("WeaponSelectPanel", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        weaponPanel.transform.SetParent(mainCanvas.transform, false);
+        var root = (RectTransform)weaponPanel.transform;
+        root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
+        root.offsetMin = root.offsetMax = Vector2.zero;
+        weaponPanel.GetComponent<Image>().color = ReferenceUiVisuals.Background;
+        var safe = ReferenceUiVisuals.SafeArea(root);
+        ReferenceUiVisuals.Text(safe, "HeroTitle", "KAHRAMANINI SEÇ", 26, ReferenceUiVisuals.Gold,
+            TextAlignmentOptions.Center, new Vector2(0, 1), new Vector2(1, 1), new Vector2(20, -88), new Vector2(-20, -48), true);
+        ReferenceUiVisuals.Text(safe, "HeroSubtitle", "Her savaşçı farklı bir strateji sunar", 16,
+            ReferenceUiVisuals.Muted, TextAlignmentOptions.Center,
+            new Vector2(0, 1), new Vector2(1, 1), new Vector2(20, -112), new Vector2(-20, -88));
+
+        selectionBorders = new Image[3];
+        string[] names = { "KILIÇ", "MIZRAK", "OKÇU" };
+        string[] tags = { "SALDIRI", "SAVUNMA", "MENZİL" };
+        string[] desc = { "Düşmanların arasına dalar, sert vurur!", "Pozisyonunu korur, düşmanlarını engeller!", "Güvenli mesafeden yüksek hasar verir!" };
+        Color[] colors = { ReferenceUiVisuals.Red, ReferenceUiVisuals.Blue, ReferenceUiVisuals.Green };
+        Color[] fills = { ReferenceUiVisuals.Hex(0xE0583A), ReferenceUiVisuals.Hex(0x5AA8E0), ReferenceUiVisuals.Hex(0x4FCF74) };
+        WeaponType[] weapons = { WeaponType.Axe, WeaponType.Spear, WeaponType.Bow };
+        Sprite[] sprites = { SpriteManager.Instance.HeroAxe, SpriteManager.Instance.HeroSpear, SpriteManager.Instance.HeroBow };
+        // These are the existing displayed values; no combat statistics are changed.
+        float[][] stats = { new [] { 1f, 0.2f, 0.3f, 1f }, new [] { 0.5f, 0.6f, 0.4f, 1f }, new [] { 0.35f, 1f, 0.8f, 0.35f } };
+        for (int i = 0; i < 3; i++)
+        {
+            float top = 0.855f - i * 0.246f;
+            float bottom = top - 0.232f;
+            var border = ReferenceUiVisuals.Image(safe, names[i] + "Border", new Vector2(0, bottom), new Vector2(1, top),
+                new Vector2(20, 0), new Vector2(-20, 0), i == 0 ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x4A3A26));
+            selectionBorders[i] = border;
+            border.raycastTarget = true;
+            var card = ReferenceUiVisuals.Image(border.transform, names[i] + "Card", Vector2.zero, Vector2.one,
+                new Vector2(3, 3), new Vector2(-3, -3), ReferenceUiVisuals.Panel);
+            var hit = border.gameObject.AddComponent<Button>();
+            hit.targetGraphic = border; hit.transition = Selectable.Transition.None;
+            int index = i;
+            hit.onClick.AddListener(() => SelectReferenceHero(index, weapons[index], names[index]));
+
+            var portrait = ReferenceUiVisuals.Image(card.transform, "HeroSprite", new Vector2(0, 0.28f), new Vector2(0, 0.72f),
+                new Vector2(10, 0), new Vector2(94, 0), Color.white);
+            portrait.sprite = HeroPortraitSprite.Get(sprites[i]); portrait.preserveAspect = true;
+            ReferenceUiVisuals.Text(card.transform, "Name", names[i], 20, ReferenceUiVisuals.Light,
+                TextAlignmentOptions.Left, new Vector2(0, 0.77f), new Vector2(1, 0.95f), new Vector2(102, 0), new Vector2(-102, 0), true);
+            var tag = ReferenceUiVisuals.Image(card.transform, "ClassTag", new Vector2(1, 0.78f), new Vector2(1, 0.94f),
+                new Vector2(-94, 0), new Vector2(-10, 0), colors[i]);
+            ReferenceUiVisuals.Text(tag.transform, "TagText", tags[i], 13, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, bodyBold: true);
+            ReferenceUiVisuals.Text(card.transform, "Description", desc[i], 14, ReferenceUiVisuals.Muted,
+                TextAlignmentOptions.Left, new Vector2(0, 0.63f), new Vector2(1, 0.78f), new Vector2(102, 0), new Vector2(-10, 0));
+            string[] labels = { "Hasar", "Menzil", "Hız", "Can" };
+            for (int s = 0; s < 4; s++)
+            {
+                float row = 0.55f - s * 0.13f;
+                ReferenceUiVisuals.Text(card.transform, "Stat" + s, labels[s], 12, ReferenceUiVisuals.Light,
+                    TextAlignmentOptions.Left, new Vector2(0, row), new Vector2(0, row + 0.11f),
+                    new Vector2(102, 0), new Vector2(153, 0));
+                var bar = ReferenceUiVisuals.Image(card.transform, "Bar" + s, new Vector2(0, row + 0.038f),
+                    new Vector2(1, row + 0.082f), new Vector2(156, 0), new Vector2(-10, 0), ReferenceUiVisuals.Background);
+                ReferenceUiVisuals.Image(bar.transform, "Fill", Vector2.zero, new Vector2(stats[i][s], 1),
+                    Vector2.zero, Vector2.zero, fills[i]);
+            }
+        }
+
+        var start = ReferenceUiVisuals.Button(safe, "StartHeroButton", "KILIÇ İLE BAŞLA", true,
+            new Vector2(0, 0), new Vector2(1, 0), new Vector2(20, 18), new Vector2(-20, 74), 18);
+        startLabel = start.GetComponentInChildren<TextMeshProUGUI>();
+        start.onClick.AddListener(() => { if (!weaponSelectionLocked) { weaponSelectionLocked = true; StartCoroutine(ConfirmWeapon(selectedWeapon)); } });
+    }
+
+    private void SelectReferenceHero(int index, WeaponType weapon, string name)
+    {
+        selectedWeapon = weapon;
+        for (int i = 0; i < selectionBorders.Length; i++)
+            selectionBorders[i].color = i == index ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x4A3A26);
+        startLabel.text = name + " İLE BAŞLA";
+    }
 
     private void ShowWeaponSelection()
     {
@@ -620,7 +903,7 @@ public class IntroSceneSetup : MonoBehaviour
             playBtnCG.blocksRaycasts = false;
         }
 
-        BuildWeaponPanel();
+        BuildReferenceWeaponPanel();
         CanvasGroup wpCG = weaponPanel.GetComponent<CanvasGroup>();
         wpCG.alpha = 0f;
         weaponPanel.SetActive(true);

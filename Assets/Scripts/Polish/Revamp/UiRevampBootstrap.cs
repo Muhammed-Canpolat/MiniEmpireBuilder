@@ -1,6 +1,7 @@
 ﻿// [UI REVAMP BOOTSTRAP] — Mini Empire Builder
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class UiRevampBootstrap : MonoBehaviour
 {
@@ -30,6 +31,10 @@ public class UiRevampBootstrap : MonoBehaviour
 
     private void AutoTagKnownNodes()
     {
+        string sceneName = SceneManager.GetActiveScene().name;
+        if (sceneName == "BattleScene") return; // Battle HUD has its own reference styling.
+        bool isBaseScene = sceneName == "BaseScene";
+
         TagByName("TopBar", UiStyleKind.TopBar);
         TagByName("BuildingPanel", UiStyleKind.Panel);
         TagByName("HeroPanel", UiStyleKind.Panel);
@@ -38,7 +43,11 @@ public class UiRevampBootstrap : MonoBehaviour
         TagByName("HeroBarBg", UiStyleKind.Panel);
         TagByName("BaseBarBg", UiStyleKind.Panel);
 
-        TagByName("BattleBtn", UiStyleKind.PrimaryButton);
+        if (!isBaseScene)
+        {
+            TagByName("BattleBtn", UiStyleKind.PrimaryButton);
+            TagByName("BuildBtn", UiStyleKind.PrimaryButton);
+        }
         TagByName("ContinueBtn", UiStyleKind.PrimaryButton);
         TagByName("ReturnButton", UiStyleKind.PrimaryButton);
         TagByName("SelectBtn", UiStyleKind.PrimaryButton);
@@ -53,12 +62,15 @@ public class UiRevampBootstrap : MonoBehaviour
         TagByName("ResultText", UiStyleKind.TitleText);
         TagByName("Subtitle", UiStyleKind.SubtitleText);
 
-        TagByName("GoldText", UiStyleKind.AccentText);
-        TagByName("GpsText", UiStyleKind.AccentText);
+        if (!isBaseScene)
+        {
+            TagByName("GoldText", UiStyleKind.AccentText);
+            TagByName("GpsText", UiStyleKind.AccentText);
+            TagByName("LevelText", UiStyleKind.BodyText);
+        }
         TagByName("BaseLvlText", UiStyleKind.AccentText);
         TagByName("WaveText", UiStyleKind.BodyText);
         TagByName("EnemyText", UiStyleKind.BodyText);
-        TagByName("LevelText", UiStyleKind.BodyText);
         TagByName("HeroLabel", UiStyleKind.BodyText);
         TagByName("BaseLabel", UiStyleKind.BodyText);
     }
