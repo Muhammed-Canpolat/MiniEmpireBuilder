@@ -1215,6 +1215,10 @@ public class BaseSceneSetup : MonoBehaviour
         _lockedLandToastRoutine = null;
     }
 
+    /// <summary>
+    /// Ağaç/kaya/çit kaldırma kartı: nesnenin adı, inşaatçı süresi, KALDIR ve VAZGEÇ.
+    /// Kart nesnenin üstünde durur, alttaki küçük ok nesneyi gösterir; ekran dışına taşmaz.
+    /// </summary>
     private void ShowRemovePrompt(PlacedMapObject obj)
     {
         if (obj == null || obj.gameObject == null)
@@ -1224,62 +1228,86 @@ public class BaseSceneSetup : MonoBehaviour
             return;
 
         HideRemovePrompt();
-
         _removeTarget = obj;
 
-        _removePrompt = new GameObject("RemovePrompt");
+        var canvasRect = _mainCanvas.GetComponent<RectTransform>();
+        _removePrompt = new GameObject("RemovePrompt", typeof(RectTransform), typeof(Image));
         _removePrompt.transform.SetParent(_mainCanvas.transform, false);
+        var rt = (RectTransform)_removePrompt.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = new Vector2(220f, 104f);
+        var card = _removePrompt.GetComponent<Image>();
+        card.sprite = ReferenceUiVisuals.ToastSprite();
+        card.type = Image.Type.Sliced;
+        card.color = Color.white;
+        var outline = _removePrompt.AddComponent<Outline>();
+        outline.effectColor = new Color(0.94f, 0.76f, 0.29f, 0.7f);
+        outline.effectDistance = new Vector2(1.5f, -1.5f);
 
-        RectTransform rt = _removePrompt.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(140f, 45f);
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
+        string title = obj.objectType == MapObjectType.Tree ? "Ağaç"
+            : obj.objectType == MapObjectType.Rock ? "Kaya"
+            : obj.objectType == MapObjectType.Fence ? "Çit" : "Nesne";
+        bool builderFree = BuilderSystem.Instance == null || BuilderSystem.Instance.HasAvailableBuilder();
+        ReferenceUiVisuals.Text(rt, "Title", UiStrings.Upper(title), 16, ReferenceUiVisuals.Gold,
+            TextAlignmentOptions.Center, new Vector2(0f, 0.70f), new Vector2(1f, 0.95f),
+            new Vector2(10f, 0f), new Vector2(-10f, 0f), title: true);
+        ReferenceUiVisuals.Text(rt, "Info", builderFree
+                ? "İnşaatçı temizler · 5 sn"
+                : "<color=#E07A5F>İnşaatçı şu an meşgul</color>", 12, ReferenceUiVisuals.Muted,
+            TextAlignmentOptions.Center, new Vector2(0f, 0.50f), new Vector2(1f, 0.70f),
+            new Vector2(10f, 0f), new Vector2(-10f, 0f), bodyBold: true);
 
-        // UI'yi obje üzerinde hizala
-        Vector3 screenPos = Camera.main.WorldToScreenPoint(obj.gameObject.transform.position + Vector3.up * 0.8f);
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            _mainCanvas.GetComponent<RectTransform>(),
-            screenPos,
-            null,
-            out Vector2 localPos);
-        rt.anchoredPosition = localPos;
-
-        Image bg = _removePrompt.AddComponent<Image>();
-        Sprite removeBg = SpriteManager.Instance?.GetSprite("ui_button_bg_01"); // Daha düzgün bir sprite
-        if (removeBg != null)
-        {
-            bg.sprite = removeBg;
-            bg.type = Image.Type.Sliced;
-            bg.color = new Color(0.9f, 0.2f, 0.2f, 1f); // Kırmızımsı buton
-        }
-        else
-        {
-            bg.color = new Color(0.9f, 0.2f, 0.2f, 0.9f);
-        }
-
-        Button btn = _removePrompt.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        btn.onClick.AddListener(() =>
+        var remove = ReferenceUiVisuals.Button(rt, "RemoveConfirm", "KALDIR", true,
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-100f, 10f), new Vector2(-4f, 48f), 14);
+        // Yıkıcı eylem: altın düğme kırmızıya çalar.
+        remove.GetComponent<Image>().color = new Color(1f, 0.62f, 0.55f);
+        remove.interactable = builderFree;
+        remove.onClick.AddListener(() =>
         {
             BaseMapManager.Instance?.RequestRemoveObject(obj);
             HideRemovePrompt();
         });
+        var cancel = ReferenceUiVisuals.Button(rt, "RemoveCancel", "VAZGEÇ", false,
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(4f, 10f), new Vector2(100f, 48f), 14);
+        cancel.onClick.AddListener(HideRemovePrompt);
 
-        GameObject textObj = new GameObject("Text");
-        textObj.transform.SetParent(_removePrompt.transform, false);
-        RectTransform txtRt = textObj.AddComponent<RectTransform>();
-        txtRt.anchorMin = Vector2.zero;
-        txtRt.anchorMax = Vector2.one;
-        txtRt.offsetMin = Vector2.zero;
-        txtRt.offsetMax = Vector2.zero;
+        // Nesneyi gösteren küçük ok.
+        var pointer = ReferenceUiVisuals.Image(rt, "Pointer", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            new Vector2(-9f, -12f), new Vector2(9f, 1f), ReferenceUiVisuals.Background);
+        pointer.sprite = PointerSprite();
+        pointer.transform.SetAsFirstSibling();
 
-        TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
-        tmp.text = "KALDIR";
-        tmp.fontSize = 22f;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.fontStyle = FontStyles.Bold;
+        // Konum: nesnenin üstü; kart ekran içinde kalır, ok nesneyi göstermeye devam eder.
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(obj.gameObject.transform.position + Vector3.up * 0.9f);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPos, null, out Vector2 localPos);
+        float halfW = rt.sizeDelta.x * 0.5f + 8f;
+        float x = Mathf.Clamp(localPos.x, canvasRect.rect.xMin + halfW, canvasRect.rect.xMax - halfW);
+        float y = Mathf.Clamp(localPos.y + 12f, canvasRect.rect.yMin + 110f, canvasRect.rect.yMax - rt.sizeDelta.y - 90f);
+        rt.anchoredPosition = new Vector2(x, y);
+        ((RectTransform)pointer.transform).anchoredPosition = new Vector2(Mathf.Clamp(localPos.x - x, -90f, 90f), -5.5f);
+
+        rt.localScale = Vector3.one * 0.7f;
+        rt.DOScale(1f, 0.18f).SetEase(Ease.OutBack);
+    }
+
+    private static Sprite removePointer;
+
+    private static Sprite PointerSprite()
+    {
+        if (removePointer != null) return removePointer;
+        const int w = 24, h = 16;
+        var texture = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            float half = (y + 0.5f) / h * (w * 0.5f);
+            float alpha = Mathf.Clamp01(half - Mathf.Abs(x + 0.5f - w * 0.5f) + 0.5f);
+            texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+        }
+        texture.Apply();
+        removePointer = Sprite.Create(texture, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+        return removePointer;
     }
 
     private void HideRemovePrompt()

@@ -196,6 +196,9 @@ public class BaseWorldUI : MonoBehaviour
     {
         if (battleButton != null) battleButton.gameObject.SetActive(show);
         if (buildMenuButton != null) buildMenuButton.gameObject.SetActive(show);
+        // Dock'a sonradan eklenen Kahraman düğmesi de aynı anda gizlenir/görünür.
+        var hero = buildMenuButton != null ? buildMenuButton.transform.parent?.Find("HeroBtn") : null;
+        if (hero != null) hero.gameObject.SetActive(show);
     }
 
     // ==================== UI GÜNCELLEME ====================

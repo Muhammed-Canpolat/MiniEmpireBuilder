@@ -234,10 +234,10 @@ public sealed class DecorPlacementController : MonoBehaviour
         var rect = undoToast.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
         rect.anchoredPosition = new Vector2(0f, 106f);
-        rect.sizeDelta = new Vector2(190f, 44f);
-        undoToast.GetComponent<Image>().color = ReferenceUiVisuals.Hex(0x2A2118);
+        rect.sizeDelta = new Vector2(150f, 48f);
+        undoToast.GetComponent<Image>().color = Color.clear;
         var toast = undoToast;
-        MakeButton(rect, "Geri al", Vector2.zero, () =>
+        MakeButton(rect, "GERİ AL", Vector2.zero, () =>
         {
             if (moved != null && CanPlace(moved.Data, previous, moved))
             {
@@ -269,11 +269,14 @@ public sealed class DecorPlacementController : MonoBehaviour
         actionPanel.transform.SetParent(parent, false);
         var rect = actionPanel.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(200f, 46f);
+        rect.sizeDelta = new Vector2(214f, 58f);
         rect.position = Camera.main.WorldToScreenPoint(item.transform.position + Vector3.up);
-        actionPanel.GetComponent<Image>().color = new Color(0.11f, 0.08f, 0.05f, 0.96f);
-        MakeButton(rect, "TAŞI", new Vector2(-50f, 0f), () => BeginMove(item));
-        MakeButton(rect, $"SİL +{item.Data.cost / 2}", new Vector2(50f, 0f), () => Delete(item));
+        var panelImage = actionPanel.GetComponent<Image>();
+        panelImage.sprite = ReferenceUiVisuals.ToastSprite();
+        panelImage.type = Image.Type.Sliced;
+        panelImage.color = Color.white;
+        MakeButton(rect, "TAŞI", new Vector2(-50f, 0f), () => BeginMove(item), false, 92f);
+        MakeButton(rect, $"SİL +{item.Data.cost / 2}", new Vector2(50f, 0f), () => Delete(item), false, 92f);
     }
 
     private void HideActions()
@@ -379,36 +382,34 @@ public sealed class DecorPlacementController : MonoBehaviour
         rect.anchorMin = new Vector2(0.15f, 0f);
         rect.anchorMax = new Vector2(0.85f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 18f);
-        rect.sizeDelta = new Vector2(0f, 62f);
-        confirmBar.GetComponent<Image>().color = new Color(0.11f, 0.08f, 0.05f, 0.94f);
-        confirmButton = MakeButton(rect, "✓", new Vector2(-55f, 0f), Confirm);
-        MakeButton(rect, "✗", new Vector2(55f, 0f), Cancel);
+        rect.anchoredPosition = new Vector2(0f, 14f);
+        rect.sizeDelta = new Vector2(0f, 66f);
+        var barImage = confirmBar.GetComponent<Image>();
+        barImage.sprite = ReferenceUiVisuals.ToastSprite();
+        barImage.type = Image.Type.Sliced;
+        barImage.color = Color.white;
+        // ✓/✗ simgeleri fontta yoktu ve boş kare görünüyordu: yazılı düğmeler.
+        string confirmLabel = moving != null ? "YERLEŞTİR" : $"YERLEŞTİR · {selected.cost}";
+        confirmButton = MakeButton(rect, confirmLabel, new Vector2(-62f, 0f), Confirm, true, 140f);
+        MakeButton(rect, "İPTAL", new Vector2(80f, 0f), Cancel, false, 96f);
     }
 
-    private static Button MakeButton(Transform parent, string label, Vector2 offset, UnityEngine.Events.UnityAction action)
+    /// <summary>Ortak düğme görünümü (kabartmalı kenar, oyunun başlık fontu).</summary>
+    private static Button MakeButton(Transform parent, string label, Vector2 offset,
+        UnityEngine.Events.UnityAction action, bool gold = false, float width = 90f)
     {
-        var go = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        var rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        var button = ReferenceUiVisuals.Button(parent, label, label, gold,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 14);
+        var rect = (RectTransform)button.transform;
         rect.anchoredPosition = offset;
-        rect.sizeDelta = new Vector2(90f, 42f);
-        go.GetComponent<Image>().color = new Color(0.34f, 0.22f, 0.10f);
-        var button = go.GetComponent<Button>();
+        rect.sizeDelta = new Vector2(width, 44f);
+        var text = button.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+            text.characterSpacing = 0.5f;
+            text.fontSizeMin = 9f;
+        }
         button.onClick.AddListener(action);
-        var textGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
-        textGo.transform.SetParent(go.transform, false);
-        var textRect = textGo.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = textRect.offsetMax = Vector2.zero;
-        var text = textGo.GetComponent<TextMeshProUGUI>();
-        text.text = label;
-        text.fontSize = 21f;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = new Color(1f, 0.86f, 0.51f);
-        text.raycastTarget = false;
         return button;
     }
 }
