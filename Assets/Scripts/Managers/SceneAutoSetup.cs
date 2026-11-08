@@ -47,11 +47,16 @@ public static class SceneAutoSetup
                 EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 break;
 
+            case "CampaignScene":
+                EnsureComponent<CampaignSceneSetup>("CampaignSceneSetup");
+                break;
+
             default:
                 // Bilinmeyen sahne — intro olarak davran (ilk açılış için)
                 if (Object.FindFirstObjectByType<IntroSceneSetup>() == null &&
                     Object.FindFirstObjectByType<BaseSceneSetup>() == null &&
-                    Object.FindFirstObjectByType<BattleSceneSetup>() == null)
+                    Object.FindFirstObjectByType<BattleSceneSetup>() == null &&
+                    Object.FindFirstObjectByType<CampaignSceneSetup>() == null)
                 {
                     Debug.Log($"[SceneAutoSetup] Bilinmeyen sahne: {sceneName}, IntroSetup ekleniyor...");
                     EnsureComponent<IntroSceneSetup>("IntroSetup");

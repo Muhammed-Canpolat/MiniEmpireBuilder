@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
     public event Action<int> OnGoldChanged;                         // altın değişince
     public event Action<BuildingType, int> OnBuildingUpgraded;      // bina seviye atınca
     public event Action<int> OnHeroLevelUp;                         // kahraman seviye atınca
+    public event Action<int> OnApprenticeLevelUp;
     public event Action<int> OnBattleLevelChanged;                  // savaş level değişince
     public event Action<int, int> OnGoldMineStoredChanged;          // (stored, capacity)
 
@@ -89,8 +90,31 @@ public class GameManager : MonoBehaviour
         PlayerData = SaveSystem.Load();
         if (PlayerData != null)
         {
+            bool cappedBaseLevel = false;
+            foreach (var entry in PlayerData.buildings)
+                if (entry.buildingType == BuildingType.MainBase && entry.level > 5)
+                {
+                    entry.level = 5;
+                    cappedBaseLevel = true;
+                }
+            if (PlayerData.placedBuildings != null)
+                foreach (var placed in PlayerData.placedBuildings)
+                    if (placed.buildingType == BuildingType.MainBase.ToString() && placed.level > 5)
+                    {
+                        placed.level = 5;
+                        cappedBaseLevel = true;
+                    }
+            if (cappedBaseLevel) SaveGame();
             PlayerData.hero.ApplyLevelStats();
             RebuildBuildingData();
+            if (PlayerData.buildableSize <= 0)
+            {
+                PlayerData.buildableSize = 10;
+            }
+            if (PlayerData.removedFenceIds == null)
+            {
+                PlayerData.removedFenceIds = new List<string>();
+            }
             IsGameStarted = true;
             Debug.Log($"[GameManager] Oyun yüklendi. Altın: {PlayerData.gold}, Level: {PlayerData.currentBattleLevel}");
         }
@@ -242,8 +266,9 @@ public class GameManager : MonoBehaviour
         {
             BuildingData bd = new BuildingData();
             bd.buildingType = entry.buildingType;
-            bd.level        = entry.level;
-            bd.isUnlocked   = entry.isUnlocked;
+            bd.level = entry.level;
+            bd.isUnlocked = entry.isUnlocked;
+            bd.SetBuildLimits();
             bd.ApplyLevelStats();
 
             Buildings[entry.buildingType] = bd;
@@ -303,6 +328,7 @@ public class GameManager : MonoBehaviour
         }
 
         OnBuildingUpgraded?.Invoke(type, building.level);
+        AudioManager.Instance?.PlaySfx("levelUp");
         SaveGame();
 
         Debug.Log($"[GameManager] {type} seviye yükseltildi! Lv.{building.level}");
@@ -324,7 +350,7 @@ public class GameManager : MonoBehaviour
                 if (mainBaseLevel >= required)
                 {
                     kvp.Value.isUnlocked = true;
-                    kvp.Value.level      = 1;
+                    kvp.Value.level = 1;
                     kvp.Value.ApplyLevelStats();
                     UpdateBuildingSaveEntry(kvp.Key, 1, true);
                     Debug.Log($"[GameManager] {kvp.Key} açıldı! (Ana Üs Lv.{mainBaseLevel})");
@@ -342,11 +368,14 @@ public class GameManager : MonoBehaviour
 
     private void UpdateBuildingSaveEntry(BuildingType type, int level, bool unlocked)
     {
+        if (PlayerData?.placedBuildings != null)
+            foreach (var placed in PlayerData.placedBuildings)
+                if (placed.buildingType == type.ToString()) placed.level = level;
         foreach (var entry in PlayerData.buildings)
         {
             if (entry.buildingType == type)
             {
-                entry.level     = level;
+                entry.level = level;
                 entry.isUnlocked = unlocked;
                 return;
             }
@@ -385,6 +414,23 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
+    public int GetApprenticeUpgradeCost()
+    {
+        int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, 5) : 1;
+        return level >= 5 ? 0 : 80 << (level - 1);
+    }
+
+    public bool UpgradeApprentice()
+    {
+        if (PlayerData == null || PlayerData.apprenticeLevel >= 5) return false;
+        int cost = GetApprenticeUpgradeCost();
+        if (!SpendGold(cost)) return false;
+        PlayerData.apprenticeLevel++;
+        OnApprenticeLevelUp?.Invoke(PlayerData.apprenticeLevel);
+        SaveGame();
+        return true;
+    }
+
     // ==================== SAVAŞ YÖNETİMİ ====================
 
     /// <summary>
@@ -404,6 +450,13 @@ public class GameManager : MonoBehaviour
     {
         IsInBattle = false;
         AddGold(goldEarned);
+
+        if (BattleSession.IsCampaign)
+        {
+            SaveGame();
+            Debug.Log($"[GameManager] Sefer zaferi: Bölge {BattleSession.RegionId}, Seviye {BattleSession.LevelNumber}, +{goldEarned} altın.");
+            return;
+        }
 
         if (PlayerData.currentBattleLevel >= PlayerData.highestBattleLevel)
         {
@@ -432,8 +485,22 @@ public class GameManager : MonoBehaviour
     public void LoadBaseWorld()
     {
         IsInBattle = false;
+        BattleSession.Clear();
         StartCoroutine(FadeAndLoadScene("BaseScene"));
         Debug.Log("[GameManager] Üs dünyasına geçiliyor...");
+    }
+
+    public void LoadCampaignMap()
+    {
+        IsInBattle = false;
+        BattleSession.Clear();
+        StartCoroutine(FadeAndLoadScene("CampaignScene"));
+    }
+
+    public void ReturnToCampaign()
+    {
+        IsInBattle = false;
+        StartCoroutine(FadeAndLoadScene("CampaignScene"));
     }
 
     public void LoadMainMenu()
@@ -468,7 +535,7 @@ public class GameManager : MonoBehaviour
         rt.offsetMax = Vector2.zero;
 
         UnityEngine.UI.Image img = panel.AddComponent<UnityEngine.UI.Image>();
-        img.color         = new Color(0, 0, 0, 0);
+        img.color = new Color(0, 0, 0, 0);
         img.raycastTarget = true; // Fade sırasında tıklamayı engelle
 
         // Fade to black
@@ -481,6 +548,7 @@ public class GameManager : MonoBehaviour
         }
 
         // Sahneyi yükle
+        DG.Tweening.DOTween.KillAll();
         SceneManager.LoadScene(sceneName);
     }
 
@@ -493,7 +561,10 @@ public class GameManager : MonoBehaviour
     {
         if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked)
         {
-            return Buildings[BuildingType.GoldMine].goldPerSecond;
+            int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, 5) : 1;
+            var progression = ApprenticeProgressionData.Instance;
+            return Buildings[BuildingType.GoldMine].goldPerSecond *
+                (1f + (progression != null ? progression.MineBonus(level) : 10) / 100f);
         }
         return 0f;
     }

@@ -349,7 +349,7 @@ public static class PlaceholderSpriteGenerator
         // Çatı örtüsü (kumaş)
         FillRect(tex, 2, 48, 60, 6, cloth);
         FillRect(tex, 6, 52, 52, 4, new Color(0.50f, 0.40f, 0.30f));
-        // Duvarcı (küçük figür)
+        // İnşaatçı (küçük figür)
         FillRect(tex, 28, 28, 8, 10, cloth); // gövde
         FillRect(tex, 30, 38, 4, 4, skin);   // kafa
         // Hazır çitler (yerde)

@@ -12,47 +12,52 @@ public class SpriteManager : MonoBehaviour
 
     // Cache — her sprite sadece bir kez yüklenir
     private Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
+    private Dictionary<string, Sprite> squareTileCache = new Dictionary<string, Sprite>();
     private Dictionary<string, RuntimeAnimatorController> controllerCache = new Dictionary<string, RuntimeAnimatorController>();
 
     // ==================== SPRITE TANIMLARI ====================
 
     // Binalar — Resources/Sprites altındaki dosyalar
-    public Sprite MainBase    => GetSprite("building_mainbase");    // Black Buildings/Castle.png
+    public Sprite MainBase => GetSprite("building_mainbase");    // Black Buildings/Castle.png
     public Sprite ArcherTower => GetSprite("building_archertower"); // Blue Buildings/Archery.png
     public Sprite CannonTower => GetSprite("building_cannontower"); // Blue Buildings/Tower.png
-    public Sprite GoldMine    => GetSprite("building_goldmine");    // Yellow Buildings/House3.png
-    
+    public Sprite GoldMine => BaseVisualCatalog.Instance?.goldStones != null &&
+        BaseVisualCatalog.Instance.goldStones.Length > 5
+        ? BaseVisualCatalog.Instance.goldStones[5] : null;
+
     // Kahramanlar (Base sahnesi için — tek kare idle)
-    public Sprite HeroAxe   => GetSprite("hero_axe");   // Warrior idle
+    public Sprite HeroAxe => GetSprite("hero_axe");   // Warrior idle
     public Sprite HeroSpear => GetSprite("hero_spear"); // Lancer idle
-    public Sprite HeroBow   => GetSprite("hero_bow");   // Archer idle
+    public Sprite HeroBow => GetSprite("hero_bow");   // Archer idle
 
     // Düşmanlar
-    public Sprite EnemyWolf   => GetSprite("enemy_wolf");
+    public Sprite EnemyWolf => GetSprite("enemy_wolf");
     public Sprite EnemyZombie => GetSprite("enemy_zombie");
-    public Sprite EnemyOrc    => GetSprite("enemy_orc");
-    public Sprite EnemyTroll  => GetSprite("enemy_troll");
+    public Sprite EnemyOrc => GetSprite("enemy_orc");
+    public Sprite EnemyTroll => GetSprite("enemy_troll");
 
     // Savunma
-    public Sprite WallBuilder  => GetSprite("building_carpenter"); // Blue Buildings/House1.png
-    public Sprite WallSegment  => GetSprite("defense_fence");
+    public Sprite BuilderHut => GetSprite("building_carpenter");
+    public Sprite WallSegment => GetSprite("defense_fence");
 
     // Ortam
-    public Sprite Ground     => GetSprite("env_ground");
+    public Sprite Ground => GetSprite("env_ground");
     public Sprite GroundSnow => GetSprite("env_ground_snow");
-    public Sprite Tree       => GetSprite("env_tree");
-    public Sprite TreeSnow   => GetSprite("env_tree_snow");
-    public Sprite Rock       => GetSprite("env_rock");
+    public Sprite Tree => GetSprite("env_tree");
+    public Sprite TreeSnow => GetSprite("env_tree_snow");
+    public Sprite Rock => GetSprite("env_rock");
 
     // UI İkonları
-    public Sprite IconGold    => GetSprite("icon_gold");
-    public Sprite IconSpear   => GetSprite("icon_spear");
-    public Sprite IconShield  => GetSprite("icon_shield");
-    public Sprite IconHeart   => GetSprite("icon_heart");
-    public Sprite BuildSlot   => GetSprite("ui_buildslot");
+    public Sprite IconGold => GetSprite("icon_gold");
+    public Sprite IconSpear => GetSprite("icon_spear");
+    public Sprite IconShield => GetSprite("icon_shield");
+    public Sprite IconHeart => GetSprite("icon_heart");
+    public Sprite BuildSlot => GetSprite("ui_buildslot");
+    public Sprite IconBuildNew => GetSprite("ui_icon_build_new");
+    public Sprite IconBattleNew => GetSprite("ui_icon_battle_new");
 
     // Efektler
-    public Sprite ParticleStar   => GetSprite("fx_star");
+    public Sprite ParticleStar => GetSprite("fx_star");
     public Sprite ParticleCircle => GetSprite("fx_circle");
 
     // ==================== UNITY YAŞAM DÖNGÜSÜ ====================
@@ -103,6 +108,7 @@ public class SpriteManager : MonoBehaviour
                 Debug.Log($"[SpriteManager] Sprite yüklendi: {spriteName}");
             }
 
+            loaded = CreateCenteredSprite(loaded);
             spriteCache[spriteName] = loaded;
             return loaded;
         }
@@ -114,6 +120,52 @@ public class SpriteManager : MonoBehaviour
         return placeholder;
     }
 
+    private Sprite CreateCenteredSprite(Sprite source)
+    {
+        if (source == null)
+            return null;
+
+        Sprite centered = Sprite.Create(
+            source.texture,
+            source.rect,
+            new Vector2(0.5f, 0.5f),
+            source.pixelsPerUnit,
+            0,
+            SpriteMeshType.FullRect,
+            source.border);
+        centered.name = source.name;
+        return centered;
+    }
+
+    public Sprite GetSquareTileSprite(string spriteName)
+    {
+        if (squareTileCache.TryGetValue(spriteName, out Sprite cached) && cached != null)
+            return cached;
+
+        Sprite source = GetSprite(spriteName);
+        if (source == null)
+            return null;
+
+        Rect sourceRect = source.rect;
+        float squareSize = Mathf.Min(sourceRect.width, sourceRect.height);
+        Rect squareRect = new Rect(
+            sourceRect.x + (sourceRect.width - squareSize) * 0.5f,
+            sourceRect.y + (sourceRect.height - squareSize) * 0.5f,
+            squareSize,
+            squareSize);
+
+        Sprite tile = Sprite.Create(
+            source.texture,
+            squareRect,
+            new Vector2(0.5f, 0.5f),
+            squareSize,
+            0,
+            SpriteMeshType.FullRect);
+        tile.name = $"{spriteName}_SquareTile";
+        squareTileCache[spriteName] = tile;
+        return tile;
+    }
+
     /// <summary>
     /// Bina tipine göre doğru sprite'ı getir
     /// </summary>
@@ -121,11 +173,11 @@ public class SpriteManager : MonoBehaviour
     {
         switch (type)
         {
-            case BuildingType.MainBase:    return MainBase;
+            case BuildingType.MainBase: return MainBase;
             case BuildingType.ArcherTower: return ArcherTower;
             case BuildingType.CannonTower: return CannonTower;
-            case BuildingType.GoldMine:    return GoldMine;
-            case BuildingType.WallBuilder: return WallBuilder;
+            case BuildingType.GoldMine: return GoldMine;
+            case BuildingType.Monastery: return BaseVisualCatalog.Instance?.GetLevels(BuildingType.Monastery)?[0]?.sprite;
             default: return MainBase;
         }
     }
@@ -137,9 +189,9 @@ public class SpriteManager : MonoBehaviour
     {
         switch (weapon)
         {
-            case WeaponType.Axe:   return HeroAxe;    // Warrior
+            case WeaponType.Axe: return HeroAxe;    // Warrior
             case WeaponType.Spear: return HeroSpear;  // Lancer
-            case WeaponType.Bow:   return HeroBow;    // Archer
+            case WeaponType.Bow: return HeroBow;    // Archer
             default: return HeroSpear;
         }
     }
@@ -160,13 +212,21 @@ public class SpriteManager : MonoBehaviour
         string resourcePath;
         switch (weapon)
         {
-            case WeaponType.Axe:   resourcePath = "Animators/Warrior_Black"; break;
-            case WeaponType.Bow:   resourcePath = "Animators/Archer_Black";  break;
-            case WeaponType.Spear: resourcePath = "Animators/Lancer_Black";  break;
-            default:               resourcePath = "Animators/Warrior_Black"; break;
+            case WeaponType.Axe: resourcePath = "Animators/Warrior_Black"; break;
+            case WeaponType.Bow: resourcePath = "Animators/Archer_Black"; break;
+            case WeaponType.Spear: resourcePath = "Animators/Lancer_Black"; break;
+            default: resourcePath = "Animators/Warrior_Black"; break;
         }
 
-        var controller = Resources.Load<RuntimeAnimatorController>(resourcePath);
+        RuntimeAnimatorController controller = null;
+        if (BaseVisualCatalog.Instance?.heroControllers != null)
+        {
+            int index = weapon == WeaponType.Spear ? 1 : weapon == WeaponType.Bow ? 2 : 0;
+            if (index < BaseVisualCatalog.Instance.heroControllers.Length)
+                controller = BaseVisualCatalog.Instance.heroControllers[index];
+        }
+        if (controller == null)
+            controller = Resources.Load<RuntimeAnimatorController>(resourcePath);
         if (controller != null)
         {
             controllerCache[cacheKey] = controller;
@@ -187,10 +247,10 @@ public class SpriteManager : MonoBehaviour
     {
         switch (type)
         {
-            case EnemyType.Wolf:   return EnemyWolf;
+            case EnemyType.Wolf: return EnemyWolf;
             case EnemyType.Zombie: return EnemyZombie;
-            case EnemyType.Orc:    return EnemyOrc;
-            case EnemyType.Troll:  return EnemyTroll;
+            case EnemyType.Orc: return EnemyOrc;
+            case EnemyType.Troll: return EnemyTroll;
             default: return EnemyWolf;
         }
     }
@@ -201,6 +261,7 @@ public class SpriteManager : MonoBehaviour
     public void ClearCache()
     {
         spriteCache.Clear();
+        squareTileCache.Clear();
         controllerCache.Clear();
         Debug.Log("[SpriteManager] Cache temizlendi.");
     }

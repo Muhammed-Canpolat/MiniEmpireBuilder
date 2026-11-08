@@ -23,7 +23,7 @@ public enum BuildingType
     ArcherTower,    // Okçu Kulesi
     CannonTower,    // Topçu Kulesi
     GoldMine,       // Altın Madeni
-    WallBuilder     // Duvarcı (duvar inşa eden bina)
+    Monastery       // Manastır — dost birimleri iyileştirir
 }
 
 /// <summary>
@@ -103,6 +103,19 @@ public class BuildingData
     public BuildingType buildingType;
     public int level = 0;
     public bool isUnlocked = false;
+    // Index is Ana Üs level. Kept on the building data so both menus use one limit.
+    public int[] maxCountByBaseLevel;
+    // Presentation only: level statistics and save format remain independent.
+    public BuildingLevelVisual[] levels = new BuildingLevelVisual[5];
+
+    public BuildingLevelVisual VisualForLevel(int value)
+    {
+        if (levels == null || levels.Length != 5 || levels[0] == null)
+            levels = BaseVisualCatalog.Instance?.GetLevels(buildingType)
+                ?? new BuildingLevelVisual[5];
+        int index = BaseVisualCatalog.ColorIndex(value);
+        return levels[index];
+    }
 
     // Hesaplanan istatistikler
     public float maxHealth = 100f;
@@ -151,9 +164,8 @@ public class BuildingData
                 goldPerSecond = 1f + (level - 1) * 0.5f;
                 break;
 
-            case BuildingType.WallBuilder:
-                // Duvarcı: Duvar inşa eder, seviyesi duvar HP'sini belirler
-                maxHealth = 60f + (level - 1) * 20f;
+            case BuildingType.Monastery:
+                maxHealth = 90f + (level - 1) * 25f;
                 currentHealth = maxHealth;
                 break;
         }
@@ -180,8 +192,8 @@ public class BuildingData
             case BuildingType.GoldMine:
                 return nextLevel * 60;
 
-            case BuildingType.WallBuilder:
-                return nextLevel * 45;
+            case BuildingType.Monastery:
+                return nextLevel * 60;
 
             default:
                 return nextLevel * 50;
@@ -202,13 +214,13 @@ public class BuildingData
                 return 2;   // Ana Üs Lv.2'de açılır
 
             case BuildingType.CannonTower:
-                return 4;   // Ana Üs Lv.4'te açılır
+                return 3;   // Ana Üs Lv.3'te açılır
 
             case BuildingType.GoldMine:
                 return 1;   // Ana Üs Lv.1'de açılır (baştan)
 
-            case BuildingType.WallBuilder:
-                return 2;   // Ana Üs Lv.2'de açılır
+            case BuildingType.Monastery:
+                return 4;   // Ana Üs Lv.4'te açılır
 
             default:
                 return 1;
@@ -223,7 +235,7 @@ public class BuildingData
         switch (buildingType)
         {
             case BuildingType.MainBase:
-                return 10;  // Ana Üs max 10
+                return 5;
 
             case BuildingType.ArcherTower:
                 return Mathf.Min(mainBaseLevel, 8);
@@ -234,7 +246,7 @@ public class BuildingData
             case BuildingType.GoldMine:
                 return Mathf.Min(mainBaseLevel + 1, 8);
 
-            case BuildingType.WallBuilder:
+            case BuildingType.Monastery:
                 return Mathf.Min(mainBaseLevel, 5);
 
             default:
@@ -247,6 +259,12 @@ public class BuildingData
     /// </summary>
     public static int GetMaxBuildCount(BuildingType type, int mainBaseLevel)
     {
+        if (type == BuildingType.ArcherTower)
+            return mainBaseLevel < 2 ? 0 : mainBaseLevel < 4 ? 1 : 2;
+        if (type == BuildingType.CannonTower)
+            return mainBaseLevel < 3 ? 0 : mainBaseLevel < 5 ? 1 : 2;
+        if (type == BuildingType.Monastery)
+            return mainBaseLevel < 4 ? 0 : 1;
         switch (type)
         {
             case BuildingType.MainBase:
@@ -255,28 +273,24 @@ public class BuildingData
             case BuildingType.GoldMine:
                 return Mathf.Min(1 + mainBaseLevel / 3, 4); // Lv1:1, Lv3:2, Lv6:3, Lv9:4
 
-            case BuildingType.ArcherTower:
-                return Mathf.Min(1 + (mainBaseLevel - 2) / 2, 3); // Lv2:1, Lv4:2, Lv6:3
-
-            case BuildingType.CannonTower:
-                return Mathf.Min(1 + (mainBaseLevel - 4) / 3, 2); // Lv4:1, Lv7:2
-
-            case BuildingType.WallBuilder:
-                return 1;   // Sadece 1 duvarcı
-
             default:
                 return 1;
         }
     }
 
-    /// <summary>
-    /// Duvarcı seviyesine göre duvar HP'si hesapla
-    /// </summary>
-    public static float GetWallHealthFromBuilder(int wallBuilderLevel)
+    public void SetBuildLimits()
     {
-        if (wallBuilderLevel <= 0) return 100f;
-        return 100f + (wallBuilderLevel - 1) * 50f;
+        maxCountByBaseLevel = new int[11];
+        for (int level = 0; level < maxCountByBaseLevel.Length; level++)
+            maxCountByBaseLevel[level] = GetMaxBuildCount(buildingType, level);
     }
+
+    public int MaxCountAtBaseLevel(int level)
+    {
+        if (maxCountByBaseLevel == null) SetBuildLimits();
+        return maxCountByBaseLevel[Mathf.Clamp(level, 0, maxCountByBaseLevel.Length - 1)];
+    }
+
 }
 
 /// <summary>
