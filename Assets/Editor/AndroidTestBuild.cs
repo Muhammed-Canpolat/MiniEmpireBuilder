@@ -75,7 +75,9 @@ public static class AndroidTestBuild
         BuildSummary summary = report.summary;
         if (summary.result == BuildResult.Succeeded)
         {
-            Debug.Log($"[AndroidTestBuild] Başarılı: {Path.GetFullPath(path)} ({summary.totalSize / (1024f * 1024f):F1} MB, {summary.totalTime.TotalSeconds:F0} sn)");
+            // summary.totalSize sıkıştırılmamış içerik toplamıdır; gerçek APK boyutunu dosyadan oku.
+            float apkMb = new FileInfo(path).Length / (1024f * 1024f);
+            Debug.Log($"[AndroidTestBuild] Başarılı: {Path.GetFullPath(path)} (APK {apkMb:F1} MB, {summary.totalTime.TotalSeconds:F0} sn)");
             EditorUtility.RevealInFinder(path);
         }
         else
