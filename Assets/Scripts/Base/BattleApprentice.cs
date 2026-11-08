@@ -101,7 +101,7 @@ public sealed class BattleApprentice : MonoBehaviour
             float distance = 1.2f;
             foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
             {
-                if (enemy == null || enemy.IsDead) continue;
+                if (enemy == null || enemy.IsDead || !FogOfWar.IsVisible(enemy.transform.position)) continue;
                 float candidate = Vector2.Distance(enemy.transform.position, transform.position);
                 if (candidate < distance) { distance = candidate; nearest = enemy; }
             }

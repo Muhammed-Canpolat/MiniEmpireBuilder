@@ -38,6 +38,8 @@ public class RegionData : ScriptableObject
     public EnemyType[] enemyTypes;
     public string specialMechanic;
     public string bossName;
+    // Eski asset'lerde alan yoksa Troll kalır (Bölge 1 davranışı değişmez).
+    public EnemyType bossType = EnemyType.Troll;
     [TextArea(2, 3)] public string description;
     public CampaignLevelData[] levels = new CampaignLevelData[5];
 }

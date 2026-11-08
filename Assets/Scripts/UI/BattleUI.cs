@@ -138,7 +138,7 @@ public class BattleUI : MonoBehaviour
         if (bossTrack == null) return;
         EnemyController boss = null;
         foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
-            if (enemy.Type == EnemyType.Troll && !enemy.IsDead) { boss = enemy; break; }
+            if (EnemyTypeInfo.IsBoss(enemy.Type) && !enemy.IsDead) { boss = enemy; break; }
         bossTrack.SetActive(boss != null);
         if (bossFill != null && boss != null)
             bossFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(boss.HealthPercent), 1f);

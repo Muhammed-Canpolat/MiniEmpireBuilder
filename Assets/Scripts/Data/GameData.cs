@@ -34,7 +34,30 @@ public enum EnemyType
     Wolf,       // Kurt — hızlı, düşük can
     Zombie,     // Zombi — yavaş, orta can
     Orc,        // Ork — güçlü, yüksek can
-    Troll       // Trol — boss, çok yüksek can
+    Troll,      // Trol — boss, çok yüksek can
+    // Yeni türler hep sona eklenir: RegionData asset'leri enum'u sayı olarak saklar.
+    ShadowWolf, // Gölge Kurt — sisin içinde görünmez, kahramana atılır
+    ForestWitch // Orman Cadısı — Bölge 2 boss'u
+}
+
+public static class EnemyTypeInfo
+{
+    public static bool IsBoss(EnemyType type) =>
+        type == EnemyType.Troll || type == EnemyType.ForestWitch;
+
+    public static string DisplayName(EnemyType type)
+    {
+        switch (type)
+        {
+            case EnemyType.Wolf: return "Kurt";
+            case EnemyType.Zombie: return "Zombi";
+            case EnemyType.Orc: return "Ork";
+            case EnemyType.Troll: return "Muhafız";
+            case EnemyType.ShadowWolf: return "Gölge Kurt";
+            case EnemyType.ForestWitch: return "Orman Cadısı";
+            default: return type.ToString();
+        }
+    }
 }
 
 // ==================== VERİ SINIFLARI ====================
@@ -349,6 +372,24 @@ public class EnemyStats
                 stats.attackRange = 2.0f;
                 stats.attackSpeed = 0.5f;
                 stats.goldDrop = 100;
+                break;
+
+            case EnemyType.ShadowWolf:
+                stats.health = 26f;
+                stats.damage = 6f;
+                stats.moveSpeed = 2.5f;
+                stats.attackRange = 1.2f;
+                stats.attackSpeed = 1.1f;
+                stats.goldDrop = 14;
+                break;
+
+            case EnemyType.ForestWitch:
+                stats.health = 240f;
+                stats.damage = 10f;
+                stats.moveSpeed = 0.9f;
+                stats.attackRange = 1.6f;
+                stats.attackSpeed = 0.6f;
+                stats.goldDrop = 120;
                 break;
         }
 

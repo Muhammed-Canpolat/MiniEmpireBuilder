@@ -251,6 +251,8 @@ public class SpriteManager : MonoBehaviour
             case EnemyType.Zombie: return EnemyZombie;
             case EnemyType.Orc: return EnemyOrc;
             case EnemyType.Troll: return EnemyTroll;
+            case EnemyType.ShadowWolf: return EnemyWolf; // koyu tonla ayrışır
+            case EnemyType.ForestWitch: return null;     // ForestWitchBoss animatörle çizer
             default: return EnemyWolf;
         }
     }

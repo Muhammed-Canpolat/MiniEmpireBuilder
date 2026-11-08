@@ -57,8 +57,10 @@ public static class CampaignContentGenerator
             region.requiredBaseLevel = i + 1;
             ColorUtility.TryParseHtmlString(tones[i], out region.colorTone);
             region.groundTile = i == 1 ? forestTile : battleTile;
-            region.enemyTypes = i < 2 ? new[] { EnemyType.Wolf, EnemyType.Zombie, EnemyType.Orc }
+            region.enemyTypes = i == 1 ? new[] { EnemyType.Wolf, EnemyType.ShadowWolf, EnemyType.Zombie }
+                : i < 2 ? new[] { EnemyType.Wolf, EnemyType.Zombie, EnemyType.Orc }
                 : new[] { EnemyType.Wolf, EnemyType.Zombie, EnemyType.Orc, EnemyType.Troll };
+            region.bossType = i == 1 ? EnemyType.ForestWitch : EnemyType.Troll;
             region.specialMechanic = i == 1 ? "Sis" : i == 3 ? "Don" : "";
             region.bossName = bosses[i];
             region.description = descriptions[i];

@@ -441,7 +441,7 @@ public class HeroController : MonoBehaviour
         EnemyController[] enemies = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
         foreach (var enemy in enemies)
         {
-            if (enemy.IsDead) continue;
+            if (enemy.IsDead || !FogOfWar.IsVisible(enemy.transform.position)) continue;
             float dist = Vector2.Distance(transform.position, enemy.transform.position);
             if (dist <= nearestDist) { nearestDist = dist; nearest = enemy; }
         }

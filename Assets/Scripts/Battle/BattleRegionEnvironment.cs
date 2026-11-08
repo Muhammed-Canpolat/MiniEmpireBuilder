@@ -1,7 +1,8 @@
 using System.Collections;
 using UnityEngine;
 
-/// <summary>Campaign terrain treatment only; it never changes combat or enemy state.</summary>
+/// <summary>Campaign terrain treatment. Görsel katman savaşa dokunmaz; oynanış etkisi
+/// yalnız "Sis" mekaniğinde eklenen <see cref="FogOfWar"/> bileşeninden gelir.</summary>
 public sealed class BattleRegionEnvironment : MonoBehaviour
 {
     private GameObject fog;
@@ -21,6 +22,8 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
             // Keep the source grass and leaf detail readable. The region tone contributes at most 15%.
             ground.color = Color.Lerp(Color.white, region.colorTone, 0.15f);
         }
+        if (region.specialMechanic == "Sis" && GetComponent<FogOfWar>() == null)
+            gameObject.AddComponent<FogOfWar>();
         if (region.id != 2) yield break;
         hero = FindFirstObjectByType<HeroController>()?.transform;
         AddForestWash();
@@ -90,8 +93,9 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
             float worldX = (x + 0.5f - width * 0.5f) * 22f / width;
             float worldY = (y + 0.5f - height * 0.5f) * 38.5f / height;
             float radius = Mathf.Sqrt(worldX * worldX + worldY * worldY);
-            float opacity = Mathf.SmoothStep(0f, 0.45f, Mathf.Clamp01((radius - 5f) / 6f));
-            fogTexture.SetPixel(x, y, new Color(0.08f, 0.12f, 0.1f, opacity));
+            // Açık puslu sis; 6.5 birimlik görüş sınırında yarı yoğunluğa ulaşır (FogOfWar.HeroRadius).
+            float opacity = Mathf.SmoothStep(0f, 0.45f, Mathf.Clamp01((radius - 5f) / 3f));
+            fogTexture.SetPixel(x, y, new Color(0.58f, 0.66f, 0.6f, opacity));
         }
         fogTexture.Apply();
         fogSprite = Sprite.Create(fogTexture, new Rect(0, 0, width, height),

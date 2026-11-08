@@ -526,6 +526,13 @@ public class BattleManager : MonoBehaviour
             spawnPos = new Vector3(Mathf.Cos(angle) * 10f, Mathf.Sin(angle) * 10f, 0);
         }
 
+        SpawnEnemyAt(type, spawnPos);
+    }
+
+    /// <summary>Belirli bir noktada düşman doğurur (ör. Cadı'nın çağırdığı kurtlar).</summary>
+    public EnemyController SpawnEnemyAt(EnemyType type, Vector3 spawnPos)
+    {
+        if (enemyPrefab == null) return null;
         GameObject enemyObj = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
         enemyObj.SetActive(true);
         enemyObj.name = $"Enemy_{type}";
@@ -541,6 +548,7 @@ public class BattleManager : MonoBehaviour
 
         enemiesAlive++;
         OnEnemiesCountChanged?.Invoke(enemiesAlive);
+        return enemy;
     }
 
     // ==================== OLAY CALLBACK'LERİ ====================
@@ -735,7 +743,7 @@ public class BattleManager : MonoBehaviour
             if (campaignLevel.kind == CampaignLevelKind.Boss && i == campaignLevel.waveCount - 1)
             {
                 wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = Mathf.Max(0, count - 1) });
-                wave.enemies.Add(new EnemySpawnInfo { enemyType = EnemyType.Troll, count = 1 });
+                wave.enemies.Add(new EnemySpawnInfo { enemyType = region.bossType, count = 1 });
             }
             else wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = count });
             battle.waves.Add(wave);

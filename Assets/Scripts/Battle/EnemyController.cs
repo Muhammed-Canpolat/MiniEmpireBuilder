@@ -34,6 +34,18 @@ public class EnemyController : MonoBehaviour
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public float HealthPercent => currentHealth / maxHealth;
+    public float Damage => damage;
+    public float MoveSpeed => moveSpeed;
+    public Transform CurrentTarget => currentTarget;
+
+    // Özel davranışlar (Gölge Kurt atılması, Cadı ışınlanması) için
+    public bool MovementLocked { get; set; }
+    public bool Invulnerable { get; set; }
+    // true iken FogOfWar alfa değerine dokunmaz (davranış kendi soluklaşmasını yönetir).
+    public bool FogOverride { get; set; }
+
+    /// <summary>Çağrılmış birimler altın düşürmez; boss ile altın kasılmasını önler.</summary>
+    public void SuppressGoldReward() => goldReward = 0;
 
     // Hedef referansları (BattleManager tarafından atanır)
     private Transform mainBaseTransform;
@@ -95,10 +107,13 @@ public class EnemyController : MonoBehaviour
             if (hasEnemyArt)
             {
                 float targetWidth = type == EnemyType.Troll ? 2.5f :
+                    type == EnemyType.ShadowWolf ? 1.6f :
                     type == EnemyType.Orc ? 1.85f :
                     type == EnemyType.Wolf ? 1.75f : 1.6f;
                 float scale = targetWidth / Mathf.Max(0.01f, spriteRenderer.sprite.bounds.size.x);
                 transform.localScale = new Vector3(scale, scale, 1f);
+                if (type == EnemyType.ShadowWolf)
+                    spriteRenderer.color = new Color(0.42f, 0.36f, 0.58f);
             }
             else switch (type)
             {
@@ -130,11 +145,32 @@ public class EnemyController : MonoBehaviour
         {
             int finalWave = Mathf.Max(1, Mathf.CeilToInt(battleLevelValue / 2f) + 2);
             int currentWave = BattleManager.Instance != null ? BattleManager.Instance.CurrentWave : 1;
-            bool isBoss = type == EnemyType.Troll &&
+            bool isBoss = EnemyTypeInfo.IsBoss(type) &&
                 (BattleSession.Level?.kind == CampaignLevelKind.Boss
                     || currentWave >= finalWave);
             bool isElite = !isBoss && currentWave % EliteWaveInterval == 0;
             visuals.ApplyTier(isElite, isBoss);
+        }
+
+        if (type == EnemyType.ShadowWolf && GetComponent<ShadowWolfBehaviour>() == null)
+            gameObject.AddComponent<ShadowWolfBehaviour>();
+        if (type == EnemyType.ForestWitch && GetComponent<ForestWitchBoss>() == null)
+            gameObject.AddComponent<ForestWitchBoss>();
+    }
+
+    /// <summary>FogOfWar tarafından çağrılır; yalnız görseli etkiler.</summary>
+    public void SetFogAlpha(float alpha)
+    {
+        if (spriteRenderer != null)
+        {
+            Color c = spriteRenderer.color;
+            c.a = alpha;
+            spriteRenderer.color = c;
+        }
+        if (healthBar != null)
+        {
+            bool show = alpha > 0.5f;
+            if (healthBar.gameObject.activeSelf != show) healthBar.gameObject.SetActive(show);
         }
     }
 
@@ -143,6 +179,7 @@ public class EnemyController : MonoBehaviour
         if (isDead) return;
 
         FindBestTarget();
+        if (MovementLocked) return;
         MoveToTarget();
         TryAttack();
     }
@@ -273,7 +310,7 @@ public class EnemyController : MonoBehaviour
 
     public void TakeDamage(float dmg)
     {
-        if (isDead) return;
+        if (isDead || Invulnerable) return;
 
         currentHealth -= dmg;
         currentHealth = Mathf.Max(0, currentHealth);

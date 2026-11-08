@@ -300,7 +300,7 @@ public class CampaignSceneSetup : MonoBehaviour
         Border(banner, ReferenceUiVisuals.Border, 1f);
         TopLabel(banner.transform, "Description", selectedRegion.description, 12, 8, 338, 54, 14,
             ReferenceUiVisuals.Light, false, TextAlignmentOptions.Left);
-        TopLabel(banner.transform, "Enemies", $"Düşmanlar: Kurt, Zombi, Ork  ·  Boss: {selectedRegion.bossName}",
+        TopLabel(banner.transform, "Enemies", $"Düşmanlar: {EnemyList(selectedRegion)}  ·  Boss: {selectedRegion.bossName}",
             12, 64, 338, 25, 12, ReferenceUiVisuals.Gold, false, TextAlignmentOptions.Left);
 
         roadViewport = ReferenceUiVisuals.Rect(regionRoot, "RoadViewport", Vector2.zero, Vector2.one,
@@ -476,5 +476,18 @@ public class CampaignSceneSetup : MonoBehaviour
         yield return new WaitForSeconds(1.25f);
         toastBackground.GetComponent<PanelController>().Hide();
         toastRoutine = null;
+    }
+
+    private static string EnemyList(RegionData region)
+    {
+        if (region?.enemyTypes == null || region.enemyTypes.Length == 0) return "—";
+        var names = new System.Collections.Generic.List<string>();
+        foreach (var type in region.enemyTypes)
+        {
+            if (EnemyTypeInfo.IsBoss(type)) continue;
+            string name = EnemyTypeInfo.DisplayName(type);
+            if (!names.Contains(name)) names.Add(name);
+        }
+        return string.Join(", ", names);
     }
 }

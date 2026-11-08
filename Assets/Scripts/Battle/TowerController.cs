@@ -22,6 +22,7 @@ public class TowerController : MonoBehaviour
 
     public float HealthPercent => currentHealth / maxHealth;
     public bool IsDestroyed => currentHealth <= 0;
+    public float AttackRange => attackRange;
 
     public void Initialize(BuildingType type)
     {
@@ -87,7 +88,7 @@ public class TowerController : MonoBehaviour
 
         foreach (var enemy in enemies)
         {
-            if (enemy.IsDead) continue;
+            if (enemy.IsDead || !FogOfWar.IsVisible(enemy.transform.position)) continue;
 
             float dist = Vector2.Distance(transform.position, enemy.transform.position);
             if (dist < nearestDist)
