@@ -511,8 +511,10 @@ public class BaseSceneSetup : MonoBehaviour
         backdropTile.sprite = buildableSprite;
         backdropTile.color = new Color(0.88f, 0.98f, 0.81f);
         backdropTile.flags = TileFlags.None;
-        for (int y = -8; y < BaseWorldLayout.Height + 8; y++)
-        for (int x = -2; x < BaseWorldLayout.Width + 2; x++)
+        // Tablet gibi geniş ekranlarda kamera yüksekliğe sığar ve 22 hücreden çok daha
+        // geniş görür; zemin yanlara taşar ki kenarlarda siyah şerit kalmasın.
+        for (int y = -12; y < BaseWorldLayout.Height + 12; y++)
+        for (int x = -14; x < BaseWorldLayout.Width + 14; x++)
             backdropTiles.SetTile(new Vector3Int(x, y, 0), backdropTile);
         backdropTiles.CompressBounds();
 
@@ -551,6 +553,7 @@ public class BaseSceneSetup : MonoBehaviour
         }
         tilemap.CompressBounds();
         CreateExteriorScenery(root.transform);
+        CreateForestMargin(root.transform);
         BaseMapManager.Instance.RefreshBuildableArea(width, height);
         CreateLockedDecor();
     }
@@ -606,6 +609,40 @@ public class BaseSceneSetup : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Çitin dışındaki geniş alanda seyrek, koyulaştırılmış ağaçlar: geniş ekranlarda
+    /// dünyayı bir orman çerçevesi sarar. Oynanışa dahil değildir (çarpışma yok).
+    /// </summary>
+    private static void CreateForestMargin(Transform parent)
+    {
+        Sprite tree = System.Array.Find(DecorPlacementController.All, item => item.id == "tree")?.sprite;
+        Sprite bush = Resources.Load<Sprite>("BaseDecor/bush");
+        if (tree == null) return;
+        var root = new GameObject("ForestMargin");
+        root.transform.SetParent(parent, false);
+        var random = new System.Random(90211);
+        for (int side = 0; side < 2; side++)
+        for (int i = 0; i < 46; i++)
+        {
+            // Çite yakın sıralar daha sık, dışa doğru seyrekleşir.
+            float depth = 1.6f + (float)(random.NextDouble() * random.NextDouble()) * 11.5f;
+            float x = side == 0 ? -depth : BaseWorldLayout.Width + depth;
+            float y = -6f + (float)random.NextDouble() * (BaseWorldLayout.Height + 12f);
+            bool isBush = bush != null && random.NextDouble() < 0.28;
+            var go = new GameObject("Margin_" + side + "_" + i);
+            go.transform.SetParent(root.transform, false);
+            go.transform.position = new Vector3(x, y, 0f);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = isBush ? bush : tree;
+            // Uzaktakiler hafif koyu: derinlik hissi, oyun alanına dikkat.
+            float shade = Mathf.Lerp(0.92f, 0.62f, Mathf.Clamp01((depth - 1.6f) / 10f));
+            renderer.color = new Color(shade, shade * 1.02f, shade * 0.95f);
+            renderer.sortingOrder = 6 - Mathf.RoundToInt(y * 0.1f);
+            float height = isBush ? 0.9f : 2.2f + (float)random.NextDouble() * 0.9f;
+            go.transform.localScale = Vector3.one * (height / Mathf.Max(0.01f, renderer.sprite.bounds.size.y));
+        }
+    }
+
     private void SpawnTerrainResources(int count, bool trees)
     {
         int created = 0;
@@ -642,8 +679,9 @@ public class BaseSceneSetup : MonoBehaviour
             float nearest = 20f;
             foreach (var center in centers)
                 nearest = Mathf.Min(nearest, Vector2.Distance(center, cell));
-            float density = Mathf.Lerp(0.14f, 0.87f, Mathf.Clamp01((4.2f - nearest) / 3.5f));
-            if (cell.y < 4 || cell.y >= 34) density = Mathf.Max(density, 0.78f);
+            // Seyrek doku + birkaç belirgin küme; önceki eşit dağılımlı yoğun görünüm yerine.
+            float density = Mathf.Lerp(0.05f, 0.62f, Mathf.Clamp01((3.6f - nearest) / 3.2f));
+            if (cell.y < 4 || cell.y >= 34) density = Mathf.Max(density, 0.42f);
             if (random.NextDouble() > density) continue;
             Sprite sprite = sprites[random.Next(sprites.Length)];
             if (sprite == null) continue;
@@ -920,7 +958,7 @@ public class BaseSceneSetup : MonoBehaviour
         if (camera == null) return;
         camera.rect = new Rect(0f, 0f, 1f, 1f);
         camera.clearFlags = CameraClearFlags.SolidColor;
-        camera.backgroundColor = ReferenceUiVisuals.Background;
+        camera.backgroundColor = new Color(0.20f, 0.31f, 0.15f); // zemin bitse de siyah değil orman yeşili
         camera.ResetAspect();
         camera.orthographicSize = 22f / (2f * camera.aspect);
         camera.transform.position = new Vector3(11f, 19f, -10f);

@@ -50,7 +50,7 @@ public class GlobalUiThemeApplier : MonoBehaviour
             }
         }
 
-        if (Camera.main != null)
+        if (Camera.main != null && /* Ana Us kendi orman yesili arka planini kullanir */ UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "BaseScene")
         {
             Camera.main.backgroundColor = palette.DarkBg;
         }
