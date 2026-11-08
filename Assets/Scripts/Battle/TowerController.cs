@@ -51,6 +51,8 @@ public class TowerController : MonoBehaviour
 
         // Health bar'ı oluştur
         healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.8f, 0));
+        BattleWorldMarkers.DashedCircle(transform, attackRange,
+            new Color(0.94f, 0.76f, 0.29f, 0.22f), 36);
 
         // Kule rengini ayarla (geçici, gerçek sprite yoksa)
         if (spriteRenderer != null && (spriteRenderer.sprite == null || spriteRenderer.sprite.name == "Square"))

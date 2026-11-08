@@ -1,8 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Savaş sahnesindeki Duvar segmenti — düşmanlar önce bunu kırmaya çalışır
-/// Duvar HP'si Duvarcı (WallBuilder) seviyesine göre belirlenir
+/// Legacy wall component retained for existing scene compatibility.
 /// </summary>
 public class WallController : MonoBehaviour
 {
@@ -19,16 +18,6 @@ public class WallController : MonoBehaviour
     private void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
-
-        // Duvarcı (WallBuilder) seviyesinden HP al
-        if (GameManager.Instance != null && GameManager.Instance.Buildings.ContainsKey(BuildingType.WallBuilder))
-        {
-            var wallBuilderData = GameManager.Instance.Buildings[BuildingType.WallBuilder];
-            if (wallBuilderData.isUnlocked && wallBuilderData.level > 0)
-            {
-                maxHealth = BuildingData.GetWallHealthFromBuilder(wallBuilderData.level);
-            }
-        }
 
         currentHealth = maxHealth;
         healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.6f, 0));

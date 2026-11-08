@@ -36,10 +36,18 @@ public class HeroController : MonoBehaviour
     private float attackSpriteTimer;
     private bool attackToggle;
     private bool useAnimator = false;
+    private bool hasMoveParameter;
 
     public float HealthPercent => currentHealth / maxHealth;
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
+
+    public void Heal(float amount)
+    {
+        if (isDead || amount <= 0f) return;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        if (healthBar != null) healthBar.UpdateHealth(currentHealth);
+    }
 
     private void Start()
     {
@@ -91,6 +99,16 @@ public class HeroController : MonoBehaviour
         heroAnimator = gameObject.AddComponent<Animator>();
         heroAnimator.runtimeAnimatorController = ctrl;
         heroAnimator.updateMode = AnimatorUpdateMode.Normal;
+        hasMoveParameter = false;
+        foreach (var parameter in heroAnimator.parameters)
+        {
+            if (parameter.name == "IsMoving" &&
+                parameter.type == AnimatorControllerParameterType.Bool)
+            {
+                hasMoveParameter = true;
+                break;
+            }
+        }
         useAnimator = true;
         Debug.Log($"[HeroController] Animator kuruldu: {ctrl.name}");
     }
@@ -116,7 +134,7 @@ public class HeroController : MonoBehaviour
     {
         if (moveInput.sqrMagnitude <= 0.0001f)
         {
-            if (useAnimator && heroAnimator != null)
+            if (useAnimator && heroAnimator != null && hasMoveParameter)
                 heroAnimator.SetBool("IsMoving", false);
             return;
         }
@@ -127,7 +145,7 @@ public class HeroController : MonoBehaviour
         if (spriteRenderer != null && Mathf.Abs(direction.x) > 0.01f)
             spriteRenderer.flipX = direction.x < 0;
 
-        if (useAnimator && heroAnimator != null)
+        if (useAnimator && heroAnimator != null && hasMoveParameter)
             heroAnimator.SetBool("IsMoving", true);
     }
 

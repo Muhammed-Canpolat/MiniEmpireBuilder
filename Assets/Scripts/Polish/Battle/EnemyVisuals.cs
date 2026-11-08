@@ -1,4 +1,4 @@
-// [ENEMY VISUALS] — Mini Empire Builder
+// [ENEMY VISUALS] â€” Mini Empire Builder
 using TMPro;
 using UnityEngine;
 
@@ -17,10 +17,13 @@ public class EnemyVisuals : MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
+        bool hasEnemyArt = spriteRenderer != null && spriteRenderer.sprite != null &&
+            spriteRenderer.sprite.name.StartsWith("enemy_");
+
         if (isBoss)
         {
-            transform.localScale *= 2f;
-            if (spriteRenderer != null)
+            transform.localScale *= hasEnemyArt ? 1.1f : 2f;
+            if (spriteRenderer != null && !hasEnemyArt)
             {
                 spriteRenderer.color = new Color(1f, 0.7f, 0.7f);
             }
@@ -36,8 +39,8 @@ public class EnemyVisuals : MonoBehaviour
 
         if (isElite)
         {
-            transform.localScale *= 1.5f;
-            if (spriteRenderer != null)
+            transform.localScale *= hasEnemyArt ? 1.2f : 1.5f;
+            if (spriteRenderer != null && !hasEnemyArt)
             {
                 spriteRenderer.color = new Color(1f, 0.5f, 0.5f);
             }

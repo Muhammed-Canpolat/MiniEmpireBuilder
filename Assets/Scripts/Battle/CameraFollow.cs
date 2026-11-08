@@ -8,7 +8,7 @@ public class BattleCameraFollow : MonoBehaviour
 {
     [SerializeField] private Transform target;
     [SerializeField] private float smoothSpeed = 5f;
-    [SerializeField] private Vector3 offset = new Vector3(0, 0, -10f);
+    [SerializeField] private Vector3 offset = new Vector3(0f, 0f, -10f);
 
     private float minX, maxX, minY, maxY;
     private bool hasBounds = false;

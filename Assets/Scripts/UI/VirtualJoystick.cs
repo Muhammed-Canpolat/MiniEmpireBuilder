@@ -35,6 +35,13 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
 
     private void Update()
     {
+        if (AudioSettingsUI.BattleModalOpen ||
+            (BaseWorldUI.Instance != null && BaseWorldUI.Instance.IsInfoPanelOpen)
+            || (BuildMenuController.Instance != null && BuildMenuController.Instance.IsOpen))
+        {
+            currentInput = Vector2.zero;
+            if (handle != null) handle.anchoredPosition = Vector2.zero;
+        }
         if (heroController == null)
             heroController = FindFirstObjectByType<HeroController>();
 
@@ -77,6 +84,24 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
     {
         _isIgnoredTouch = false;
 
+        if (AudioSettingsUI.BattleModalOpen)
+        {
+            _isIgnoredTouch = true;
+            currentInput = Vector2.zero;
+            return;
+        }
+
+        if (BaseWorldUI.Instance != null && BaseWorldUI.Instance.IsInfoPanelOpen)
+        {
+            _isIgnoredTouch = true;
+            return;
+        }
+        if (BuildMenuController.Instance != null && BuildMenuController.Instance.IsOpen)
+        {
+            _isIgnoredTouch = true;
+            return;
+        }
+
         if (visualRoot == null || rectTransform == null)
             return;
 
@@ -106,6 +131,11 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
         if (parentRt == null)
             parentRt = rectTransform;
 
+        // ScreenPointToLocalPointInRectangle returns coordinates around the parent's pivot.
+        // Keep the floating visual anchored to that same pivot after HUD reparenting.
+        visualRoot.anchorMin = visualRoot.anchorMax = parentRt.pivot;
+        visualRoot.pivot = new Vector2(0.5f, 0.5f);
+
         Vector2 localPoint;
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 parentRt, eventData.position, eventData.pressEventCamera, out localPoint))
@@ -122,6 +152,12 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
     public void OnDrag(PointerEventData eventData)
     {
         if (_isIgnoredTouch) return;
+        if ((BaseWorldUI.Instance != null && BaseWorldUI.Instance.IsInfoPanelOpen)
+            || (BuildMenuController.Instance != null && BuildMenuController.Instance.IsOpen))
+        {
+            currentInput = Vector2.zero;
+            return;
+        }
         ProcessPointer(eventData);
     }
 

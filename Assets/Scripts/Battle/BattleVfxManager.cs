@@ -40,7 +40,7 @@ public class BattleVfxManager : MonoBehaviour
         obj.AddComponent<UnityEngine.UI.CanvasScaler>();
 
         RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(2f, 0.8f);
+        rt.sizeDelta = new Vector2(180f, 60f);
         rt.localScale = Vector3.one * 0.012f;
 
         // TMP metni
@@ -52,6 +52,9 @@ public class BattleVfxManager : MonoBehaviour
 
         TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
         tmp.alignment = TextAlignmentOptions.Center;
+        tmp.enableWordWrapping = false;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.enableAutoSizing = false;
 
         if (miss)
         {
@@ -141,8 +144,8 @@ public class BattleVfxManager : MonoBehaviour
         GameObject panel = new GameObject("Panel");
         panel.transform.SetParent(canvasObj.transform, false);
         RectTransform prt = panel.AddComponent<RectTransform>();
-        prt.anchorMin = new Vector2(0.05f, 0.42f);
-        prt.anchorMax = new Vector2(0.95f, 0.58f);
+        prt.anchorMin = new Vector2(0.16f, 0.65f);
+        prt.anchorMax = new Vector2(0.84f, 0.74f);
         prt.offsetMin = Vector2.zero; prt.offsetMax = Vector2.zero;
         UnityEngine.UI.Image pImg = panel.AddComponent<UnityEngine.UI.Image>();
         pImg.color = new Color(0f, 0f, 0f, 0.75f);
@@ -171,7 +174,7 @@ public class BattleVfxManager : MonoBehaviour
         trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
         TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
         tmp.text = $"DALGA {waveNumber}";
-        tmp.fontSize = 72f;
+        tmp.fontSize = 52f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
         tmp.fontStyle = FontStyles.Bold;
@@ -179,9 +182,9 @@ public class BattleVfxManager : MonoBehaviour
 
         // Giriş animasyonu: scale 0 → 1.2 → 1
         panel.transform.localScale = Vector3.zero;
-        panel.transform.DOScale(1f, 0.5f).SetEase(Ease.OutBack);
+        panel.transform.DOScale(1f, 0.25f).SetEase(Ease.OutBack);
 
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(0.95f);
 
         // Çıkış: yukarı kayarak
         RectTransform panelRt = panel.GetComponent<RectTransform>();

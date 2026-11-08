@@ -17,7 +17,7 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private GameObject enemyPrefab;         // Düşman prefab'ı
     [SerializeField] private int archerBattleBuildCost = 50;
     [SerializeField] private int cannonBattleBuildCost = 75;
-    [SerializeField] private int wallBattleBuildCost = 100;
+    [SerializeField] private int monasteryBattleBuildCost = 60;
     [SerializeField] private int baseWinGoldReward = 100;
 
     [Header("Durum")]
@@ -26,6 +26,7 @@ public class BattleManager : MonoBehaviour
     private int totalGoldEarned = 0;
     private bool battleActive = false;
     private bool battleWon = false;
+    private int lastStars;
 
     // Level verisi
     private LevelData currentLevel;
@@ -61,7 +62,12 @@ public class BattleManager : MonoBehaviour
             battleLevel = GameManager.Instance.PlayerData.currentBattleLevel;
         }
 
-        currentLevel = LevelData.GenerateLevel(battleLevel);
+        if (BattleSession.IsCampaign)
+        {
+            battleLevel = (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber;
+            currentLevel = CreateCampaignWaves(BattleSession.Region, BattleSession.Level);
+        }
+        else currentLevel = LevelData.GenerateLevel(battleLevel);
 
         Debug.Log($"[BattleManager] Level {battleLevel} başlıyor! {currentLevel.waves.Count} dalga");
 
@@ -85,10 +91,28 @@ public class BattleManager : MonoBehaviour
         var sm = SpriteManager.Instance;
 
         // === ZEMIN ===
-        CreateSimpleSprite("BattleGround", new Color(0.1f, 0.14f, 0.06f),
-            new Vector3(0, 0, 1), new Vector3(25f, 25f, 1f));
-        CreateSimpleSprite("Arena", new Color(0.12f, 0.16f, 0.07f),
-            new Vector3(0, 0, 0.9f), new Vector3(14f, 14f, 1f));
+        Sprite ground = BattleSession.Region?.groundTile ?? sm?.GetSprite("ground_battle_tile_01")
+                        ?? Resources.Load<Sprite>("Sprites/ground_battle_tile_01");
+        if (ground != null)
+        {
+            var groundObject = new GameObject("BattleGround");
+            groundObject.transform.position = new Vector3(0, 0, 1);
+            var renderer = groundObject.AddComponent<SpriteRenderer>();
+            renderer.sprite = ground;
+            renderer.drawMode = SpriteDrawMode.Tiled;
+            renderer.size = new Vector2(60f, 60f);
+            renderer.sortingOrder = -100;
+            renderer.color = BattleSession.Level?.kind == CampaignLevelKind.Boss
+                ? new Color(0.64f, 0.73f, 0.64f)
+                : BattleSession.IsCampaign
+                    ? Color.Lerp(new Color(0.82f, 0.78f, 0.72f), BattleSession.Region.colorTone, 0.15f)
+                    : new Color(0.82f, 0.78f, 0.72f);
+        }
+        else
+        {
+            CreateSimpleSprite("BattleGround", new Color(0.12f, 0.11f, 0.09f),
+                new Vector3(0, 0, 1), new Vector3(60f, 60f, 1f));
+        }
 
         // === ÇEVRE DEKORASYONU (Rastgele) ===
         // Geniş bir alana (örn: -15 to 15) rastgele kaya, çalı, kuru ot yerleştirelim.
@@ -139,7 +163,7 @@ public class BattleManager : MonoBehaviour
             if (sm != null)
             {
                 baseObj = CreateSpriteObject("AnaUs", sm.MainBase,
-                    Vector3.zero, new Vector3(0.45f, 0.45f, 1f));
+                    Vector3.zero, new Vector3(0.60f, 0.60f, 1f));
             }
             else
             {
@@ -276,57 +300,9 @@ public class BattleManager : MonoBehaviour
     {
         if (GameManager.Instance == null)
             return;
-
-        int mainBaseLevel = GameManager.Instance.GetMainBaseLevel();
-        bool archerUnlocked = GameManager.Instance.Buildings.ContainsKey(BuildingType.ArcherTower) &&
-                             GameManager.Instance.Buildings[BuildingType.ArcherTower].isUnlocked;
-        bool cannonUnlocked = GameManager.Instance.Buildings.ContainsKey(BuildingType.CannonTower) &&
-                             GameManager.Instance.Buildings[BuildingType.CannonTower].isUnlocked;
-        bool wallUnlocked = GameManager.Instance.Buildings.ContainsKey(BuildingType.WallBuilder) &&
-                           GameManager.Instance.Buildings[BuildingType.WallBuilder].isUnlocked;
-
-        int archerSlots = 0;
-        int cannonSlots = 0;
-        int wallSlots = 0;
-
-        if (archerUnlocked)
-            archerSlots = BuildingData.GetMaxBuildCount(BuildingType.ArcherTower, mainBaseLevel);
-
-        if (cannonUnlocked)
-            cannonSlots = BuildingData.GetMaxBuildCount(BuildingType.CannonTower, mainBaseLevel);
-
-        if (mainBaseLevel >= 25) wallSlots = 4;
-
-        if (!archerUnlocked) archerSlots = 0;
-        if (!cannonUnlocked) cannonSlots = 0;
-        if (!wallUnlocked) wallSlots = 0;
-
-        Vector3[] archerPositions =
-        {
-            new Vector3(3f, 2.5f, 0f),
-            new Vector3(-3f, 2.5f, 0f)
-        };
-        Vector3[] cannonPositions =
-        {
-            new Vector3(-3f, -2.5f, 0f),
-            new Vector3(3f, -2.5f, 0f)
-        };
-        Vector3[] wallPositions =
-        {
-            new Vector3(0f, 5f, 0f),
-            new Vector3(5f, 0f, 0f),
-            new Vector3(0f, -5f, 0f),
-            new Vector3(-5f, 0f, 0f)
-        };
-
-        for (int i = 0; i < archerSlots && i < archerPositions.Length; i++)
-            CreateBuildSlot(archerPositions[i], BuildingType.ArcherTower, archerBattleBuildCost);
-
-        for (int i = 0; i < cannonSlots && i < cannonPositions.Length; i++)
-            CreateBuildSlot(cannonPositions[i], BuildingType.CannonTower, cannonBattleBuildCost);
-
-        for (int i = 0; i < wallSlots && i < wallPositions.Length; i++)
-            CreateBuildSlot(wallPositions[i], BuildingType.WallBuilder, wallBattleBuildCost);
+        CreateBuildSlot(new Vector3(-3.2f, 2.2f, 0f), BuildingType.ArcherTower, archerBattleBuildCost);
+        CreateBuildSlot(new Vector3(0.2f, 2.2f, 0f), BuildingType.CannonTower, cannonBattleBuildCost);
+        CreateBuildSlot(new Vector3(-1.5f, -3.0f, 0f), BuildingType.Monastery, monasteryBattleBuildCost);
     }
 
     private void CreateBuildSlot(Vector3 position, BuildingType type, int cost)
@@ -373,6 +349,27 @@ public class BattleManager : MonoBehaviour
 
         TowerController tower = towerObj.AddComponent<TowerController>();
         tower.Initialize(type);
+        if (GameManager.Instance?.Buildings != null &&
+            GameManager.Instance.Buildings.TryGetValue(type, out var building))
+        {
+            var visual = building.VisualForLevel(building.level);
+            var renderer = towerObj.GetComponent<SpriteRenderer>();
+            if (renderer != null && visual != null)
+            {
+                if (visual.sprite != null) renderer.sprite = visual.sprite;
+                renderer.color = visual.color;
+            }
+        }
+    }
+
+    private void CreateMonastery(Vector3 position)
+    {
+        var visual = GameManager.Instance?.Buildings != null &&
+            GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var data)
+            ? data.VisualForLevel(data.level) : null;
+        var monastery = CreateSpriteObject("Monastery", visual?.sprite,
+            position, new Vector3(0.4f, 0.4f, 1f));
+        monastery.AddComponent<MonasteryHealer>();
     }
 
     private GameObject CreateEnemyPrefab()
@@ -393,6 +390,7 @@ public class BattleManager : MonoBehaviour
         prefab.layer = LayerMask.NameToLayer("Default"); // İleride "Enemy" layer ekleyeceğiz
 
         prefab.AddComponent<EnemyController>();
+        prefab.AddComponent<EnemyVisuals>();
 
         prefab.SetActive(false); // Prefab olarak kullanılacak, sahnede görünmeyecek
 
@@ -437,13 +435,17 @@ public class BattleManager : MonoBehaviour
 
             currentWaveIndex = w;
             WaveData wave = currentLevel.waves[w];
-            OnWaveIncoming?.Invoke(w + 1);
+            int incomingCount = 0;
+            foreach (var enemy in wave.enemies) incomingCount += enemy.count;
+            OnWaveIncoming?.Invoke(incomingCount);
 
             // Ekranda DALGA X banner'ını göster
             if (BattleVfxManager.Instance != null)
                 BattleVfxManager.Instance.ShowWaveBanner(w + 1);
 
+            NextWaveAt = Time.time + 3f;
             yield return new WaitForSeconds(3f);
+            NextWaveAt = 0f;
 
             Debug.Log($"[BattleManager] Dalga {w + 1}/{currentLevel.waves.Count} başlıyor!");
             OnWaveChanged?.Invoke(w + 1, currentLevel.waves.Count);
@@ -462,8 +464,10 @@ public class BattleManager : MonoBehaviour
             // Dalgalar arası bekleme
             if (w < currentLevel.waves.Count - 1)
             {
-                Debug.Log("[BattleManager] Sonraki dalga 3 saniye içinde...");
-                yield return new WaitForSeconds(3f);
+                Debug.Log("[BattleManager] Sonraki dalga 5 saniye içinde...");
+                NextWaveAt = Time.time + 5f;
+                yield return new WaitForSeconds(5f);
+                NextWaveAt = 0f;
             }
         }
 
@@ -529,7 +533,9 @@ public class BattleManager : MonoBehaviour
         EnemyController enemy = enemyObj.GetComponent<EnemyController>();
         if (enemy != null)
         {
-            int battleLevel = GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
+            int battleLevel = BattleSession.IsCampaign
+                ? (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber
+                : GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
             enemy.Initialize(type, battleLevel, mainBaseTransform);
         }
 
@@ -553,10 +559,7 @@ public class BattleManager : MonoBehaviour
 
     public bool TryBuildFromSlot(BattleBuildSlot slot, BuildingType type, Vector3 position, int cost)
     {
-        if (!battleActive)
-            return false;
-
-        if (cost <= 0 || totalGoldEarned < cost)
+        if (!CanBuildFromSlot(type, cost))
             return false;
 
         totalGoldEarned -= cost;
@@ -570,8 +573,8 @@ public class BattleManager : MonoBehaviour
             case BuildingType.CannonTower:
                 CreateTower(position, BuildingType.CannonTower);
                 break;
-            case BuildingType.WallBuilder:
-                CreateWallPiece(position);
+            case BuildingType.Monastery:
+                CreateMonastery(position);
                 break;
             default:
                 return false;
@@ -581,6 +584,48 @@ public class BattleManager : MonoBehaviour
             BattleVfxManager.Instance.SpawnBuild(position);
 
         return true;
+    }
+
+    public bool CanBuildFromSlot(BuildingType type, int cost)
+    {
+        if (!battleActive || cost <= 0 || totalGoldEarned < cost || GameManager.Instance == null)
+            return false;
+        if (!GameManager.Instance.Buildings.TryGetValue(type, out var building) || !building.isUnlocked)
+            return false;
+        int max = GetBattleBuildAllowance(type);
+        int built = 0;
+        foreach (var slot in FindObjectsByType<BattleBuildSlot>(FindObjectsSortMode.None))
+            if (slot.IsBuilt && slot.BuiltType == type) built++;
+        return built < max;
+    }
+
+    public int GetBattleBuildAllowance(BuildingType type)
+    {
+        var placed = GameManager.Instance?.PlayerData?.placedBuildings;
+        if (placed == null) return 0;
+        int count = 0;
+        foreach (var building in placed)
+            if (building != null && building.buildingType == type.ToString()) count++;
+        return count;
+    }
+
+    public int GetBattleBuildRemaining(BuildingType type)
+    {
+        int built = 0;
+        foreach (var slot in FindObjectsByType<BattleBuildSlot>(FindObjectsSortMode.None))
+            if (slot.IsBuilt && slot.BuiltType == type) built++;
+        return Mathf.Max(0, GetBattleBuildAllowance(type) - built);
+    }
+
+    public int GetBuildCost(BuildingType type)
+    {
+        switch (type)
+        {
+            case BuildingType.ArcherTower: return archerBattleBuildCost;
+            case BuildingType.CannonTower: return cannonBattleBuildCost;
+            case BuildingType.Monastery: return monasteryBattleBuildCost;
+            default: return 0;
+        }
     }
 
     public void OnHeroDied()
@@ -602,6 +647,15 @@ public class BattleManager : MonoBehaviour
     {
         battleActive = false;
         battleWon = true;
+        if (BattleSession.IsCampaign)
+        {
+            float baseHealth = mainBaseTransform != null
+                ? mainBaseTransform.GetComponent<MainBaseController>()?.HealthPercent ?? 0f : 0f;
+            float heroHealth = heroTransform != null
+                ? heroTransform.GetComponent<HeroController>()?.HealthPercent ?? 0f : 0f;
+            lastStars = 1 + (baseHealth > 0.5f ? 1 : 0) + (heroHealth > 0.5f ? 1 : 0);
+            CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
+        }
         int totalPayout = totalGoldEarned + GetVictoryBonus();
 
         Debug.Log($"[BattleManager] SAVAŞ KAZANILDI! Savas ici kalan altin: {totalGoldEarned}, Odul: {GetVictoryBonus()}, Toplam: {totalPayout}");
@@ -633,6 +687,19 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    public bool Forfeit()
+    {
+        if (!battleActive) return false;
+        BattleLost();
+        foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+            if (enemy != null) Destroy(enemy.gameObject);
+        foreach (var projectile in FindObjectsByType<ProjectileController>(FindObjectsSortMode.None))
+            if (projectile != null) Destroy(projectile.gameObject);
+        return true;
+    }
+
+    public float NextWaveAt { get; private set; }
+
     // ==================== PUBLIC ERIŞIM ====================
 
     public int CurrentWave => currentWaveIndex + 1;
@@ -642,10 +709,37 @@ public class BattleManager : MonoBehaviour
     public int VictoryBonus => GetVictoryBonus();
     public bool IsBattleActive => battleActive;
     public bool IsBattleWon => battleWon;
+    public int LastStars => lastStars;
 
     private int GetVictoryBonus()
     {
+        if (BattleSession.IsCampaign && BattleSession.Level != null)
+            return BattleSession.Level.reward;
         int battleLevel = GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
         return baseWinGoldReward + (battleLevel - 1) * 10;
+    }
+
+    private static LevelData CreateCampaignWaves(RegionData region, CampaignLevelData campaignLevel)
+    {
+        if (region == null || campaignLevel == null)
+            return LevelData.GenerateLevel(1);
+        var battle = new LevelData { levelNumber = campaignLevel.number };
+        for (int i = 0; i < campaignLevel.waveCount; i++)
+        {
+            var wave = new WaveData { waveNumber = i + 1,
+                timeBetweenSpawns = Mathf.Max(0.65f, 1.25f - (region.id - 1) * 0.1f) };
+            int count = campaignLevel.enemyCounts != null && i < campaignLevel.enemyCounts.Length
+                ? campaignLevel.enemyCounts[i] : 7;
+            EnemyType type = region.enemyTypes != null && region.enemyTypes.Length > 0
+                ? region.enemyTypes[Mathf.Min(i, region.enemyTypes.Length - 1)] : EnemyType.Wolf;
+            if (campaignLevel.kind == CampaignLevelKind.Boss && i == campaignLevel.waveCount - 1)
+            {
+                wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = Mathf.Max(0, count - 1) });
+                wave.enemies.Add(new EnemySpawnInfo { enemyType = EnemyType.Troll, count = 1 });
+            }
+            else wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = count });
+            battle.waves.Add(wave);
+        }
+        return battle;
     }
 }

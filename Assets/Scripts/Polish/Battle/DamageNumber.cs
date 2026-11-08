@@ -1,4 +1,4 @@
-// [DAMAGE NUMBER] — Mini Empire Builder
+// [DAMAGE NUMBER] â€” Mini Empire Builder
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -30,6 +30,10 @@ public class DamageNumber : MonoBehaviour
     private IEnumerator PlayRoutine(float damage, bool isCritical)
     {
         text.text = Mathf.RoundToInt(damage).ToString();
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.alignment = TextAlignmentOptions.Center;
+        text.rectTransform.sizeDelta = new Vector2(8f, 2f);
         text.color = isCritical ? Color.yellow : Color.white;
         text.fontSize = isCritical ? 7f : 5f;
 

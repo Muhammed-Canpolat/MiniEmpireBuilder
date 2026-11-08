@@ -18,6 +18,13 @@ public class MainBaseController : MonoBehaviour
     public float MaxHealth => maxHealth;
     public bool IsDestroyed => currentHealth <= 0;
 
+    public void Heal(float amount)
+    {
+        if (IsDestroyed || amount <= 0f) return;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        if (healthBar != null) healthBar.UpdateHealth(currentHealth);
+    }
+
     private void Start()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -33,7 +40,7 @@ public class MainBaseController : MonoBehaviour
         currentHealth = maxHealth;
 
         // Can barı oluştur
-        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 1.2f, 0));
+        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 1.2f, 0), ReferenceUiVisuals.Gold);
     }
 
     public void TakeDamage(float damage)

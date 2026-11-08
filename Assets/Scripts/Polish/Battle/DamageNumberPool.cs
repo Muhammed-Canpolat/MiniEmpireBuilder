@@ -14,6 +14,13 @@ public class DamageNumberPool : MonoBehaviour
 
     private void Awake()
     {
+        if (damageNumberPrefab != null) Initialize(damageNumberPrefab);
+    }
+
+    public void Initialize(DamageNumber prefab)
+    {
+        if (prefab == null || pool.Count > 0) return;
+        damageNumberPrefab = prefab;
         for (int i = 0; i < poolSize; i++)
         {
             DamageNumber instance = Instantiate(damageNumberPrefab, transform);
@@ -21,12 +28,12 @@ public class DamageNumberPool : MonoBehaviour
             pool.Enqueue(instance);
         }
     }
-
     /// <summary>
     /// Spawns and animates damage number at world position.
     /// </summary>
     public void ShowDamage(Vector3 position, float damage, float baselineDamage)
     {
+        if (damageNumberPrefab == null) return;
         DamageNumber number = GetFromPool();
         number.transform.position = position;
         number.gameObject.SetActive(true);

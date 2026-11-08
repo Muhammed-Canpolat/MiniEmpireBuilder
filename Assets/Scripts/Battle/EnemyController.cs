@@ -30,6 +30,7 @@ public class EnemyController : MonoBehaviour
 
     // Public erişim
     public bool IsDead => isDead;
+    public EnemyType Type => enemyType;
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public float HealthPercent => currentHealth / maxHealth;
@@ -87,7 +88,19 @@ public class EnemyController : MonoBehaviour
                 }
             }
 
-            switch (type)
+            // Imported enemy art has different source dimensions. Size by its
+            // actual sprite bounds so each enemy stays readable on a phone.
+            bool hasEnemyArt = spriteRenderer.sprite != null &&
+                spriteRenderer.sprite.name.StartsWith("enemy_");
+            if (hasEnemyArt)
+            {
+                float targetWidth = type == EnemyType.Troll ? 2.5f :
+                    type == EnemyType.Orc ? 1.85f :
+                    type == EnemyType.Wolf ? 1.75f : 1.6f;
+                float scale = targetWidth / Mathf.Max(0.01f, spriteRenderer.sprite.bounds.size.x);
+                transform.localScale = new Vector3(scale, scale, 1f);
+            }
+            else switch (type)
             {
                 case EnemyType.Wolf:
                     if (SpriteManager.Instance == null)
@@ -117,7 +130,9 @@ public class EnemyController : MonoBehaviour
         {
             int finalWave = Mathf.Max(1, Mathf.CeilToInt(battleLevelValue / 2f) + 2);
             int currentWave = BattleManager.Instance != null ? BattleManager.Instance.CurrentWave : 1;
-            bool isBoss = currentWave >= finalWave && type == EnemyType.Troll;
+            bool isBoss = type == EnemyType.Troll &&
+                (BattleSession.Level?.kind == CampaignLevelKind.Boss
+                    || currentWave >= finalWave);
             bool isElite = !isBoss && currentWave % EliteWaveInterval == 0;
             visuals.ApplyTier(isElite, isBoss);
         }

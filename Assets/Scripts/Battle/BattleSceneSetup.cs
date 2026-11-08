@@ -75,6 +75,7 @@ public class BattleSceneSetup : MonoBehaviour
 
         // Normal akış — savaşı başlat
         StartBattle();
+        gameObject.AddComponent<BattleRegionEnvironment>();
 
         // Sahne fade-in
         StartCoroutine(BattleFadeIn());
@@ -170,8 +171,8 @@ public class BattleSceneSetup : MonoBehaviour
         CreateWeaponCardAnchored(weaponSelectPanel.transform, "AxeCard",
             c1Bot, c1Top,
             "BALTA", new Color(0.9f, 0.3f, 0.2f),
-            "Tank Savasci",
-            "Dusmanlarin icine dal, sert vur!",
+            "Tank Savaşçı",
+            "Düşmanların içine dal, sert vur!",
             new float[] { 1.0f, 0.2f, 0.3f, 1.0f },
             WeaponType.Axe);
 
@@ -181,7 +182,7 @@ public class BattleSceneSetup : MonoBehaviour
         CreateWeaponCardAnchored(weaponSelectPanel.transform, "SpearCard",
             c2Bot, c2Top,
             "MIZRAK", new Color(0.3f, 0.7f, 1f),
-            "Savunma Savascisi",
+            "Savunma Savaşçısı",
             "Pozisyon tut, dusmanlarini durdur!",
             new float[] { 0.5f, 0.6f, 0.4f, 1.0f },
             WeaponType.Spear);
@@ -465,6 +466,8 @@ public class BattleSceneSetup : MonoBehaviour
         GameObject canvasObj = new GameObject("BattleCanvas");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 10;
 
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -507,14 +510,14 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI enemyText = CreateText(topBar.transform, "EnemyText",
             new Vector2(0.65f, 0.55f), new Vector2(0.98f, 0.95f),
             Vector2.zero, Vector2.zero,
-            "Dusman: 0", 24, TextAlignmentOptions.Right);
+            "Düşman 0", 24, TextAlignmentOptions.Right);
         enemyText.fontStyle = FontStyles.Bold;
 
         // Altın — alt satır
         TextMeshProUGUI goldText = CreateText(topBar.transform, "GoldText",
             new Vector2(0.02f, 0.08f), new Vector2(0.98f, 0.50f),
             Vector2.zero, Vector2.zero,
-            "Altin: +0", 21, TextAlignmentOptions.Center);
+            "0", 21, TextAlignmentOptions.Center);
         goldText.color = new Color(1f, 0.85f, 0.2f);
         goldText.fontStyle = FontStyles.Bold;
 
@@ -527,7 +530,7 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI heroLabel = CreateText(heroBarBg.transform, "HeroLabel",
             new Vector2(0, 1), new Vector2(1, 1.6f),
             Vector2.zero, Vector2.zero,
-            "Savasci", 16, TextAlignmentOptions.Left);
+            UiStrings.Warrior, 16, TextAlignmentOptions.Left);
         heroLabel.color = Color.cyan;
 
         Slider heroHealthBar = CreateHealthBar(heroBarBg.transform, "HeroHealthBar",
@@ -548,7 +551,7 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI baseLabel = CreateText(baseBarBg.transform, "BaseLabel",
             new Vector2(0, 1), new Vector2(1, 1.6f),
             Vector2.zero, Vector2.zero,
-            "Ana Us", 16, TextAlignmentOptions.Left);
+            UiStrings.MainBase, 16, TextAlignmentOptions.Left);
         baseLabel.color = Color.yellow;
 
         Slider baseHealthBar = CreateHealthBar(baseBarBg.transform, "BaseHealthBar",
@@ -563,29 +566,25 @@ public class BattleSceneSetup : MonoBehaviour
         // ===== JOYSTICK (sag alt) =====
         CreateVirtualJoystick(canvasObj.transform);
 
-        // ===== MINIMAP (sag alt) =====
-        GameObject minimapObj = new GameObject("Minimap");
-        minimapObj.transform.SetParent(canvasObj.transform, false);
-        RectTransform mmRt = minimapObj.AddComponent<RectTransform>();
-        mmRt.anchorMin = new Vector2(0.74f, 0.22f);
-        mmRt.anchorMax = new Vector2(0.96f, 0.35f);
-        mmRt.offsetMin = Vector2.zero;
-        mmRt.offsetMax = Vector2.zero;
-
-        RawImage minimapImg = minimapObj.AddComponent<RawImage>();
-        minimapImg.color = Color.white;
-        minimapObj.AddComponent<MinimapController>();
+        // Screen-edge indicators replace the minimap; no extra camera or render texture.
+        canvasObj.AddComponent<BattleOffscreenIndicators>();
 
         // ===== SAVAŞ SONU PANELİ =====
         // Tam ekran koyu arka plan (savaş alanını gizler)
-        GameObject endPanel = CreatePanel(canvasObj.transform, "BattleEndPanel",
+        GameObject victoryCanvasObj = new GameObject("VictoryCanvas");
+        Canvas victoryCanvas = victoryCanvasObj.AddComponent<Canvas>();
+        victoryCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        victoryCanvas.sortingOrder = 200;
+        ReferenceUiVisuals.ConfigureCanvas(victoryCanvasObj.AddComponent<CanvasScaler>());
+        victoryCanvasObj.AddComponent<GraphicRaycaster>();
+        GameObject endPanel = CreatePanel(victoryCanvasObj.transform, "VictoryOverlay",
             Vector2.zero, Vector2.one,
             Vector2.zero, Vector2.zero,
             new Color(0.03f, 0.03f, 0.06f, 0.85f));
         endPanel.SetActive(false);
 
         // İç panel (bilgi kutusu)
-        GameObject endInner = CreatePanel(endPanel.transform, "EndInner",
+        GameObject endInner = CreatePanel(endPanel.transform, "VictoryInner",
             new Vector2(0.06f, 0.30f), new Vector2(0.94f, 0.72f),
             Vector2.zero, Vector2.zero,
             new Color(0.08f, 0.08f, 0.12f, 0.95f));
@@ -596,7 +595,7 @@ public class BattleSceneSetup : MonoBehaviour
             Vector2.zero, Vector2.zero,
             new Color(1f, 0.85f, 0.2f, 0.8f));
 
-        TextMeshProUGUI resultText = CreateText(endInner.transform, "ResultText",
+        TextMeshProUGUI resultText = CreateText(endInner.transform, "VictoryResult",
             new Vector2(0.05f, 0.65f), new Vector2(0.95f, 0.95f),
             Vector2.zero, Vector2.zero,
             "ZAFER!", 42, TextAlignmentOptions.Center);
@@ -605,15 +604,18 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI rewardText = CreateText(endInner.transform, "RewardText",
             new Vector2(0.05f, 0.40f), new Vector2(0.95f, 0.60f),
             Vector2.zero, Vector2.zero,
-            "Kazanilan Altin: 0", 24, TextAlignmentOptions.Center);
+            "Kazanılan Altın: 0", 24, TextAlignmentOptions.Center);
 
         // Devam butonu
-        GameObject btnObj = CreateButton(endInner.transform, "ReturnButton",
+        GameObject btnObj = CreateButton(endInner.transform, "VictoryReturnButton",
             new Vector2(0.15f, 0.06f), new Vector2(0.85f, 0.30f),
             Vector2.zero, Vector2.zero,
             "Devam Et", new Color(0.15f, 0.65f, 0.25f));
 
         // ===== BattleUI bileşenini ekle ve referansları ata =====
+        endPanel.AddComponent<VictoryReferenceView>().Initialize(
+            endInner.GetComponent<RectTransform>(), resultText, rewardText, btnObj.GetComponent<Button>());
+        DarkFantasyHudPolish.PolishBattle(canvas);
         BattleUI battleUI = canvasObj.AddComponent<BattleUI>();
         battleUI.SetReferences(
             waveText, enemyText, goldText, levelText,
@@ -626,9 +628,16 @@ public class BattleSceneSetup : MonoBehaviour
 
     private void CreateVirtualJoystick(Transform parent)
     {
+        GameObject inputCanvasObject = new GameObject("BattleJoystickCanvas");
+        Canvas inputCanvas = inputCanvasObject.AddComponent<Canvas>();
+        inputCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        inputCanvas.overrideSorting = true;
+        inputCanvas.sortingOrder = 0;
+        CanvasScaler inputScaler = inputCanvasObject.AddComponent<CanvasScaler>();
+        ReferenceUiVisuals.ConfigureCanvas(inputScaler);
+        inputCanvasObject.AddComponent<GraphicRaycaster>();
         GameObject inputRoot = new GameObject("VirtualJoystickInput");
-        inputRoot.transform.SetParent(parent, false);
-        inputRoot.transform.SetAsFirstSibling();
+        inputRoot.transform.SetParent(inputCanvasObject.transform, false);
         RectTransform inputRt = inputRoot.AddComponent<RectTransform>();
         inputRt.anchorMin = Vector2.zero;
         inputRt.anchorMax = Vector2.one;
@@ -650,8 +659,11 @@ public class BattleSceneSetup : MonoBehaviour
 
         Image bg = visualRoot.AddComponent<Image>();
         bg.sprite = CreateCircleSprite(128);
-        bg.color = new Color(0.05f, 0.05f, 0.05f, 0.5f);
+        bg.color = new Color(0.165f, 0.13f, 0.094f, 0.86f);
         bg.raycastTarget = false;
+        var joystickOutline = visualRoot.AddComponent<Outline>();
+        joystickOutline.effectColor = ReferenceUiVisuals.Border;
+        joystickOutline.effectDistance = new Vector2(2f, -2f);
 
         GameObject handleObj = new GameObject("Handle");
         handleObj.transform.SetParent(visualRoot.transform, false);
@@ -663,14 +675,13 @@ public class BattleSceneSetup : MonoBehaviour
 
         Image handleImg = handleObj.AddComponent<Image>();
         handleImg.sprite = CreateCircleSprite(64);
-        handleImg.color = new Color(0.8f, 0.8f, 0.8f, 0.9f);
+        handleImg.color = ReferenceUiVisuals.Gold;
         handleImg.raycastTarget = false;
 
         VirtualJoystick joystick = inputRoot.AddComponent<VirtualJoystick>();
         joystick.Setup(rootRt, handleRt, 100f);
 
         visualRoot.transform.SetAsLastSibling();
-        inputRoot.transform.SetAsFirstSibling();
     }
 
     private Sprite CreateCircleSprite(int size)
