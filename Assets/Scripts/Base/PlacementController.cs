@@ -1,5 +1,8 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using TMPro;
+using DG.Tweening;
 
 /// <summary>
 /// Yarı saydam ghost sprite ile yerleştirme (yeni bina inşa veya taşıma) modu.
@@ -8,17 +11,23 @@ public class PlacementController : MonoBehaviour
 {
     public static PlacementController Instance { get; private set; }
 
-    private bool             _isPlacing;
-    private BuildingType     _placingBuildingType;
-    private PlacedMapObject  _movingObject;
-    private GameObject       _ghostObj;
-    private SpriteRenderer   _ghostRenderer;
+    private bool _isPlacing;
+    private BuildingType _placingBuildingType;
+    private PlacedMapObject _movingObject;
+    private GameObject _ghostObj;
+    private SpriteRenderer _ghostRenderer;
 
     private float _buildDuration;
-    private int   _buildCost;
-    private bool  _hasClickedDownSinceStart;
+    private int _buildCost;
+    private bool _hasClickedDownSinceStart;
     private Vector3 _lastValidWorldPos;
+    private Vector3 _moveOrigin;
+    private Vector3 _moveScale;
+    private GameObject _moveGrid;
+    private GameObject _footprint;
+    private GameObject _undoToast;
 
+    private const float GoldMineMaxWorldSize = 2.2f;
 
     private void Awake()
     {
@@ -38,11 +47,11 @@ public class PlacementController : MonoBehaviour
     {
         if (_isPlacing) CancelPlacement();
 
-        _isPlacing           = true;
+        _isPlacing = true;
         _placingBuildingType = type;
-        _movingObject        = null;
-        _buildDuration       = buildDurationSeconds;
-        _buildCost           = cost;
+        _movingObject = null;
+        _buildDuration = buildDurationSeconds;
+        _buildCost = cost;
         _hasClickedDownSinceStart = false;
 
         CreateGhost(BaseMapManager.GetBuildingColor(type), SpriteManager.Instance?.GetBuildingSprite(type));
@@ -53,12 +62,17 @@ public class PlacementController : MonoBehaviour
     public void BeginMove(PlacedMapObject obj)
     {
         if (_isPlacing) CancelPlacement();
-        if (obj?.gameObject == null) return;
+        if (obj?.gameObject == null || obj.buildingType == BuildingType.MainBase) return;
 
-        _isPlacing           = true;
+        _isPlacing = true;
         _placingBuildingType = obj.buildingType ?? BuildingType.MainBase; // fallback
-        _movingObject        = obj;
-        _buildDuration       = 0f;
+        _movingObject = obj;
+        _buildDuration = 0f;
+        _hasClickedDownSinceStart = true;
+        _moveOrigin = obj.gameObject.transform.position;
+        _moveScale = obj.gameObject.transform.localScale;
+        _lastValidWorldPos = _moveOrigin;
+        obj.gameObject.transform.DOScale(_moveScale * 1.1f, 0.12f);
 
         // Orijinal objeyi hafif saydam yap
         var sr = obj.gameObject.GetComponent<SpriteRenderer>();
@@ -68,6 +82,10 @@ public class PlacementController : MonoBehaviour
         }
 
         CreateGhost(BaseMapManager.GetBuildingColor(_placingBuildingType), sr?.sprite);
+        CreateMoveGrid();
+        _ghostObj.transform.position = _moveOrigin;
+        _footprint.transform.position = _moveOrigin;
+        _footprint.GetComponent<SpriteRenderer>().color = new Color32(0x4F, 0xCF, 0x74, 0x59);
     }
 
     public void CancelPlacement()
@@ -75,10 +93,13 @@ public class PlacementController : MonoBehaviour
         if (!_isPlacing) return;
 
         if (_ghostObj != null) Destroy(_ghostObj);
+        if (_moveGrid != null) Destroy(_moveGrid);
+        if (_footprint != null) Destroy(_footprint);
 
         // Taşıma iptaliyse orijinal rengi geri ver
         if (_movingObject?.gameObject != null)
         {
+            _movingObject.gameObject.transform.DOScale(_moveScale, 0.2f);
             var sr = _movingObject.gameObject.GetComponent<SpriteRenderer>();
             if (sr != null)
             {
@@ -86,7 +107,7 @@ public class PlacementController : MonoBehaviour
             }
         }
 
-        _isPlacing    = false;
+        _isPlacing = false;
         _movingObject = null;
     }
 
@@ -97,23 +118,25 @@ public class PlacementController : MonoBehaviour
         if (!_isPlacing || _ghostObj == null) return;
 
         Vector2 pointerPos = Vector2.zero;
-        bool    pressed    = false;
-        bool    released   = false;
-        bool    hasInput   = false;
+        bool pressed = false;
+        bool released = false;
+        bool hasInput = false;
 
-        if (Mouse.current != null && (Mouse.current.leftButton.isPressed || Mouse.current.leftButton.wasReleasedThisFrame || Mouse.current.delta.ReadValue().sqrMagnitude > 0))
+        if (Touchscreen.current != null &&
+            (Touchscreen.current.primaryTouch.press.isPressed ||
+             Touchscreen.current.primaryTouch.press.wasReleasedThisFrame))
         {
-            pointerPos = Mouse.current.position.ReadValue();
-            pressed    = Mouse.current.leftButton.wasPressedThisFrame;
-            released   = Mouse.current.leftButton.wasReleasedThisFrame;
+            var touch = Touchscreen.current.primaryTouch;
+            pointerPos = touch.position.ReadValue();
+            pressed = touch.press.wasPressedThisFrame;
+            released = touch.press.wasReleasedThisFrame;
             hasInput = true;
         }
-        else if (Touchscreen.current != null && Touchscreen.current.touches.Count > 0)
+        else if (Mouse.current != null && (Mouse.current.leftButton.isPressed || Mouse.current.leftButton.wasReleasedThisFrame || Mouse.current.delta.ReadValue().sqrMagnitude > 0))
         {
-            var touch = Touchscreen.current.touches[0];
-            pointerPos = touch.position.ReadValue();
-            pressed    = touch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Began;
-            released   = touch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Ended || touch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Canceled;
+            pointerPos = Mouse.current.position.ReadValue();
+            pressed = Mouse.current.leftButton.wasPressedThisFrame;
+            released = Mouse.current.leftButton.wasReleasedThisFrame;
             hasInput = true;
         }
 
@@ -121,7 +144,19 @@ public class PlacementController : MonoBehaviour
 
         if (hasInput)
         {
-            _lastValidWorldPos = Camera.main.ScreenToWorldPoint(new Vector3(pointerPos.x, pointerPos.y, 0f));
+            Vector3 pointerWorld = Camera.main.ScreenToWorldPoint(new Vector3(pointerPos.x, pointerPos.y, 0f));
+            if (_movingObject != null)
+            {
+                Vector2 size = BaseWorldLayout.Footprint(_placingBuildingType);
+                _lastValidWorldPos = new Vector3(
+                    Mathf.Floor(pointerWorld.x - size.x * 0.5f) + size.x * 0.5f,
+                    Mathf.Floor(pointerWorld.y - size.y * 0.5f) + size.y * 0.5f, -1f);
+            }
+            else if (BaseMapManager.Instance != null && BaseMapManager.Instance.TryGetAvailableSlot(
+                    _placingBuildingType, pointerWorld, null, out var slot))
+                _lastValidWorldPos = slot.center;
+            else
+                _lastValidWorldPos = pointerWorld;
             _lastValidWorldPos.z = -1f; // Ghost objesi üstte
         }
 
@@ -133,6 +168,13 @@ public class PlacementController : MonoBehaviour
         // Çakışma kontrolü
         bool canPlace = CheckCanPlace(_lastValidWorldPos);
         _ghostRenderer.color = canPlace ? new Color(0.2f, 1f, 0.2f, 0.6f) : new Color(1f, 0.2f, 0.2f, 0.6f);
+        if (_footprint != null)
+        {
+            _footprint.transform.position = _lastValidWorldPos;
+            _footprint.GetComponent<SpriteRenderer>().color = canPlace
+                ? new Color32(0x4F, 0xCF, 0x74, 0x59)
+                : new Color32(0xC2, 0x45, 0x2D, 0x59);
+        }
 
 
         if (released)
@@ -140,26 +182,29 @@ public class PlacementController : MonoBehaviour
             if (canPlace)
                 ConfirmPlacement(_lastValidWorldPos);
             else
+            {
+                if (_movingObject != null && _ghostObj != null)
+                {
+                    var rejected = _ghostObj;
+                    _ghostObj = null;
+                    rejected.transform.DOMove(_moveOrigin, 0.2f)
+                        .OnComplete(() => Destroy(rejected));
+                }
                 CancelPlacement();
+            }
         }
     }
 
     private bool CheckCanPlace(Vector3 pos)
     {
-        // UI üzerindeysek iptal (Basit mesafe/box kontrolü)
-        if (IsPointerOverBlockingUI())
-            return false;
-
-        // Çakışma (Radius 1f, ghost boyutuna göre ayarlanabilir)
-        Collider2D hit = Physics2D.OverlapCircle(pos, 0.7f);
-
-        // Kendi objemizse sorun yok (Taşıma durumu)
-        if (hit != null && _movingObject != null && hit.gameObject == _movingObject.gameObject)
-            return true;
-
-        return hit == null; // Çakışma yoksa true
+        if (IsPointerOverBlockingUI()) return false;
+        if (_movingObject != null)
+            return BaseMapManager.Instance != null && BaseMapManager.Instance.CanPlaceBuildingAt(
+                _placingBuildingType, pos, _movingObject);
+        return BaseMapManager.Instance != null && BaseMapManager.Instance.TryGetAvailableSlot(
+            _placingBuildingType, pos, _movingObject?.id, out var slot)
+            && Vector2.Distance(pos, slot.center) < 0.1f;
     }
-
     private bool IsPointerOverBlockingUI()
     {
         if (UnityEngine.EventSystems.EventSystem.current == null) return false;
@@ -191,8 +236,17 @@ public class PlacementController : MonoBehaviour
         if (_movingObject != null)
         {
             // Taşıma onayı
-            BaseMapManager.Instance?.MoveObjectTo(_movingObject, pos);
+            var moved = _movingObject;
+            Vector3 previous = _moveOrigin;
+            bool success = BaseMapManager.Instance != null && BaseMapManager.Instance.MoveObjectTo(moved, pos);
             CancelPlacement(); // Ghost silinir, renk 1f yapılır
+            if (success)
+            {
+                BaseBuildingVisual.SpawnDust(pos + Vector3.down * 0.4f, 110);
+                AudioManager.Instance?.PlaySfx("buildingPlace");
+                if (Application.isMobilePlatform) Handheld.Vibrate();
+                ShowUndo(moved, previous);
+            }
         }
         else
         {
@@ -203,10 +257,15 @@ public class PlacementController : MonoBehaviour
                 {
                     // İnşaatçıyı meşgul et
                     string name = BaseMapManager.GetBuildingDisplayName(_placingBuildingType);
-                    BuilderSystem.Instance.TryStartTask(name + " İnşası", _buildDuration, pos);
+                    PlacedMapObject completedBuilding = null;
+                    BuilderSystem.Instance.TryStartTask(name + " İnşası", _buildDuration, pos,
+                        () => completedBuilding?.gameObject?.GetComponent<BaseBuildingVisual>()
+                            ?.PlayConstructionComplete());
 
                     // Binayı oluştur
-                    BaseMapManager.Instance?.SpawnBuilding(_placingBuildingType, pos);
+                    completedBuilding = BaseMapManager.Instance?.SpawnBuilding(_placingBuildingType, pos);
+                    if (completedBuilding != null)
+                        AudioManager.Instance?.PlaySfx("buildingPlace");
 
                     BaseMapManager.Instance?.SaveAll();
                 }
@@ -231,11 +290,11 @@ public class PlacementController : MonoBehaviour
     private void CreateGhost(Color fallbackColor, Sprite realSprite = null)
     {
         _ghostObj = new GameObject("GhostPlacement");
-        _ghostObj.transform.localScale = new Vector3(0.9f, 0.9f, 1f);
+        _ghostObj.transform.localScale = CalculateGhostScale(_placingBuildingType, realSprite);
 
         _ghostRenderer = _ghostObj.AddComponent<SpriteRenderer>();
         _ghostRenderer.sortingOrder = 100;
-        
+
         if (realSprite != null)
         {
             _ghostRenderer.sprite = realSprite;
@@ -250,5 +309,81 @@ public class PlacementController : MonoBehaviour
         }
 
         _ghostRenderer.color = new Color(0.2f, 1f, 0.2f, 0.6f);
+    }
+
+    private void CreateMoveGrid()
+    {
+        var area = BaseMapManager.Instance.BuildableRect;
+        var square = BaseMapManager.MakeSquareSprite(Color.white);
+        _moveGrid = new GameObject("MoveGrid");
+        void AddLine(float x, float y, float width, float height)
+        {
+            var line = new GameObject("GridLine");
+            line.transform.SetParent(_moveGrid.transform, false);
+            line.transform.position = new Vector3(x, y, 0f);
+            line.transform.localScale = new Vector3(width / square.bounds.size.x,
+                height / square.bounds.size.y, 1f);
+            var sr = line.AddComponent<SpriteRenderer>();
+            sr.sprite = square;
+            sr.sortingOrder = 98;
+            sr.color = new Color(1f, 1f, 1f, 0.12f);
+        }
+        for (int x = area.xMin; x <= area.xMax; x++)
+            AddLine(x, area.center.y, 0.025f, area.height);
+        for (int y = area.yMin; y <= area.yMax; y++)
+            AddLine(area.center.x, y, area.width, 0.025f);
+        _footprint = new GameObject("MoveFootprint");
+        var renderer = _footprint.AddComponent<SpriteRenderer>();
+        renderer.sprite = square;
+        renderer.sortingOrder = 99;
+        var size = BaseWorldLayout.Footprint(_placingBuildingType);
+        _footprint.transform.localScale = new Vector3(size.x / square.bounds.size.x,
+            size.y / square.bounds.size.y, 1f);
+    }
+
+    private void ShowUndo(PlacedMapObject moved, Vector3 previous)
+    {
+        if (_undoToast != null) Destroy(_undoToast);
+        var safe = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
+        if (safe == null) return;
+        _undoToast = new GameObject("MoveUndoToast", typeof(RectTransform), typeof(Image), typeof(Button));
+        _undoToast.transform.SetParent(safe, false);
+        var rect = _undoToast.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.sizeDelta = new Vector2(190f, 44f);
+        rect.anchoredPosition = new Vector2(0f, 106f);
+        _undoToast.GetComponent<Image>().color = ReferenceUiVisuals.Hex(0x2A2118);
+        var captured = _undoToast;
+        _undoToast.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            if (moved?.gameObject != null) BaseMapManager.Instance?.MoveObjectTo(moved, previous);
+            if (captured != null) Destroy(captured);
+        });
+        var text = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+        text.transform.SetParent(_undoToast.transform, false);
+        var textRect = text.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = textRect.offsetMax = Vector2.zero;
+        var label = text.GetComponent<TextMeshProUGUI>();
+        label.text = "Geri al";
+        label.fontSize = 18f;
+        label.alignment = TextAlignmentOptions.Center;
+        label.color = ReferenceUiVisuals.Gold;
+        Destroy(captured, 3f);
+    }
+
+    private Vector3 CalculateGhostScale(BuildingType type, Sprite sprite)
+    {
+        if (type != BuildingType.GoldMine || sprite == null)
+            return new Vector3(0.9f, 0.9f, 1f);
+
+        Vector2 size = sprite.bounds.size;
+        float maxSize = Mathf.Max(size.x, size.y);
+        if (maxSize <= 0.0001f)
+            return new Vector3(0.9f, 0.9f, 1f);
+
+        float scale = Mathf.Min(1f, GoldMineMaxWorldSize / maxSize);
+        return new Vector3(scale, scale, 1f);
     }
 }

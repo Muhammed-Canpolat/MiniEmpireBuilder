@@ -9,7 +9,7 @@ using System.Linq;
 
 // ==================== VERİ TİPLERİ ====================
 
-public enum MapObjectType { Building, Tree, Rock }
+public enum MapObjectType { Building, Tree, Rock, Fence }
 
 /// <summary>Haritadaki canlı bir objeyi temsil eder</summary>
 public class PlacedMapObject
@@ -46,6 +46,17 @@ public class BaseMapManager : MonoBehaviour
 
     private readonly List<PlacedMapObject> _mapObjects = new List<PlacedMapObject>();
 
+    private const float FenceSegmentWorldLength = 4f;
+    private const float FenceHeight = 1.2f;
+    private const float FenceCornerWorldSize = 1.2f;
+
+    private GameObject _buildableGroundRoot;
+    private GameObject _buildableFenceRoot;
+    private RectInt _buildableRect;
+    public Vector2 BuildableCenter => _buildableRect.center;
+    public RectInt BuildableRect => _buildableRect;
+
+
     [Header("Respawn")]
     [SerializeField] private int minTreeCount = 8;
     [SerializeField] private int minRockCount = 4;
@@ -62,36 +73,378 @@ public class BaseMapManager : MonoBehaviour
         _respawnTargetTime = UnityEngine.Random.Range(respawnIntervalMin, respawnIntervalMax);
     }
 
+    private void Update()
+    {
+        if (BaseSceneSetup.Instance == null) return;
+        _respawnTimer += Time.deltaTime;
+        if (_respawnTimer < _respawnTargetTime) return;
+        _respawnTimer = 0f;
+        _respawnTargetTime = UnityEngine.Random.Range(respawnIntervalMin, respawnIntervalMax);
+        TryRespawn(MapObjectType.Tree, minTreeCount);
+        TryRespawn(MapObjectType.Rock, minRockCount);
+    }
+
+    private void OnEnable()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.OnBuildingUpgraded += OnBuildingUpgraded;
+    }
+
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
     }
 
-    private void Update()
+    private void OnDisable()
     {
-        _respawnTimer += Time.deltaTime;
-        if (_respawnTimer < _respawnTargetTime)
+        if (GameManager.Instance != null)
+            GameManager.Instance.OnBuildingUpgraded -= OnBuildingUpgraded;
+    }
+
+    // ==================== BUILDABLE AREA ====================
+
+    public void RefreshBuildableArea(int mapWidth, int mapHeight)
+    {
+        ClearBuildableVisualRoots();
+        _buildableRect = BaseWorldLayout.CleanAtLevel(GameManager.Instance != null
+            ? GameManager.Instance.GetMainBaseLevel() : 1);
+
+        BuildBuildableGround();
+        BuildBuildableFence();
+    }
+
+    public bool IsBuildablePosition(Vector3 worldPos)
+    {
+        if (_buildableRect.width <= 0 || _buildableRect.height <= 0) return true;
+        Vector2Int cell = new Vector2Int(
+            Mathf.FloorToInt(worldPos.x),
+            Mathf.FloorToInt(worldPos.y));
+        return _buildableRect.Contains(cell);
+    }
+
+    public bool IsBuildableArea(Vector3 worldPos, float radius)
+    {
+        if (_buildableRect.width <= 0 || _buildableRect.height <= 0) return true;
+
+        return worldPos.x - radius >= _buildableRect.xMin
+            && worldPos.x + radius <= _buildableRect.xMax
+            && worldPos.y - radius >= _buildableRect.yMin
+            && worldPos.y + radius <= _buildableRect.yMax;
+    }
+
+    private void OnBuildingUpgraded(BuildingType type, int newLevel)
+    {
+        foreach (var building in _mapObjects)
+        {
+            if (building.buildingType != type || building.gameObject == null) continue;
+            var label = building.gameObject.transform.Find("ReadableLabel/Text")?.GetComponent<TextMeshProUGUI>();
+            if (type == BuildingType.MainBase && label != null) label.text = $"{newLevel}";
+            var badge = building.gameObject.transform.Find("ReadableLabel/LevelBadge/Text")
+                ?.GetComponent<TextMeshProUGUI>();
+            if (badge != null) badge.text = $"Lv.{newLevel}";
+        }
+        if (type != BuildingType.MainBase) return;
+        if (BaseSceneSetup.Instance == null) return;
+        RefreshBuildableArea(BaseSceneSetup.Instance.width, BaseSceneSetup.Instance.height);
+        BaseSceneSetup.Instance.ClearUnlockedLand(newLevel);
+        BaseSceneSetup.Instance.RefreshCameraFraming();
+    }
+
+    private void BuildBuildableGround()
+    {
+        _buildableGroundRoot = new GameObject("BuildableGround");
+    }
+
+    /// <summary>
+    /// Belirtilen konuma 1x1 dünya birimi büyüklüğünde bir zemin sprite'ı yerleştirir.
+    /// Sprite'ın pivot veya import ayarından tamamen bağımsız çalışır.
+    /// </summary>
+    private void PlaceGroundTile(Sprite sprite, Vector3 worldPos, int sortingOrder, Color color, Vector2 size)
+    {
+        if (sprite == null) return;
+
+        GameObject go = new GameObject($"GroundTile_{Mathf.FloorToInt(worldPos.x)}_{Mathf.FloorToInt(worldPos.y)}");
+        go.transform.SetParent(_buildableGroundRoot.transform, false);
+
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sortingOrder = sortingOrder;
+        sr.color = color;
+
+        // Sprite boyutunu 1x1 dünya birimine ölçekle.
+        float sprW = sprite.bounds.size.x > 0.001f ? sprite.bounds.size.x : 1f;
+        float sprH = sprite.bounds.size.y > 0.001f ? sprite.bounds.size.y : 1f;
+
+        go.transform.position = worldPos;
+        go.transform.localScale = new Vector3(size.x / sprW, size.y / sprH, 1f);
+    }
+
+    private void BuildBuildableFence()
+    {
+        ClearFenceObjects();
+        MigrateRemovedFenceIds();
+
+        _buildableFenceRoot = new GameObject("BuildableFence");
+
+        Sprite segmentSprite = BaseCustomArt.Get("fence_oak_rail")
+            ?? LoadFullFenceSprite("fence_wood_segment");
+        Sprite cornerSprite = BaseCustomArt.Get("fence_stone_pillar")
+            ?? LoadFullFenceSprite("fence_wood_corner");
+
+        if (segmentSprite == null && cornerSprite == null)
             return;
 
-        _respawnTimer = 0f;
-        _respawnTargetTime = UnityEngine.Random.Range(respawnIntervalMin, respawnIntervalMax);
+        if (cornerSprite == null)
+            Debug.LogWarning("[BMM] fence_wood_corner sprite bulunamadi, kose objeleri olusturulmayacak.");
 
-        TryRespawn(MapObjectType.Tree, minTreeCount);
-        TryRespawn(MapObjectType.Rock, minRockCount);
+        // One continuous ring inside the thin exterior ground strip.
+        float left = 1.5f;
+        float right = 20.5f;
+        float bottom = 1.5f;
+        float top = 36.5f;
+
+        // Corners
+        if (cornerSprite != null)
+        {
+            CreateFencePiece(cornerSprite, new Vector3(left, bottom, 0.2f), 0f, true, GetFenceId("corner", 0, 0));
+            CreateFencePiece(cornerSprite, new Vector3(right, bottom, 0.2f), 90f, true, GetFenceId("corner", _buildableRect.width, 0), flipX: true);
+            CreateFencePiece(cornerSprite, new Vector3(right, top, 0.2f), 180f, true, GetFenceId("corner", _buildableRect.width, _buildableRect.height), flipX: true);
+            CreateFencePiece(cornerSprite, new Vector3(left, top, 0.2f), 270f, true, GetFenceId("corner", 0, _buildableRect.height));
+        }
+
+        if (segmentSprite == null)
+            return;
+
+        // Horizontal edges
+        for (int x = 2; x <= 19; x++)
+        {
+            float wx = x + 0.5f;
+            CreateFencePiece(segmentSprite, new Vector3(wx, bottom, 0.2f), 0f, false, GetFenceId("bottom", x, 0), 1.1f);
+            CreateFencePiece(segmentSprite, new Vector3(wx, top, 0.2f), 0f, false, GetFenceId("top", x, 0), 1.1f);
+        }
+
+        // Vertical edges
+        for (int y = 2; y <= 35; y++)
+        {
+            float wy = y + 0.5f;
+            CreateFencePiece(segmentSprite, new Vector3(left, wy, 0.2f), 90f, false, GetFenceId("left", 0, y), 1.1f);
+            CreateFencePiece(segmentSprite, new Vector3(right, wy, 0.2f), 90f, false, GetFenceId("right", 0, y), 1.1f);
+        }
+    }
+
+    private static Sprite LoadFullFenceSprite(string name)
+    {
+        var texture = Resources.Load<Texture2D>("Sprites/" + name);
+        if (texture == null) return null;
+        Rect region = new Rect(0, 0, texture.width, texture.height);
+        return Sprite.Create(texture, region,
+            new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private void CreateFencePiece(Sprite sprite, Vector3 worldPos, float zRotation, bool isCorner, string id,
+        float segmentLength = FenceSegmentWorldLength, bool flipX = false)
+    {
+        if (IsFenceRemoved(id))
+            return;
+
+        GameObject go = new GameObject(isCorner ? "FenceCorner" : "FenceSegment");
+        go.transform.SetParent(_buildableFenceRoot.transform, false);
+        go.transform.position = worldPos;
+        bool authoredPillar = sprite.name == "fence_stone_pillar";
+        bool authoredRail = sprite.name == "fence_oak_rail";
+        go.transform.rotation = Quaternion.Euler(0f, 0f, authoredPillar ? 0f : zRotation);
+
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.flipX = flipX;
+        sr.sortingOrder = 300;
+
+        go.transform.localScale = GetFenceScale(sprite, isCorner, segmentLength);
+
+        BoxCollider2D col = go.AddComponent<BoxCollider2D>();
+        float worldScale = go.transform.localScale.x;
+        col.size = new Vector2((isCorner ? 0.8f : segmentLength - 0.05f) / worldScale,
+            (isCorner ? 0.8f : authoredRail ? 0.70f : 0.25f)
+                / go.transform.localScale.y);
+        col.isTrigger = false;
+
+        Rigidbody2D rb = go.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
+
+        MapObjectTag tag = go.AddComponent<MapObjectTag>();
+        tag.objectType = MapObjectType.Fence;
+
+        _mapObjects.Add(new PlacedMapObject
+        {
+            gameObject = go,
+            objectType = MapObjectType.Fence,
+            id = id
+        });
+
+        if (!authoredRail && !authoredPillar) return;
+        Sprite pillar = BaseCustomArt.Get("fence_stone_pillar");
+        Sprite lantern = BaseCustomArt.Get("fence_lantern");
+        int coordinate = zRotation == 90f ? Mathf.FloorToInt(worldPos.y) :
+            Mathf.FloorToInt(worldPos.x);
+        if (authoredRail && pillar != null && (coordinate - 2) % 6 == 0)
+            AddFenceAdornment(go.transform, pillar, "StoneFencePost",
+                worldPos + new Vector3(0f, 0.25f, 0f), new Vector2(0.48f, 1.22f), 301);
+        bool horizontal = zRotation == 0f;
+        bool lampHere = authoredRail &&
+            (horizontal ? coordinate == 5 || coordinate == 16
+                : coordinate == 11 || coordinate == 26);
+        if (lampHere && lantern != null)
+        {
+            AddFenceAdornment(go.transform, BaseMapManager.MakeCircleSprite(Color.white),
+                "FenceLanternGlow", worldPos + new Vector3(0f, 0.94f, 0f),
+                new Vector2(0.6f, 0.6f), 302,
+                new Color(1f, 0.59f, 0.15f, 0.20f));
+            AddFenceAdornment(go.transform, lantern, "FenceLantern",
+                worldPos + new Vector3(0f, 0.89f, 0f), new Vector2(0.24f, 0.38f), 303);
+        }
+    }
+
+    private static void AddFenceAdornment(Transform parent, Sprite sprite, string name,
+        Vector3 worldPosition, Vector2 worldSize, int sortingOrder,
+        Color? tint = null)
+    {
+        var ornament = new GameObject(name);
+        ornament.transform.SetParent(parent, false);
+        ornament.transform.position = worldPosition;
+        ornament.transform.rotation = Quaternion.identity;
+        var renderer = ornament.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.color = tint ?? Color.white;
+        renderer.sortingOrder = sortingOrder;
+        ornament.transform.localScale = new Vector3(
+            worldSize.x / Mathf.Max(0.01f, sprite.bounds.size.x * parent.lossyScale.x),
+            worldSize.y / Mathf.Max(0.01f, sprite.bounds.size.y * parent.lossyScale.y), 1f);
+    }
+
+    private string GetFenceId(string side, int x, int y)
+    {
+        var fixedArea = BaseWorldLayout.Buildable;
+        return $"fence_{fixedArea.xMin}_{fixedArea.yMin}_{fixedArea.width}_{fixedArea.height}_{side}_{x}_{y}";
+    }
+
+    private void MigrateRemovedFenceIds()
+    {
+        var data = GameManager.Instance?.PlayerData;
+        if (data?.removedFenceIds == null || data.removedFenceIds.Count == 0) return;
+        var mapped = new HashSet<string>();
+        bool changed = false;
+        foreach (string id in data.removedFenceIds)
+        {
+            string[] parts = id.Split('_');
+            if (parts.Length != 8 || parts[0] != "fence"
+                || !int.TryParse(parts[3], out int oldWidth)
+                || !int.TryParse(parts[4], out int oldHeight)
+                || !int.TryParse(parts[6], out int oldX)
+                || !int.TryParse(parts[7], out int oldY)
+                || oldWidth <= 0 || oldHeight <= 0)
+            {
+                mapped.Add(id);
+                continue;
+            }
+            int newX = Mathf.RoundToInt((float)oldX / oldWidth * BaseWorldLayout.Buildable.width);
+            int newY = Mathf.RoundToInt((float)oldY / oldHeight * BaseWorldLayout.Buildable.height);
+            string replacement = GetFenceId(parts[5], newX, newY);
+            mapped.Add(replacement);
+            if (replacement != id) changed = true;
+        }
+        if (changed)
+        {
+            data.removedFenceIds = new List<string>(mapped);
+            GameManager.Instance.SaveGame();
+        }
+    }
+
+    private bool IsFenceRemoved(string id)
+    {
+        return GameManager.Instance?.PlayerData?.removedFenceIds != null
+            && GameManager.Instance.PlayerData.removedFenceIds.Contains(id);
+    }
+
+    private Vector3 GetFenceScale(Sprite sprite, bool isCorner, float segmentLength)
+    {
+        if (sprite == null) return Vector3.one;
+        Vector2 size = sprite.bounds.size;
+        if (size.x <= 0.0001f || size.y <= 0.0001f) return Vector3.one;
+        if (sprite.name == "fence_stone_pillar")
+            return new Vector3(0.86f / size.x, 1.62f / size.y, 1f);
+        if (sprite.name == "fence_oak_rail")
+            return new Vector3(segmentLength / size.x, FenceHeight / size.y, 1f);
+        return isCorner
+            ? new Vector3(FenceCornerWorldSize / size.x, FenceHeight / size.y, 1f)
+            : new Vector3(segmentLength / size.x, FenceHeight / size.y, 1f);
+    }
+
+    private void ClearFenceObjects()
+    {
+        for (int i = _mapObjects.Count - 1; i >= 0; i--)
+        {
+            if (_mapObjects[i].objectType != MapObjectType.Fence) continue;
+            if (_mapObjects[i].gameObject != null)
+                Destroy(_mapObjects[i].gameObject);
+            _mapObjects.RemoveAt(i);
+        }
+    }
+
+    private void ClearBuildableVisualRoots()
+    {
+        ClearFenceObjects();
+
+        // Alan köklerini doğrudan field'lardan yok et (FindObjectsOfType'tan daha güvenilir)
+        if (_buildableGroundRoot != null)
+        {
+            Destroy(_buildableGroundRoot);
+            _buildableGroundRoot = null;
+        }
+        if (_buildableFenceRoot != null)
+        {
+            Destroy(_buildableFenceRoot);
+            _buildableFenceRoot = null;
+        }
+
+        // Güvenlik: aynı isimli artık kalmış objeleri de temizle
+        GameObject[] allObjects = FindObjectsOfType<GameObject>(true);
+        foreach (GameObject go in allObjects)
+        {
+            if (go == null) continue;
+            if (go.name == "BuildableGround" || go.name == "BuildableFence")
+                Destroy(go);
+        }
     }
 
     // ==================== SPAWN ====================
 
     /// <summary>Haritaya bina spawn et (kayıt sisteminden veya placement'tan)</summary>
     public PlacedMapObject SpawnBuilding(BuildingType type, Vector3 pos, string id = null)
+        => SpawnBuildingInternal(type, pos, id, false);
+
+    private PlacedMapObject SpawnSavedBuilding(BuildingType type, Vector3 pos, string id)
+        => SpawnBuildingInternal(type, pos, id, true);
+
+    private PlacedMapObject SpawnBuildingInternal(BuildingType type, Vector3 pos, string id,
+        bool savedPosition)
     {
-        id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
+        BaseWorldLayout.Slot slot;
+        if (string.IsNullOrEmpty(id) || !BaseWorldLayout.TryGet(id, out slot)
+            || slot.buildingType != type || IsSlotOccupied(id))
+        {
+            if (!TryGetAvailableSlot(type, pos, null, out slot)) return null;
+        }
+        id = slot.id;
+        if (!savedPosition) pos = slot.center;
+        else if (type != BuildingType.MainBase && !CanPlaceBuildingAt(type, pos))
+            pos = NearestValidBuildingPosition(type, pos);
 
         GameObject go = new GameObject($"Building_{type}_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0f);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        Sprite s = SpriteManager.Instance?.GetBuildingSprite(type);
+        Sprite s = type == BuildingType.GoldMine
+            ? MakeSquareSprite(Color.white) : SpriteManager.Instance?.GetBuildingSprite(type);
 
         if (s == null)
         {
@@ -104,7 +457,7 @@ public class BaseMapManager : MonoBehaviour
                 iconGo.transform.SetParent(go.transform, false);
                 SpriteRenderer isr = iconGo.AddComponent<SpriteRenderer>();
                 isr.sprite = SpriteManager.Instance?.IconGold ?? MakeCircleSprite(Color.yellow);
-                isr.sortingOrder = 6;
+                isr.sortingOrder = 101 - Mathf.RoundToInt(pos.y * 2f);
                 iconGo.transform.localScale = Vector3.one * 1.5f;
             }
             else
@@ -113,21 +466,35 @@ public class BaseMapManager : MonoBehaviour
             }
         }
 
+        if (type != BuildingType.GoldMine && GameManager.Instance?.Buildings != null &&
+            GameManager.Instance.Buildings.TryGetValue(type, out var placedBuilding))
+        {
+            var levelSprite = placedBuilding.VisualForLevel(placedBuilding.level)?.sprite;
+            if (levelSprite != null) s = levelSprite;
+        }
+
         sr.sprite = s;
-        sr.sortingOrder = 5;
+        sr.sortingOrder = 100 - Mathf.RoundToInt(pos.y * 2f);
+
+        float visualMultiplier = 1f;
+        Vector3 targetScale = CalculateBuildingVisualScale(type, sr.sprite) * visualMultiplier;
 
         if (type == BuildingType.GoldMine)
         {
-            go.transform.localScale = new Vector3(1.6f, 1.6f, 1f);
-            CreateGoldMineDecor(go.transform);
+            go.transform.localScale = targetScale;
+            sr.color = Color.clear;
         }
         else if (type == BuildingType.MainBase)
         {
-            go.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
+            go.transform.localScale = targetScale;
         }
-        else if (type == BuildingType.WallBuilder)
+        else if (type == BuildingType.Monastery)
         {
-            go.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+            go.transform.localScale = targetScale;
+        }
+        else
+        {
+            go.transform.localScale = targetScale;
         }
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
@@ -139,21 +506,52 @@ public class BaseMapManager : MonoBehaviour
         // Sprite boyutuna göre collider ayarla (Geniş binalara tıklamayı kolaylaştırır)
         Vector2 sSize = sr.sprite != null ? new Vector2(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y) : new Vector2(1.5f, 1.5f);
         if (sSize.x < 1f || sSize.y < 1f) sSize = new Vector2(Mathf.Max(1.5f, sSize.x), Mathf.Max(1.5f, sSize.y));
-        col.size = sSize;
+        col.size = sSize / visualMultiplier;
 
         BuildingIdentifier bid = go.AddComponent<BuildingIdentifier>();
 
         bid.buildingType = type;
 
+        var levelVisual = go.AddComponent<BaseBuildingVisual>();
+        levelVisual.Initialize(type, sr, targetScale);
+        BaseGarrisonVisual garrisonVisual = null;
+        if (type == BuildingType.MainBase || type == BuildingType.ArcherTower ||
+            type == BuildingType.CannonTower || type == BuildingType.Monastery)
+        {
+            var template = Resources.Load<BaseGarrisonVisual>("Garrison_" + type);
+            garrisonVisual = template != null ? Instantiate(template, go.transform)
+                : go.AddComponent<BaseGarrisonVisual>();
+            garrisonVisual.transform.localPosition = Vector3.zero;
+        }
+        if (type == BuildingType.GoldMine)
+        {
+            int mineLevel = GameManager.Instance?.Buildings != null &&
+                GameManager.Instance.Buildings.TryGetValue(type, out var mineData)
+                ? mineData.level : 1;
+            var template = Resources.Load<BaseMineVisual>("BaseMineVisual");
+            var mineVisual = template != null ? Instantiate(template, go.transform)
+                : go.AddComponent<BaseMineVisual>();
+            mineVisual.transform.localPosition = Vector3.zero;
+            mineVisual.Initialize(mineLevel, sr.sortingOrder);
+        }
+
         // Spawn animasyonu
         go.transform.localScale = Vector3.zero;
-        go.transform.DOScale(new Vector3(0.9f, 0.9f, 1f), 0.3f).SetEase(Ease.OutBack);
+        go.transform.DOScale(targetScale, 0.3f).SetEase(Ease.OutBack)
+            .OnComplete(() =>
+            {
+                if (garrisonVisual != null) garrisonVisual.Initialize(type, sr.sortingOrder);
+            });
+        CreateBuildingShadow(go.transform, slot.footprint, targetScale, sr.sortingOrder - 1);
 
         // Dünya etiketi
-        CreateWorldLabel(go.transform,
-            GetBuildingDisplayName(type),
-            GetBuildingLevelText(type),
-            GetBuildingColor(type));
+        CreateReadableLabel(go.transform, type == BuildingType.MainBase
+            ? $"{GameManager.Instance?.GetMainBaseLevel() ?? 1}"
+            : GetBuildingDisplayName(type), type == BuildingType.MainBase,
+            sr.sprite.bounds.extents.y * targetScale.y + 0.34f, targetScale.x,
+            type == BuildingType.MainBase ? null : GetBuildingLevelText(type));
+        if (type != BuildingType.MainBase)
+            go.transform.Find("ReadableLabel")?.gameObject.SetActive(false);
 
         var obj = new PlacedMapObject
         {
@@ -165,7 +563,53 @@ public class BaseMapManager : MonoBehaviour
         };
 
         _mapObjects.Add(obj);
+
+        BaseGroundPaths.Instance?.Refresh();
+
+        if (type == BuildingType.MainBase && BaseSceneSetup.Instance != null)
+            RefreshBuildableArea(BaseSceneSetup.Instance.width, BaseSceneSetup.Instance.height);
+
         return obj;
+    }
+
+    private Vector3 CalculateBuildingVisualScale(BuildingType type, Sprite sprite)
+    {
+        float spriteWidth = sprite != null ? sprite.bounds.size.x : 0f;
+        if (spriteWidth <= 0.0001f) return Vector3.one;
+        float footprintWidth = BaseWorldLayout.Footprint(type).x;
+        float width = Mathf.Min(footprintWidth * 1.15f, footprintWidth + 0.6f);
+        float scale = width / spriteWidth;
+        return new Vector3(scale, scale, 1f);
+    }
+
+    public static void CreateBuildingShadow(Transform parent, Vector2 footprint, Vector3 parentScale, int sortingOrder)
+    {
+        var template = Resources.Load<GameObject>("BaseGroundShadow");
+        if (template == null) return;
+        var shadow = Instantiate(template, parent);
+        shadow.name = "ZeminGolgesi";
+        shadow.transform.localPosition = new Vector3(0f, -0.25f / parentScale.y, 0f);
+        var renderer = shadow.GetComponent<SpriteRenderer>();
+        if (renderer == null || renderer.sprite == null) return;
+        renderer.color = new Color(0f, 0f, 0f, 0.30f);
+        renderer.sortingOrder = sortingOrder;
+        shadow.transform.localScale = new Vector3(footprint.x * 1.25f /
+            (renderer.sprite.bounds.size.x * parentScale.x), footprint.y * 1.25f /
+            (renderer.sprite.bounds.size.y * parentScale.y), 1f);
+    }
+
+    private Vector3 CalculateMaxSizeScale(Sprite sprite, float maxWorldSize, float fallbackScale)
+    {
+        if (sprite == null)
+            return new Vector3(fallbackScale, fallbackScale, 1f);
+
+        Vector2 size = sprite.bounds.size;
+        float maxSize = Mathf.Max(size.x, size.y);
+        if (maxSize <= 0.0001f)
+            return new Vector3(fallbackScale, fallbackScale, 1f);
+
+        float scale = Mathf.Min(fallbackScale, maxWorldSize / maxSize);
+        return new Vector3(scale, scale, 1f);
     }
 
     /// <summary>Haritaya ağaç spawn et</summary>
@@ -173,19 +617,22 @@ public class BaseMapManager : MonoBehaviour
     {
         id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
 
-        float scale = UnityEngine.Random.Range(0.40f, 0.58f);
-
         GameObject go = new GameObject($"Tree_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0.3f);
-        go.transform.localScale = new Vector3(scale, scale, 1f);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = GetRandomTreeSprite() ?? SpriteManager.Instance?.Tree ?? MakeCircleSprite(new Color(0.15f, 0.5f, 0.15f));
         sr.sortingOrder = 3;
+        float treeScale = UnityEngine.Random.Range(1.5f, 2.1f) /
+            Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        go.transform.localScale = new Vector3(treeScale, treeScale, 1f);
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
-        col.isTrigger = true;
-        col.size = new Vector2(1.5f, 1.5f);
+        col.isTrigger = false;
+        col.size = new Vector2(0.9f, 0.9f) / treeScale;
+
+        Rigidbody2D rb = go.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
 
         MapObjectTag tag = go.AddComponent<MapObjectTag>();
         tag.objectType = MapObjectType.Tree;
@@ -207,19 +654,22 @@ public class BaseMapManager : MonoBehaviour
     {
         id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
 
-        float scale = UnityEngine.Random.Range(0.38f, 0.55f);
-
         GameObject go = new GameObject($"Rock_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0.4f);
-        go.transform.localScale = new Vector3(scale, scale, 1f);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = SpriteManager.Instance?.Rock ?? MakeCircleSprite(new Color(0.52f, 0.48f, 0.42f));
         sr.sortingOrder = 4;
+        float rockScale = UnityEngine.Random.Range(0.9f, 1.35f) /
+            Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        go.transform.localScale = new Vector3(rockScale, rockScale, 1f);
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
-        col.isTrigger = true;
-        col.size = new Vector2(1.2f, 0.9f);
+        col.isTrigger = false;
+        col.size = new Vector2(0.9f, 0.7f) / rockScale;
+
+        Rigidbody2D rb = go.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
 
         MapObjectTag tag = go.AddComponent<MapObjectTag>();
         tag.objectType = MapObjectType.Rock;
@@ -238,6 +688,9 @@ public class BaseMapManager : MonoBehaviour
 
     private Sprite GetRandomTreeSprite()
     {
+        var fullTree = Array.Find(DecorPlacementController.All,
+            item => item.id == "tree")?.sprite;
+        if (fullTree != null) return fullTree;
         Sprite[] trees = new Sprite[]
         {
             SpriteManager.Instance?.GetSprite("tree1"),
@@ -257,64 +710,6 @@ public class BaseMapManager : MonoBehaviour
             return null;
 
         return available[UnityEngine.Random.Range(0, available.Count)];
-    }
-
-    private void CreateGoldMineDecor(Transform parent)
-    {
-        if (parent == null) return;
-
-        // --- Kazıcı İşçi (pawn_miner) ---
-        Sprite minerSprite = SpriteManager.Instance?.GetSprite("pawn_miner");
-        if (minerSprite != null)
-        {
-            GameObject miner = new GameObject("MineWorker");
-            miner.transform.SetParent(parent, false);
-            Vector3 minerBasePos = new Vector3(-0.62f, -0.28f, -0.05f);
-            miner.transform.localPosition = minerBasePos;
-            SpriteRenderer msr = miner.AddComponent<SpriteRenderer>();
-            msr.sprite = minerSprite;
-            msr.sortingOrder = 7;
-            miner.transform.localScale = Vector3.one * 0.55f;
-
-            // Kazma animasyonu: yukarı-aşağı + yatay eğilme
-            // Yukarı-aşağı hareketi (kazma vuruşu hissi)
-            miner.transform.DOLocalMoveY(minerBasePos.y + 0.12f, 0.28f)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetEase(Ease.InOutQuad);
-            // Hafif yatay sallanma (vurma sırasında eğilme)
-            miner.transform.DOLocalRotate(new Vector3(0f, 0f, -18f), 0.28f)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetEase(Ease.InOutSine);
-        }
-
-        // --- Altın Yığını Kümeleri (gold_stone_6) ---
-        Sprite goldPile = SpriteManager.Instance?.GetSprite("gold_stone_6");
-        if (goldPile != null)
-        {
-            // Ana büyük yığın
-            CreateGoldPile(parent, goldPile, new Vector3(0.52f, -0.22f, -0.06f), 0.60f, 0);
-            // Küçük yan yığın
-            CreateGoldPile(parent, goldPile, new Vector3(0.75f, -0.30f, -0.06f), 0.38f, 1);
-            // Diğer küçük yığın
-            CreateGoldPile(parent, goldPile, new Vector3(0.35f, -0.35f, -0.06f), 0.32f, 2);
-        }
-    }
-
-    private void CreateGoldPile(Transform parent, Sprite sprite, Vector3 localPos, float scale, int animOffset)
-    {
-        GameObject pile = new GameObject("GoldPile");
-        pile.transform.SetParent(parent, false);
-        pile.transform.localPosition = localPos;
-        SpriteRenderer psr = pile.AddComponent<SpriteRenderer>();
-        psr.sprite = sprite;
-        psr.sortingOrder = 6;
-        pile.transform.localScale = Vector3.one * scale;
-
-        // Nefes alan büyüme/küçülme animasyonu (her yığın farklı hızda)
-        float duration = 0.9f + animOffset * 0.35f;
-        pile.transform.DOScale(scale * 1.08f, duration)
-            .SetLoops(-1, LoopType.Yoyo)
-            .SetEase(Ease.InOutSine);
     }
 
     // ==================== KALDIRMA ====================
@@ -407,6 +802,8 @@ public class BaseMapManager : MonoBehaviour
         if (obj.gameObject == null) yield break;
 
         Vector3 pos = obj.gameObject.transform.position;
+        bool removedFence = obj.objectType == MapObjectType.Fence;
+        string removedFenceId = obj.id;
 
         // Coin uçuş efekti
         SpawnCoinEffect(pos);
@@ -420,6 +817,10 @@ public class BaseMapManager : MonoBehaviour
 
         if (obj.gameObject != null) Destroy(obj.gameObject);
         _mapObjects.Remove(obj);
+        BaseGroundPaths.Instance?.Refresh();
+
+        if (removedFence)
+            MarkFenceRemoved(removedFenceId);
 
         // Altın kazan
         GameManager.Instance?.AddGold(10);
@@ -431,15 +832,91 @@ public class BaseMapManager : MonoBehaviour
     // ==================== TAŞIMA ====================
 
     /// <summary>Mevcut objeyi yeni pozisyona taşı</summary>
-    public void MoveObjectTo(PlacedMapObject obj, Vector3 newPos)
+    private void MarkFenceRemoved(string fenceId)
     {
-        if (obj?.gameObject == null) return;
+        if (string.IsNullOrEmpty(fenceId) || GameManager.Instance?.PlayerData == null)
+            return;
+
+        if (GameManager.Instance.PlayerData.removedFenceIds == null)
+            GameManager.Instance.PlayerData.removedFenceIds = new List<string>();
+
+        if (!GameManager.Instance.PlayerData.removedFenceIds.Contains(fenceId))
+            GameManager.Instance.PlayerData.removedFenceIds.Add(fenceId);
+    }
+
+    public bool CanPlaceBuildingAt(BuildingType type, Vector2 center, PlacedMapObject moving = null)
+    {
+        if (type == BuildingType.MainBase) return false;
+        Vector2 size = BaseWorldLayout.Footprint(type);
+        int left = Mathf.RoundToInt(center.x - size.x * 0.5f);
+        int bottom = Mathf.RoundToInt(center.y - size.y * 0.5f);
+        var footprint = new RectInt(left, bottom, Mathf.RoundToInt(size.x), Mathf.RoundToInt(size.y));
+        if (
+            (footprint.xMin < BaseWorldLayout.Buildable.xMin + 1 ||
+             footprint.xMax > BaseWorldLayout.Buildable.xMax - 1 ||
+             footprint.yMin < BaseWorldLayout.Buildable.yMin + 1 ||
+             footprint.yMax > BaseWorldLayout.Buildable.yMax - 1)) return false;
+        for (int y = footprint.yMin; y < footprint.yMax; y++)
+        for (int x = footprint.xMin; x < footprint.xMax; x++)
+        {
+            if (!_buildableRect.Contains(new Vector2Int(x, y))) return false;
+            foreach (string fixedName in new[] { "BuilderHut", "HeroCamp" })
+            {
+                var fixedObject = GameObject.Find(fixedName);
+                if (fixedObject != null && new Rect(fixedObject.transform.position.x - 1f,
+                    fixedObject.transform.position.y - 1f, 2f, 2f)
+                    .Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
+            }
+            foreach (var other in _mapObjects)
+            {
+                if (other == moving || other.gameObject == null || other.isBeingRemoved ||
+                    other.objectType != MapObjectType.Building || !other.buildingType.HasValue) continue;
+                Vector2 otherSize = BaseWorldLayout.Footprint(other.buildingType.Value);
+                var otherRect = new Rect(other.gameObject.transform.position.x - otherSize.x * 0.5f,
+                    other.gameObject.transform.position.y - otherSize.y * 0.5f, otherSize.x, otherSize.y);
+                if (otherRect.Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
+            }
+            var decor = DecorPlacementController.Instance;
+            if (decor != null)
+                foreach (var item in decor.Placed)
+                    if (item != null && item.Occupies(new Vector2Int(x, y))) return false;
+        }
+        return true;
+    }
+
+    private Vector3 NearestValidBuildingPosition(BuildingType type, Vector3 saved)
+    {
+        Vector2 footprint = BaseWorldLayout.Footprint(type);
+        Vector3 best = saved;
+        float bestDistance = float.MaxValue;
+        for (int y = BaseWorldLayout.Buildable.yMin + 1;
+             y <= BaseWorldLayout.Buildable.yMax - 1 - footprint.y; y++)
+        for (int x = BaseWorldLayout.Buildable.xMin + 1;
+             x <= BaseWorldLayout.Buildable.xMax - 1 - footprint.x; x++)
+        {
+            var candidate = new Vector3(x + footprint.x * 0.5f,
+                y + footprint.y * 0.5f, saved.z);
+            float distance = (candidate - saved).sqrMagnitude;
+            if (distance >= bestDistance || !CanPlaceBuildingAt(type, candidate)) continue;
+            best = candidate;
+            bestDistance = distance;
+        }
+        return best;
+    }
+
+    public bool MoveObjectTo(PlacedMapObject obj, Vector3 newPos)
+    {
+        if (obj?.gameObject == null || !obj.buildingType.HasValue ||
+            !CanPlaceBuildingAt(obj.buildingType.Value, newPos, obj)) return false;
 
         Vector3 target = new Vector3(newPos.x, newPos.y, obj.gameObject.transform.position.z);
         obj.gameObject.transform.DOKill();
-        obj.gameObject.transform.DOMove(target, 0.25f).SetEase(Ease.OutBack);
-
+        obj.gameObject.transform.position = target;
+        obj.gameObject.transform.DOPunchScale(Vector3.one * 0.08f, 0.2f);
+        BaseGroundPaths.Instance?.Refresh();
         SaveAll();
+        HeroMovementController.Instance?.RefreshWalkable();
+        return true;
     }
 
     // ==================== KAYIT / YÜKLEME ====================
@@ -457,10 +934,13 @@ public class BaseMapManager : MonoBehaviour
 
             list.Add(new PlacedBuildingData
             {
-                id = obj.id,
+                slotId = obj.id,
                 buildingType = obj.buildingType?.ToString() ?? "",
+                hasPosition = true,
                 x = obj.gameObject.transform.position.x,
-                y = obj.gameObject.transform.position.y
+                y = obj.gameObject.transform.position.y,
+                level = obj.buildingType.HasValue && GameManager.Instance.Buildings.TryGetValue(obj.buildingType.Value, out var state)
+                    ? state.level : 1
             });
         }
 
@@ -472,12 +952,59 @@ public class BaseMapManager : MonoBehaviour
     public void LoadFromPlayerData()
     {
         if (GameManager.Instance?.PlayerData?.placedBuildings == null) return;
-
-        foreach (var data in GameManager.Instance.PlayerData.placedBuildings)
+        var saved = GameManager.Instance.PlayerData.placedBuildings;
+        foreach (var data in saved)
         {
             if (Enum.TryParse<BuildingType>(data.buildingType, out BuildingType type))
-                SpawnBuilding(type, new Vector3(data.x, data.y, 0f), data.id);
+                SpawnSavedBuilding(type, data.hasPosition ? new Vector2(data.x, data.y)
+                    : BaseWorldLayout.TryGet(data.slotId, out var slot)
+                        ? slot.center : Vector2.zero, data.slotId);
         }
+        SaveAll();
+    }
+
+    /// <summary>Apply the recommended positions only after the player confirms in the edit menu.</summary>
+    public void ApplyRecommendedLayout()
+    {
+        foreach (var item in _mapObjects)
+        {
+            if (item.gameObject == null || item.objectType != MapObjectType.Building ||
+                !BaseWorldLayout.TryGet(item.id, out var slot)) continue;
+            item.gameObject.transform.position = new Vector3(slot.center.x, slot.center.y,
+                item.gameObject.transform.position.z);
+        }
+        foreach (string name in new[] { "BuilderHut", "HeroCamp" })
+        {
+            var obj = GameObject.Find(name);
+            if (obj == null) continue;
+            var slot = BaseWorldLayout.Get(name == "BuilderHut" ? "builder" : "camp");
+            obj.transform.position = new Vector3(slot.center.x, slot.center.y, obj.transform.position.z);
+        }
+        BaseGroundPaths.Instance?.Refresh();
+        HeroMovementController.Instance?.RefreshWalkable();
+        DecorPlacementController.Instance?.AddRecommendedClusters();
+        BaseGroundPaths.Instance?.Refresh();
+        SaveAll();
+    }
+
+    public bool IsSlotOccupied(string slotId)
+        => _mapObjects.Any(o => o.objectType == MapObjectType.Building && o.id == slotId
+            && !o.isBeingRemoved && o.gameObject != null);
+
+    public bool TryGetAvailableSlot(BuildingType type, Vector2 pointer, string movingSlotId,
+        out BaseWorldLayout.Slot selected)
+    {
+        selected = default;
+        float best = float.PositiveInfinity;
+        foreach (var slot in BaseWorldLayout.ForBuilding(type))
+        {
+            if (slot.id != movingSlotId && IsSlotOccupied(slot.id)) continue;
+            float distance = Vector2.SqrMagnitude(slot.center - pointer);
+            if (distance >= best) continue;
+            best = distance;
+            selected = slot;
+        }
+        return !string.IsNullOrEmpty(selected.id);
     }
 
     // ==================== SORGULAR ====================
@@ -491,8 +1018,46 @@ public class BaseMapManager : MonoBehaviour
     public bool IsBuildingPlaced(BuildingType type)
         => _mapObjects.Any(o => o.buildingType == type && !o.isBeingRemoved);
 
+    public void ShowBuildingLabel(PlacedMapObject building)
+    {
+        if (building?.gameObject == null || building.buildingType == BuildingType.MainBase) return;
+        var label = building.gameObject.transform.Find("ReadableLabel");
+        if (label == null) return;
+        var badge = label.Find("LevelBadge/Text")?.GetComponent<TextMeshProUGUI>();
+        if (badge != null && building.buildingType.HasValue)
+            badge.text = GetBuildingLevelText(building.buildingType.Value);
+        label.gameObject.SetActive(true);
+        StartCoroutine(HideBuildingLabelAfterDelay(label.gameObject));
+    }
+
+    private IEnumerator HideBuildingLabelAfterDelay(GameObject label)
+    {
+        yield return new WaitForSeconds(2f);
+        if (label != null) label.SetActive(false);
+    }
+
     private int CountObjects(MapObjectType type)
         => _mapObjects.Count(o => o.objectType == type && !o.isBeingRemoved);
+
+    public bool CanSpawnResourceAt(Vector2 position)
+    {
+        var cell = new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+        if (!BaseWorldLayout.Buildable.Contains(cell)) return false;
+        foreach (var hit in Physics2D.OverlapCircleAll(position, 0.8f))
+        {
+            // Building sprite colliders can extend far beyond their footprint.
+            // The precise footprint check below handles them instead.
+            if (hit.GetComponentInParent<BuildingIdentifier>() != null) continue;
+            return false;
+        }
+        foreach (var footprint in BaseWorldLayout.GetOccupiedFootprints())
+        {
+            var padded = new Rect(footprint.xMin - 0.8f, footprint.yMin - 0.8f,
+                footprint.width + 1.6f, footprint.height + 1.6f);
+            if (padded.Contains(position)) return false;
+        }
+        return true;
+    }
 
     private void TryRespawn(MapObjectType type, int minCount)
     {
@@ -508,13 +1073,10 @@ public class BaseMapManager : MonoBehaviour
 
         for (int i = 0; i < 12; i++)
         {
-            float rx = UnityEngine.Random.Range(1f, width - 1f);
-            float ry = UnityEngine.Random.Range(1f, height - 1f);
+            float rx = UnityEngine.Random.Range(2.7f, width - 2.7f);
+            float ry = UnityEngine.Random.Range(2.7f, height - 2.7f);
             Vector3 pos = new Vector3(rx, ry, 0f);
-
-            Collider2D hit = Physics2D.OverlapCircle(pos, 0.7f);
-            if (hit != null)
-                continue;
+            if (!CanSpawnResourceAt(pos)) continue;
 
             if (type == MapObjectType.Tree)
                 SpawnTree(pos);
@@ -572,6 +1134,115 @@ public class BaseMapManager : MonoBehaviour
     }
 
     // ==================== DÜNYA ETİKETİ ====================
+
+    public static void CreateReadableLabel(Transform parent, string caption, bool gold,
+        float worldOffsetBelowCenter, float parentScale, string levelText = null)
+    {
+        var root = new GameObject("ReadableLabel");
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = new Vector3(0f, -worldOffsetBelowCenter / Mathf.Max(0.01f, parentScale), -0.1f);
+        var canvas = root.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.sortingOrder = 200;
+        var rect = root.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(gold ? 36f : 180f, 33f);
+        rect.localScale = Vector3.one * (0.017f / Mathf.Max(0.01f, parentScale));
+        var bg = new GameObject("Background");
+        bg.transform.SetParent(root.transform, false);
+        var bgRect = bg.AddComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.offsetMin = bgRect.offsetMax = Vector2.zero;
+        var image = bg.AddComponent<Image>();
+        image.color = gold ? ReferenceUiVisuals.Gold : new Color(0.078f, 0.067f, 0.051f, 0.85f);
+        image.raycastTarget = false;
+        var words = new GameObject("Text");
+        words.transform.SetParent(root.transform, false);
+        var textRect = words.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = gold ? Vector2.one : new Vector2(0.75f, 1f);
+        textRect.offsetMin = textRect.offsetMax = Vector2.zero;
+        var text = words.AddComponent<TextMeshProUGUI>();
+        text.text = caption;
+        text.fontSize = gold ? 24f : 30f;
+        text.enableWordWrapping = false;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = gold ? ReferenceUiVisuals.Background : ReferenceUiVisuals.Gold;
+        text.raycastTarget = false;
+        if (!gold)
+        {
+            var badge = new GameObject("LevelBadge");
+            badge.transform.SetParent(root.transform, false);
+            var badgeRect = badge.AddComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(0.77f, 0.05f);
+            badgeRect.anchorMax = new Vector2(0.99f, 0.95f);
+            badgeRect.offsetMin = badgeRect.offsetMax = Vector2.zero;
+            var badgeImage = badge.AddComponent<Image>();
+            badgeImage.color = ReferenceUiVisuals.Gold;
+            badgeImage.raycastTarget = false;
+            var badgeText = new GameObject("Text");
+            badgeText.transform.SetParent(badge.transform, false);
+            var badgeTextRect = badgeText.AddComponent<RectTransform>();
+            badgeTextRect.anchorMin = Vector2.zero;
+            badgeTextRect.anchorMax = Vector2.one;
+            badgeTextRect.offsetMin = badgeTextRect.offsetMax = Vector2.zero;
+            var badgeTmp = badgeText.AddComponent<TextMeshProUGUI>();
+            badgeTmp.text = levelText ?? "Lv.1";
+            badgeTmp.fontSize = 16f;
+            badgeTmp.enableAutoSizing = true;
+            badgeTmp.fontSizeMin = 9f;
+            badgeTmp.alignment = TextAlignmentOptions.Center;
+            badgeTmp.fontStyle = FontStyles.Bold;
+            badgeTmp.color = ReferenceUiVisuals.Background;
+            badgeTmp.raycastTarget = false;
+        }
+    }
+
+    private void CreateMineTitleLabel(Transform parent, Vector3 parentTargetScale)
+    {
+        float parentScale = Mathf.Max(0.1f, parentTargetScale.x);
+        GameObject labelObj = new GameObject("MineTitleLabel");
+        labelObj.transform.SetParent(parent, false);
+        labelObj.transform.localPosition = new Vector3(0f, 0.95f / parentScale, -0.08f);
+
+        Canvas canvas = labelObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvas.sortingOrder = 18;
+
+        RectTransform rootRt = labelObj.GetComponent<RectTransform>();
+        rootRt.sizeDelta = new Vector2(150f, 48f);
+        rootRt.localScale = Vector3.one * (0.009f / parentScale);
+
+        GameObject bgGo = new GameObject("BG");
+        bgGo.transform.SetParent(labelObj.transform, false);
+        RectTransform bgRt = bgGo.AddComponent<RectTransform>();
+        bgRt.anchorMin = new Vector2(0.08f, 0.18f);
+        bgRt.anchorMax = new Vector2(0.92f, 0.88f);
+        bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
+        Image bg = bgGo.AddComponent<Image>();
+        bg.color = new Color(0.05f, 0.035f, 0.02f, 0.72f);
+        bg.raycastTarget = false;
+
+        GameObject textGo = new GameObject("Text");
+        textGo.transform.SetParent(labelObj.transform, false);
+        RectTransform textRt = textGo.AddComponent<RectTransform>();
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.offsetMin = textRt.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI text = textGo.AddComponent<TextMeshProUGUI>();
+        text.text = "Maden";
+        text.fontSize = 28f;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = new Color(1f, 0.82f, 0.18f);
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 16f;
+        text.fontSizeMax = 28f;
+        text.outlineWidth = 0.18f;
+        text.outlineColor = new Color(0f, 0f, 0f, 0.85f);
+    }
 
     private void CreateWorldLabel(Transform parent, string line1, string line2, Color color)
     {
@@ -636,7 +1307,7 @@ public class BaseMapManager : MonoBehaviour
             case BuildingType.GoldMine: return "Maden";
             case BuildingType.ArcherTower: return "Okçu";
             case BuildingType.CannonTower: return "Topçu";
-            case BuildingType.WallBuilder: return "Duvarcı";
+            case BuildingType.Monastery: return "Manastır";
             default: return type.ToString();
         }
     }
@@ -657,7 +1328,7 @@ public class BaseMapManager : MonoBehaviour
             case BuildingType.GoldMine: return new Color(1f, 0.85f, 0.2f);
             case BuildingType.ArcherTower: return new Color(0.2f, 0.65f, 1f);
             case BuildingType.CannonTower: return new Color(1f, 0.42f, 0.12f);
-            case BuildingType.WallBuilder: return new Color(0.65f, 0.48f, 0.22f);
+            case BuildingType.Monastery: return new Color(0.75f, 0.64f, 0.43f);
             default: return Color.white;
         }
     }
@@ -670,7 +1341,7 @@ public class BaseMapManager : MonoBehaviour
         Color[] cols = new Color[32 * 32];
         for (int i = 0; i < cols.Length; i++) cols[i] = color;
         tex.SetPixels(cols); tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+        return Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f, 0, SpriteMeshType.FullRect);
     }
 
     public static Sprite MakeCircleSprite(Color color)

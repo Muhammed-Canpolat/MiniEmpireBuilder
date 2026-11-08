@@ -10,6 +10,7 @@ public class BuilderVisualController : MonoBehaviour
     private Transform hutTransform;
     private bool isSleeping = false;
     private GameObject zzzEffect;
+    private Animator workerAnimator;
 
     private void Start()
     {
@@ -18,19 +19,23 @@ public class BuilderVisualController : MonoBehaviour
         hutTransform = hut.transform;
 
         // Ana üssün sol köşesine yerleştir
-        float cx = BaseSceneSetup.Instance?.width / 2f ?? 12f;
-        float cy = BaseSceneSetup.Instance?.height / 2f ?? 12f;
-        hut.transform.position = new Vector3(cx - 4f, cy + 2f, 0f);
-        hut.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+        hut.transform.position = BaseWorldLayout.Get("builder").center;
 
         SpriteRenderer sr = hut.AddComponent<SpriteRenderer>();
-        // WallBuilder → building_carpenter → Blue Buildings/House1.png
-        sr.sprite = SpriteManager.Instance?.WallBuilder;
+        sr.sprite = SpriteManager.Instance?.BuilderHut;
         if (sr.sprite == null) sr.sprite = BaseMapManager.MakeSquareSprite(new Color(0.25f, 0.45f, 0.75f));
-        sr.sortingOrder = 4;
+        sr.sortingOrder = 100 - Mathf.RoundToInt(hut.transform.position.y * 2f);
+        float scale = 2.6f / Mathf.Max(0.01f, sr.sprite.bounds.size.x);
+        hut.transform.localScale = new Vector3(scale, scale, 1f);
+        BaseMapManager.CreateBuildingShadow(hut.transform, new Vector2(2f, 2f),
+            hut.transform.localScale, sr.sortingOrder - 1);
+        var hutCollider = hut.AddComponent<BoxCollider2D>();
+        hutCollider.size = sr.sprite.bounds.size;
 
         // Kulübenin altına etiket ekle
-        AddHutLabel(hutTransform);
+        BaseMapManager.CreateReadableLabel(hutTransform, "İnşaatçı", false,
+            sr.sprite.bounds.extents.y * scale + 0.34f, scale, "Lv.1");
+        hutTransform.Find("ReadableLabel")?.gameObject.SetActive(false);
 
         // 2. İnşaatçı Karakter Avatarini Ayarla (Avatars_04.png = ui_builder_avatar)
         SpriteRenderer builderSr = gameObject.AddComponent<SpriteRenderer>();
@@ -42,8 +47,16 @@ public class BuilderVisualController : MonoBehaviour
             builderSr.sprite = BaseMapManager.MakeCircleSprite(new Color(0.3f, 0.6f, 1f));
 
         builderSr.color = Color.white; // Orijinal renk
-        builderSr.sortingOrder = 14;
-        transform.localScale = new Vector3(0.65f, 0.65f, 1f);
+        builderSr.sortingOrder = 101 - Mathf.RoundToInt(transform.position.y * 2f);
+        transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+        var pawnController = BaseVisualCatalog.Instance?.pawnControllers?[0];
+        if (pawnController != null)
+        {
+            workerAnimator = gameObject.AddComponent<Animator>();
+            workerAnimator.runtimeAnimatorController = pawnController;
+            workerAnimator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            workerAnimator.Play("Pawn_Idle Hammer_Blue");
+        }
 
         CreateZzZ();
 
@@ -52,6 +65,21 @@ public class BuilderVisualController : MonoBehaviour
             BuilderSystem.Instance.OnStatusChanged += UpdateVisuals;
             UpdateVisuals();
         }
+    }
+
+    public void ShowHutLabel()
+    {
+        if (hutTransform == null) return;
+        var label = hutTransform.Find("ReadableLabel");
+        if (label == null) return;
+        label.gameObject.SetActive(true);
+        StartCoroutine(HideHutLabel(label.gameObject));
+    }
+
+    private System.Collections.IEnumerator HideHutLabel(GameObject label)
+    {
+        yield return new WaitForSeconds(2f);
+        if (label != null) label.SetActive(false);
     }
 
     private void OnDestroy()
@@ -145,6 +173,7 @@ public class BuilderVisualController : MonoBehaviour
                     zzzEffect.SetActive(true);
                     isSleeping = true;
                 });
+                workerAnimator?.Play("Pawn_Run Hammer_Blue");
             }
         }
         else
@@ -163,8 +192,9 @@ public class BuilderVisualController : MonoBehaviour
             transform.DOMove(target, 2.5f).SetSpeedBased().OnComplete(() =>
             {
                 // Hedefe ulaştı, çalışma animasyonu (ufak zıplamalar) yap
-                transform.DOJump(target, 0.2f, 1, 0.5f).SetLoops(-1);
+                workerAnimator?.Play("Pawn_Interact Hammer_Blue");
             });
+            workerAnimator?.Play("Pawn_Run Hammer_Blue");
         }
     }
 }

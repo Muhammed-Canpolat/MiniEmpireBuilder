@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using System.Linq;
+using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Yeni Scrollable 30x20 Harita + Tiled Zemin + Sistemlerin Başlatılması
@@ -16,11 +18,18 @@ public class BaseSceneSetup : MonoBehaviour
     private TextMeshProUGUI _builderStatusText;
     private GameObject _removePrompt;
     private PlacedMapObject _removeTarget;
+    private Coroutine _lockedLandToastRoutine;
+    private readonly System.Collections.Generic.Dictionary<Vector2Int, GameObject> _lockedDecor =
+        new System.Collections.Generic.Dictionary<Vector2Int, GameObject>();
+    private GameObject _lockedShadeRoot;
+    private GameObject _naturalBoundaryRoot;
+    private Sprite _lockedFogSprite;
+    private Texture2D _lockedFogTexture;
 
 
     [Header("Map Settings")]
-    public int width = 30;
-    public int height = 20;
+    public int width = BaseWorldLayout.Width;
+    public int height = BaseWorldLayout.Height;
 
     private void Awake()
     {
@@ -29,9 +38,13 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void Start()
     {
+        width = BaseWorldLayout.Width;
+        height = BaseWorldLayout.Height;
         SetupSystems();
 
         SetupUI();
+        gameObject.AddComponent<BaseLevelBanner>();
+        gameObject.AddComponent<FirstBaseGuide>();
         GenerateWorld();
 
         // Kayıtlı binaları yükle, yoksa ana üs + maden spawnla
@@ -42,13 +55,22 @@ public class BaseSceneSetup : MonoBehaviour
         else
         {
             // Yeni oyun
-            BaseMapManager.Instance.SpawnBuilding(BuildingType.MainBase, new Vector3(width / 2f, height / 2f, 0f));
-            BaseMapManager.Instance.SpawnBuilding(BuildingType.GoldMine, new Vector3(width / 2f + 3f, height / 2f, 0f));
+            BaseMapManager.Instance.SpawnBuilding(BuildingType.MainBase, BaseWorldLayout.Get("main").center, "main");
+            BaseMapManager.Instance.SpawnBuilding(BuildingType.GoldMine, BaseWorldLayout.Get("mine_1").center, "mine_1");
             BaseMapManager.Instance.SaveAll();
         }
 
         SpawnHero();
+        new GameObject("BaseApprentice").AddComponent<BaseApprenticeVisual>();
+        CreateHeroCamp();
+        gameObject.AddComponent<BaseAmbientMotion>();
+        SpawnTerrainResources(8, true);
+        SpawnTerrainResources(4, false);
         SetupCamera();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        gameObject.AddComponent<BaseDebugOverlay>();
+#endif
+        StartCoroutine(LogBaseWidthAfterSpawn());
 
         // Input Manager (Long press + tap)
         LongPressHandler.Instance.OnLongPress += HandleLongPress;
@@ -90,9 +112,16 @@ public class BaseSceneSetup : MonoBehaviour
     private void SetupSystems()
     {
         // Managerlar eksikse ekle
+        if (SpriteManager.Instance == null)
+        {
+            GameObject spriteManagerGo = new GameObject("SpriteManager");
+            spriteManagerGo.AddComponent<SpriteManager>();
+        }
+
         if (BaseMapManager.Instance == null) gameObject.AddComponent<BaseMapManager>();
         if (BuilderSystem.Instance == null) gameObject.AddComponent<BuilderSystem>();
         if (PlacementController.Instance == null) gameObject.AddComponent<PlacementController>();
+        if (DecorPlacementController.Instance == null) gameObject.AddComponent<DecorPlacementController>();
         if (LongPressHandler.Instance == null) gameObject.AddComponent<LongPressHandler>();
         if (BuildMenuController.Instance == null) gameObject.AddComponent<BuildMenuController>();
 
@@ -113,6 +142,8 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void SetupUI()
     {
+        DisableLegacySceneCanvas();
+
         if (UnityEngine.EventSystems.EventSystem.current == null)
         {
             GameObject eventSystem = new GameObject("EventSystem");
@@ -126,10 +157,11 @@ public class BaseSceneSetup : MonoBehaviour
 
         _mainCanvas = canvasObj.AddComponent<Canvas>();
         _mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        _mainCanvas.overrideSorting = true;
+        _mainCanvas.sortingOrder = 10;
 
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
+        ReferenceUiVisuals.ConfigureCanvas(scaler);
 
         canvasObj.AddComponent<GraphicRaycaster>();
 
@@ -152,20 +184,51 @@ public class BaseSceneSetup : MonoBehaviour
         Sprite barBuilder = SpriteManager.Instance?.GetSprite("ui_bar_builder");
         Sprite ribbonBattle = SpriteManager.Instance?.GetSprite("ui_ribbon_battle");  // BigRibbons 5.png
         Sprite avatarBuilder = SpriteManager.Instance?.GetSprite("ui_builder_avatar"); // Avatars_04.png
-        Sprite iconBattle = SpriteManager.Instance?.GetSprite("ui_icon_battle");    // Tool_03.png
-        Sprite iconBuild = SpriteManager.Instance?.GetSprite("ui_icon_build");     // Tool_04.png
+        Sprite iconBattle = SpriteManager.Instance?.IconBattleNew
+                 ?? Resources.Load<Sprite>("Sprites/ui_icon_battle_new")
+                 ?? SpriteManager.Instance?.GetSprite("ui_icon_battle");
+        Sprite iconBuild = SpriteManager.Instance?.IconBuildNew
+                ?? Resources.Load<Sprite>("Sprites/ui_icon_build_new")
+                ?? SpriteManager.Instance?.GetSprite("ui_icon_build");
+
+        Sprite topBarBg = Resources.Load<Sprite>("Sprites/ui_topbar_bg_16x9")
+                          ?? SpriteManager.Instance?.GetSprite("ui_topbar_bg_16x9");
+        Sprite buttonBg = Resources.Load<Sprite>("Sprites/ui_button_bg_01")
+                          ?? SpriteManager.Instance?.GetSprite("ui_button_bg_01");
+
+        if (topBarBg != null)
+        {
+            GameObject topBar = new GameObject("TopBarBG");
+            topBar.transform.SetParent(hudRoot.transform, false);
+            RectTransform topBarRt = topBar.AddComponent<RectTransform>();
+            topBarRt.anchorMin = new Vector2(0f, 1f);
+            topBarRt.anchorMax = new Vector2(1f, 1f);
+            topBarRt.pivot = new Vector2(0.5f, 1f);
+            topBarRt.anchoredPosition = Vector2.zero;
+            topBarRt.sizeDelta = new Vector2(0f, 130f);
+
+            Image topBarImg = topBar.AddComponent<Image>();
+            topBarImg.sprite = topBarBg;
+            topBarImg.color = Color.white;
+            topBarImg.raycastTarget = false;
+        }
 
         // ─── ALTIN BARI (Sol üst) ───────────────────────────────
         GameObject goldPill = new GameObject("GoldPill");
         goldPill.transform.SetParent(hudRoot.transform, false);
         RectTransform goldRt = goldPill.AddComponent<RectTransform>();
-        goldRt.anchorMin = new Vector2(0.02f, 0.942f);
-        goldRt.anchorMax = new Vector2(0.40f, 0.990f);
+        goldRt.anchorMin = new Vector2(0.02f, 0.93f);
+        goldRt.anchorMax = new Vector2(0.40f, 0.98f);
         goldRt.offsetMin = Vector2.zero;
         goldRt.offsetMax = Vector2.zero;
 
         Image goldBg = goldPill.AddComponent<Image>();
-        if (barGold != null)
+        if (topBarBg != null)
+        {
+            goldBg.color = new Color(1f, 1f, 1f, 0f);
+            goldBg.raycastTarget = false;
+        }
+        else if (barGold != null)
         {
             goldBg.sprite = barGold;
             goldBg.color = Color.white;
@@ -179,32 +242,45 @@ public class BaseSceneSetup : MonoBehaviour
         Sprite goldCoin = SpriteManager.Instance?.IconGold
                        ?? BaseMapManager.MakeCircleSprite(new Color(1f, 0.85f, 0.2f));
         // Coin ikonu barın sol kısmında
-        CreateImage(goldPill.transform, "CoinIcon",
-            new Vector2(0.0f, 0.08f), new Vector2(0.25f, 0.92f),
+        Image coinIcon = CreateImage(goldPill.transform, "CoinIcon",
+            new Vector2(0.02f, 0.18f), new Vector2(0.24f, 0.82f),
             goldCoin, Color.white);
+        RectTransform coinRt = coinIcon.rectTransform;
+        coinRt.offsetMin = new Vector2(0f, -15f);   // Left, Bottom
+        coinRt.offsetMax = new Vector2(-5f, 15f);   // -Right, -Top
         // Altın sayısı
         TextMeshProUGUI goldText = CreateText(goldPill.transform, "GoldText",
             "0",
-            new Vector2(0.28f, 0.38f), new Vector2(0.96f, 0.92f),
-            30, TextAlignmentOptions.Left, new Color(0.95f, 0.95f, 0.95f));
+            new Vector2(0.28f, 0.36f), new Vector2(0.96f, 0.92f),
+            36, TextAlignmentOptions.Left, new Color(0.95f, 0.95f, 0.95f));
         goldText.fontStyle = FontStyles.Bold;
+        goldText.fontSize = 34f;
+        RectTransform goldTextRt = goldText.rectTransform;
+        goldTextRt.offsetMin = new Vector2(-15f, -20f); // Left, Bottom
+        goldTextRt.offsetMax = new Vector2(0f, 0f);     // -Right, -Top
         // +X/sn
         TextMeshProUGUI gpsText = CreateText(goldPill.transform, "GpsText",
             "+0.0 altın/sn",
-            new Vector2(0.28f, 0.04f), new Vector2(0.98f, 0.42f),
-            13, TextAlignmentOptions.Left, new Color(0.85f, 0.85f, 0.85f));
+            new Vector2(0.28f, 0.04f), new Vector2(0.98f, 0.36f),
+            14, TextAlignmentOptions.Left, new Color(0.85f, 0.85f, 0.85f));
+        gpsText.gameObject.SetActive(false);
 
         // ─── SAVAŞ SEVİYESİ (Üst Orta) ────────────────────────
         GameObject levelPill = new GameObject("BattleLevelPill");
         levelPill.transform.SetParent(hudRoot.transform, false);
         RectTransform levelRt = levelPill.AddComponent<RectTransform>();
         levelRt.anchorMin = new Vector2(0.33f, 0.935f);
-        levelRt.anchorMax = new Vector2(0.67f, 1.000f);
-        levelRt.offsetMin = Vector2.zero;
-        levelRt.offsetMax = Vector2.zero;
+        levelRt.anchorMax = new Vector2(0.67f, 0.985f);
+        levelRt.offsetMin = new Vector2(0f, 0f);   // Left, Bottom
+        levelRt.offsetMax = new Vector2(0f, -30f); // -Right, -Top
 
         Image levelBg = levelPill.AddComponent<Image>();
-        if (ribbonBattle != null)
+        if (topBarBg != null)
+        {
+            levelBg.color = new Color(1f, 1f, 1f, 0f);
+            levelBg.raycastTarget = false;
+        }
+        else if (ribbonBattle != null)
         {
             levelBg.sprite = ribbonBattle;
             levelBg.color = Color.white;
@@ -216,22 +292,31 @@ public class BaseSceneSetup : MonoBehaviour
         }
 
         TextMeshProUGUI battleLvlText = CreateText(levelPill.transform, "LevelText",
-            "Savaş Lv.1",
-            new Vector2(0.08f, 0.12f), new Vector2(0.92f, 0.82f),
-            24, TextAlignmentOptions.Center, new Color(0.95f, 0.95f, 0.95f));
+            "SAVAŞ LVL. 10",
+            new Vector2(0.08f, 0.18f), new Vector2(0.92f, 0.82f),
+            28, TextAlignmentOptions.Center, new Color(0.95f, 0.95f, 0.95f));
         battleLvlText.fontStyle = FontStyles.Bold;
+        battleLvlText.fontSize = 36f;
+        RectTransform levelTextRt = battleLvlText.rectTransform;
+        levelTextRt.offsetMin = new Vector2(0f, 0f);
+        levelTextRt.offsetMax = new Vector2(0f, 0f);
 
         // ─── İNŞAATÇI BARI (Sağ üst) ──────────────────────────
         GameObject builderPill = new GameObject("BuilderPill");
         builderPill.transform.SetParent(hudRoot.transform, false);
         RectTransform builderRt = builderPill.AddComponent<RectTransform>();
-        builderRt.anchorMin = new Vector2(0.60f, 0.942f);
-        builderRt.anchorMax = new Vector2(0.98f, 0.990f);
-        builderRt.offsetMin = Vector2.zero;
-        builderRt.offsetMax = Vector2.zero;
+        builderRt.anchorMin = new Vector2(0.60f, 0.935f);
+        builderRt.anchorMax = new Vector2(0.98f, 0.985f);
+        builderRt.offsetMin = new Vector2(0f, -20f);  // Left, Bottom
+        builderRt.offsetMax = new Vector2(-10f, 0f);  // -Right, -Top
 
         Image builderBg = builderPill.AddComponent<Image>();
-        if (barBuilder != null)
+        if (topBarBg != null)
+        {
+            builderBg.color = new Color(1f, 1f, 1f, 0f);
+            builderBg.raycastTarget = false;
+        }
+        else if (barBuilder != null)
         {
             builderBg.sprite = barBuilder;
             builderBg.color = Color.white;
@@ -243,26 +328,32 @@ public class BaseSceneSetup : MonoBehaviour
         }
 
         Sprite builderIcon = avatarBuilder
-                          ?? SpriteManager.Instance?.WallBuilder
+                          ?? SpriteManager.Instance?.BuilderHut
                           ?? BaseMapManager.MakeCircleSprite(new Color(0.3f, 0.6f, 1f));
-        CreateImage(builderPill.transform, "AvatarIcon",
-            new Vector2(0.50f, 0.06f), new Vector2(0.70f, 0.94f),
+        Image avatarIcon = CreateImage(builderPill.transform, "AvatarIcon",
+            new Vector2(0.52f, 0.18f), new Vector2(0.72f, 0.82f),
             builderIcon, Color.white);
+        RectTransform avatarRt = avatarIcon.rectTransform;
+        avatarRt.offsetMin = new Vector2(0f, -5f);   // Left, Bottom
+        avatarRt.offsetMax = new Vector2(-18f, 0f);  // -Right, -Top
         _builderStatusText = CreateText(builderPill.transform, "BuilderCount",
             "1/1",
-            new Vector2(0.72f, 0.15f), new Vector2(0.98f, 0.85f),
-            28, TextAlignmentOptions.Left, new Color(0.95f, 0.95f, 0.95f));
+            new Vector2(0.74f, 0.18f), new Vector2(0.98f, 0.82f),
+            30, TextAlignmentOptions.Left, new Color(0.95f, 0.95f, 0.95f));
         _builderStatusText.fontStyle = FontStyles.Bold;
+        RectTransform builderCountRt = _builderStatusText.rectTransform;
+        builderCountRt.offsetMin = new Vector2(-18f, 0f); // Left, Bottom
+        builderCountRt.offsetMax = new Vector2(0f, -6f);  // -Right, -Top
 
         // ─── SAVAŞA GİT BUTONU (Tool_03) ──────────────────────
         Button battleBtn = CreateRoundIconButton(hudRoot.transform, "BattleBtn",
-            new Vector2(0.85f, 0.12f), new Vector2(140f, 140f),
-            iconBattle, "Savaşa Git", new Color(0.85f, 0.25f, 0.2f), null);
+            new Vector2(0.86f, 0.10f), new Vector2(320f, 140f),
+            iconBattle, "Savaşa Git", new Color(0.85f, 0.25f, 0.2f), buttonBg);
 
         // ─── İNŞA ET BUTONU (Tool_04) ─────────────────────────
         Button buildBtn = CreateRoundIconButton(hudRoot.transform, "BuildBtn",
-            new Vector2(0.85f, 0.28f), new Vector2(140f, 140f),
-            iconBuild, "İnşa", new Color(0.2f, 0.55f, 0.85f), null);
+            new Vector2(0.86f, 0.22f), new Vector2(320f, 140f),
+            iconBuild, "İnşa Et", new Color(0.2f, 0.55f, 0.85f), buttonBg);
 
         // --- Info Panels (Building + Hero) ---
         GameObject buildingInfoPanel = CreatePanel(canvasObj.transform, "BuildingInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
@@ -274,9 +365,9 @@ public class BaseSceneSetup : MonoBehaviour
         Button bClose = CreateButton(buildingInfoPanel.transform, "CloseBtn", "X", new Vector2(0.85f, 0.85f), new Vector2(0.95f, 0.95f), Color.red);
 
         GameObject heroInfoPanel = CreatePanel(canvasObj.transform, "HeroInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-        TextMeshProUGUI hName = CreateText(heroInfoPanel.transform, "Name", "Kahraman", new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.95f), 45, TextAlignmentOptions.Center, Color.white);
-        TextMeshProUGUI hLvl = CreateText(heroInfoPanel.transform, "Level", "Seviye 1", new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.8f), 35, TextAlignmentOptions.Center, Color.yellow);
-        TextMeshProUGUI hStats = CreateText(heroInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f), 28, TextAlignmentOptions.TopLeft, Color.white);
+        TextMeshProUGUI hName = CreateText(heroInfoPanel.transform, "Name", "Kahraman", new Vector2(0.1f, 0.85f), new Vector2(0.84f, 0.96f), 37, TextAlignmentOptions.Center, Color.white);
+        TextMeshProUGUI hLvl = CreateText(heroInfoPanel.transform, "Level", "Seviye 1", new Vector2(0.1f, 0.60f), new Vector2(0.9f, 0.72f), 31, TextAlignmentOptions.Center, Color.yellow);
+        TextMeshProUGUI hStats = CreateText(heroInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.34f), new Vector2(0.9f, 0.60f), 25, TextAlignmentOptions.TopLeft, Color.white);
         Button hUpBtn = CreateButton(heroInfoPanel.transform, "UpBtn", "Yükselt", new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
         TextMeshProUGUI hCost = hUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
         Button hClose = CreateButton(heroInfoPanel.transform, "CloseBtn", "X", new Vector2(0.85f, 0.85f), new Vector2(0.95f, 0.95f), Color.red);
@@ -290,7 +381,20 @@ public class BaseSceneSetup : MonoBehaviour
             battleBtn, buildBtn
         );
 
-        CreateVirtualJoystick(hudRoot.transform);
+        DarkFantasyHudPolish.PolishBase(_mainCanvas, hudRoot.transform);
+    }
+
+    private void DisableLegacySceneCanvas()
+    {
+        // Eski sahne UI'si (Canvas) runtime UI ile cakisiyor, kapat.
+        var canvases = FindObjectsOfType<Canvas>(true);
+        foreach (var canvas in canvases)
+        {
+            if (canvas == null || canvas.gameObject == null) continue;
+            if (canvas.gameObject.name == "BaseCanvas") continue;
+
+            canvas.gameObject.SetActive(false);
+        }
     }
 
     private void UpdateBuilderStatus()
@@ -303,9 +407,18 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void CreateVirtualJoystick(Transform parent)
     {
+        // Keep the full-screen movement raycast behind every HUD and modal control.
+        var inputCanvasObject = new GameObject("BaseJoystickCanvas");
+        var inputCanvas = inputCanvasObject.AddComponent<Canvas>();
+        inputCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        inputCanvas.overrideSorting = true;
+        inputCanvas.sortingOrder = 0;
+        var inputScaler = inputCanvasObject.AddComponent<CanvasScaler>();
+        ReferenceUiVisuals.ConfigureCanvas(inputScaler);
+        inputCanvasObject.AddComponent<GraphicRaycaster>();
+
         GameObject inputRoot = new GameObject("VirtualJoystickInput");
-        inputRoot.transform.SetParent(parent, false);
-        inputRoot.transform.SetAsFirstSibling();
+        inputRoot.transform.SetParent(inputCanvasObject.transform, false);
         RectTransform inputRt = inputRoot.AddComponent<RectTransform>();
         inputRt.anchorMin = Vector2.zero;
         inputRt.anchorMax = Vector2.one;
@@ -351,100 +464,366 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void GenerateWorld()
     {
-        GameObject worldRoot = new GameObject("WorldRoot");
+        var legacyGround = GameObject.Find("Ground")?.GetComponent<SpriteRenderer>();
+        if (legacyGround != null) legacyGround.enabled = false;
 
-        Sprite grassSprite = null;
-        Sprite woodSlotsSprite = SpriteManager.Instance?.GetSprite("tile_wood_slots");
+        var root = new GameObject("WorldRoot");
+        var grid = root.AddComponent<Grid>();
+        grid.cellSize = Vector3.one;
+        root.AddComponent<BaseGroundPaths>();
+        var ground = new GameObject("BaseGroundTilemap");
+        ground.transform.SetParent(root.transform, false);
+        var tilemap = ground.AddComponent<Tilemap>();
+        var renderer = ground.AddComponent<TilemapRenderer>();
+        renderer.sortingOrder = -20;
 
-        Texture2D tileset = Resources.Load<Texture2D>("Sprites/tileset_color1");
-        if (tileset != null)
+        var grassTexture = Resources.Load<Texture2D>("BaseDecor/grass_tileset");
+        Sprite buildableSprite = grassTexture != null
+            ? Sprite.Create(grassTexture, new Rect(64, 256, 64, 64),
+                new Vector2(0.5f, 0.5f), 64f)
+            : SpriteManager.Instance?.GetSquareTileSprite("ground_buildable_01");
+        Sprite lockedSprite = buildableSprite;
+
+        var buildableTile = ScriptableObject.CreateInstance<Tile>();
+        buildableTile.sprite = buildableSprite;
+        buildableTile.color = new Color(0.94f, 1f, 0.87f);
+        buildableTile.flags = TileFlags.None;
+        var alternateTile = ScriptableObject.CreateInstance<Tile>();
+        alternateTile.sprite = buildableSprite;
+        alternateTile.color = new Color(0.89f, 0.98f, 0.82f);
+        alternateTile.flags = TileFlags.None;
+        var thirdTile = ScriptableObject.CreateInstance<Tile>();
+        thirdTile.sprite = buildableSprite;
+        thirdTile.color = new Color(0.98f, 1f, 0.91f);
+        thirdTile.flags = TileFlags.None;
+        var lockedTile = ScriptableObject.CreateInstance<Tile>();
+        lockedTile.sprite = lockedSprite;
+        lockedTile.color = new Color(0.76f, 0.91f, 0.70f);
+        lockedTile.flags = TileFlags.None;
+
+        // The camera is wider vertically than the 22×36 playable grid on tall phones.
+        // Textured scenery behind the grid fills that view without adding playable cells.
+        var backdrop = new GameObject("BaseBackdropTilemap");
+        backdrop.transform.SetParent(root.transform, false);
+        var backdropTiles = backdrop.AddComponent<Tilemap>();
+        backdrop.AddComponent<TilemapRenderer>().sortingOrder = -30;
+        var backdropTile = ScriptableObject.CreateInstance<Tile>();
+        backdropTile.sprite = buildableSprite;
+        backdropTile.color = new Color(0.88f, 0.98f, 0.81f);
+        backdropTile.flags = TileFlags.None;
+        for (int y = -8; y < BaseWorldLayout.Height + 8; y++)
+        for (int x = -2; x < BaseWorldLayout.Width + 2; x++)
+            backdropTiles.SetTile(new Vector3Int(x, y, 0), backdropTile);
+        backdropTiles.CompressBounds();
+
+        var stainRoot = new GameObject("GrassDetails");
+        stainRoot.transform.SetParent(root.transform, false);
+        Sprite grassTuft = Resources.Load<Sprite>("BaseDecor/bush");
+        var grassRandom = new System.Random(194712);
+
+        for (int y = 0; y < BaseWorldLayout.Height; y++)
+        for (int x = 0; x < BaseWorldLayout.Width; x++)
         {
-            int cols = 9;
-            int rows = 6;
-            int tileWidth = tileset.width / cols;
-            int tileHeight = tileset.height / rows;
-            int ppu = Mathf.Max(32, Mathf.Min(tileWidth, tileHeight));
-
-            Sprite GetTile(int col, int row)
+            Vector3Int cell = new Vector3Int(x, y, 0);
+            bool buildable = BaseWorldLayout.Buildable.Contains(new Vector2Int(x, y));
+            int variation = grassRandom.Next();
+            tilemap.SetTile(cell, !buildable ? lockedTile
+                : variation % 3 == 0 ? buildableTile
+                : variation % 3 == 1 ? alternateTile : thirdTile);
+            if (buildable)
             {
-                int x = col * tileWidth;
-                int y = tileset.height - (row + 1) * tileHeight;
-                Rect rect = new Rect(x, y, tileWidth, tileHeight);
-                return Sprite.Create(tileset, rect, new Vector2(0.5f, 0.5f), ppu);
+                var rotation = Quaternion.Euler(0f, 0f, (variation % 4) * 90f);
+                tilemap.SetTransformMatrix(cell, Matrix4x4.TRS(Vector3.zero, rotation,
+                    new Vector3((variation & 4) == 0 ? 1f : -1f, 1f, 1f)));
+                if (grassTuft != null && grassRandom.NextDouble() < 0.06)
+                {
+                    var stain = new GameObject("GrassFlowerDetail");
+                    stain.transform.SetParent(stainRoot.transform, false);
+                    stain.transform.position = new Vector3(x + 0.5f, y + 0.5f, 0f);
+                    var sprite = stain.AddComponent<SpriteRenderer>();
+                    sprite.sprite = grassTuft;
+                    sprite.sortingOrder = -19;
+                    sprite.color = new Color(0.58f, 0.79f, 0.49f, 0.52f);
+                    float scale = 0.28f / Mathf.Max(0.1f, grassTuft.bounds.size.x);
+                    stain.transform.localScale = Vector3.one * scale;
+                }
             }
-
-            grassSprite = GetTile(0, 0);
         }
+        tilemap.CompressBounds();
+        CreateExteriorScenery(root.transform);
+        BaseMapManager.Instance.RefreshBuildableArea(width, height);
+        CreateLockedDecor();
+    }
 
-        if (grassSprite == null)
-            grassSprite = SpriteManager.Instance?.Ground;
+    private static void CreateExteriorScenery(Transform parent)
+    {
+        Sprite tree = System.Array.Find(DecorPlacementController.All,
+            item => item.id == "tree")?.sprite;
+        Sprite bush = Resources.Load<Sprite>("BaseDecor/bush");
+        Sprite rock = Resources.Load<Sprite>("BaseDecor/rock");
+        if (tree == null && bush == null && rock == null) return;
 
-        if (grassSprite == null)
+        var root = new GameObject("ExteriorScenery");
+        root.transform.SetParent(parent, false);
+        var random = new System.Random(40172);
+        for (int side = 0; side < 4; side++)
         {
-            Texture2D tex = new Texture2D(32, 32);
-            Color[] cols = new Color[32 * 32];
-            Color groundColor = new Color(0.35f, 0.55f, 0.3f);
-            for (int i = 0; i < cols.Length; i++) cols[i] = groundColor;
-            tex.SetPixels(cols); tex.Apply();
-            grassSprite = Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
-        }
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+            int count = side < 2 ? 10 : 5;
+            for (int i = 0; i < count; i++)
             {
-                GameObject tile = new GameObject($"Grass_{x}_{y}");
-                tile.transform.SetParent(worldRoot.transform);
-                tile.transform.position = new Vector3(x, y, 2f);
-
-                SpriteRenderer sr = tile.AddComponent<SpriteRenderer>();
-
-                if (woodSlotsSprite != null)
-                {
-                    sr.sprite = woodSlotsSprite;
-                    sr.color = Color.white;
-                }
-                else
-                {
-                    sr.sprite = grassSprite;
-                    sr.color = Color.white;
-                }
-                sr.sortingOrder = -10;
+                Sprite sprite = i % 5 == 0 ? rock : i % 3 == 0 ? bush : tree;
+                if (sprite == null) sprite = tree != null ? tree : rock != null ? rock : bush;
+                if (sprite == null) continue;
+                float x = side == 0 ? 0.2f + (float)random.NextDouble() * 0.3f
+                    : side == 1 ? 21.5f + (float)random.NextDouble() * 0.3f
+                    : 2.1f + (float)random.NextDouble() * 17.8f;
+                float y = side < 2 ? 0.5f + (i + 0.3f +
+                    (float)random.NextDouble() * 0.4f) / count * 37f
+                    : side == 2 ? 0.15f + (float)random.NextDouble() * 0.25f
+                    : 37.6f + (float)random.NextDouble() * 0.25f;
+                var go = new GameObject("Exterior_" + side + "_" + i);
+                go.transform.SetParent(root.transform, false);
+                go.transform.position = new Vector3(x, y, 0f);
+                var renderer = go.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite;
+                renderer.sortingOrder = 6;
+                float targetHeight = sprite == rock ? 0.65f : sprite == bush ? 0.85f
+                    : side < 2 ? 2.4f + (float)random.NextDouble() * 0.5f : 0.9f;
+                go.transform.localScale = Vector3.one *
+                    (targetHeight / Mathf.Max(0.01f, sprite.bounds.size.y));
+                // Keep the full sprite bounds outside the fence; edge trees may crop at the screen.
+                Vector3 position = go.transform.position;
+                if (side == 0) position.x = Mathf.Min(position.x,
+                    1.0f - renderer.bounds.extents.x);
+                else if (side == 1) position.x = Mathf.Max(position.x,
+                    21.0f + renderer.bounds.extents.x);
+                else if (side == 2) position.y = Mathf.Min(position.y,
+                    1.0f - renderer.bounds.extents.y);
+                else position.y = Mathf.Max(position.y,
+                    37.0f + renderer.bounds.extents.y);
+                go.transform.position = position;
             }
-        }
-
-
-        // Ağaçlar — merkez bölgesi ve su kenarı dışında rastgele
-        int treeCount = UnityEngine.Random.Range(6, 10);
-        int placed = 0;
-        int attempts = 0;
-        while (placed < treeCount && attempts < 100)
-        {
-            attempts++;
-            float rx = UnityEngine.Random.Range(3f, width - 3f);
-            float ry = UnityEngine.Random.Range(3f, height - 3f);
-            float dxC = Mathf.Abs(rx - width / 2f);
-            float dyC = Mathf.Abs(ry - height / 2f);
-            // Merkez alanı (5x5) ve bina yakını hariC tut
-            if (dxC < 3.5f && dyC < 3.5f) continue;
-            BaseMapManager.Instance.SpawnTree(new Vector3(rx, ry, 0f));
-            placed++;
-        }
-
-        int rockCount = UnityEngine.Random.Range(4, 7);
-        for (int i = 0; i < rockCount; i++)
-        {
-            float rx = UnityEngine.Random.Range(1f, width - 1f);
-            float ry = UnityEngine.Random.Range(1f, height - 1f);
-            BaseMapManager.Instance.SpawnRock(new Vector3(rx, ry, 0f));
         }
     }
 
+    private void SpawnTerrainResources(int count, bool trees)
+    {
+        int created = 0;
+        for (int attempt = 0; attempt < 500 && created < count; attempt++)
+        {
+            int quadrant = created % 4;
+            float minX = quadrant % 2 == 0 ? 2.7f : width * 0.5f;
+            float maxX = quadrant % 2 == 0 ? width * 0.5f : width - 2.7f;
+            float minY = quadrant < 2 ? 2.7f : height * 0.5f;
+            float maxY = quadrant < 2 ? height * 0.5f : height - 2.7f;
+            Vector3 position = new Vector3(Random.Range(minX, maxX),
+                Random.Range(minY, maxY), 0f);
+            if (!BaseMapManager.Instance.CanSpawnResourceAt(position)) continue;
+            if (trees) BaseMapManager.Instance.SpawnTree(position);
+            else BaseMapManager.Instance.SpawnRock(position);
+            created++;
+        }
+    }
+
+    private void CreateLockedDecor()
+    {
+        Sprite tree = System.Array.Find(DecorPlacementController.All, item => item.id == "tree")?.sprite;
+        Sprite[] sprites = { tree, Resources.Load<Sprite>("BaseDecor/bush"),
+            Resources.Load<Sprite>("BaseDecor/rock"), Resources.Load<Sprite>("BaseDecor/stump") };
+        var clean = BaseWorldLayout.CleanAtLevel(GameManager.Instance != null
+            ? GameManager.Instance.GetMainBaseLevel() : 1);
+        var random = new System.Random(76143);
+        var centers = new System.Collections.Generic.List<Vector2>();
+        for (int i = 0; i < 18; i++)
+            centers.Add(new Vector2(random.Next(2, 20), random.Next(2, 36)));
+        foreach (Vector2Int cell in EnumerateInteriorCells())
+        {
+            if (clean.Contains(cell)) continue;
+            float nearest = 20f;
+            foreach (var center in centers)
+                nearest = Mathf.Min(nearest, Vector2.Distance(center, cell));
+            float density = Mathf.Lerp(0.14f, 0.87f, Mathf.Clamp01((4.2f - nearest) / 3.5f));
+            if (cell.y < 4 || cell.y >= 34) density = Mathf.Max(density, 0.78f);
+            if (random.NextDouble() > density) continue;
+            Sprite sprite = sprites[random.Next(sprites.Length)];
+            if (sprite == null) continue;
+            var go = new GameObject("LockedObstacle_" + cell.x + "_" + cell.y);
+            go.transform.position = new Vector3(cell.x + 0.5f + (float)(random.NextDouble() - 0.5) * 0.4f,
+                cell.y + 0.5f + (float)(random.NextDouble() - 0.5) * 0.4f, 0f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = 5;
+            float size = (0.65f + (float)random.NextDouble() * 0.65f)
+                / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            go.transform.localScale = Vector3.one * size;
+            _lockedDecor[cell] = go;
+        }
+        RefreshLockedShade(clean);
+    }
+
+    private void RefreshLockedShade(RectInt clean)
+    {
+        if (_lockedShadeRoot != null) Destroy(_lockedShadeRoot);
+        if (_lockedFogSprite != null) Destroy(_lockedFogSprite);
+        if (_lockedFogTexture != null) Destroy(_lockedFogTexture);
+        _lockedShadeRoot = new GameObject("LockedLandShade");
+        Sprite square = BaseMapManager.MakeSquareSprite(Color.white);
+        void Band(string name, int start, int end)
+        {
+            if (end <= start) return;
+            var go = new GameObject(name);
+            go.transform.SetParent(_lockedShadeRoot.transform, false);
+            go.transform.position = new Vector3(11f, (start + end) * 0.5f, 0f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = square;
+            sr.color = new Color(0f, 0f, 0f, 0.25f);
+            sr.sortingOrder = 4;
+            go.transform.localScale = new Vector3(18f / square.bounds.size.x,
+                (end - start) / square.bounds.size.y, 1f);
+        }
+        Band("SouthClosed", BaseWorldLayout.Buildable.yMin, clean.yMin);
+        Band("NorthClosed", clean.yMax, BaseWorldLayout.Buildable.yMax);
+        var fogTexture = new Texture2D(1, 32, TextureFormat.RGBA32, false);
+        _lockedFogTexture = fogTexture;
+        for (int y = 0; y < 32; y++)
+            fogTexture.SetPixel(0, y, new Color(0.73f, 0.72f, 0.65f,
+                (1f - Mathf.Abs(y - 16f) / 16f) * 0.22f));
+        fogTexture.Apply();
+        var fogSprite = Sprite.Create(fogTexture, new Rect(0, 0, 1, 32),
+            new Vector2(0.5f, 0.5f), 32f);
+        _lockedFogSprite = fogSprite;
+        var fog = new GameObject("NorthernBoundaryFog");
+        fog.transform.SetParent(_lockedShadeRoot.transform, false);
+        fog.transform.position = new Vector3(11f, clean.yMax, 0f);
+        fog.transform.localScale = new Vector3(18f, 1.2f, 1f);
+        var fogRenderer = fog.AddComponent<SpriteRenderer>();
+        fogRenderer.sprite = fogSprite;
+        fogRenderer.sortingOrder = 6;
+    }
+
+    private static System.Collections.Generic.IEnumerable<Vector2Int> EnumerateInteriorCells()
+    {
+        for (int y = BaseWorldLayout.Buildable.yMin; y < BaseWorldLayout.Buildable.yMax; y++)
+        for (int x = BaseWorldLayout.Buildable.xMin; x < BaseWorldLayout.Buildable.xMax; x++)
+            yield return new Vector2Int(x, y);
+    }
+
+    public void ClearUnlockedLand(int level)
+    {
+        var clean = BaseWorldLayout.CleanAtLevel(level);
+        RefreshLockedShade(clean);
+        StartCoroutine(AnimateLandClearing(clean));
+        if (_naturalBoundaryRoot != null)
+        {
+            Destroy(_naturalBoundaryRoot);
+            _naturalBoundaryRoot = null;
+        }
+    }
+
+    private void CreateNaturalBoundaryBand()
+    {
+        if (_naturalBoundaryRoot != null) return;
+        _naturalBoundaryRoot = new GameObject("NaturalBoundaryBand");
+        Sprite tree = System.Array.Find(DecorPlacementController.All,
+            item => item.id == "tree")?.sprite;
+        Sprite bush = Resources.Load<Sprite>("BaseDecor/bush");
+        var random = new System.Random(5519);
+        for (int y = 2; y <= 35; y++)
+        {
+            if (y != 2 && y != 3 && y != 34 && y != 35) continue;
+            for (int x = 2; x < 20; x++)
+            {
+                if (random.NextDouble() > 0.78) continue;
+                Sprite sprite = random.NextDouble() < 0.45 ? tree : bush;
+                if (sprite == null) continue;
+                var item = new GameObject("NaturalBoundaryPlant");
+                item.transform.SetParent(_naturalBoundaryRoot.transform, false);
+                item.transform.position = new Vector3(x + 0.5f,
+                    y + 0.5f + (float)(random.NextDouble() - 0.5) * 0.24f);
+                var renderer = item.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite;
+                renderer.sortingOrder = 5;
+                float size = (0.75f + (float)random.NextDouble() * 0.45f) /
+                    Mathf.Max(0.01f, sprite.bounds.size.y);
+                item.transform.localScale = Vector3.one * size;
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator AnimateLandClearing(RectInt clean)
+    {
+        var pawn = GameObject.Find("BuilderCharacter");
+        Vector3 pawnHome = pawn != null ? pawn.transform.position : Vector3.zero;
+        GameObject helper = null;
+        var pawnSprite = pawn != null ? pawn.GetComponentInChildren<SpriteRenderer>()?.sprite : null;
+        if (pawnSprite != null)
+        {
+            helper = new GameObject("ClearingPawn");
+            helper.transform.position = pawnHome + Vector3.right * 0.6f;
+            helper.transform.localScale = Vector3.one *
+                (0.7f / Mathf.Max(0.01f, pawnSprite.bounds.size.y));
+            var helperRenderer = helper.AddComponent<SpriteRenderer>();
+            helperRenderer.sprite = pawnSprite;
+            helperRenderer.sortingOrder = 112;
+        }
+        var cleared = new System.Collections.Generic.List<Vector2Int>();
+        foreach (var pair in _lockedDecor)
+            if (clean.Contains(pair.Key)) cleared.Add(pair.Key);
+        for (int index = 0; index < cleared.Count; index++)
+        {
+            var cell = cleared[index];
+            GameObject obstacle = _lockedDecor[cell];
+            _lockedDecor.Remove(cell);
+            if (obstacle == null) continue;
+            var worker = index % 2 == 0 || helper == null ? pawn : helper;
+            if (worker != null) worker.transform.DOMove(obstacle.transform.position, 0.18f);
+            obstacle.transform.DOScale(Vector3.zero, 0.22f).SetEase(Ease.InBack)
+                .OnComplete(() => { if (obstacle != null) Destroy(obstacle); });
+            var dust = new GameObject("ClearingDust");
+            dust.transform.position = obstacle.transform.position;
+            var dustRenderer = dust.AddComponent<SpriteRenderer>();
+            dustRenderer.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+            dustRenderer.color = new Color(0.75f, 0.65f, 0.45f, 0.45f);
+            dustRenderer.sortingOrder = 110;
+            dust.transform.localScale = Vector3.one * 0.2f;
+            dust.transform.DOScale(Vector3.one * 0.8f, 0.3f).OnComplete(() => Destroy(dust));
+            dustRenderer.DOFade(0f, 0.3f);
+            yield return new WaitForSeconds(0.05f);
+        }
+        if (pawn != null) pawn.transform.DOMove(pawnHome, 0.3f);
+        if (helper != null) Destroy(helper, 0.4f);
+        if (cleared.Count > 0 && Camera.main != null)
+            Camera.main.transform.DOShakePosition(0.16f, 0.06f, 8, 90f);
+    }
+
+    private static void AddGroundVisual(Transform parent, string objectName, string resource,
+        Vector2 center, Vector2 size, int order, Color tint)
+    {
+        Texture2D texture = Resources.Load<Texture2D>("Sprites/" + resource);
+        if (texture == null) return;
+        var go = new GameObject(objectName);
+        go.transform.SetParent(parent, false);
+        go.transform.position = new Vector3(center.x, center.y, 2f);
+        // The buildable texture has dark baked edges. Tile only its clean central field.
+        Rect source = resource == "ground_buildable_01"
+            ? new Rect(texture.width * 0.36f, texture.height * 0.17f,
+                texture.width * 0.28f, texture.height * 0.66f)
+            : new Rect(0, 0, texture.width, texture.height);
+        var sprite = Sprite.Create(texture, source,
+            new Vector2(0.5f, 0.5f), source.width, 0, SpriteMeshType.FullRect);
+        var visual = go.AddComponent<SpriteRenderer>();
+        visual.sprite = sprite;
+        visual.drawMode = SpriteDrawMode.Tiled;
+        visual.size = size;
+        visual.color = tint;
+        visual.sortingOrder = order;
+    }
     private void SpawnHero()
     {
         _heroObj = new GameObject("Hero");
-        _heroObj.transform.position = new Vector3(width / 2f + 1f, height / 2f - 2f, -0.5f);
-        _heroObj.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+        Vector2 camp = BaseWorldLayout.Get("camp").center;
+        _heroObj.transform.position = new Vector3(camp.x, camp.y, -0.5f);
+        _heroObj.transform.localScale = Vector3.one;
 
         SpriteRenderer sr = _heroObj.AddComponent<SpriteRenderer>();
         WeaponType weapon = GameManager.Instance?.PlayerData?.hero?.weaponType ?? WeaponType.Axe;
@@ -459,8 +838,17 @@ public class BaseSceneSetup : MonoBehaviour
         }
         sr.sortingOrder = 15;
 
-        if (weapon == WeaponType.Spear)
-            _heroObj.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+        string heroName = weapon == WeaponType.Spear ? "spear" : weapon == WeaponType.Bow ? "bow" : "axe";
+        Sprite[] idleFrames = Resources.LoadAll<Sprite>($"Sprites/hero_{heroName}_idle");
+        if (idleFrames.Length > 0)
+        {
+            System.Array.Sort(idleFrames, (a, b) => string.CompareOrdinal(a.name, b.name));
+            Sprite trimmed = HeroPortraitSprite.Get(idleFrames[0]);
+            if (trimmed != null) sr.sprite = trimmed;
+        }
+        float visibleWidth = HeroPortraitSprite.Get(sr.sprite).bounds.size.x;
+        float heroScale = 2.5f / Mathf.Max(0.01f, visibleWidth);
+        _heroObj.transform.localScale = new Vector3(heroScale, heroScale, 1f);
 
         CircleCollider2D col = _heroObj.AddComponent<CircleCollider2D>();
         col.isTrigger = false;
@@ -472,40 +860,111 @@ public class BaseSceneSetup : MonoBehaviour
         if (sr.sprite != null)
         {
             float radius = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y) * 0.4f;
-            col.radius = Mathf.Max(0.25f, radius);
+            float previousScale = weapon == WeaponType.Spear ? 0.8f : 0.7f;
+            float visualScale = _heroObj.transform.localScale.x;
+            col.radius = Mathf.Max(0.25f, radius) * previousScale / visualScale;
         }
 
         _heroObj.AddComponent<HeroMovementController>();
     }
 
+    private void CreateHeroCamp()
+    {
+        Vector2 campPosition = BaseWorldLayout.Get("camp").center;
+        Vector3 center = new Vector3(campPosition.x, campPosition.y, 0f);
+        var camp = new GameObject("HeroCamp");
+        camp.transform.position = center;
+        var renderer = camp.AddComponent<SpriteRenderer>();
+        renderer.sprite = MakeCampFlagSprite();
+        renderer.sortingOrder = 78;
+        camp.transform.localScale = Vector3.one * 2f;
+        BaseMapManager.CreateBuildingShadow(camp.transform, new Vector2(2f, 2f),
+            camp.transform.localScale, renderer.sortingOrder - 1);
+    }
+
+    private static Sprite MakeCampFlagSprite()
+    {
+        var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Point;
+        var pixels = new Color32[32 * 32];
+        Color32 wood = new Color32(184, 132, 67, 255);
+        Color32 edge = new Color32(96, 56, 28, 255);
+        Color32 gold = new Color32(240, 194, 74, 255);
+        Color32 shade = new Color32(166, 102, 31, 255);
+        for (int y = 3; y < 29; y++)
+        for (int x = 7; x < 10; x++) pixels[y * 32 + x] = x == 7 ? edge : wood;
+        for (int y = 17; y < 28; y++)
+        for (int x = 10; x < 27 - (27 - y) / 2; x++)
+            pixels[y * 32 + x] = y < 19 || x > 23 ? shade : gold;
+        for (int x = 3; x < 15; x++)
+        for (int y = 2; y < 5; y++)
+            if (Mathf.Abs(x - 9) + Mathf.Abs(y - 3) < 7) pixels[y * 32 + x] = edge;
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.2f), 32f);
+    }
+
     private void SetupCamera()
     {
-        Camera.main.orthographicSize = 6f;
-        Camera.main.transform.position = new Vector3(width / 2f, height / 2f, -10f);
+        Camera camera = Camera.main;
+        RefreshCameraFraming();
+        var follow = camera.GetComponent<CameraFollow>();
+        if (follow != null) follow.enabled = false;
+        var panZoom = camera.GetComponent<CameraController>();
+        if (panZoom != null) panZoom.enabled = false;
+    }
 
-        // Basit kamera takibi kahramana
-        var follow = Camera.main.gameObject.AddComponent<CameraFollow>();
-        follow.target = _heroObj.transform;
-        follow.boundsMin = new Vector2(3f, 3f);
-        follow.boundsMax = new Vector2(width - 3f, height - 3f);
+    public void RefreshCameraFraming()
+    {
+        Camera camera = Camera.main;
+        if (camera == null) return;
+        camera.rect = new Rect(0f, 0f, 1f, 1f);
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = ReferenceUiVisuals.Background;
+        camera.ResetAspect();
+        camera.orthographicSize = 22f / (2f * camera.aspect);
+        camera.transform.position = new Vector3(11f, 19f, -10f);
+        var bars = FindFirstObjectByType<WorldViewportBars>();
+        if (bars != null) bars.UpdateLayout();
+    }
+
+    private System.Collections.IEnumerator LogBaseWidthAfterSpawn()
+    {
+        yield return new WaitForSeconds(0.4f);
+        var mainBase = FindObjectsOfType<BuildingIdentifier>()
+            .FirstOrDefault(building => building.buildingType == BuildingType.MainBase);
+        var renderer = mainBase != null ? mainBase.GetComponent<SpriteRenderer>() : null;
+        var camera = Camera.main;
+        if (renderer != null && camera != null)
+        {
+            float ratio = renderer.bounds.size.x / (camera.orthographicSize * 2f * camera.aspect);
+            Debug.Log($"[BaseVisual] Ana Üs ekran genişliği oranı: {ratio:F3} (hedef 0.50–0.55)");
+        }
     }
 
     // ==================== INPUT (TAP & LONG PRESS) ====================
 
     private void HandleLongPress(GameObject targetObj)
     {
+        var decor = targetObj != null ? targetObj.GetComponentInParent<DecorInstance>() : null;
+        if (decor != null)
+        {
+            DecorPlacementController.Instance?.BeginMove(decor);
+            return;
+        }
         // Uzun basma algılandığında
         var mapObj = BaseMapManager.Instance.GetMapObject(targetObj);
         if (mapObj != null)
         {
-            if (mapObj.objectType == MapObjectType.Tree || mapObj.objectType == MapObjectType.Rock)
+            if (mapObj.objectType == MapObjectType.Tree || mapObj.objectType == MapObjectType.Rock || mapObj.objectType == MapObjectType.Fence)
             {
                 BaseMapManager.Instance.RequestRemoveObject(mapObj);
             }
             else if (mapObj.objectType == MapObjectType.Building)
             {
                 // Taşıma modu
-                PlacementController.Instance.BeginMove(mapObj);
+                if (mapObj.buildingType != BuildingType.MainBase)
+                    PlacementController.Instance.BeginMove(mapObj);
             }
         }
     }
@@ -540,6 +999,8 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void HandleInput()
     {
+        if (DecorPlacementController.Instance != null && DecorPlacementController.Instance.IsPlacing)
+            return;
         if (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
         {
             if (_wasPointerOverUIOnPress) return;
@@ -566,23 +1027,48 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void HandleTap(Vector3 worldPos)
     {
+        if (BaseWorldLayout.Buildable.Contains(new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y)))
+            && BaseMapManager.Instance != null && !BaseMapManager.Instance.IsBuildablePosition(worldPos))
+        {
+            if (_lockedLandToastRoutine != null) StopCoroutine(_lockedLandToastRoutine);
+            _lockedLandToastRoutine = StartCoroutine(ShowLockedLandToast());
+            return;
+        }
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
 
         if (hit.collider != null)
         {
+            var touchedDecor = hit.collider.GetComponentInParent<DecorInstance>();
+            if (touchedDecor != null)
+            {
+                DecorPlacementController.Instance?.ShowActions(touchedDecor);
+                return;
+            }
+            if (hit.collider.gameObject.name == "BuilderHut")
+            {
+                FindObjectOfType<BuilderVisualController>()?.ShowHutLabel();
+                return;
+            }
             var mapObj = BaseMapManager.Instance.GetMapObject(hit.collider.gameObject);
             if (mapObj != null && mapObj.objectType == MapObjectType.Building)
             {
                 HideRemovePrompt();
+                BaseMapManager.Instance.ShowBuildingLabel(mapObj);
+                mapObj.gameObject.GetComponent<BaseBuildingVisual>()?.Tap();
                 // Binaya tıklandı
                 if (mapObj.buildingType == BuildingType.GoldMine)
                 {
+                    FirstBaseGuide.Instance?.OnMineTapped();
                     // Altın madenine tıklandığında içindeki altını topla!
-                    int stored = GameManager.Instance.GoldMineStored;
-                    if (stored > 0)
+                    if (GameManager.Instance.GoldMineStored > 0)
                     {
-                        GameManager.Instance.CollectGoldFromMineStorage();
-                        GoldPopupManager.ShowGoldChange(stored);
+                        int collected = GameManager.Instance.CollectGoldFromMineStorage();
+                        if (collected > 0)
+                        {
+                            AudioManager.Instance?.PlaySfx("goldCollect");
+                            GetComponent<BaseWorldUI>()?.AnimateMineCollection(
+                                mapObj.gameObject.transform.position, collected);
+                        }
                     }
 
                 }
@@ -595,7 +1081,7 @@ public class BaseSceneSetup : MonoBehaviour
                 return;
             }
 
-            if (mapObj != null && (mapObj.objectType == MapObjectType.Tree || mapObj.objectType == MapObjectType.Rock))
+            if (mapObj != null && (mapObj.objectType == MapObjectType.Tree || mapObj.objectType == MapObjectType.Rock || mapObj.objectType == MapObjectType.Fence))
             {
                 ShowRemovePrompt(mapObj);
                 return;
@@ -608,11 +1094,40 @@ public class BaseSceneSetup : MonoBehaviour
                 GetComponent<BaseWorldUI>()?.ShowHeroInfo();
                 return;
             }
+            else if (hit.collider.GetComponentInParent<BaseApprenticeVisual>() != null)
+            {
+                HideRemovePrompt();
+                GetComponent<BaseWorldUI>()?.ShowApprenticeInfo();
+                return;
+            }
+        }
+
+        if (BaseMapManager.Instance != null && !BaseMapManager.Instance.IsBuildablePosition(worldPos))
+        {
+            if (_lockedLandToastRoutine != null) StopCoroutine(_lockedLandToastRoutine);
+            _lockedLandToastRoutine = StartCoroutine(ShowLockedLandToast());
+            return;
         }
 
         // Boşluğa tıklandı - Panelleri kapat (artık tıklamayla yürümeyecek)
         HideRemovePrompt();
         GetComponent<BaseWorldUI>()?.HideAllPanelsPublic();
+    }
+
+    private System.Collections.IEnumerator ShowLockedLandToast()
+    {
+        var pill = _mainCanvas?.transform.Find("SafeArea/HudRoot/LockedLandToast");
+        var label = pill?.Find("Text")?.GetComponent<TextMeshProUGUI>();
+        var group = pill?.GetComponent<CanvasGroup>();
+        if (label == null || group == null) yield break;
+        int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
+        label.text = level >= 5 ? "Kalıcı doğal sınır"
+            : $"Ana Üs Sev. {level + 1} ile temizlenir";
+        var panel = pill.GetComponent<PanelController>();
+        panel.Show();
+        yield return new WaitForSeconds(1.25f);
+        if (panel != null) panel.Hide();
+        _lockedLandToastRoutine = null;
     }
 
     private void ShowRemovePrompt(PlacedMapObject obj)
@@ -628,27 +1143,34 @@ public class BaseSceneSetup : MonoBehaviour
         _removeTarget = obj;
 
         _removePrompt = new GameObject("RemovePrompt");
+        _removePrompt.transform.SetParent(_mainCanvas.transform, false);
 
-        Canvas canvas = _removePrompt.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 3000;
-        _removePrompt.AddComponent<GraphicRaycaster>();
+        RectTransform rt = _removePrompt.AddComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(140f, 45f);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
 
-        RectTransform rt = _removePrompt.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(110f, 36f);
-        rt.localScale = Vector3.one;
+        // UI'yi obje üzerinde hizala
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(obj.gameObject.transform.position + Vector3.up * 0.8f);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            _mainCanvas.GetComponent<RectTransform>(),
+            screenPos,
+            null,
+            out Vector2 localPos);
+        rt.anchoredPosition = localPos;
 
         Image bg = _removePrompt.AddComponent<Image>();
-        Sprite removeBg = SpriteManager.Instance?.GetSprite("ui_btn_remove");
+        Sprite removeBg = SpriteManager.Instance?.GetSprite("ui_button_bg_01"); // Daha düzgün bir sprite
         if (removeBg != null)
         {
             bg.sprite = removeBg;
-            bg.color = Color.white;
-            bg.preserveAspect = true;
+            bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.9f, 0.2f, 0.2f, 1f); // Kırmızımsı buton
         }
         else
         {
-            bg.color = new Color(0.05f, 0.06f, 0.08f, 0.9f);
+            bg.color = new Color(0.9f, 0.2f, 0.2f, 0.9f);
         }
 
         Button btn = _removePrompt.AddComponent<Button>();
@@ -669,9 +1191,9 @@ public class BaseSceneSetup : MonoBehaviour
 
         TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
         tmp.text = "KALDIR";
-        tmp.fontSize = 18f;
+        tmp.fontSize = 22f;
         tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = new Color(1f, 0.85f, 0.2f);
+        tmp.color = Color.white;
         tmp.fontStyle = FontStyles.Bold;
     }
 
@@ -736,7 +1258,7 @@ public class BaseSceneSetup : MonoBehaviour
         {
             bg.sprite = bgSprite;
             bg.color = Color.white;
-            bg.preserveAspect = true;
+            bg.preserveAspect = false;
         }
         else
         {
@@ -746,39 +1268,54 @@ public class BaseSceneSetup : MonoBehaviour
 
         Button btn = root.AddComponent<Button>();
         btn.targetGraphic = bg;
+        if (bgSprite != null)
+        {
+            ColorBlock colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = Color.white;
+            colors.selectedColor = Color.white;
+            btn.colors = colors;
+        }
 
-        GameObject iconObj = new GameObject("Icon");
-        iconObj.transform.SetParent(root.transform, false);
-        RectTransform iconRt = iconObj.AddComponent<RectTransform>();
-        // Ikonlari buyutmek icin anchorlari genisletiyoruz (eski: 0.22-0.78, yeni: 0.1-0.9)
-        iconRt.anchorMin = new Vector2(0.1f, 0.2f);
-        iconRt.anchorMax = new Vector2(0.9f, 0.85f);
-        iconRt.offsetMin = Vector2.zero;
-        iconRt.offsetMax = Vector2.zero;
-        Image iconImg = iconObj.AddComponent<Image>();
         if (icon != null)
         {
+            GameObject iconObj = new GameObject("Icon");
+            iconObj.transform.SetParent(root.transform, false);
+            RectTransform iconRt = iconObj.AddComponent<RectTransform>();
+            // Ikonlari buyutmek icin anchorlari genisletiyoruz (eski: 0.22-0.78, yeni: 0.1-0.9)
+            iconRt.anchorMin = new Vector2(0.1f, 0.2f);
+            iconRt.anchorMax = new Vector2(0.9f, 0.85f);
+            iconRt.offsetMin = Vector2.zero;
+            iconRt.offsetMax = Vector2.zero;
+            Image iconImg = iconObj.AddComponent<Image>();
             iconImg.sprite = icon;
             iconImg.color = Color.white;
             iconImg.preserveAspect = true;
-        }
-        else
-        {
-            iconImg.color = new Color(1f, 1f, 1f, 0.4f);
         }
 
         GameObject labelObj = new GameObject("Label");
         labelObj.transform.SetParent(root.transform, false);
         RectTransform labelRt = labelObj.AddComponent<RectTransform>();
-        labelRt.anchorMin = new Vector2(0f, -0.35f);
-        labelRt.anchorMax = new Vector2(1f, 0f);
+        if (bgSprite != null)
+        {
+            labelRt.anchorMin = new Vector2(0f, 0f);
+            labelRt.anchorMax = new Vector2(1f, 1f);
+        }
+        else
+        {
+            labelRt.anchorMin = new Vector2(0f, -0.35f);
+            labelRt.anchorMax = new Vector2(1f, 0f);
+        }
         labelRt.offsetMin = Vector2.zero;
         labelRt.offsetMax = Vector2.zero;
         TextMeshProUGUI tmp = labelObj.AddComponent<TextMeshProUGUI>();
         tmp.text = label;
-        tmp.fontSize = 20f;
+        tmp.fontSize = (bgSprite != null) ? 34f : 20f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
+        if (bgSprite != null)
+            tmp.fontStyle = FontStyles.Bold;
 
         return btn;
     }

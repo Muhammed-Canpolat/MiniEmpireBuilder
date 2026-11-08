@@ -11,7 +11,7 @@ public class LongPressHandler : MonoBehaviour
     public static LongPressHandler Instance { get; private set; }
 
     [Header("Ayarlar")]
-    public float HoldThreshold       = 0.8f;  // saniye
+    public float HoldThreshold       = 0.4f;  // saniye
     public float MoveCancelThreshold = 22f;   // piksel
 
     /// <summary>Uzun basma algılanınca — hedef GameObject verilir</summary>
@@ -44,17 +44,19 @@ public class LongPressHandler : MonoBehaviour
         bool    pressedFrame  = false;
         bool    releasedFrame = false;
 
-        if (Mouse.current != null)
+        if (Touchscreen.current != null &&
+            (Touchscreen.current.primaryTouch.press.isPressed ||
+             Touchscreen.current.primaryTouch.press.wasReleasedThisFrame))
+        {
+            pressedFrame = Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
+            releasedFrame = Touchscreen.current.primaryTouch.press.wasReleasedThisFrame;
+            pos = Touchscreen.current.primaryTouch.position.ReadValue();
+        }
+        else if (Mouse.current != null)
         {
             pressedFrame  = Mouse.current.leftButton.wasPressedThisFrame;
             releasedFrame = Mouse.current.leftButton.wasReleasedThisFrame;
             pos           = Mouse.current.position.ReadValue();
-        }
-        else if (Touchscreen.current != null)
-        {
-            pressedFrame  = Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
-            releasedFrame = Touchscreen.current.primaryTouch.press.wasReleasedThisFrame;
-            pos           = Touchscreen.current.primaryTouch.position.ReadValue();
         }
 
         if (pressedFrame)

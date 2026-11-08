@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using DG.Tweening;
 
 /// <summary>
 /// Üs dünyasındaki UI — bina bilgileri, altın, seviye yükseltme butonları
@@ -40,8 +41,66 @@ public class BaseWorldUI : MonoBehaviour
 
     [Header("Alt Butonlar")]
     [SerializeField] private Button battleButton;
+    public Button BattleButton => battleButton;
+
+    public void AnimateMineCollection(Vector3 worldPosition, int amount)
+    {
+        if (amount <= 0 || goldText == null || Camera.main == null) return;
+        var canvas = goldText.canvas;
+        if (canvas == null) return;
+        var root = canvas.transform as RectTransform;
+        Vector2 start = Camera.main.WorldToScreenPoint(worldPosition);
+        Vector2 end = goldText.rectTransform.position;
+        var sprite = BaseVisualCatalog.Instance?.goldIcon ?? SpriteManager.Instance?.IconGold;
+        int count = Mathf.Clamp(amount / 8, 5, 8);
+        for (int i = 0; i < count; i++)
+        {
+            var coin = new GameObject("FlyingMineGold", typeof(RectTransform), typeof(Image));
+            coin.transform.SetParent(root, false);
+            var image = coin.GetComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+            var rect = coin.GetComponent<RectTransform>();
+            rect.sizeDelta = Vector2.one * 28f;
+            float phase = (float)i / count;
+            int coinIndex = i;
+            Vector2 from = start + new Vector2(Mathf.Cos(phase * 6.28f) * 25f,
+                Mathf.Sin(phase * 6.28f) * 18f);
+            float t = 0f;
+            DOTween.To(() => t, value =>
+            {
+                t = value;
+                if (rect == null) return;
+                Vector2 control = (from + end) * 0.5f +
+                    new Vector2(45f + coinIndex * 4f, 95f);
+                Vector2 screen = (1f - t) * (1f - t) * from +
+                    2f * (1f - t) * t * control + t * t * end;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(root,
+                    screen, canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera,
+                    out var local);
+                rect.anchoredPosition = local;
+            }, 1f, 0.6f).SetDelay(i * 0.035f)
+                .OnComplete(() => { if (coin != null) Destroy(coin); });
+        }
+        int displayed = GameManager.Instance.Gold - amount;
+        DOTween.To(() => displayed, value =>
+        {
+            displayed = value;
+            if (goldText != null) goldText.text = value.ToString();
+        }, GameManager.Instance.Gold, 0.6f);
+    }
 
     private BuildingType selectedBuilding;
+    private GameObject modalBlocker;
+    public bool IsInfoPanelOpen => (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
+        || (heroInfoPanel != null && heroInfoPanel.activeSelf);
+
+    private void SetModalBlocker(bool visible)
+    {
+        if (modalBlocker == null)
+            modalBlocker = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea/ModalBlocker")?.gameObject;
+        if (modalBlocker != null) modalBlocker.SetActive(visible);
+    }
 
     /// <summary>
     /// Programatik kurulum — BaseSceneSetup tarafından çağrılır
@@ -84,9 +143,10 @@ public class BaseWorldUI : MonoBehaviour
 
     private void Start()
     {
+        CreateCharacterTabs();
         // Panel'leri gizle
-        if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
-        if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
+        if (buildingInfoPanel != null) buildingInfoPanel.AddComponent<PanelController>().Initialize();
+        if (heroInfoPanel != null) heroInfoPanel.AddComponent<PanelController>().Initialize();
 
 
         // Buton listener'ları
@@ -148,7 +208,7 @@ public class BaseWorldUI : MonoBehaviour
         UpdateGoldDisplay(GameManager.Instance.Gold);
 
         if (battleLevelText != null)
-            battleLevelText.text = $"Savas Lv.{GameManager.Instance.PlayerData.currentBattleLevel}";
+            battleLevelText.text = $"ANA ÜS · SEV. {GameManager.Instance.GetMainBaseLevel()}";
 
         if (goldPerSecText != null)
         {
@@ -160,11 +220,22 @@ public class BaseWorldUI : MonoBehaviour
     }
 
     private int lastKnownGold = -1;
+    private bool showingApprentice;
+    private readonly GameObject[] characterUnderlines = new GameObject[2];
 
     private void UpdateGoldDisplay(int gold)
     {
         if (goldText != null)
             goldText.text = $"{gold}";
+        var levelFill = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea/HudRoot/BaseLevelTrack/Fill") as RectTransform;
+        if (levelFill != null && GameManager.Instance?.Buildings != null
+            && GameManager.Instance.Buildings.TryGetValue(BuildingType.MainBase, out var mainBase))
+        {
+            int cost = mainBase.GetUpgradeCost();
+            levelFill.anchorMax = new Vector2(cost > 0 ? Mathf.Clamp01((float)gold / cost) : 1f, 1f);
+        }
+        if (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
+            ShowBuildingInfo(selectedBuilding);
 
         // Altın değişikliğini popup olarak göster
         if (lastKnownGold >= 0 && gold != lastKnownGold)
@@ -206,10 +277,12 @@ public class BaseWorldUI : MonoBehaviour
         if (!GameManager.Instance.Buildings.ContainsKey(type)) return;
 
         selectedBuilding = type;
+        BuildMenuController.Instance?.Hide();
         BuildingData building = GameManager.Instance.Buildings[type];
 
-        if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
-        if (buildingInfoPanel != null) buildingInfoPanel.SetActive(true);
+        if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.HideImmediate();
+        if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.Show();
+        SetModalBlocker(true);
 
         // Bina adı
         if (buildingNameText != null)
@@ -247,30 +320,80 @@ public class BaseWorldUI : MonoBehaviour
             }
             else
             {
-                upgradeCostText.text = $"Yükselt: {building.GetUpgradeCost()} Altın";
+                upgradeCostText.text = $"YÜKSELT · {building.GetUpgradeCost()}";
             }
         }
 
         // Buton aktiflik
         if (upgradeButton != null)
         {
-            upgradeButton.interactable = building.isUnlocked
+            bool canUpgrade = building.isUnlocked
                 && building.level < maxLvl
                 && GameManager.Instance.Gold >= building.GetUpgradeCost();
+            upgradeButton.interactable = canUpgrade;
+            var buttonImage = upgradeButton.GetComponent<Image>();
+            if (buttonImage != null) buttonImage.color = canUpgrade ? Color.white : new Color(0.65f, 0.65f, 0.65f, 0.75f);
+            if (upgradeCostText != null && !canUpgrade && building.isUnlocked && building.level < maxLvl)
+                upgradeCostText.text = $"YÜKSELT · <color=#C2452D>{building.GetUpgradeCost()}</color>";
+        }
+
+        var next = buildingInfoPanel?.transform.Find("NextUnlock")?.GetComponent<TextMeshProUGUI>();
+        if (next != null)
+        {
+            next.text = type == BuildingType.MainBase ? GetNextMainBaseUnlock(building.level) : "";
         }
     }
 
     /// <summary>
     /// Kahraman bilgilerini göster
     /// </summary>
-    public void ShowHeroInfo()
+    public void ShowHeroInfo() => ShowCharacterInfo(false);
+
+    public void ShowApprenticeInfo() => ShowCharacterInfo(true);
+
+    private void ShowCharacterInfo(bool apprentice)
     {
         if (GameManager.Instance == null) return;
+        showingApprentice = apprentice;
+        for (int i = 0; i < characterUnderlines.Length; i++)
+            if (characterUnderlines[i] != null)
+                characterUnderlines[i].SetActive(apprentice == (i == 1));
+        BuildMenuController.Instance?.Hide();
 
-        if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
-        if (heroInfoPanel != null) heroInfoPanel.SetActive(true);
+        if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.HideImmediate();
+        if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.Show();
+        SetModalBlocker(true);
 
         HeroData hero = GameManager.Instance.PlayerData.hero;
+
+        if (apprentice)
+        {
+            int apprenticeLevel = GameManager.Instance.PlayerData.apprenticeLevel;
+            int apprenticeCost = GameManager.Instance.GetApprenticeUpgradeCost();
+            if (heroNameText != null) heroNameText.text = "ÇIRAK";
+            if (heroLevelText != null) heroLevelText.text = $"Seviye {apprenticeLevel}";
+            if (heroStatsText != null)
+            {
+                var progression = ApprenticeProgressionData.Instance;
+                if (progression != null)
+                {
+                    int next = Mathf.Min(5, apprenticeLevel + 1);
+                    string Arrow(int from, int to) => next == apprenticeLevel ? from.ToString()
+                        : $"{from} → {to} ▲";
+                    heroStatsText.text = $"Can {Arrow(progression.Health(hero.weaponType, apprenticeLevel), progression.Health(hero.weaponType, next))}\n" +
+                        $"Hasar {Arrow(progression.Damage(hero.weaponType, apprenticeLevel), progression.Damage(hero.weaponType, next))}\n" +
+                        $"Maden +%{progression.MineBonus(apprenticeLevel)}" +
+                        (next == apprenticeLevel ? "" : $" → +%{progression.MineBonus(next)} ▲");
+                }
+            }
+            if (heroUpgradeCostText != null)
+                heroUpgradeCostText.text = apprenticeLevel >= 5 ? "MAKSİMUM SEVİYE" :
+                    $"YÜKSELT · {apprenticeCost}";
+            if (heroUpgradeButton != null)
+                heroUpgradeButton.interactable = apprenticeLevel < 5 &&
+                    GameManager.Instance.Gold >= apprenticeCost;
+            return;
+        }
 
         if (heroNameText != null)
             heroNameText.text = $"Ana Savaşçı ({GetWeaponName(hero.weaponType)})";
@@ -280,7 +403,7 @@ public class BaseWorldUI : MonoBehaviour
 
         if (heroStatsText != null)
         {
-            heroStatsText.text = $"Can: {hero.maxHealth:F0}\n" +
+            heroStatsText.text = $"XP: —\nCan: {hero.maxHealth:F0}\n" +
                                  $"Hasar: {hero.damage:F0}\n" +
                                  $"Menzil: {hero.attackRange:F1}\n" +
                                  $"Saldırı Hızı: {hero.attackSpeed:F1}/sn";
@@ -307,7 +430,8 @@ public class BaseWorldUI : MonoBehaviour
 
     private void OnBattleClicked()
     {
-        GameManager.Instance.StartBattle();
+        FirstBaseGuide.Instance?.OnBattleTapped();
+        GameManager.Instance.LoadCampaignMap();
     }
 
     private void OnUpgradeClicked()
@@ -320,9 +444,67 @@ public class BaseWorldUI : MonoBehaviour
 
     private void OnHeroUpgradeClicked()
     {
-        if (GameManager.Instance.UpgradeHero())
+        if (showingApprentice)
         {
-            ShowHeroInfo(); // UI'ı güncelle
+            if (GameManager.Instance.UpgradeApprentice()) ShowApprenticeInfo();
+        }
+        else if (GameManager.Instance.UpgradeHero())
+        {
+            ShowHeroInfo();
+        }
+    }
+
+    private void CreateCharacterTabs()
+    {
+        if (heroInfoPanel == null) return;
+        string[] labels = { "KAHRAMAN", "ÇIRAK" };
+        for (int i = 0; i < 2; i++)
+        {
+            int selected = i;
+            var go = new GameObject("CharacterTab_" + labels[i], typeof(RectTransform),
+                typeof(Image), typeof(Button));
+            go.transform.SetParent(heroInfoPanel.transform, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(i == 0 ? 0.08f : 0.51f, 0.72f);
+            rect.anchorMax = new Vector2(i == 0 ? 0.49f : 0.91f, 0.83f);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            go.GetComponent<Image>().color = new Color(0.17f, 0.12f, 0.08f);
+            go.GetComponent<Button>().onClick.AddListener(() => ShowCharacterInfo(selected == 1));
+            var textGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textGo.transform.SetParent(go.transform, false);
+            var textRect = textGo.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = textRect.offsetMax = Vector2.zero;
+            var text = textGo.GetComponent<TextMeshProUGUI>();
+            text.text = labels[i];
+            text.fontSize = 19f;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = new Color(1f, 0.84f, 0.49f);
+            text.raycastTarget = false;
+            var underline = new GameObject("GoldUnderline", typeof(RectTransform), typeof(Image));
+            underline.transform.SetParent(go.transform, false);
+            var line = underline.GetComponent<RectTransform>();
+            line.anchorMin = new Vector2(0.08f, 0f);
+            line.anchorMax = new Vector2(0.92f, 0f);
+            line.sizeDelta = new Vector2(0f, 3f);
+            line.anchoredPosition = Vector2.zero;
+            underline.GetComponent<Image>().color = new Color(1f, 0.75f, 0.24f);
+            characterUnderlines[i] = underline;
+            underline.SetActive(i == 0);
+        }
+        if (heroUpgradeButton != null)
+        {
+            var icon = new GameObject("GoldIcon", typeof(RectTransform), typeof(Image));
+            icon.transform.SetParent(heroUpgradeButton.transform, false);
+            var rect = icon.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.07f, 0.2f);
+            rect.anchorMax = new Vector2(0.17f, 0.8f);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            var image = icon.GetComponent<Image>();
+            image.sprite = BaseVisualCatalog.Instance?.goldIcon ?? SpriteManager.Instance?.IconGold;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
         }
     }
 
@@ -333,9 +515,10 @@ public class BaseWorldUI : MonoBehaviour
 
     private void CloseAllPanels()
     {
-        if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
-        if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
+        if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.Hide();
+        if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.Hide();
         BuildMenuController.Instance?.Hide();
+        SetModalBlocker(false);
     }
     
     public void HideAllPanelsPublic()
@@ -343,11 +526,21 @@ public class BaseWorldUI : MonoBehaviour
         CloseAllPanels();
     }
 
+    public void OnBuildMenuClosed()
+    {
+        if (!IsInfoPanelOpen) SetModalBlocker(false);
+    }
+
+    public void OnBuildMenuOpened()
+    {
+        SetModalBlocker(true);
+    }
+
     private void OnBuildMenuClicked()
     {
-        if (buildingInfoPanel != null) buildingInfoPanel.SetActive(false);
-        if (heroInfoPanel != null) heroInfoPanel.SetActive(false);
-        
+        if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.HideImmediate();
+        if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.HideImmediate();
+        SetModalBlocker(true);
         BuildMenuController.Instance?.Show();
     }
 
@@ -361,9 +554,21 @@ public class BaseWorldUI : MonoBehaviour
             case BuildingType.ArcherTower: return "Okçu Kulesi";
             case BuildingType.CannonTower: return "Topçu Kulesi";
             case BuildingType.GoldMine: return "Altın Madeni";
-            case BuildingType.WallBuilder: return "Duvarcı";
+            case BuildingType.Monastery: return "Manastır";
             default: return type.ToString();
         }
+    }
+
+    private string GetNextMainBaseUnlock(int currentLevel)
+    {
+        int nextLevel = currentLevel + 1;
+        var unlocked = new List<string>();
+        foreach (var entry in GameManager.Instance.Buildings)
+            if (entry.Key != BuildingType.MainBase && entry.Value.GetRequiredMainBaseLevel() == nextLevel)
+                unlocked.Add(GetBuildingDisplayName(entry.Key));
+        if (nextLevel >= 3 && nextLevel % 2 == 1)
+            unlocked.Add("yeni arazi");
+        return unlocked.Count > 0 ? $"Sev. {nextLevel}: {string.Join(" + ", unlocked)}" : "";
     }
 
     private string GetBuildingStatsText(BuildingData building)
@@ -387,8 +592,8 @@ public class BaseWorldUI : MonoBehaviour
                 return $"Can: {building.maxHealth:F0}\n" +
                        $"Üretim: {building.goldPerSecond:F1} altın/sn";
 
-            case BuildingType.WallBuilder:
-                return $"Can: {building.maxHealth:F0}";
+            case BuildingType.Monastery:
+                return $"Can: {building.maxHealth:F0}\nİyileştirme: 3 sn'de %3\nMenzil: 4";
 
 
             default:
