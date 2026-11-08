@@ -20,3 +20,5 @@ MonoBehaviour:
   sprite: {fileID: -3633224223434720437, guid: 6514c5d10cfb3524faf8cfc0b9a03b16, type: 3}
   animated: 0
   animatorController: {fileID: 0}
+  customArt: fence_lantern
+  visualScale: 1

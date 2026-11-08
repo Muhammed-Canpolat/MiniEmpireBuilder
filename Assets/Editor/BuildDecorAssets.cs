@@ -29,11 +29,11 @@ public static class BuildDecorAssets
         {
             string path = $"{Folder}/{ids[i]}.asset";
             var data = AssetDatabase.LoadAssetAtPath<DecorData>(path);
-            if (data == null)
-            {
-                data = ScriptableObject.CreateInstance<DecorData>();
-                AssetDatabase.CreateAsset(data, path);
-            }
+            // Var olan dekorlar elle seçilmiş görsellere (Cainos, Tiny Swords, özel sanat) bağlı:
+            // araç yalnız eksik varlığı oluşturur, mevcutları yer tutucuyla ezmez.
+            if (data != null) continue;
+            data = ScriptableObject.CreateInstance<DecorData>();
+            AssetDatabase.CreateAsset(data, path);
             data.id = ids[i];
             data.displayName = names[i];
             data.footprint = sizes[i];

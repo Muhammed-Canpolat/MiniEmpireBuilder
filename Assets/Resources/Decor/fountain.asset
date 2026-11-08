@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: fountain
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: fountain
-  displayName: "F\u0131skiye"
-  footprint: {x: 3, y: 3}
+  displayName: Kuyu
+  footprint: {x: 2, y: 2}
   cost: 80
   unlockMainBaseLevel: 3
-  sprite: {fileID: -8957615376174189121, guid: 6445f4092c8a35a4593f20fac05b406c, type: 3}
+  sprite: {fileID: 21300066, guid: 7810966f0f690954c87305933cabf2b0, type: 3}
   animated: 0
   animatorController: {fileID: 0}
+  customArt: 
+  visualScale: 1

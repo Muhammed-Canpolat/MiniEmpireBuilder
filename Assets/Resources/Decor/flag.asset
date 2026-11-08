@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: flag
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: flag
-  displayName: Bayrak
+  displayName: Sancak
   footprint: {x: 1, y: 1}
   cost: 12
   unlockMainBaseLevel: 1
   sprite: {fileID: -8987002224583354746, guid: fbbf647aa68df2244afbec6ac2afb64b, type: 3}
   animated: 0
   animatorController: {fileID: 0}
+  customArt: 
+  visualScale: 1

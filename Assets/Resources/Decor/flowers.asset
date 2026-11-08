@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: flowers
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: flowers
-  displayName: "\xC7i\xE7ek tarlas\u0131"
-  footprint: {x: 2, y: 1}
+  displayName: Ayçiçeği
+  footprint: {x: 1, y: 1}
   cost: 10
   unlockMainBaseLevel: 1
-  sprite: {fileID: 7635937179663181632, guid: 9568a079b4862744d822e2281464a772, type: 3}
+  sprite: {fileID: 21300264, guid: 7810966f0f690954c87305933cabf2b0, type: 3}
   animated: 0
   animatorController: {fileID: 0}
+  customArt: 
+  visualScale: 1

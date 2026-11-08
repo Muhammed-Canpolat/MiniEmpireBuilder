@@ -219,15 +219,8 @@ public static class DarkFantasyHudPolish
             StyleText(item, "PlacedCount", 11, ReferenceUiVisuals.Muted, false);
             SetAnchors(item.Find("PlacedCount") as RectTransform, new Vector2(0, 0.01f), new Vector2(1, 0.14f));
         }
-        int decorIndex = 0;
-        foreach (Transform child in panel)
-        {
-            if (!child.name.StartsWith("Decor_")) continue;
-            var card = child as RectTransform;
-            int row = decorIndex++ / 4;
-            SetAnchors(card, new Vector2(card.anchorMin.x, row == 0 ? 0.36f : 0.08f),
-                new Vector2(card.anchorMax.x, row == 0 ? 0.62f : 0.33f));
-        }
+        // Dekor kartları kaydırılabilir ızgarada; alan sekmelerin altından ipucunun üstüne.
+        SetAnchors(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
         ReferenceUiVisuals.Text(panel, "BuildMenuHint", "Kilitli yapılar üs geliştikçe açılır.", 12,
             SoftGold, TextAlignmentOptions.Center, new Vector2(0, 0.005f),
             new Vector2(1, 0.085f), new Vector2(12, 0), new Vector2(-12, 0));

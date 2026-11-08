@@ -26,7 +26,7 @@ public class ExpansionFeatureTests
         for (int i = 0; i < 20; i++) yield return null;
         yield return new WaitForSecondsRealtime(0.5f);
         var decor = Resources.LoadAll("Decor", RuntimeType("DecorData"));
-        Assert.AreEqual(8, decor.Length);
+        Assert.AreEqual(17, decor.Length); // 8 eski kimlik + 9 yeni köy/doğa dekoru
         var fountain = decor.Single(item => (string)Value(item, "id") == "fountain");
         Assert.AreEqual(80, Value(fountain, "cost"));
         Assert.AreEqual(3, Value(fountain, "unlockMainBaseLevel"));
@@ -78,7 +78,7 @@ public class ExpansionFeatureTests
         Assert.NotNull(tab);
         tab.GetComponent<Button>().onClick.Invoke();
         Assert.IsTrue(tab.transform.Find("GoldUnderline").gameObject.activeSelf);
-        Assert.AreEqual(8, GameObject.Find("BuildMenuPanel").GetComponentsInChildren<Button>()
+        Assert.AreEqual(17, GameObject.Find("BuildMenuPanel").GetComponentsInChildren<Button>()
             .Count(button => button.name.StartsWith("Decor_")));
         yield return new WaitForSecondsRealtime(0.35f);
         Capture("expansion-decor-menu.png");

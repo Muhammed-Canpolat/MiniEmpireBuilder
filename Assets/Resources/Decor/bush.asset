@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: bush
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: bush
-  displayName: "\xC7al\u0131"
+  displayName: Çalı
   footprint: {x: 1, y: 1}
   cost: 5
   unlockMainBaseLevel: 1
   sprite: {fileID: -7511650321784113099, guid: a84dffbcf25d54440af977606896fc46, type: 3}
   animated: 1
   animatorController: {fileID: 9100000, guid: 7e5e4de9c96f445e6b70d2ca04ada62b, type: 2}
+  customArt: 
+  visualScale: 1.35

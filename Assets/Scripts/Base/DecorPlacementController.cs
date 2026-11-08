@@ -286,12 +286,10 @@ public sealed class DecorPlacementController : MonoBehaviour
     {
         var go = new GameObject("Decor_" + data.id);
         var renderer = go.AddComponent<SpriteRenderer>();
-        renderer.sprite = data.sprite ?? Square;
+        renderer.sprite = data.Visual ?? Square;
         renderer.sortingOrder = 20 - cell.y;
-        float width = data.footprint.x * 0.9f;
-        float height = data.footprint.y * 0.9f;
-        go.transform.localScale = new Vector3(width / Mathf.Max(0.01f, renderer.sprite.bounds.size.x),
-            height / Mathf.Max(0.01f, renderer.sprite.bounds.size.y), 1f);
+        // Oranı koruyan tek ölçek; eskiden en ve boy ayrı ölçeklenip görsel yamuluyordu.
+        go.transform.localScale = Vector3.one * data.ScaleFor(renderer.sprite);
         var collider = go.AddComponent<BoxCollider2D>();
         collider.size = renderer.sprite.bounds.size;
         var item = go.AddComponent<DecorInstance>();
@@ -348,22 +346,22 @@ public sealed class DecorPlacementController : MonoBehaviour
     private void CreateGhost()
     {
         ghost = new GameObject("DecorGhost");
-        ghostRenderer = ghost.AddComponent<SpriteRenderer>();
-        ghostRenderer.sprite = selected.sprite ?? Square;
+        var visual = new GameObject("Visual");
+        visual.transform.SetParent(ghost.transform, false);
+        ghostRenderer = visual.AddComponent<SpriteRenderer>();
+        ghostRenderer.sprite = selected.Visual ?? Square;
         ghostRenderer.sortingOrder = 130;
-        ghost.transform.localScale = new Vector3(
-            selected.footprint.x * 0.9f / Mathf.Max(0.01f, ghostRenderer.sprite.bounds.size.x),
-            selected.footprint.y * 0.9f / Mathf.Max(0.01f, ghostRenderer.sprite.bounds.size.y), 1f);
+        float scale = selected.ScaleFor(ghostRenderer.sprite);
+        visual.transform.localScale = Vector3.one * scale;
+        visual.transform.localPosition = new Vector3(0f, selected.VerticalOffset(ghostRenderer.sprite, scale), 0f);
         for (int y = 0; y < selected.footprint.y; y++)
         for (int x = 0; x < selected.footprint.x; x++)
         {
             var tile = new GameObject("FootprintCell");
             tile.transform.SetParent(ghost.transform, false);
             tile.transform.localPosition = new Vector3(
-                (x + 0.5f - selected.footprint.x * 0.5f) / ghost.transform.localScale.x,
-                (y + 0.5f - selected.footprint.y * 0.5f) / ghost.transform.localScale.y, 0f);
-            tile.transform.localScale = new Vector3(0.94f / ghost.transform.localScale.x,
-                0.94f / ghost.transform.localScale.y, 1f);
+                x + 0.5f - selected.footprint.x * 0.5f, y + 0.5f - selected.footprint.y * 0.5f, 0f);
+            tile.transform.localScale = new Vector3(0.94f / Square.bounds.size.x, 0.94f / Square.bounds.size.y, 1f);
             var renderer = tile.AddComponent<SpriteRenderer>();
             renderer.sprite = Square;
             renderer.sortingOrder = 129;
@@ -436,8 +434,11 @@ public sealed class DecorInstance : MonoBehaviour
     public void SetCell(Vector2Int cell)
     {
         Cell = cell;
+        var renderer = GetComponent<SpriteRenderer>();
+        float offset = renderer != null && renderer.sprite != null
+            ? Data.VerticalOffset(renderer.sprite, transform.localScale.y) : 0f;
         transform.position = new Vector3(cell.x + Data.footprint.x * 0.5f,
-            cell.y + Data.footprint.y * 0.5f, 0f);
+            cell.y + Data.footprint.y * 0.5f + offset, 0f);
     }
 
     public bool Occupies(Vector2Int point) => point.x >= Cell.x && point.y >= Cell.y &&

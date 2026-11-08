@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c52e97efd190be46bc7c6dabcf9d9d9, type: 3}
+  m_Name: wood_logs
+  m_EditorClassIdentifier: Assembly-CSharp::DecorData
+  id: wood_logs
+  displayName: Odun yığını
+  footprint: {x: 2, y: 1}
+  cost: 10
+  unlockMainBaseLevel: 1
+  sprite: {fileID: 21300126, guid: 7810966f0f690954c87305933cabf2b0, type: 3}
+  animated: 0
+  animatorController: {fileID: 0}
+  customArt: 
+  visualScale: 1

@@ -101,11 +101,13 @@ public class BuildMenuController : MonoBehaviour
         CreateItem(BuildingType.CannonTower, 0.35f, 0.64f, 80);
         CreateItem(BuildingType.Monastery, 0.67f, 0.96f, 60);
         var decor = DecorPlacementController.All;
-        string[] decorOrder = { "tree", "bush", "rock", "flowers", "lantern",
-            "stone_path", "fountain", "flag" };
-        System.Array.Sort(decor, (a, b) =>
-            System.Array.IndexOf(decorOrder, a.id).CompareTo(System.Array.IndexOf(decorOrder, b.id)));
-        for (int i = 0; i < decor.Length; i++) CreateDecorItem(decor[i], i);
+        // Doğa → köy eşyaları → büyük yapılar; listede olmayan yeni dekorlar en sona, bedele göre.
+        string[] decorOrder = { "tree", "bush", "rock", "flowers", "sheep", "stone_path",
+            "hay_bale", "barrel", "crate", "wood_logs", "anvil", "scarecrow", "campfire",
+            "lantern", "flag", "fountain", "statue" };
+        int Order(DecorData d) { int i = System.Array.IndexOf(decorOrder, d.id); return i < 0 ? 1000 + d.cost : i; }
+        System.Array.Sort(decor, (a, b) => Order(a).CompareTo(Order(b)));
+        CreateDecorGrid(decor);
         SelectTab(0);
         CreateRecommendedLayoutControl();
     }
@@ -204,19 +206,47 @@ public class BuildMenuController : MonoBehaviour
         RefreshButtons();
     }
 
-    private void CreateDecorItem(DecorData data, int index)
+    private void CreateDecorGrid(DecorData[] decor)
+    {
+        // Kaydırılabilir 4 sütunlu ızgara: katalog büyüdükçe panel taşmaz.
+        var scroll = new GameObject("DecorScroll", typeof(RectTransform), typeof(RectMask2D), typeof(ScrollRect));
+        scroll.transform.SetParent(_panelRoot.transform, false);
+        var scrollRect = scroll.GetComponent<RectTransform>();
+        scrollRect.anchorMin = new Vector2(0.02f, 0.11f);
+        scrollRect.anchorMax = new Vector2(0.98f, 0.735f);
+        scrollRect.offsetMin = scrollRect.offsetMax = Vector2.zero;
+        var content = new GameObject("Content", typeof(RectTransform), typeof(GridLayoutGroup),
+            typeof(ContentSizeFitter), typeof(DecorGridAutoCell));
+        content.transform.SetParent(scroll.transform, false);
+        var contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.offsetMin = contentRect.offsetMax = Vector2.zero;
+        var grid = content.GetComponent<GridLayoutGroup>();
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 4;
+        grid.spacing = new Vector2(6f, 6f);
+        grid.padding = new RectOffset(2, 2, 2, 8);
+        content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var view = scroll.GetComponent<ScrollRect>();
+        view.content = contentRect;
+        view.horizontal = false;
+        view.movementType = ScrollRect.MovementType.Clamped;
+        view.scrollSensitivity = 18f;
+        _decorCards.Add(scroll);
+        for (int i = 0; i < decor.Length; i++) CreateDecorItem(decor[i], content.transform);
+    }
+
+    private void CreateDecorItem(DecorData data, Transform parent)
     {
         if (data == null) return;
-        int column = index % 4;
-        int row = index / 4;
         var go = new GameObject("Decor_" + data.id, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(_panelRoot.transform, false);
-        var rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.02f + column * 0.245f, row == 0 ? 0.44f : 0.12f);
-        rect.anchorMax = new Vector2(0.245f + column * 0.245f, row == 0 ? 0.72f : 0.40f);
-        rect.offsetMin = rect.offsetMax = Vector2.zero;
+        go.transform.SetParent(parent, false);
         var image = go.GetComponent<Image>();
-        image.color = new Color(0.18f, 0.14f, 0.1f);
+        image.sprite = ReferenceUiVisuals.ToastSprite();
+        image.type = Image.Type.Sliced;
+        image.color = Color.white;
         var button = go.GetComponent<Button>();
         button.targetGraphic = image;
         button.onClick.AddListener(() =>
@@ -227,37 +257,24 @@ public class BuildMenuController : MonoBehaviour
             Hide();
             DecorPlacementController.Instance?.BeginPlacement(data);
         });
-        var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-        icon.transform.SetParent(go.transform, false);
-        var iconRect = icon.GetComponent<RectTransform>();
-        iconRect.anchorMin = new Vector2(0.25f, 0.38f);
-        iconRect.anchorMax = new Vector2(0.75f, 0.95f);
-        iconRect.offsetMin = iconRect.offsetMax = Vector2.zero;
-        icon.GetComponent<Image>().sprite = data.sprite;
-        icon.GetComponent<Image>().preserveAspect = true;
-        var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-        label.transform.SetParent(go.transform, false);
-        var labelRect = label.GetComponent<RectTransform>();
-        labelRect.anchorMin = new Vector2(0f, 0.19f);
-        labelRect.anchorMax = new Vector2(1f, 0.43f);
-        labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
-        var text = label.GetComponent<TextMeshProUGUI>();
-        text.text = data.displayName;
-        text.fontSize = 12f;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        var price = new GameObject("Cost", typeof(RectTransform), typeof(TextMeshProUGUI));
-        price.transform.SetParent(go.transform, false);
-        var priceRect = price.GetComponent<RectTransform>();
-        priceRect.anchorMin = Vector2.zero;
-        priceRect.anchorMax = new Vector2(1f, 0.2f);
-        priceRect.offsetMin = priceRect.offsetMax = Vector2.zero;
-        var priceText = price.GetComponent<TextMeshProUGUI>();
-        priceText.text = data.cost.ToString();
-        priceText.fontSize = 13f;
-        priceText.alignment = TextAlignmentOptions.Center;
-        priceText.color = new Color(1f, 0.83f, 0.35f);
-        _decorCards.Add(go);
+
+        // Görsel yuvası: açık zeminli çerçeve, içinde oranı korunmuş önizleme.
+        var well = ReferenceUiVisuals.Image(go.transform, "Well", new Vector2(0.08f, 0.40f),
+            new Vector2(0.92f, 0.94f), Vector2.zero, Vector2.zero, ReferenceUiVisuals.Hex(0x4A5A34));
+        well.sprite = ReferenceUiVisuals.SolidPillSprite();
+        well.type = Image.Type.Sliced;
+        var icon = ReferenceUiVisuals.Image(well.transform, "Icon", Vector2.zero, Vector2.one,
+            new Vector2(4f, 3f), new Vector2(-4f, -3f), Color.white);
+        icon.sprite = data.Visual;
+        icon.preserveAspect = true;
+
+        var text = ReferenceUiVisuals.Text(go.transform, "Label", data.displayName, 11,
+            ReferenceUiVisuals.Light, TextAlignmentOptions.Center, new Vector2(0f, 0.19f),
+            new Vector2(1f, 0.40f), new Vector2(3f, 0f), new Vector2(-3f, 0f), bodyBold: true);
+        text.fontSizeMin = 8f;
+        ReferenceUiVisuals.Text(go.transform, "Cost", data.cost.ToString(), 11,
+            ReferenceUiVisuals.Gold, TextAlignmentOptions.Center, Vector2.zero,
+            new Vector2(1f, 0.20f), new Vector2(3f, 3f), new Vector2(-3f, 0f), bodyBold: true);
         _decorButtons.Add(button);
     }
 
@@ -449,8 +466,10 @@ public class BuildMenuController : MonoBehaviour
             var label = btn.transform.Find("Cost")?.GetComponent<TextMeshProUGUI>();
             if (label != null) label.text = unlocked ? $"{data.cost} ALTIN" :
                 $"SEV. {data.unlockMainBaseLevel}";
-            var icon = btn.transform.Find("Icon")?.GetComponent<Image>();
-            if (icon != null) icon.color = unlocked ? Color.white : new Color(0.5f, 0.5f, 0.5f, 0.6f);
+            var icon = btn.transform.Find("Well/Icon")?.GetComponent<Image>();
+            if (icon != null) icon.color = unlocked ? Color.white : new Color(0.35f, 0.35f, 0.35f, 0.75f);
+            var well = btn.transform.Find("Well")?.GetComponent<Image>();
+            if (well != null) well.color = unlocked ? ReferenceUiVisuals.Hex(0x4A5A34) : ReferenceUiVisuals.Hex(0x2A2620);
         }
     }
 
@@ -461,5 +480,23 @@ public class BuildMenuController : MonoBehaviour
             // İnşaatçı durumu değişirse anlık güncelle
             RefreshButtons();
         }
+    }
+}
+
+/// <summary>Izgara hücresini kapsayıcı genişliğine göre ayarlar (4 sütun, kart oranı 1:1.25).</summary>
+public sealed class DecorGridAutoCell : MonoBehaviour
+{
+    private GridLayoutGroup grid;
+    private float lastWidth = -1f;
+
+    private void LateUpdate()
+    {
+        if (grid == null) grid = GetComponent<GridLayoutGroup>();
+        float width = ((RectTransform)transform).rect.width;
+        if (grid == null || width <= 0f || Mathf.Approximately(width, lastWidth)) return;
+        lastWidth = width;
+        int columns = Mathf.Max(1, grid.constraintCount);
+        float cell = (width - grid.padding.left - grid.padding.right - grid.spacing.x * (columns - 1)) / columns;
+        grid.cellSize = new Vector2(cell, cell * 1.25f);
     }
 }
