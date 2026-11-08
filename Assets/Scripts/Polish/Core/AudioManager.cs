@@ -5,49 +5,41 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// <summary>Optional audio slots. Empty clips are silent until art is supplied.</summary>
+/// <summary>
+/// Müzik ve efektler. Klipler Resources/AudioLibrary.asset'ten gelir (bu bileşen çalışma
+/// anında oluşturulduğu için Inspector'dan atanamaz). Sahneye göre müzik:
+/// Menü → menü teması, Ana Üs → çalma listesi (sırayla), Sefer → sefer teması,
+/// Savaş → rastgele bir döngü (+ sisli bölgede ambiyans katmanı), boss çıkınca boss müziği.
+/// Parçalar arası geçiş 1 sn; her parça kendi ses çarpanıyla çalar.
+/// </summary>
 public sealed class AudioManager : MonoBehaviour
 {
     private const string MusicEnabledKey = "audio_music_enabled";
     private const string SfxEnabledKey = "audio_sfx_enabled";
+    private const float FadeSeconds = 1f;
+    private const float FogLayerVolume = 0.35f;
 
-    [Header("Music - assign clips in Inspector")]
-    [SerializeField] private AudioClip introBGM;
-    [SerializeField] private AudioClip baseBGM;
-    [SerializeField] private AudioClip worldBGM;
-    [SerializeField] private AudioClip battleBGM;
-    [SerializeField] private AudioClip baseWindLoop;
-    [SerializeField] private AudioClip baseBirdLoop;
-
-    [Header("Effects - assign clips in Inspector")]
-    [SerializeField] private AudioClip buttonClick;
-    [SerializeField] private AudioClip buildingPlace;
-    [SerializeField] private AudioClip goldCollect;
-    [SerializeField] private AudioClip levelUp;
-    [SerializeField] private AudioClip swordHit;
-    [SerializeField] private AudioClip enemyDeath;
-    [SerializeField] private AudioClip victory;
-    [SerializeField] private AudioClip arrowShoot;
-    [SerializeField] private AudioClip bossBGM;
-    [SerializeField] private AudioClip defeat;
-    private float musicVolume = 0.55f;
-    private float sfxVolume = 0.85f;
-
-    [SerializeField] private AudioSource musicA;
-    [SerializeField] private AudioSource musicB;
-    [SerializeField] private AudioSource windSource;
-    [SerializeField] private AudioSource birdSource;
-    [SerializeField] private AudioSource[] sfxPool;
+    private AudioSource musicA;
+    private AudioSource musicB;
+    private AudioSource windSource;
+    private AudioSource birdSource;
+    private AudioSource layerSource;
+    private AudioSource[] effects;
 
     private readonly HashSet<int> wiredButtons = new HashSet<int>();
     private bool isMusicAActive = true;
-    private AudioClip currentMusic;
+    private MusicTrack currentTrack;
+    private MusicTrack[] playlist;      // Ana Üs: sırayla
+    private int playlistIndex;
     private AudioListener fallbackListener;
-    private AudioSource[] effects;
     private Coroutine buttonScan;
+    private float musicVolume = 0.6f;
+    private float sfxVolume = 0.85f;
+
     public static AudioManager Instance { get; private set; }
     public bool MusicEnabled => PlayerPrefs.GetInt(MusicEnabledKey, 1) == 1;
     public bool SfxEnabled => PlayerPrefs.GetInt(SfxEnabledKey, 1) == 1;
+    private static AudioLibrary Library => AudioLibrary.Instance;
 
     private void Awake()
     {
@@ -56,57 +48,28 @@ public sealed class AudioManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         fallbackListener = gameObject.AddComponent<AudioListener>();
         UpdateListener();
-        musicA = EnsureSource(musicA, "MusicA", true);
-        musicB = EnsureSource(musicB, "MusicB", true);
-        windSource = EnsureSource(windSource, "BaseWind", true);
-        birdSource = EnsureSource(birdSource, "BaseBirds", true);
-        if (sfxPool == null || sfxPool.Length == 0) sfxPool = new AudioSource[4];
-        effects = new AudioSource[sfxPool.Length];
-        for (int i = 0; i < sfxPool.Length; i++)
-            effects[i] = sfxPool[i] = EnsureSource(sfxPool[i], "Effect" + i, false);
-        ApplyLibrary();
+        musicA = MakeSource("MusicA", true);
+        musicB = MakeSource("MusicB", true);
+        windSource = MakeSource("BaseWind", true);
+        birdSource = MakeSource("BaseBirds", true);
+        layerSource = MakeSource("MusicLayer", true);
+        effects = new AudioSource[4];
+        for (int i = 0; i < effects.Length; i++) effects[i] = MakeSource("Effect" + i, false);
+        if (Library != null)
+        {
+            musicVolume = Library.musicVolume;
+            sfxVolume = Library.sfxVolume;
+        }
         SceneManager.activeSceneChanged += OnSceneChanged;
         buttonScan = StartCoroutine(WireUiButtons());
         OnSceneChanged(default, SceneManager.GetActiveScene());
     }
 
-    /// <summary>Resources/AudioLibrary.asset'teki klipleri boş alanlara doldurur.</summary>
-    private void ApplyLibrary()
+    private AudioSource MakeSource(string name, bool loop)
     {
-        var library = AudioLibrary.Instance;
-        if (library == null) return;
-        introBGM = Pick(introBGM, library.menuMusic);
-        baseBGM = Pick(baseBGM, library.baseMusic);
-        worldBGM = Pick(worldBGM, library.campaignMusic);
-        battleBGM = Pick(battleBGM, library.battleMusic);
-        bossBGM = Pick(bossBGM, library.bossMusic);
-        baseWindLoop = Pick(baseWindLoop, library.baseWindLoop);
-        baseBirdLoop = Pick(baseBirdLoop, library.baseBirdLoop);
-        buttonClick = Pick(buttonClick, library.buttonClick);
-        buildingPlace = Pick(buildingPlace, library.buildingPlace);
-        goldCollect = Pick(goldCollect, library.goldCollect);
-        levelUp = Pick(levelUp, library.levelUp);
-        swordHit = Pick(swordHit, library.swordHit);
-        arrowShoot = Pick(arrowShoot, library.arrowShoot);
-        enemyDeath = Pick(enemyDeath, library.enemyDeath);
-        victory = Pick(victory, library.victory);
-        defeat = Pick(defeat, library.defeat);
-        musicVolume = library.musicVolume;
-        sfxVolume = library.sfxVolume;
-        foreach (var source in effects) if (source != null) source.volume = sfxVolume;
-    }
-
-    // UnityEngine.Object için ?? güvenilmez (sahte null); açık karşılaştırma.
-    private static AudioClip Pick(AudioClip own, AudioClip fromLibrary) => own != null ? own : fromLibrary;
-
-    private AudioSource EnsureSource(AudioSource source, string name, bool loop)
-    {
-        if (source == null)
-        {
-            var child = new GameObject(name);
-            child.transform.SetParent(transform, false);
-            source = child.AddComponent<AudioSource>();
-        }
+        var child = new GameObject(name);
+        child.transform.SetParent(transform, false);
+        var source = child.AddComponent<AudioSource>();
         source.playOnAwake = false;
         source.loop = loop;
         source.spatialBlend = 0f;
@@ -159,43 +122,114 @@ public sealed class AudioManager : MonoBehaviour
         }
     }
 
-    public void PlayBgm(AudioClip clip)
+    // ==================== MÜZİK ====================
+
+    private AudioSource ActiveMusic => isMusicAActive ? musicA : musicB;
+    private float TrackVolume(MusicTrack track) => musicVolume * Mathf.Clamp01(track?.volume ?? 1f);
+
+    /// <summary>Parçaya 1 sn'lik çapraz geçiş. loop=false ise parça bitince çalma listesi ilerler.</summary>
+    private void PlayTrack(MusicTrack track, bool loop)
     {
-        if (clip == currentMusic) return;
-        currentMusic = clip;
-        if (clip == null)
+        if (track != null && track.clip == null) track = null;
+        if (track != null && currentTrack != null && track.clip == currentTrack.clip) return;
+        currentTrack = track;
+        if (track == null)
         {
-            musicA.DOKill();
-            musicB.DOKill();
-            musicA.DOFade(0f, 1f).OnComplete(musicA.Stop);
-            musicB.DOFade(0f, 1f).OnComplete(musicB.Stop);
+            foreach (var source in new[] { musicA, musicB })
+            {
+                source.DOKill();
+                source.DOFade(0f, FadeSeconds).OnComplete(source.Stop);
+            }
             return;
         }
-        AudioSource from = isMusicAActive ? musicA : musicB;
+        AudioSource from = ActiveMusic;
         AudioSource to = isMusicAActive ? musicB : musicA;
         from.DOKill();
         to.DOKill();
-        to.clip = clip;
+        to.clip = track.clip;
+        to.loop = loop;
         to.volume = 0f;
         if (MusicEnabled) to.Play();
-        from.DOFade(0f, 1f).OnComplete(from.Stop);
-        to.DOFade(MusicEnabled ? musicVolume : 0f, 1f);
+        from.DOFade(0f, FadeSeconds).OnComplete(from.Stop);
+        to.DOFade(MusicEnabled ? TrackVolume(track) : 0f, FadeSeconds);
         isMusicAActive = !isMusicAActive;
     }
 
-    public void PlayIntroBgm() { StopBaseAmbience(); PlayBgm(introBGM); }
-    public void PlayWorldBgm() { StopBaseAmbience(); PlayBgm(worldBGM); }
-    public void PlayBattleBgm() { StopBaseAmbience(); PlayBgm(battleBGM); }
-    /// <summary>Boss sahaya çıkınca savaş müziği boss müziğine geçer (atanmışsa).</summary>
-    public void PlayBossBgm() { if (bossBGM != null) PlayBgm(bossBGM); }
-    public void PlayBaseBgm()
+    private static MusicTrack Random(MusicTrack[] tracks)
     {
-        PlayBgm(baseBGM);
-        PlayAmbient(windSource, baseWindLoop, 0.22f);
-        PlayAmbient(birdSource, baseBirdLoop, 0.14f);
+        if (tracks == null) return null;
+        var usable = System.Array.FindAll(tracks, t => t != null && t.clip != null);
+        return usable.Length == 0 ? null : usable[UnityEngine.Random.Range(0, usable.Length)];
     }
 
-    private void PlayAmbient(AudioSource source, AudioClip clip, float volume)
+    public void PlayIntroBgm()
+    {
+        StopAmbience();
+        playlist = null;
+        PlayTrack(Random(Library?.menuMusic), true);
+    }
+
+    public void PlayWorldBgm()
+    {
+        StopAmbience();
+        playlist = null;
+        PlayTrack(Random(Library?.campaignMusic), true);
+    }
+
+    /// <summary>Her savaşta rastgele bir döngü; sisli bölgede altta ambiyans katmanı.</summary>
+    public void PlayBattleBgm()
+    {
+        StopAmbience();
+        playlist = null;
+        PlayTrack(Random(Library?.battleMusic), true);
+        var fog = Library?.fogAmbience;
+        bool foggy = BattleSession.IsCampaign && BattleSession.Region != null
+            && BattleSession.Region.specialMechanic == "Sis";
+        if (foggy && fog != null && fog.clip != null)
+            PlayLayer(layerSource, fog.clip, TrackVolume(fog) * FogLayerVolume);
+    }
+
+    /// <summary>Boss sahaya çıkınca boss müziği (atanmışsa).</summary>
+    public void PlayBossBgm()
+    {
+        var boss = Random(Library?.bossMusic);
+        if (boss != null) PlayTrack(boss, true);
+    }
+
+    /// <summary>Ana Üs: uzun parçalar sırayla çalar, liste bitince başa döner.</summary>
+    public void PlayBaseBgm()
+    {
+        var tracks = Library?.baseMusic;
+        playlist = tracks != null ? System.Array.FindAll(tracks, t => t != null && t.clip != null) : null;
+        if (playlist != null && playlist.Length > 0)
+        {
+            bool alreadyInList = currentTrack != null && System.Array.Exists(playlist, t => t.clip == currentTrack.clip);
+            if (!alreadyInList)
+            {
+                playlistIndex = UnityEngine.Random.Range(0, playlist.Length);
+                PlayTrack(playlist[playlistIndex], playlist.Length == 1);
+            }
+        }
+        else PlayTrack(null, true);
+        PlayLayer(windSource, Library?.baseWindLoop, 0.22f);
+        PlayLayer(birdSource, Library?.baseBirdLoop, 0.14f);
+    }
+
+    private void Update()
+    {
+        // Çalma listesi: parça bitince sıradakine geç (döngü kapalıyken kaynak durur).
+        if (playlist == null || playlist.Length < 2 || !MusicEnabled || currentTrack == null) return;
+        var active = ActiveMusic;
+        if (active.clip == currentTrack.clip && !active.loop && !active.isPlaying
+            && active.time == 0f && active.timeSamples == 0)
+        {
+            playlistIndex = (playlistIndex + 1) % playlist.Length;
+            currentTrack = null;
+            PlayTrack(playlist[playlistIndex], false);
+        }
+    }
+
+    private void PlayLayer(AudioSource source, AudioClip clip, float volume)
     {
         if (source == null || clip == null) return;
         source.clip = clip;
@@ -203,11 +237,14 @@ public sealed class AudioManager : MonoBehaviour
         if (MusicEnabled && !source.isPlaying) source.Play();
     }
 
-    private void StopBaseAmbience()
+    private void StopAmbience()
     {
         if (windSource != null) windSource.Stop();
         if (birdSource != null) birdSource.Stop();
+        if (layerSource != null) layerSource.Stop();
     }
+
+    // ==================== EFEKTLER ====================
 
     public void PlaySfx(string key)
     {
@@ -215,9 +252,30 @@ public sealed class AudioManager : MonoBehaviour
         AudioClip clip = ResolveSfx(key);
         if (clip == null || effects == null || effects.Length == 0) return;
         foreach (var source in effects)
-            if (source != null && !source.isPlaying) { source.PlayOneShot(clip); return; }
-        effects[0]?.PlayOneShot(clip);
+            if (source != null && !source.isPlaying) { source.PlayOneShot(clip, sfxVolume); return; }
+        effects[0]?.PlayOneShot(clip, sfxVolume);
     }
+
+    private static AudioClip ResolveSfx(string key)
+    {
+        var library = Library;
+        if (library == null) return null;
+        switch (key)
+        {
+            case "buttonClick": return library.buttonClick;
+            case "buildingPlace": return library.buildingPlace;
+            case "goldCollect": return library.goldCollect;
+            case "levelUp": return library.levelUp;
+            case "swordHit": return library.swordHit;
+            case "enemyDeath": return library.enemyDeath;
+            case "victory": return library.victory;
+            case "arrowShoot": return library.arrowShoot;
+            case "defeat": return library.defeat;
+            default: return null;
+        }
+    }
+
+    // ==================== AYARLAR ====================
 
     public void SetMusicEnabled(bool enabled)
     {
@@ -225,37 +283,24 @@ public sealed class AudioManager : MonoBehaviour
         PlayerPrefs.Save();
         if (!enabled)
         {
-            musicA.Pause(); musicB.Pause(); StopBaseAmbience();
+            musicA.Pause(); musicB.Pause(); StopAmbience();
+            return;
         }
-        else
+        var active = ActiveMusic;
+        if (currentTrack != null && active.clip == currentTrack.clip)
         {
-            AudioSource active = isMusicAActive ? musicA : musicB;
-            if (active.clip == currentMusic && currentMusic != null)
-            { active.volume = musicVolume; active.UnPause(); if (!active.isPlaying) active.Play(); }
-            if (SceneManager.GetActiveScene().name == "BaseScene") PlayBaseBgm();
+            active.volume = TrackVolume(currentTrack);
+            active.UnPause();
+            if (!active.isPlaying) active.Play();
         }
+        string scene = SceneManager.GetActiveScene().name;
+        if (scene == "BaseScene") PlayBaseBgm();
+        else if (scene == "BattleScene" && currentTrack == null) PlayBattleBgm();
     }
 
     public void SetSfxEnabled(bool enabled)
     {
         PlayerPrefs.SetInt(SfxEnabledKey, enabled ? 1 : 0);
         PlayerPrefs.Save();
-    }
-
-    private AudioClip ResolveSfx(string key)
-    {
-        switch (key)
-        {
-            case "buttonClick": return buttonClick;
-            case "buildingPlace": return buildingPlace;
-            case "goldCollect": return goldCollect;
-            case "levelUp": return levelUp;
-            case "swordHit": return swordHit;
-            case "enemyDeath": return enemyDeath;
-            case "victory": return victory;
-            case "arrowShoot": return arrowShoot;
-            case "defeat": return defeat;
-            default: return null;
-        }
     }
 }

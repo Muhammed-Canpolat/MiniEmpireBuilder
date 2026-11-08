@@ -1,0 +1,30 @@
+fileFormatVersion: 2
+guid: 1a858b077a513a14aa8f029bd2b86cf9
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 8
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 2
+    sampleRateSetting: 0
+    sampleRateOverride: 0
+    compressionFormat: 1
+    quality: 0.7
+    conversionMode: 0
+    preloadAudioData: 0
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 0
+  loadInBackground: 1
+  ambisonic: 0
+  3D: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 20478
+  packageName: Emotional Themes Pack 1
+  packageVersion: 1.0
+  assetPath: Assets/Emotional Themes Pack 1/Maya.ogg
+  uploadId: 9638

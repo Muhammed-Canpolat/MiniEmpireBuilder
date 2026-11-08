@@ -12,11 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82d1e36b3be34d71bd0064988f650212, type: 3}
   m_Name: AudioLibrary
   m_EditorClassIdentifier: Assembly-CSharp::AudioLibrary
-  menuMusic: {fileID: 0}
-  baseMusic: {fileID: 0}
-  campaignMusic: {fileID: 0}
-  battleMusic: {fileID: 0}
-  bossMusic: {fileID: 0}
+  menuMusic:
+  - clip: {fileID: 8300000, guid: dc9200baf1bb9bf4f864d7804fead23a, type: 3}
+    volume: 0.86
+  baseMusic:
+  - clip: {fileID: 8300000, guid: 3588b8ffa427bae44bbc62c98cc00a14, type: 3}
+    volume: 0.6
+  - clip: {fileID: 8300000, guid: 1a858b077a513a14aa8f029bd2b86cf9, type: 3}
+    volume: 0.6
+  - clip: {fileID: 8300000, guid: 58d1c449f26f65c42a76578bea15d617, type: 3}
+    volume: 0.6
+  campaignMusic:
+  - clip: {fileID: 8300000, guid: c2983f5f3ba0a504a9eee876d653d489, type: 3}
+    volume: 0.98
+  battleMusic:
+  - clip: {fileID: 8300000, guid: 483c646614ba18e44aefed66d403734e, type: 3}
+    volume: 0.85
+  - clip: {fileID: 8300000, guid: e030d038005e97c43a42564bf8bc4f49, type: 3}
+    volume: 0.86
+  - clip: {fileID: 8300000, guid: 1c1850fe141187f4184b8853a505b06d, type: 3}
+    volume: 0.87
+  - clip: {fileID: 8300000, guid: bcbc346bb12ee5546aea434f6ccbb78f, type: 3}
+    volume: 0.6
+  bossMusic:
+  - clip: {fileID: 8300000, guid: b6e783277a501f342a77ba7781c8af47, type: 3}
+    volume: 0.49
+  - clip: {fileID: 8300000, guid: 309b7566aba9693408c3a3df72163dea, type: 3}
+    volume: 0.43
+  fogAmbience:
+    clip: {fileID: 8300000, guid: 99f146cf98126cc44a4ffc7abc886993, type: 3}
+    volume: 0.99
   baseWindLoop: {fileID: 0}
   baseBirdLoop: {fileID: 0}
   buttonClick: {fileID: 0}
@@ -28,5 +53,5 @@ MonoBehaviour:
   enemyDeath: {fileID: 0}
   victory: {fileID: 0}
   defeat: {fileID: 0}
-  musicVolume: 0.55
+  musicVolume: 0.6
   sfxVolume: 0.85

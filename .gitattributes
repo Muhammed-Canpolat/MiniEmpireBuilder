@@ -2,3 +2,5 @@
 *.bundle filter=lfs diff=lfs merge=lfs -text
 Assets/Firebase/Plugins/x86_64/FirebaseCppApp-13_8_0.bundle filter=lfs diff=lfs merge=lfs -text
 Assets/Firebase/Plugins/x86_64/FirebaseCppApp-13_8_0.so filter=lfs diff=lfs merge=lfs -text
+Assets/Audio/**/*.wav filter=lfs diff=lfs merge=lfs -text
+Assets/Audio/**/*.ogg filter=lfs diff=lfs merge=lfs -text
