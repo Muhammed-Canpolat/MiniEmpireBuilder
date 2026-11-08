@@ -227,7 +227,7 @@ public class BattleUI : MonoBehaviour
 
     private void ShowBattleResult(bool won)
     {
-        if (won) AudioManager.Instance?.PlaySfx("victory");
+        AudioManager.Instance?.PlaySfx(won ? "victory" : "defeat");
         if (battleEndPanel != null)
             battleEndPanel.SetActive(true);
 

@@ -150,6 +150,7 @@ public class EnemyController : MonoBehaviour
                     || currentWave >= finalWave);
             bool isElite = !isBoss && currentWave % EliteWaveInterval == 0;
             visuals.ApplyTier(isElite, isBoss);
+            if (isBoss) AudioManager.Instance?.PlayBossBgm();
         }
 
         AddGroundShadow();

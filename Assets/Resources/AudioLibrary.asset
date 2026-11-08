@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82d1e36b3be34d71bd0064988f650212, type: 3}
+  m_Name: AudioLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::AudioLibrary
+  menuMusic: {fileID: 0}
+  baseMusic: {fileID: 0}
+  campaignMusic: {fileID: 0}
+  battleMusic: {fileID: 0}
+  bossMusic: {fileID: 0}
+  baseWindLoop: {fileID: 0}
+  baseBirdLoop: {fileID: 0}
+  buttonClick: {fileID: 0}
+  buildingPlace: {fileID: 0}
+  goldCollect: {fileID: 0}
+  levelUp: {fileID: 0}
+  swordHit: {fileID: 0}
+  arrowShoot: {fileID: 0}
+  enemyDeath: {fileID: 0}
+  victory: {fileID: 0}
+  defeat: {fileID: 0}
+  musicVolume: 0.55
+  sfxVolume: 0.85

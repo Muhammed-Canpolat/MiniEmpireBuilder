@@ -28,6 +28,10 @@ public sealed class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip enemyDeath;
     [SerializeField] private AudioClip victory;
     [SerializeField] private AudioClip arrowShoot;
+    [SerializeField] private AudioClip bossBGM;
+    [SerializeField] private AudioClip defeat;
+    private float musicVolume = 0.55f;
+    private float sfxVolume = 0.85f;
 
     [SerializeField] private AudioSource musicA;
     [SerializeField] private AudioSource musicB;
@@ -60,10 +64,40 @@ public sealed class AudioManager : MonoBehaviour
         effects = new AudioSource[sfxPool.Length];
         for (int i = 0; i < sfxPool.Length; i++)
             effects[i] = sfxPool[i] = EnsureSource(sfxPool[i], "Effect" + i, false);
+        ApplyLibrary();
         SceneManager.activeSceneChanged += OnSceneChanged;
         buttonScan = StartCoroutine(WireUiButtons());
         OnSceneChanged(default, SceneManager.GetActiveScene());
     }
+
+    /// <summary>Resources/AudioLibrary.asset'teki klipleri boş alanlara doldurur.</summary>
+    private void ApplyLibrary()
+    {
+        var library = AudioLibrary.Instance;
+        if (library == null) return;
+        introBGM = Pick(introBGM, library.menuMusic);
+        baseBGM = Pick(baseBGM, library.baseMusic);
+        worldBGM = Pick(worldBGM, library.campaignMusic);
+        battleBGM = Pick(battleBGM, library.battleMusic);
+        bossBGM = Pick(bossBGM, library.bossMusic);
+        baseWindLoop = Pick(baseWindLoop, library.baseWindLoop);
+        baseBirdLoop = Pick(baseBirdLoop, library.baseBirdLoop);
+        buttonClick = Pick(buttonClick, library.buttonClick);
+        buildingPlace = Pick(buildingPlace, library.buildingPlace);
+        goldCollect = Pick(goldCollect, library.goldCollect);
+        levelUp = Pick(levelUp, library.levelUp);
+        swordHit = Pick(swordHit, library.swordHit);
+        arrowShoot = Pick(arrowShoot, library.arrowShoot);
+        enemyDeath = Pick(enemyDeath, library.enemyDeath);
+        victory = Pick(victory, library.victory);
+        defeat = Pick(defeat, library.defeat);
+        musicVolume = library.musicVolume;
+        sfxVolume = library.sfxVolume;
+        foreach (var source in effects) if (source != null) source.volume = sfxVolume;
+    }
+
+    // UnityEngine.Object için ?? güvenilmez (sahte null); açık karşılaştırma.
+    private static AudioClip Pick(AudioClip own, AudioClip fromLibrary) => own != null ? own : fromLibrary;
 
     private AudioSource EnsureSource(AudioSource source, string name, bool loop)
     {
@@ -145,13 +179,15 @@ public sealed class AudioManager : MonoBehaviour
         to.volume = 0f;
         if (MusicEnabled) to.Play();
         from.DOFade(0f, 1f).OnComplete(from.Stop);
-        to.DOFade(MusicEnabled ? 1f : 0f, 1f);
+        to.DOFade(MusicEnabled ? musicVolume : 0f, 1f);
         isMusicAActive = !isMusicAActive;
     }
 
     public void PlayIntroBgm() { StopBaseAmbience(); PlayBgm(introBGM); }
     public void PlayWorldBgm() { StopBaseAmbience(); PlayBgm(worldBGM); }
     public void PlayBattleBgm() { StopBaseAmbience(); PlayBgm(battleBGM); }
+    /// <summary>Boss sahaya çıkınca savaş müziği boss müziğine geçer (atanmışsa).</summary>
+    public void PlayBossBgm() { if (bossBGM != null) PlayBgm(bossBGM); }
     public void PlayBaseBgm()
     {
         PlayBgm(baseBGM);
@@ -195,7 +231,7 @@ public sealed class AudioManager : MonoBehaviour
         {
             AudioSource active = isMusicAActive ? musicA : musicB;
             if (active.clip == currentMusic && currentMusic != null)
-            { active.volume = 1f; active.UnPause(); if (!active.isPlaying) active.Play(); }
+            { active.volume = musicVolume; active.UnPause(); if (!active.isPlaying) active.Play(); }
             if (SceneManager.GetActiveScene().name == "BaseScene") PlayBaseBgm();
         }
     }
@@ -218,6 +254,7 @@ public sealed class AudioManager : MonoBehaviour
             case "enemyDeath": return enemyDeath;
             case "victory": return victory;
             case "arrowShoot": return arrowShoot;
+            case "defeat": return defeat;
             default: return null;
         }
     }
