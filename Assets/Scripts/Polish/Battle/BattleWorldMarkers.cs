@@ -55,33 +55,23 @@ public static class BattleWorldMarkers
 
         var caption = new GameObject("SlotCaption");
         caption.transform.SetParent(parent, false);
-        caption.transform.localPosition = new Vector3(0, -0.90f, -0.2f);
+        caption.transform.localPosition = new Vector3(0, -1.18f, -0.2f);
         var canvas = caption.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.sortingOrder = 12;
         var canvasRect = caption.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(140, 42);
+        // Tek satır, okunur boyut: 1.5 x 0.42 dünya birimi.
+        canvasRect.sizeDelta = new Vector2(150, 42);
         canvasRect.localScale = Vector3.one * 0.01f;
         var pill = caption.AddComponent<UnityEngine.UI.Image>();
         pill.sprite = ReferenceUiVisuals.PillSprite();
         pill.type = UnityEngine.UI.Image.Type.Sliced;
         pill.color = new Color32(0x14, 0x11, 0x0D, 0xD9);
         pill.raycastTarget = false;
-        var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-        label.transform.SetParent(caption.transform, false);
-        var labelRect = label.GetComponent<RectTransform>();
-        labelRect.anchorMin = new Vector2(0, 0.48f);
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
-        var text = label.GetComponent<TextMeshProUGUI>();
-        text.text = "Boş yuva";
-        text.alignment = TextAlignmentOptions.Center;
-        ReferenceUiVisuals.ApplyFont(text, 12, ReferenceUiVisuals.Muted, bodyBold: true);
-        text.raycastTarget = false;
-        var rights = ReferenceUiVisuals.Text(caption.transform, "RemainingRights", "", 12,
+        var rights = ReferenceUiVisuals.Text(caption.transform, "RemainingRights", "", 26,
             ReferenceUiVisuals.Gold, TextAlignmentOptions.Center,
-            Vector2.zero, new Vector2(1, 0.48f), Vector2.zero, Vector2.zero);
-        caption.AddComponent<BattleSlotRights>().Initialize(manager, rights);
+            Vector2.zero, Vector2.one, new Vector2(8, 2), new Vector2(-8, -2), bodyBold: true);
+        caption.AddComponent<BattleSlotRights>().Initialize(manager, rights, canvas);
     }
 }
 
@@ -89,14 +79,24 @@ public sealed class BattleSlotRights : MonoBehaviour
 {
     private BattleManager manager;
     private TextMeshProUGUI label;
-    public void Initialize(BattleManager source, TextMeshProUGUI target)
+    private Canvas canvas;
+    private static readonly BuildingType[] Types =
+        { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery };
+
+    public void Initialize(BattleManager source, TextMeshProUGUI target, Canvas owner)
     {
         manager = source;
         label = target;
+        canvas = owner;
     }
+
+    /// <summary>Tüm kule türlerinde kalan toplam hak; hak yoksa etiket gizlenir.</summary>
     private void Update()
     {
         if (manager == null || label == null) return;
-        label.text = $"Okçu {manager.GetBattleBuildRemaining(BuildingType.ArcherTower)} hak";
+        int remaining = 0;
+        foreach (var type in Types) remaining += manager.GetBattleBuildRemaining(type);
+        if (canvas != null) canvas.enabled = remaining > 0;
+        label.text = UiStrings.Upper($"Kule kur · {remaining} hak");
     }
 }

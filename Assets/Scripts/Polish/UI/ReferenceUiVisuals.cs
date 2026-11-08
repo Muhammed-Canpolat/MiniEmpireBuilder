@@ -160,6 +160,27 @@ public static class ReferenceUiVisuals
         return pillSprite;
     }
 
+    private static Sprite solidPillSprite;
+
+    /// <summary>Beyaz dolgulu yuvarlak hap; Image.color ile istenen renge boyanır.</summary>
+    public static Sprite SolidPillSprite()
+    {
+        if (solidPillSprite != null) return solidPillSprite;
+        var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < 32; y++)
+        for (int x = 0; x < 32; x++)
+        {
+            float dx = x - 15.5f, dy = y - 15.5f;
+            float alpha = Mathf.Clamp01(16f - Mathf.Sqrt(dx * dx + dy * dy));
+            texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+        }
+        texture.Apply();
+        solidPillSprite = Sprite.Create(texture, new Rect(0, 0, 32, 32),
+            new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, new Vector4(15, 15, 15, 15));
+        return solidPillSprite;
+    }
+
     public static Button Button(Transform parent, string name, string label, bool gold,
         Vector2 min, Vector2 max, Vector2 low, Vector2 high, float fontSize)
     {

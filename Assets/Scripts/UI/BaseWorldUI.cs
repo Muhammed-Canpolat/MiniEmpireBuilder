@@ -312,7 +312,7 @@ public class BaseWorldUI : MonoBehaviour
             if (!building.isUnlocked)
             {
                 int reqLvl = building.GetRequiredMainBaseLevel();
-                upgradeCostText.text = $"Ana Üs Lv.{reqLvl} gerekli";
+                upgradeCostText.text = $"Ana Üs Sev. {reqLvl} gerekli";
             }
             else if (building.level >= maxLvl)
             {

@@ -152,15 +152,39 @@ public class EnemyController : MonoBehaviour
             visuals.ApplyTier(isElite, isBoss);
         }
 
+        AddGroundShadow();
+
         if (type == EnemyType.ShadowWolf && GetComponent<ShadowWolfBehaviour>() == null)
             gameObject.AddComponent<ShadowWolfBehaviour>();
         if (type == EnemyType.ForestWitch && GetComponent<ForestWitchBoss>() == null)
             gameObject.AddComponent<ForestWitchBoss>();
     }
 
+    private const float ShadowAlpha = 0.38f;
+    private SpriteRenderer groundShadow;
+
+    /// <summary>Ayak altında yumuşak gölge: düşman zeminden ayrışır.</summary>
+    private void AddGroundShadow()
+    {
+        if (groundShadow != null || spriteRenderer == null || spriteRenderer.sprite == null) return;
+        if (!spriteRenderer.sprite.name.StartsWith("enemy_")) return; // Cadı animatörle çizilir
+        Bounds local = spriteRenderer.sprite.bounds;
+        var shadow = new GameObject("GroundShadow");
+        shadow.transform.SetParent(transform, false);
+        shadow.transform.localPosition = new Vector3(local.center.x, local.min.y + local.size.y * 0.12f, 0.01f);
+        groundShadow = shadow.AddComponent<SpriteRenderer>();
+        groundShadow.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+        Vector2 circle = groundShadow.sprite.bounds.size;
+        shadow.transform.localScale = new Vector3(local.size.x * 0.62f / Mathf.Max(0.01f, circle.x),
+            local.size.y * 0.16f / Mathf.Max(0.01f, circle.y), 1f);
+        groundShadow.color = new Color(0f, 0f, 0f, ShadowAlpha);
+        groundShadow.sortingOrder = spriteRenderer.sortingOrder - 1;
+    }
+
     /// <summary>FogOfWar tarafından çağrılır; yalnız görseli etkiler.</summary>
     public void SetFogAlpha(float alpha)
     {
+        if (groundShadow != null) groundShadow.color = new Color(0f, 0f, 0f, ShadowAlpha * alpha);
         if (spriteRenderer != null)
         {
             Color c = spriteRenderer.color;

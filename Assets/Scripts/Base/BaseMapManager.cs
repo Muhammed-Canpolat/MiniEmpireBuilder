@@ -141,7 +141,7 @@ public class BaseMapManager : MonoBehaviour
             if (type == BuildingType.MainBase && label != null) label.text = $"{newLevel}";
             var badge = building.gameObject.transform.Find("ReadableLabel/LevelBadge/Text")
                 ?.GetComponent<TextMeshProUGUI>();
-            if (badge != null) badge.text = $"Lv.{newLevel}";
+            if (badge != null) badge.text = $"Sev. {newLevel}";
         }
         if (type != BuildingType.MainBase) return;
         if (BaseSceneSetup.Instance == null) return;
@@ -1154,7 +1154,9 @@ public class BaseMapManager : MonoBehaviour
         bgRect.anchorMax = Vector2.one;
         bgRect.offsetMin = bgRect.offsetMax = Vector2.zero;
         var image = bg.AddComponent<Image>();
-        image.color = gold ? ReferenceUiVisuals.Gold : new Color(0.078f, 0.067f, 0.051f, 0.85f);
+        image.sprite = gold ? ReferenceUiVisuals.SolidPillSprite() : ReferenceUiVisuals.PillSprite();
+        image.type = Image.Type.Sliced;
+        image.color = gold ? ReferenceUiVisuals.Gold : Color.white;
         image.raycastTarget = false;
         var words = new GameObject("Text");
         words.transform.SetParent(root.transform, false);
@@ -1168,7 +1170,8 @@ public class BaseMapManager : MonoBehaviour
         text.enableWordWrapping = false;
         text.fontStyle = FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
-        text.color = gold ? ReferenceUiVisuals.Background : ReferenceUiVisuals.Gold;
+        ReferenceUiVisuals.ApplyFont(text, gold ? 24f : 28f,
+            gold ? ReferenceUiVisuals.Background : ReferenceUiVisuals.Light, bodyBold: true);
         text.raycastTarget = false;
         if (!gold)
         {
@@ -1179,6 +1182,8 @@ public class BaseMapManager : MonoBehaviour
             badgeRect.anchorMax = new Vector2(0.99f, 0.95f);
             badgeRect.offsetMin = badgeRect.offsetMax = Vector2.zero;
             var badgeImage = badge.AddComponent<Image>();
+            badgeImage.sprite = ReferenceUiVisuals.SolidPillSprite();
+            badgeImage.type = Image.Type.Sliced;
             badgeImage.color = ReferenceUiVisuals.Gold;
             badgeImage.raycastTarget = false;
             var badgeText = new GameObject("Text");
@@ -1188,13 +1193,12 @@ public class BaseMapManager : MonoBehaviour
             badgeTextRect.anchorMax = Vector2.one;
             badgeTextRect.offsetMin = badgeTextRect.offsetMax = Vector2.zero;
             var badgeTmp = badgeText.AddComponent<TextMeshProUGUI>();
-            badgeTmp.text = levelText ?? "Lv.1";
+            badgeTmp.text = levelText ?? "Sev. 1";
             badgeTmp.fontSize = 16f;
             badgeTmp.enableAutoSizing = true;
             badgeTmp.fontSizeMin = 9f;
             badgeTmp.alignment = TextAlignmentOptions.Center;
-            badgeTmp.fontStyle = FontStyles.Bold;
-            badgeTmp.color = ReferenceUiVisuals.Background;
+            ReferenceUiVisuals.ApplyFont(badgeTmp, 16f, ReferenceUiVisuals.Background, bodyBold: true);
             badgeTmp.raycastTarget = false;
         }
     }
@@ -1317,7 +1321,7 @@ public class BaseMapManager : MonoBehaviour
         if (GameManager.Instance?.Buildings == null) return "";
         if (!GameManager.Instance.Buildings.ContainsKey(type)) return "";
         var bd = GameManager.Instance.Buildings[type];
-        return bd.isUnlocked ? $"Lv.{bd.level}" : "Kilitli";
+        return bd.isUnlocked ? $"Sev. {bd.level}" : "Kilitli";
     }
 
     public static Color GetBuildingColor(BuildingType type)

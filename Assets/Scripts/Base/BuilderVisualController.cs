@@ -34,7 +34,7 @@ public class BuilderVisualController : MonoBehaviour
 
         // Kulübenin altına etiket ekle
         BaseMapManager.CreateReadableLabel(hutTransform, "İnşaatçı", false,
-            sr.sprite.bounds.extents.y * scale + 0.34f, scale, "Lv.1");
+            sr.sprite.bounds.extents.y * scale + 0.34f, scale, "Sev. 1");
         hutTransform.Find("ReadableLabel")?.gameObject.SetActive(false);
 
         // 2. İnşaatçı Karakter Avatarini Ayarla (Avatars_04.png = ui_builder_avatar)
@@ -106,9 +106,7 @@ public class BuilderVisualController : MonoBehaviour
 
         var txt = zzzEffect.AddComponent<TextMeshProUGUI>();
         txt.text = "zzZ";
-        txt.color = new Color(0.85f, 0.9f, 1f);
-        txt.fontSize = 5f;
-        txt.fontStyle = FontStyles.Bold;
+        ReferenceUiVisuals.ApplyFont(txt, 5f, new Color(0.85f, 0.9f, 1f, 0.9f), bodyBold: true);
         txt.alignment = TextAlignmentOptions.Center;
 
         // Hafif yukarı sürükleme

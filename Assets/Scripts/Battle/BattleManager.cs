@@ -105,11 +105,12 @@ public class BattleManager : MonoBehaviour
             renderer.drawMode = SpriteDrawMode.Tiled;
             renderer.size = new Vector2(60f, 60f);
             renderer.sortingOrder = -100;
+            // Zemin önceki tonlardan belirgin açık: koyu düşman sprite'ları üzerinde seçilebilsin.
             renderer.color = BattleSession.Level?.kind == CampaignLevelKind.Boss
-                ? new Color(0.64f, 0.73f, 0.64f)
+                ? new Color(0.86f, 0.93f, 0.86f)
                 : BattleSession.IsCampaign
-                    ? Color.Lerp(new Color(0.82f, 0.78f, 0.72f), BattleSession.Region.colorTone, 0.15f)
-                    : new Color(0.82f, 0.78f, 0.72f);
+                    ? Color.Lerp(new Color(1f, 0.96f, 0.9f), BattleSession.Region.colorTone, 0.12f)
+                    : new Color(1f, 0.96f, 0.9f);
         }
         else
         {

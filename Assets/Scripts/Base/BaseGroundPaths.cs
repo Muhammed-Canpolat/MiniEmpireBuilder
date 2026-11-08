@@ -9,34 +9,82 @@ public sealed class BaseGroundPaths : MonoBehaviour
     public static BaseGroundPaths Instance { get; private set; }
     private Tilemap roadBaseMap;
     private Tilemap roadMap;
-    private Tile roadTile;
-    private Tile roadBaseTile;
-    private Texture2D roadTexture;
-    private Sprite roadSprite;
+    private readonly List<Tile> roadTiles = new List<Tile>();
+    private readonly List<Texture2D> roadTextures = new List<Texture2D>();
+    private readonly List<Sprite> roadSprites = new List<Sprite>();
+
+    // Yol lekesi hücreden taşar ki komşu hücreler kesintisiz, yuvarlak kenarlı bir patika oluştursun.
+    private const int RoadTexture = 40;
+    private const float RoadWorldSize = 1.42f;
+    private static readonly Color32 DirtBase = new Color32(0x9C, 0x7B, 0x50, 0xFF);
+    private static readonly Color32 DirtDark = new Color32(0x7C, 0x5E, 0x3C, 0xFF);
+    private static readonly Color32 DirtLight = new Color32(0xB6, 0x95, 0x63, 0xFF);
+    private static readonly Color32 Pebble = new Color32(0x93, 0x8D, 0x80, 0xFF);
 
     private void Awake()
     {
         Instance = this;
         roadBaseMap = CreateMap("StoneRoadBaseTilemap", -17);
         roadMap = CreateMap("StoneRoadTilemap", -16);
-        roadTile = ScriptableObject.CreateInstance<Tile>();
-        roadBaseTile = ScriptableObject.CreateInstance<Tile>();
-        var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
-        roadTexture = texture;
+        for (int variant = 0; variant < 3; variant++)
+        {
+            var texture = MakeDirtTexture(1337 + variant * 101);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, RoadTexture, RoadTexture),
+                new Vector2(0.5f, 0.5f), RoadTexture / RoadWorldSize);
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            tile.sprite = sprite;
+            tile.color = Color.white;
+            tile.flags = TileFlags.None;
+            roadTextures.Add(texture);
+            roadSprites.Add(sprite);
+            roadTiles.Add(tile);
+        }
+    }
+
+    /// <summary>Kenarı gürültülü, ortası opak, çakıllı toprak lekesi.</summary>
+    private static Texture2D MakeDirtTexture(int seed)
+    {
+        var random = new System.Random(seed);
+        var texture = new Texture2D(RoadTexture, RoadTexture, TextureFormat.RGBA32, false);
         texture.filterMode = FilterMode.Bilinear;
-        for (int y = 0; y < 32; y++)
-        for (int x = 0; x < 32; x++)
-            texture.SetPixel(x, y, new Color32(0x8A, 0x7A, 0x5A, 0xFF));
+        texture.wrapMode = TextureWrapMode.Clamp;
+        float half = RoadTexture * 0.5f;
+        float phase = (float)random.NextDouble() * 6.28f;
+        var pixels = new Color32[RoadTexture * RoadTexture];
+        for (int y = 0; y < RoadTexture; y++)
+        for (int x = 0; x < RoadTexture; x++)
+        {
+            float dx = (x + 0.5f - half) / half, dy = (y + 0.5f - half) / half;
+            float radius = Mathf.Sqrt(dx * dx + dy * dy);
+            float angle = Mathf.Atan2(dy, dx);
+            // Organik kenar: açıya bağlı hafif dalga.
+            float edge = 0.86f + 0.06f * Mathf.Sin(angle * 3f + phase) + 0.04f * Mathf.Sin(angle * 7f - phase);
+            float alpha = Mathf.Clamp01((edge - radius) / 0.16f);
+            float noise = (float)random.NextDouble();
+            Color color = noise < 0.18f ? (Color)DirtDark : noise > 0.9f ? (Color)DirtLight : (Color)DirtBase;
+            color = Color.Lerp(color, DirtDark, Mathf.Clamp01((radius - 0.55f) / 0.35f) * 0.45f);
+            color.a = alpha;
+            pixels[y * RoadTexture + x] = color;
+        }
+        // Birkaç çakıl taşı.
+        int pebbles = 3 + random.Next(3);
+        for (int i = 0; i < pebbles; i++)
+        {
+            int cx = 10 + random.Next(RoadTexture - 20), cy = 10 + random.Next(RoadTexture - 20);
+            int r = 1 + random.Next(2);
+            for (int y = -r; y <= r; y++)
+            for (int x = -r; x <= r; x++)
+            {
+                if (x * x + y * y > r * r + 1) continue;
+                int index = (cy + y) * RoadTexture + cx + x;
+                Color32 shade = y > 0 ? new Color32(0xAE, 0xA9, 0x9C, 0xFF) : Pebble;
+                shade.a = pixels[index].a;
+                pixels[index] = shade;
+            }
+        }
+        texture.SetPixels32(pixels);
         texture.Apply();
-        var sprite = Sprite.Create(texture, new Rect(0, 0, 32, 32),
-            new Vector2(0.5f, 0.5f), 32f);
-        roadSprite = sprite;
-        roadBaseTile.sprite = sprite;
-        roadBaseTile.color = Color.white;
-        roadBaseTile.flags = TileFlags.None;
-        roadTile.sprite = Resources.Load<DecorData>("Decor/stone_path")?.sprite ?? sprite;
-        roadTile.color = Color.white;
-        roadTile.flags = TileFlags.None;
+        return texture;
     }
 
     private Tilemap CreateMap(string name, int order)
@@ -51,10 +99,9 @@ public sealed class BaseGroundPaths : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
-        if (roadTile != null) Destroy(roadTile);
-        if (roadBaseTile != null) Destroy(roadBaseTile);
-        if (roadSprite != null) Destroy(roadSprite);
-        if (roadTexture != null) Destroy(roadTexture);
+        foreach (var tile in roadTiles) if (tile != null) Destroy(tile);
+        foreach (var sprite in roadSprites) if (sprite != null) Destroy(sprite);
+        foreach (var texture in roadTextures) if (texture != null) Destroy(texture);
     }
 
     public void Refresh()
@@ -92,8 +139,9 @@ public sealed class BaseGroundPaths : MonoBehaviour
             if (building == main) continue;
             foreach (var cell in AStar(start, Access(building, blocked, bounds), blocked, bounds))
             {
-                roadBaseMap.SetTile(new Vector3Int(cell.x, cell.y, 0), roadBaseTile);
-                roadMap.SetTile(new Vector3Int(cell.x, cell.y, 0), roadTile);
+                // Hücreye göre sabit varyant: yol her yenilemede aynı görünür.
+                int variant = Mathf.Abs(cell.x * 73856093 ^ cell.y * 19349663) % roadTiles.Count;
+                roadMap.SetTile(new Vector3Int(cell.x, cell.y, 0), roadTiles[variant]);
             }
         }
     }

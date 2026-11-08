@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 public class TooltipSystem : MonoBehaviour
 {
     private const float HoldDuration = 0.5f;
-    private const string DefaultMessage = "Acmak icin: Savas Lv.3 gerekli";
+    private const string DefaultMessage = "Açmak için: Ana Üs Sev. 3 gerekli";
 
     [SerializeField] private GameObject tooltipPanel;
     [SerializeField] private TextMeshProUGUI tooltipText;
