@@ -23,39 +23,15 @@ public sealed class VictoryReferenceView : MonoBehaviour
         panel = inner;
         inner.anchorMin = inner.anchorMax = new Vector2(0.5f, 0.5f);
         inner.pivot = new Vector2(0.5f, 0.5f);
-        inner.sizeDelta = new Vector2(350, BattleSession.IsCampaign ? 550 : 500);
+        bool campaign = BattleSession.IsCampaign;
+        float panelWidth = 360f;
+        float panelHeight = campaign ? 640f : 560f;
+        inner.sizeDelta = new Vector2(panelWidth, panelHeight);
         inner.anchoredPosition = Vector2.zero;
-        inner.GetComponent<Image>().color = ReferenceUiVisuals.Panel;
-        inner.gameObject.AddComponent<Outline>().effectColor = ReferenceUiVisuals.Border;
-        var frameSprites = Resources.LoadAll<Sprite>("Sprites/Intro/intro_button");
-        if (frameSprites.Length > 0)
-        {
-            Sprite source = frameSprites[0];
-            var rect = source.rect;
-            float strip = rect.height * 0.29f;
-            var top = ReferenceUiVisuals.Image(inner, "OrnateHeader", new Vector2(0.5f, 1),
-                new Vector2(0.5f, 1), new Vector2(-165, -62), new Vector2(165, 0), Color.white);
-            top.sprite = Sprite.Create(source.texture,
-                new Rect(rect.x, rect.yMax - strip, rect.width, strip), new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
-            var bottom = ReferenceUiVisuals.Image(inner, "OrnateFooter", new Vector2(0.5f, 0),
-                new Vector2(0.5f, 0), new Vector2(-165, 0), new Vector2(165, 62), Color.white);
-            bottom.sprite = Sprite.Create(source.texture,
-                new Rect(rect.x, rect.y, rect.width, strip), new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
-            float sideWidth = rect.width * 0.16f;
-            float sideHeight = rect.height - strip * 2f;
-            var left = ReferenceUiVisuals.Image(inner, "OrnateLeft", new Vector2(0, 0),
-                new Vector2(0, 1), new Vector2(0, 62), new Vector2(34, -62), Color.white);
-            left.sprite = Sprite.Create(source.texture,
-                new Rect(rect.x, rect.y + strip, sideWidth, sideHeight),
-                new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
-            var right = ReferenceUiVisuals.Image(inner, "OrnateRight", new Vector2(1, 0),
-                new Vector2(1, 1), new Vector2(-34, 62), new Vector2(0, -62), Color.white);
-            right.sprite = Sprite.Create(source.texture,
-                new Rect(rect.xMax - sideWidth, rect.y + strip, sideWidth, sideHeight),
-                new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
-        }
-        ReferenceUiVisuals.Image(inner, "BottomRule", new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-            new Vector2(-165, 5), new Vector2(165, 8), ReferenceUiVisuals.Border);
+        // Kök Image yalnız ışın hedefi; görünen dolgu çerçevenin içine çekilir ki
+        // çerçeve köşelerinin saydam kısımlarından taşmasın.
+        inner.GetComponent<Image>().color = Color.clear;
+        BuildOrnateFrame(inner, panelWidth);
 
         var border = inner.Find("EndBorder");
         if (border != null) border.gameObject.SetActive(false);
@@ -81,11 +57,11 @@ public sealed class VictoryReferenceView : MonoBehaviour
         string[] labels = { "Düşman altını", "Zafer ödülü", "İnşa maliyeti", "Üsse aktarılan" };
         for (int i = 0; i < 4; i++)
         {
-            float y = BattleSession.IsCampaign
-                ? (i == 3 ? -366 : -260 - i * 38)
-                : (i == 3 ? -330 : -224 - i * 38);
+            // Satırlar 40 birim aralıklı; toplam satırı ayraçla birlikte 48 birim aşağıda.
+            float first = campaign ? -258f : -226f;
+            float y = i == 3 ? first - 2 * 40f - 48f : first - i * 40f;
             var row = ReferenceUiVisuals.Rect(inner, "ResultRow" + i, new Vector2(0.5f, 1), new Vector2(0.5f, 1),
-                new Vector2(-135, y - 34), new Vector2(135, y));
+                new Vector2(-112, y - 34), new Vector2(112, y));
             rows[i] = row.gameObject.AddComponent<CanvasGroup>();
             ReferenceUiVisuals.Text(row, "Label", labels[i], i == 3 ? 22 : 19,
                 i == 3 ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
@@ -95,15 +71,15 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 new Vector2(0.72f, 0), Vector2.one, Vector2.zero, Vector2.zero, bodyBold: true);
             if (i == 3)
                 ReferenceUiVisuals.Image(inner, "ResultDivider", new Vector2(0.5f, 1), new Vector2(0.5f, 1),
-                    new Vector2(-135, y + 3), new Vector2(135, y + 5), ReferenceUiVisuals.Border);
+                    new Vector2(-112, y + 6), new Vector2(112, y + 8), ReferenceUiVisuals.Border);
         }
 
         returnButton = existingReturn;
         var buttonRt = (RectTransform)existingReturn.transform;
         buttonRt.anchorMin = buttonRt.anchorMax = new Vector2(0.5f, 0f);
         buttonRt.pivot = new Vector2(0.5f, 0f);
-        buttonRt.sizeDelta = new Vector2(270, 56);
-        buttonRt.anchoredPosition = new Vector2(0, BattleSession.IsCampaign ? 78 : 70);
+        buttonRt.sizeDelta = new Vector2(236, 56);
+        buttonRt.anchoredPosition = new Vector2(0, campaign ? 126 : 70);
         ReferenceUiVisuals.ApplyButtonSkin(existingReturn, true);
         var text = existingReturn.GetComponentInChildren<TextMeshProUGUI>();
         if (text != null)
@@ -126,9 +102,63 @@ public sealed class VictoryReferenceView : MonoBehaviour
             }
             retryButton = ReferenceUiVisuals.Button(inner, "RetryCampaignBattle", "TEKRAR OYNA", false,
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-                new Vector2(-135, 13), new Vector2(135, 66), 17);
+                new Vector2(-118, 66), new Vector2(118, 118), 17);
             retryButton.onClick.AddListener(() => GameManager.Instance.StartBattle());
         }
+    }
+
+    private const float FrameFillInset = 0.55f;
+
+    /// <summary>
+    /// Süslü çerçeve: üst/alt şeritler köşeleriyle birlikte panel genişliğine oranlı
+    /// oturur, yan sütunlar uzatılmak yerine döşenir. Koyu dolgu çerçevenin içinde kalır.
+    /// </summary>
+    private static void BuildOrnateFrame(RectTransform inner, float panelWidth)
+    {
+        var frameSprites = Resources.LoadAll<Sprite>("Sprites/Intro/intro_button");
+        if (frameSprites.Length == 0)
+        {
+            ReferenceUiVisuals.Image(inner, "Fill", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
+                ReferenceUiVisuals.Panel).transform.SetAsFirstSibling();
+            inner.gameObject.AddComponent<Outline>().effectColor = ReferenceUiVisuals.Border;
+            return;
+        }
+        Sprite source = frameSprites[0];
+        Rect rect = source.rect;
+        float scale = panelWidth / rect.width;              // kaynak piksel → UI birimi
+        float strip = rect.height * 0.29f;
+        float sideWidth = rect.width * 0.16f;
+        float stripUi = strip * scale;
+        float sideUi = sideWidth * scale;
+
+        var fill = ReferenceUiVisuals.Image(inner, "Fill", Vector2.zero, Vector2.one,
+            new Vector2(sideUi * FrameFillInset, stripUi * FrameFillInset),
+            new Vector2(-sideUi * FrameFillInset, -stripUi * FrameFillInset), ReferenceUiVisuals.Panel);
+        fill.transform.SetAsFirstSibling();
+
+        Image Piece(string name, Rect crop, Vector2 min, Vector2 max, Vector2 low, Vector2 high, bool tiled)
+        {
+            var image = ReferenceUiVisuals.Image(inner, name, min, max, low, high, Color.white);
+            image.sprite = Sprite.Create(source.texture, crop, new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
+            if (tiled)
+            {
+                image.type = Image.Type.Tiled;
+                // Döşeme, üst/alt şeritle aynı ölçekte tekrar etsin.
+                image.pixelsPerUnitMultiplier = 1f / scale *
+                    (100f / Mathf.Max(1f, source.pixelsPerUnit));
+            }
+            return image;
+        }
+
+        float sideHeight = rect.height - strip * 2f;
+        Piece("OrnateLeft", new Rect(rect.x, rect.y + strip, sideWidth, sideHeight),
+            new Vector2(0, 0), new Vector2(0, 1), new Vector2(0, stripUi - 1), new Vector2(sideUi, -stripUi + 1), true);
+        Piece("OrnateRight", new Rect(rect.xMax - sideWidth, rect.y + strip, sideWidth, sideHeight),
+            new Vector2(1, 0), new Vector2(1, 1), new Vector2(-sideUi, stripUi - 1), new Vector2(0, -stripUi + 1), true);
+        Piece("OrnateHeader", new Rect(rect.x, rect.yMax - strip, rect.width, strip),
+            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -stripUi), Vector2.zero, false);
+        Piece("OrnateFooter", new Rect(rect.x, rect.y, rect.width, strip),
+            new Vector2(0, 0), new Vector2(1, 0), Vector2.zero, new Vector2(0, stripUi), false);
     }
 
     public void Present(bool won, int enemyGold, int bonus, int buildCost)

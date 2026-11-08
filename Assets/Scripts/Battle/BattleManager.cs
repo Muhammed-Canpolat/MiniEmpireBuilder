@@ -24,6 +24,9 @@ public class BattleManager : MonoBehaviour
     private int currentWaveIndex = 0;
     private int enemiesAlive = 0;
     private int totalGoldEarned = 0;
+    // Kahraman üssün sağ altında başlar: üssün ve yuvaların üstüne binmez (yuva tetik yarıçapı 1.35).
+    private static readonly Vector3 HeroSpawnPosition = new Vector3(2.6f, -1.7f, 0f);
+    public int GoldEarned => totalGoldEarned;
     private bool battleActive = false;
     private bool battleWon = false;
     private int lastStars;
@@ -188,7 +191,7 @@ public class BattleManager : MonoBehaviour
                     scale = new Vector3(1.0f, 1.0f, 1f);
 
                 heroObj = CreateSpriteObject("AnaSavasci", heroSprite,
-                    new Vector3(-2f, 0, 0), scale);
+                    HeroSpawnPosition, scale);
             }
             else
             {
@@ -209,7 +212,7 @@ public class BattleManager : MonoBehaviour
                     }
                 }
                 heroObj = CreateSimpleSprite("AnaSavasci", heroColor,
-                    new Vector3(-2f, 0, 0), new Vector3(0.8f, 0.8f, 1f));
+                    HeroSpawnPosition, new Vector3(0.8f, 0.8f, 1f));
             }
 
             heroObj.AddComponent<HeroController>();
@@ -300,9 +303,11 @@ public class BattleManager : MonoBehaviour
     {
         if (GameManager.Instance == null)
             return;
-        CreateBuildSlot(new Vector3(-3.2f, 2.2f, 0f), BuildingType.ArcherTower, archerBattleBuildCost);
-        CreateBuildSlot(new Vector3(0.2f, 2.2f, 0f), BuildingType.CannonTower, cannonBattleBuildCost);
-        CreateBuildSlot(new Vector3(-1.5f, -3.0f, 0f), BuildingType.Monastery, monasteryBattleBuildCost);
+        // Ana Üs görseli yaklaşık x∈[-1.9, 1.9], y∈[-1.0, 1.6] kaplar (BattleActorPresentation).
+        // Yuvalar (yarıçap 0.95 + alt etiket) bu alanın dışında, üssün iki üst köşesi ve altında.
+        CreateBuildSlot(new Vector3(-2.9f, 2.4f, 0f), BuildingType.ArcherTower, archerBattleBuildCost);
+        CreateBuildSlot(new Vector3(2.9f, 2.4f, 0f), BuildingType.CannonTower, cannonBattleBuildCost);
+        CreateBuildSlot(new Vector3(0f, -2.9f, 0f), BuildingType.Monastery, monasteryBattleBuildCost);
     }
 
     private void CreateBuildSlot(Vector3 position, BuildingType type, int cost)

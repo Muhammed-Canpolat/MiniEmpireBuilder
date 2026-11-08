@@ -60,13 +60,31 @@ public class BattleBuildSlot : MonoBehaviour
         }
         if (choiceCanvas == null) CreateChoicePanel();
         choiceCanvas.SetActive(true);
-        UpdateChoices();
-        var screen = Camera.main.WorldToScreenPoint(hero.transform.position + Vector3.up * 2.3f);
-        var anchor = new Vector2(Mathf.Clamp(screen.x / Screen.width, 168f / 390f, 1f - 168f / 390f),
-            Mathf.Clamp(screen.y / Screen.height, 85f / 844f, 1f - 85f / 844f));
-        choicePanel.anchorMin = choicePanel.anchorMax = anchor;
-        choicePanel.anchoredPosition = Vector2.zero;
+        int visible = UpdateChoices();
+        bool infoOnly = visible == 0;
+        choicePanel.gameObject.SetActive(!infoOnly);
+        infoPill.gameObject.SetActive(infoOnly);
+        if (infoOnly) infoText.text = InfoMessage();
+        // Menü yuvanın üstünde durur; kahramanı ve yaklaşan düşmanı kapatmaz.
+        RectTransform target = infoOnly ? infoPill : choicePanel;
+        Vector2 half = target.sizeDelta * 0.5f;
+        var screen = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 1.7f);
+        var scaler = choiceCanvas.GetComponent<RectTransform>();
+        float w = Mathf.Max(1f, scaler.rect.width), h = Mathf.Max(1f, scaler.rect.height);
+        var anchor = new Vector2(
+            Mathf.Clamp(screen.x / Screen.width, (half.x + 8f) / w, 1f - (half.x + 8f) / w),
+            // Alt panel (~150) ve üst HUD (~160) ile çakışmasın; panelin tabanı çapada durur.
+            Mathf.Clamp(screen.y / Screen.height, 150f / h, 1f - (half.y * 2f + 160f) / h));
+        target.anchorMin = target.anchorMax = anchor;
+        target.anchoredPosition = new Vector2(0f, half.y);
     }
+
+    private const float ChoiceWidth = 104f;
+    private const float ChoiceHeight = 84f;
+    private const float ChoiceGap = 6f;
+    private RectTransform infoPill;
+    private TextMeshProUGUI infoText;
+    private readonly TextMeshProUGUI[] choiceTexts = new TextMeshProUGUI[3];
 
     private void CreateChoicePanel()
     {
@@ -77,52 +95,80 @@ public class BattleBuildSlot : MonoBehaviour
         canvas.sortingOrder = 50;
         ReferenceUiVisuals.ConfigureCanvas(choiceCanvas.GetComponent<CanvasScaler>());
         choicePanel = ReferenceUiVisuals.Rect(choiceCanvas.transform, "SlotChoicePanel",
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(-168, -62), new Vector2(168, 62));
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         var background = choicePanel.gameObject.AddComponent<Image>();
-        background.color = ReferenceUiVisuals.Panel;
-        var outline = choicePanel.gameObject.AddComponent<Outline>();
-        outline.effectColor = ReferenceUiVisuals.Gold;
-        outline.effectDistance = new Vector2(2, -2);
+        background.sprite = ReferenceUiVisuals.ToastSprite();
+        background.type = Image.Type.Sliced;
         for (int i = 0; i < choices.Length; i++)
         {
             int captured = i;
             choices[i] = ReferenceUiVisuals.Button(choicePanel, "BuildChoice" + i, "",
-                false,
-                new Vector2(0.02f + i * 0.33f, 0.08f),
-                new Vector2(0.32f + i * 0.33f, 0.92f), Vector2.zero, Vector2.zero, 12);
+                true, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero, 13);
             choices[i].onClick.AddListener(() => TryBuild(types[captured]));
+            choiceTexts[i] = choices[i].GetComponentInChildren<TextMeshProUGUI>();
+            choiceTexts[i].characterSpacing = 0.5f;
+            choiceTexts[i].lineSpacing = -8f;
         }
+
+        // Kurulabilecek yapı yoksa: ekranı kapatmayan, dokunmayı engellemeyen bilgi balonu.
+        infoPill = ReferenceUiVisuals.Rect(choiceCanvas.transform, "SlotInfoPill",
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        infoPill.sizeDelta = new Vector2(250f, 50f);
+        var pillImage = infoPill.gameObject.AddComponent<Image>();
+        pillImage.sprite = ReferenceUiVisuals.ToastSprite();
+        pillImage.type = Image.Type.Sliced;
+        pillImage.raycastTarget = false;
+        infoText = ReferenceUiVisuals.Text(infoPill, "Text", "",
+            13, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(12f, 4f), new Vector2(-12f, -4f));
+        infoPill.gameObject.SetActive(false);
     }
 
-    private void UpdateChoices()
+    /// <summary>Yalnız Ana Üs'te sahip olunan yapıları gösterir; görünen seçenek sayısını döndürür.</summary>
+    private int UpdateChoices()
     {
+        int visible = 0;
         for (int i = 0; i < choices.Length; i++)
         {
             var type = types[i];
-            int cost = battleManager.GetBuildCost(type);
             int owned = battleManager.GetBattleBuildAllowance(type);
+            bool show = owned > 0;
+            choices[i].gameObject.SetActive(show);
+            if (!show) continue;
+
+            int cost = battleManager.GetBuildCost(type);
             int remaining = battleManager.GetBattleBuildRemaining(type);
-            bool unlocked = GameManager.Instance != null
-                && GameManager.Instance.Buildings.TryGetValue(type, out var data) && data.isUnlocked;
-            choices[i].interactable = battleManager.CanBuildFromSlot(type, cost);
+            bool canBuild = battleManager.CanBuildFromSlot(type, cost);
+            choices[i].interactable = canBuild;
             var group = choices[i].GetComponent<CanvasGroup>();
             if (group == null) group = choices[i].gameObject.AddComponent<CanvasGroup>();
-            group.alpha = choices[i].interactable ? 1f : 0.5f;
-            var text = choices[i].GetComponentInChildren<TextMeshProUGUI>();
-            if (text != null)
-            {
-                string name = type == BuildingType.ArcherTower ? "OKÇU"
-                    : type == BuildingType.CannonTower ? "TOPÇU" : "MANASTIR";
-                int level = type == BuildingType.ArcherTower ? 2 : type == BuildingType.CannonTower ? 3 : 4;
-                string instruction = owned == 0
-                    ? $"Ana Üste {Name(type)} binası kur"
-                    : remaining == 0 ? $"Ana Üste yeni {Name(type)} binası kur" : "";
-                text.text = !unlocked ? $"SEV. {level}\n{remaining}/{owned}\n{instruction}"
-                    : $"{name} {cost}\n{remaining}/{owned}\n{instruction}";
-                text.fontSize = instruction.Length > 0 ? 10 : 13;
-            }
+            group.alpha = canBuild ? 1f : 0.55f;
+
+            string status = remaining <= 0 ? "Hak kalmadı"
+                : battleManager.GoldEarned < cost ? "Altın yetersiz"
+                : $"{remaining}/{owned} hak";
+            choiceTexts[i].text = UiStrings.Upper(Name(type)) +
+                $"\n<size=16>{cost}</size> <size=11>ALTIN</size>\n<size=10>{UiStrings.Upper(status)}</size>";
+
+            var rect = (RectTransform)choices[i].transform;
+            float x = 8f + visible * (ChoiceWidth + ChoiceGap);
+            rect.offsetMin = new Vector2(x, -ChoiceHeight * 0.5f);
+            rect.offsetMax = new Vector2(x + ChoiceWidth, ChoiceHeight * 0.5f);
+            visible++;
         }
+        choicePanel.sizeDelta = new Vector2(16f + visible * ChoiceWidth + Mathf.Max(0, visible - 1) * ChoiceGap,
+            ChoiceHeight + 16f);
+        return visible;
+    }
+
+    private static string InfoMessage()
+    {
+        bool archerUnlocked = GameManager.Instance != null &&
+            GameManager.Instance.Buildings.TryGetValue(BuildingType.ArcherTower, out var archer) &&
+            archer.isUnlocked;
+        return archerUnlocked
+            ? "Kule kurmak için önce\n<color=#F0C24A>Ana Üs'te Okçu binası</color> inşa et"
+            : "Kuleler <color=#F0C24A>Ana Üs Sev. 2</color> ile açılır";
     }
 
     private static string Name(BuildingType type) => type == BuildingType.ArcherTower

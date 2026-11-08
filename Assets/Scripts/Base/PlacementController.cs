@@ -23,6 +23,7 @@ public class PlacementController : MonoBehaviour
     private Vector3 _lastValidWorldPos;
     private Vector3 _moveOrigin;
     private Vector3 _moveScale;
+    private float _moveOriginalAlpha = 1f;
     private GameObject _moveGrid;
     private GameObject _footprint;
     private GameObject _undoToast;
@@ -74,14 +75,19 @@ public class PlacementController : MonoBehaviour
         _lastValidWorldPos = _moveOrigin;
         obj.gameObject.transform.DOScale(_moveScale * 1.1f, 0.12f);
 
-        // Orijinal objeyi hafif saydam yap
+        // Orijinal objeyi hafif saydam yap. Maden gibi kök renderer'ı görünmez
+        // (alfa 0) olan yapılarda alfa korunur; aksi halde gizli kare görünür olur.
         var sr = obj.gameObject.GetComponent<SpriteRenderer>();
+        _moveOriginalAlpha = sr != null ? sr.color.a : 1f;
         if (sr != null)
         {
-            Color c = sr.color; c.a = 0.5f; sr.color = c;
+            Color c = sr.color; c.a = _moveOriginalAlpha * 0.5f; sr.color = c;
         }
 
-        CreateGhost(BaseMapManager.GetBuildingColor(_placingBuildingType), sr?.sprite);
+        // Hayalet, binanın ekranda görünen asıl görselini gerçek boyutunda kullanır.
+        SpriteRenderer visual = FindVisibleRenderer(obj.gameObject, sr);
+        CreateGhost(BaseMapManager.GetBuildingColor(_placingBuildingType), visual?.sprite,
+            visual != null ? visual.transform.lossyScale : (Vector3?)null);
         CreateMoveGrid();
         _ghostObj.transform.position = _moveOrigin;
         _footprint.transform.position = _moveOrigin;
@@ -103,7 +109,7 @@ public class PlacementController : MonoBehaviour
             var sr = _movingObject.gameObject.GetComponent<SpriteRenderer>();
             if (sr != null)
             {
-                Color c = sr.color; c.a = 1f; sr.color = c;
+                Color c = sr.color; c.a = _moveOriginalAlpha; sr.color = c;
             }
         }
 
@@ -287,10 +293,28 @@ public class PlacementController : MonoBehaviour
 
     // ==================== YARDIMCI ====================
 
-    private void CreateGhost(Color fallbackColor, Sprite realSprite = null)
+    /// <summary>Kök renderer görünmezse (maden) görünen en büyük alt görseli döndürür.</summary>
+    private static SpriteRenderer FindVisibleRenderer(GameObject root, SpriteRenderer rootRenderer)
+    {
+        if (rootRenderer != null && rootRenderer.sprite != null && rootRenderer.color.a > 0.01f)
+            return rootRenderer;
+        SpriteRenderer best = null;
+        float bestArea = 0f;
+        foreach (var candidate in root.GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (candidate == rootRenderer || candidate.sprite == null || candidate.color.a < 0.5f) continue;
+            if (candidate.GetComponent<Animator>() != null) continue; // işçi/asker değil, yapının kendisi
+            Vector3 size = candidate.bounds.size;
+            float area = size.x * size.y;
+            if (area > bestArea) { bestArea = area; best = candidate; }
+        }
+        return best;
+    }
+
+    private void CreateGhost(Color fallbackColor, Sprite realSprite = null, Vector3? worldScale = null)
     {
         _ghostObj = new GameObject("GhostPlacement");
-        _ghostObj.transform.localScale = CalculateGhostScale(_placingBuildingType, realSprite);
+        _ghostObj.transform.localScale = worldScale ?? CalculateGhostScale(_placingBuildingType, realSprite);
 
         _ghostRenderer = _ghostObj.AddComponent<SpriteRenderer>();
         _ghostRenderer.sortingOrder = 100;
