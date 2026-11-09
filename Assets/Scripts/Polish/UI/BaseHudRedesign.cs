@@ -54,7 +54,7 @@ public static class BaseHudRedesign
         var gold = hud.Find("GoldPill") as RectTransform;
         if (gold != null)
         {
-            SetAnchors(gold, new Vector2(0.025f, 0.931f), new Vector2(0.30f, 0.983f));
+            SetAnchors(gold, new Vector2(0.025f, 0.931f), new Vector2(0.27f, 0.983f));
             var bg = gold.GetComponent<Image>();
             if (bg != null)
             {
@@ -76,6 +76,30 @@ public static class BaseHudRedesign
             }
             var amountText = amount != null ? amount.GetComponent<TextMeshProUGUI>() : null;
             if (amountText != null) amountText.alignment = TextAlignmentOptions.Left;
+        }
+
+        // Elmas: altının yanında koyu hap; dokununca nasıl kazanılacağını söyler.
+        if (hud.Find("GemPill") == null)
+        {
+            var gemButton = ReferenceUiVisuals.Button(hud, "GemPill", "", false,
+                new Vector2(0.28f, 0.936f), new Vector2(0.415f, 0.978f), Vector2.zero, Vector2.zero, 12);
+            var gemBg = gemButton.GetComponent<Image>();
+            gemBg.sprite = ReferenceUiVisuals.PillSprite();
+            gemBg.type = Image.Type.Sliced;
+            var oldLabel = gemButton.transform.Find("Label");
+            if (oldLabel != null) Object.Destroy(oldLabel.gameObject);
+            var gemIcon = ReferenceUiVisuals.Image(gemButton.transform, "GemIcon", new Vector2(0.05f, 0.12f),
+                new Vector2(0.38f, 0.88f), Vector2.zero, Vector2.zero, Color.white);
+            gemIcon.sprite = GemIcon.Sprite;
+            gemIcon.preserveAspect = true;
+            var gemText = ReferenceUiVisuals.Text(gemButton.transform, "GemText", "0", 15,
+                ReferenceUiVisuals.Light, TextAlignmentOptions.Left, new Vector2(0.40f, 0.05f),
+                new Vector2(0.96f, 0.95f), Vector2.zero, Vector2.zero, bodyBold: true);
+            var counter = gemButton.gameObject.AddComponent<GemCounter>();
+            counter.Bind(gemText);
+            gemButton.onClick.AddListener(() => Object.FindFirstObjectByType<BaseSceneSetup>()?.ShowHudToast(
+                counter.RegisterTestTap() ? "[TEST] +100 elmas"
+                    : "Elmas: giriş ödülleri ve mağazadan kazanılır; inşaatçı ve hızlandırmada kullanılır"));
         }
 
         // Eski "ANA ÜS · SEV. N" yazısı yerine arma.

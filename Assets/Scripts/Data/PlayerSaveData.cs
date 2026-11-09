@@ -11,6 +11,7 @@ public class PlayerSaveData
     public int saveVersion = 0;
     // Genel
     public int gold = 50;                   // Başlangıç altını
+    public int gems = 0;                    // Elmas (değerli para birimi)
     public int currentBattleLevel = 1;      // Şu anki savaş seviyesi
     public int highestBattleLevel = 1;      // Ulaşılan en yüksek seviye
 
@@ -39,8 +40,12 @@ public class PlayerSaveData
 
     // Eski (v3) inşaatçı durumu: yalnız geçiş için okunur.
     public BuilderSaveData builderState = new BuilderSaveData();
-    // v4: gerçek saate bağlı inşaatçı görevi; oyun kapalıyken de ilerler.
+    // v4: tek inşaatçının görevi. v5'ten itibaren yalnız geçiş için okunur.
     public BuilderTaskSave builderTask = new BuilderTaskSave();
+    // v5: birden çok inşaatçı (1–5). Her görev builderIndex ile bir inşaatçıya bağlıdır.
+    public int builderCount = 1;
+    public List<BuilderTaskSave> builderTasks = new List<BuilderTaskSave>();
+    public List<BuilderHutSave> builderHuts = new List<BuilderHutSave>();
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
@@ -48,7 +53,7 @@ public class PlayerSaveData
     public static PlayerSaveData CreateNew(WeaponType selectedWeapon)
     {
         PlayerSaveData data = new PlayerSaveData();
-        data.saveVersion = 4;
+        data.saveVersion = CurrentVersion;
 
         // Ana Savaşçı
         data.hero = new HeroData();
@@ -108,11 +113,26 @@ public class PlayerSaveData
         data.campaignProgress = new List<CampaignLevelProgress>();
         data.builderState = new BuilderSaveData();
         data.builderTask = new BuilderTaskSave();
+        data.builderCount = 1;
+        data.builderTasks = new List<BuilderTaskSave>();
+        data.builderHuts = new List<BuilderHutSave>();
+        data.gems = 0;
         data.buildableSize = 17;
         data.removedFenceIds = new List<string>();
 
         return data;
     }
+
+    public const int CurrentVersion = 5;
+}
+
+/// <summary>İnşaatçı kulübesinin konumu (index = inşaatçı sırası). Konum yoksa varsayılan yere konur.</summary>
+[Serializable]
+public class BuilderHutSave
+{
+    public bool hasPosition;
+    public float x;
+    public float y;
 }
 
 /// <summary>
@@ -166,12 +186,13 @@ public class BuilderSaveData
 }
 
 /// <summary>
-/// Tek inşaatçının görevi. kind: "build" (yeni yapı), "upgrade" (slotId'deki yapıyı
+/// Bir inşaatçının görevi. kind: "build" (yeni yapı), "upgrade" (slotId'deki yapıyı
 /// bir seviye yükselt), "remove" (kaldırma). Süre UTC tick ile tutulur.
 /// </summary>
 [Serializable]
 public class BuilderTaskSave
 {
+    public int builderIndex;
     public string kind = "";
     public string label = "";
     public string slotId = "";
@@ -302,6 +323,25 @@ public static class SaveSystem
                 data.saveVersion = 4;
                 Save(data);
             }
+            if (data.builderTasks == null) data.builderTasks = new List<BuilderTaskSave>();
+            if (data.builderHuts == null) data.builderHuts = new List<BuilderHutSave>();
+            if (data.saveVersion < 5)
+            {
+                // Tek görev listeye taşınır; 1 inşaatçı ve 0 elmasla devam edilir.
+                data.builderTasks.Clear();
+                if (data.builderTask != null && data.builderTask.IsActive)
+                {
+                    data.builderTask.builderIndex = 0;
+                    data.builderTasks.Add(data.builderTask);
+                }
+                data.builderTask = new BuilderTaskSave();
+                data.builderCount = 1;
+                data.saveVersion = 5;
+                Save(data);
+            }
+            data.builderCount = Mathf.Clamp(data.builderCount, 1, Progression.MaxBuilders);
+            data.gems = Mathf.Max(0, data.gems);
+            data.builderTasks.RemoveAll(task => task == null || !task.IsActive);
             return data;
         }
 

@@ -250,6 +250,22 @@ public static class Progression
     public const int MaxLevel = 15;
     public const int LevelsPerColorTier = 3;
 
+    // ==================== İNŞAATÇILAR ====================
+    public const int MaxBuilders = 5;
+    /// <summary>2. inşaatçının (altınla) açıldığı Ana Üs seviyesi.</summary>
+    public const int SecondBuilderMainBaseLevel = 5;
+
+    /// <summary>
+    /// n. inşaatçının bedeli. 2.: Ana Üs 5→6 yükseltmesi kadar altın; 3./4./5.: 100/200/300 elmas.
+    /// </summary>
+    public static (int gold, int gems) BuilderCost(int builderNumber)
+    {
+        if (builderNumber <= 1 || builderNumber > MaxBuilders) return (0, 0);
+        if (builderNumber == 2)
+            return (UpgradeCost(BuildingType.MainBase, SecondBuilderMainBaseLevel + 1), 0);
+        return (0, (builderNumber - 2) * 100);
+    }
+
     // Hedef seviyeye göre (index = hedef seviye). 1→2: 15 sn, 2→3: 1 dk, 3→4: 30 dk ...
     private static readonly int[] UpgradeSeconds =
     {

@@ -101,10 +101,7 @@ public sealed class DecorPlacementController : MonoBehaviour
                 if (new Rect(center.x - size.x * 0.5f, center.y - size.y * 0.5f,
                     size.x, size.y).Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
             }
-            var hut = GameObject.Find("BuilderHut");
-            if (hut != null && new Rect(hut.transform.position.x - 1f,
-                hut.transform.position.y - 1f, 2f, 2f).Contains(new Vector2(x + 0.5f, y + 0.5f)))
-                return false;
+            if (BuilderHut.IsInsideAny(new Vector2(x + 0.5f, y + 0.5f))) return false;
             foreach (var item in placed)
                 if (item != null && item != except && item.Occupies(point)) return false;
         }

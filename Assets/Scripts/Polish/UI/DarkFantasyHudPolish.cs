@@ -85,19 +85,13 @@ public static class DarkFantasyHudPolish
             TextAlignmentOptions.Center, new Vector2(0.30f, 0.897f), new Vector2(0.70f, 0.918f),
             Vector2.zero, Vector2.zero, bodyBold: true);
 
-        // İnşaatçı göstergesi dokununca ne olduğunu söyler.
+        // İnşaatçı göstergesi dokununca inşaatçılar panelini açar (durum + yeni inşaatçı).
         var builderPill = hud.Find("BuilderPill");
         if (builderPill != null && builderPill.GetComponent<Button>() == null)
         {
             var pillImage = builderPill.GetComponent<Image>();
             if (pillImage != null) pillImage.raycastTarget = true;
-            builderPill.gameObject.AddComponent<Button>().onClick.AddListener(() =>
-            {
-                bool free = BuilderSystem.Instance == null || BuilderSystem.Instance.HasAvailableBuilder();
-                Object.FindFirstObjectByType<BaseSceneSetup>()?.ShowHudToast(free
-                    ? "İnşaatçın boşta: yeni yapı kurabilir ya da yükseltebilirsin"
-                    : "İnşaatçın çalışıyor: iş bitince yeni yapı başlatabilirsin");
-            });
+            builderPill.gameObject.AddComponent<Button>().onClick.AddListener(BuilderPanel.Show);
         }
         var lockedToast = ReferenceUiVisuals.Image(hud, "LockedLandToast",
             new Vector2(0.08f, 1), new Vector2(0.92f, 1),

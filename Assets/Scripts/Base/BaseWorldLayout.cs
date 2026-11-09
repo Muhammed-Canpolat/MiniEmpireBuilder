@@ -100,9 +100,8 @@ public static class BaseWorldLayout
             Vector2 min = (Vector2)building.transform.position - size * 0.5f;
             footprints.Add(new Rect(min, size));
         }
-        var hut = GameObject.Find("BuilderHut");
-        if (hut != null)
-            footprints.Add(new Rect((Vector2)hut.transform.position - Vector2.one, Vector2.one * 2f));
+        foreach (var hut in BuilderHut.All)
+            if (hut != null) footprints.Add(hut.Footprint);
         return footprints;
     }
 

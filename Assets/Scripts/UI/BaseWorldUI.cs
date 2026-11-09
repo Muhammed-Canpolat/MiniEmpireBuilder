@@ -318,8 +318,8 @@ public class BaseWorldUI : MonoBehaviour
         if (buildingStatsText != null)
             buildingStatsText.text = GetBuildingStatsText(building);
 
-        var task = gm.BuilderTask;
-        bool thisUpgrading = gm.IsBuilderBusy && task.kind == "upgrade" && task.slotId == slotId;
+        var task = gm.TaskForSlot(slotId);
+        bool thisUpgrading = task != null && task.kind == "upgrade";
         int cost = building.GetUpgradeCost();
         string duration = Progression.FormatDuration(Progression.UpgradeSecondsTo(building.level + 1));
         var block = gm.CanUpgrade(slotId, type);
@@ -329,13 +329,17 @@ public class BaseWorldUI : MonoBehaviour
             if (!typeData.isUnlocked)
                 upgradeCostText.text = $"Ana Üs Sev. {typeData.GetRequiredMainBaseLevel()} gerekli";
             else if (thisUpgrading)
-                upgradeCostText.text = $"YÜKSELTİLİYOR · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
+                upgradeCostText.text = $"YÜKSELTİLİYOR · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
+            else if (block == GameManager.UpgradeBlock.Upgrading)
+                upgradeCostText.text = $"İNŞA EDİLİYOR · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
             else if (building.level >= Progression.MaxLevel)
                 upgradeCostText.text = "EN YÜKSEK SEVİYE";
             else if (block == GameManager.UpgradeBlock.MaxLevel)
                 upgradeCostText.text = $"Önce Ana Üs Sev. {building.level + (type == BuildingType.GoldMine ? 0 : 1)}";
             else if (block == GameManager.UpgradeBlock.BuilderBusy)
-                upgradeCostText.text = $"İNŞAATÇI MEŞGUL · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
+                upgradeCostText.text = gm.BuilderCount > 1
+                    ? $"TÜM İNŞAATÇILAR MEŞGUL · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}"
+                    : $"İNŞAATÇI MEŞGUL · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
             else if (block == GameManager.UpgradeBlock.NoGold)
                 upgradeCostText.text = $"YÜKSELT · <color=#C2452D>{cost}</color> · {duration}";
             else

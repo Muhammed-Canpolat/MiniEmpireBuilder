@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// İnşaatçının üzerinde çalıştığı binanın tepesinde geri sayım ve ilerleme çubuğu.
-/// Görev GameManager'da gerçek saatle ilerler; bu bileşen yalnız gösterir.
+/// Her inşaatçının üzerinde çalıştığı binanın tepesinde geri sayım ve ilerleme çubuğu.
+/// Görevler GameManager'da gerçek saatle ilerler; bu bileşen yalnız gösterir.
 /// </summary>
 public sealed class BuilderTaskMarker : MonoBehaviour
 {
@@ -12,26 +13,33 @@ public sealed class BuilderTaskMarker : MonoBehaviour
     private const float WorldHeight = 0.62f;
     private const float CanvasScale = 0.01f;
 
-    private GameObject root;
-    private TextMeshProUGUI label;
-    private RectTransform fill;
+    private sealed class Marker
+    {
+        public GameObject root;
+        public TextMeshProUGUI label;
+        public RectTransform fill;
+    }
+
+    private readonly List<Marker> markers = new List<Marker>();
 
     private void LateUpdate()
     {
         var gm = GameManager.Instance;
-        if (gm == null || !gm.IsBuilderBusy || gm.BuilderTask.kind == "remove")
-        {
-            if (root != null && root.activeSelf) root.SetActive(false);
-            return;
-        }
-        if (root == null) Build();
-        if (!root.activeSelf) root.SetActive(true);
-
-        var task = gm.BuilderTask;
-        root.transform.position = AnchorFor(task);
-        string what = task.kind == "upgrade" ? task.label : "İnşa";
-        label.text = $"{what} · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
-        fill.anchorMax = new Vector2(Mathf.Max(0.02f, gm.BuilderProgress), 1f);
+        int used = 0;
+        if (gm != null)
+            foreach (var task in gm.BuilderTasks)
+            {
+                if (task.kind == "remove") continue;
+                if (used >= markers.Count) markers.Add(Build());
+                var marker = markers[used++];
+                if (!marker.root.activeSelf) marker.root.SetActive(true);
+                marker.root.transform.position = AnchorFor(task);
+                string what = task.kind == "upgrade" ? task.label : "İnşa";
+                marker.label.text = $"{what} · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
+                marker.fill.anchorMax = new Vector2(Mathf.Max(0.02f, GameManager.TaskProgress(task)), 1f);
+            }
+        for (int i = used; i < markers.Count; i++)
+            if (markers[i].root.activeSelf) markers[i].root.SetActive(false);
     }
 
     /// <summary>Hedef binanın görünen tepesinin biraz üstü.</summary>
@@ -50,22 +58,23 @@ public sealed class BuilderTaskMarker : MonoBehaviour
             building.transform.position.y + 4.5f), 0f);
     }
 
-    private void Build()
+    private static Marker Build()
     {
-        root = new GameObject("BuilderTaskMarker", typeof(RectTransform));
-        var canvas = root.AddComponent<Canvas>();
+        var marker = new Marker();
+        marker.root = new GameObject("BuilderTaskMarker", typeof(RectTransform));
+        var canvas = marker.root.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.sortingOrder = 450;
-        var rect = (RectTransform)root.transform;
+        var rect = (RectTransform)marker.root.transform;
         rect.sizeDelta = new Vector2(WorldWidth / CanvasScale, WorldHeight / CanvasScale);
         rect.localScale = Vector3.one * CanvasScale;
 
-        var background = root.AddComponent<Image>();
+        var background = marker.root.AddComponent<Image>();
         background.sprite = ReferenceUiVisuals.PillSprite();
         background.type = Image.Type.Sliced;
         background.raycastTarget = false;
 
-        label = ReferenceUiVisuals.Text(rect, "Label", "", 24, ReferenceUiVisuals.Light,
+        marker.label = ReferenceUiVisuals.Text(rect, "Label", "", 24, ReferenceUiVisuals.Light,
             TextAlignmentOptions.Center, new Vector2(0f, 0.36f), Vector2.one,
             new Vector2(14f, 0f), new Vector2(-14f, -4f), bodyBold: true);
 
@@ -77,11 +86,13 @@ public sealed class BuilderTaskMarker : MonoBehaviour
             Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
         fillImage.sprite = ReferenceUiVisuals.SolidPillSprite();
         fillImage.type = Image.Type.Sliced;
-        fill = fillImage.rectTransform;
+        marker.fill = fillImage.rectTransform;
+        return marker;
     }
 
     private void OnDestroy()
     {
-        if (root != null) Destroy(root);
+        foreach (var marker in markers)
+            if (marker.root != null) Destroy(marker.root);
     }
 }

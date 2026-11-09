@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour
 
     // ==================== EVENT'LER ====================
     public event Action<int> OnGoldChanged;                         // altın değişince
+    public event Action<int> OnGemsChanged;                         // elmas değişince
+    public event Action<int> OnBuilderHired;                        // yeni inşaatçı (toplam sayı)
     public event Action<BuildingType, int> OnBuildingUpgraded;      // bina seviye atınca
     public event Action<int> OnHeroLevelUp;                         // kahraman seviye atınca
     public event Action<int> OnApprenticeLevelUp;
@@ -243,6 +245,27 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
+    // ==================== ELMAS ====================
+
+    public int Gems => PlayerData?.gems ?? 0;
+
+    public void AddGems(int amount, bool saveAfter = true)
+    {
+        if (PlayerData == null || amount <= 0) return;
+        PlayerData.gems += amount;
+        OnGemsChanged?.Invoke(PlayerData.gems);
+        if (saveAfter) SaveGame();
+    }
+
+    public bool SpendGems(int amount)
+    {
+        if (PlayerData == null || amount <= 0 || PlayerData.gems < amount) return false;
+        PlayerData.gems -= amount;
+        OnGemsChanged?.Invoke(PlayerData.gems);
+        SaveGame();
+        return true;
+    }
+
     // ==================== BİNA YÖNETİMİ ====================
 
     /// <summary>
@@ -327,12 +350,13 @@ public class GameManager : MonoBehaviour
         return levels[Mathf.Clamp(index, 0, levels.Count - 1)];
     }
 
-    public enum UpgradeBlock { None, Missing, Locked, MaxLevel, BuilderBusy, NoGold }
+    public enum UpgradeBlock { None, Missing, Locked, MaxLevel, BuilderBusy, NoGold, Upgrading }
 
     public UpgradeBlock CanUpgrade(string slotId, BuildingType type)
     {
         if (!Buildings.TryGetValue(type, out var data)) return UpgradeBlock.Missing;
         if (!data.isUnlocked) return UpgradeBlock.Locked;
+        if (TaskForSlot(slotId) != null) return UpgradeBlock.Upgrading;
         int level = GetInstanceLevel(slotId, type);
         if (level >= data.GetMaxLevel(GetMainBaseLevel())) return UpgradeBlock.MaxLevel;
         if (IsBuilderBusy) return UpgradeBlock.BuilderBusy;
@@ -396,31 +420,77 @@ public class GameManager : MonoBehaviour
     public event Action OnBuilderTaskStarted;
     public event Action<BuilderTaskSave> OnBuilderTaskCompleted;
 
-    public BuilderTaskSave BuilderTask => PlayerData?.builderTask;
-    public bool IsBuilderBusy => PlayerData?.builderTask != null && PlayerData.builderTask.IsActive;
+    private static readonly List<BuilderTaskSave> NoTasks = new List<BuilderTaskSave>();
 
-    public double BuilderSecondsRemaining => IsBuilderBusy
-        ? Math.Max(0d, new TimeSpan(PlayerData.builderTask.endTicks - DateTime.UtcNow.Ticks).TotalSeconds)
-        : 0d;
+    /// <summary>Etkin görevler (her inşaatçının en fazla bir görevi).</summary>
+    public IReadOnlyList<BuilderTaskSave> BuilderTasks => PlayerData?.builderTasks ?? NoTasks;
+    public int BuilderCount => Mathf.Clamp(PlayerData?.builderCount ?? 1, 1, Progression.MaxBuilders);
+    public int BusyBuilderCount => BuilderTasks.Count;
+    public int FreeBuilderCount => Mathf.Max(0, BuilderCount - BusyBuilderCount);
+    public bool HasFreeBuilder => FreeBuilderCount > 0;
 
-    public float BuilderProgress
+    /// <summary>Tüm inşaatçılar meşgul (yeni iş başlatılamaz).</summary>
+    public bool IsBuilderBusy => PlayerData != null && !HasFreeBuilder;
+
+    /// <summary>En erken bitecek görev; görev yoksa null. (Tek inşaatçı dönemiyle uyumlu.)</summary>
+    public BuilderTaskSave BuilderTask
     {
         get
         {
-            if (!IsBuilderBusy) return 0f;
-            var task = PlayerData.builderTask;
-            double total = task.endTicks - task.startTicks;
-            return total <= 0 ? 1f : Mathf.Clamp01((float)((DateTime.UtcNow.Ticks - task.startTicks) / total));
+            BuilderTaskSave soonest = null;
+            foreach (var task in BuilderTasks)
+                if (soonest == null || task.endTicks < soonest.endTicks) soonest = task;
+            return soonest;
         }
     }
 
+    public double BuilderSecondsRemaining => SecondsRemaining(BuilderTask);
+    public float BuilderProgress => TaskProgress(BuilderTask);
+
+    public static double SecondsRemaining(BuilderTaskSave task) => task == null || !task.IsActive ? 0d
+        : Math.Max(0d, new TimeSpan(task.endTicks - DateTime.UtcNow.Ticks).TotalSeconds);
+
+    public static float TaskProgress(BuilderTaskSave task)
+    {
+        if (task == null || !task.IsActive) return 0f;
+        double total = task.endTicks - task.startTicks;
+        return total <= 0 ? 1f : Mathf.Clamp01((float)((DateTime.UtcNow.Ticks - task.startTicks) / total));
+    }
+
+    public BuilderTaskSave TaskForBuilder(int builderIndex)
+    {
+        foreach (var task in BuilderTasks)
+            if (task.builderIndex == builderIndex) return task;
+        return null;
+    }
+
+    /// <summary>Bu binada süren yükseltme/inşa görevi (yoksa null).</summary>
+    public BuilderTaskSave TaskForSlot(string slotId)
+    {
+        if (string.IsNullOrEmpty(slotId)) return null;
+        foreach (var task in BuilderTasks)
+            if (task.slotId == slotId) return task;
+        return null;
+    }
+
+    private int FirstFreeBuilderIndex()
+    {
+        for (int i = 0; i < BuilderCount; i++)
+            if (TaskForBuilder(i) == null) return i;
+        return -1;
+    }
+
+    /// <summary>Boştaki ilk inşaatçıya görev verir. Başlayan görev <see cref="LastStartedTask"/>.</summary>
     public bool StartBuilderTask(string kind, string label, float seconds, Vector3 position,
         string slotId = "", string buildingType = "")
     {
-        if (PlayerData == null || IsBuilderBusy) return false;
+        if (PlayerData == null) return false;
+        int index = FirstFreeBuilderIndex();
+        if (index < 0) return false;
         long now = DateTime.UtcNow.Ticks;
-        PlayerData.builderTask = new BuilderTaskSave
+        var task = new BuilderTaskSave
         {
+            builderIndex = index,
             kind = kind,
             label = label,
             slotId = slotId ?? "",
@@ -430,22 +500,63 @@ public class GameManager : MonoBehaviour
             x = position.x,
             y = position.y
         };
+        PlayerData.builderTasks.Add(task);
+        LastStartedTask = task;
         SaveGame();
         OnBuilderTaskStarted?.Invoke();
         return true;
     }
 
+    public BuilderTaskSave LastStartedTask { get; private set; }
+
     private void Update() => CheckBuilderTask();
 
     private void CheckBuilderTask()
     {
-        if (!IsBuilderBusy || DateTime.UtcNow.Ticks < PlayerData.builderTask.endTicks) return;
-        var task = PlayerData.builderTask;
-        PlayerData.builderTask = new BuilderTaskSave();
-        if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
-            ApplyInstanceUpgrade(task.slotId, type);
+        if (PlayerData?.builderTasks == null || PlayerData.builderTasks.Count == 0) return;
+        long now = DateTime.UtcNow.Ticks;
+        List<BuilderTaskSave> finished = null;
+        foreach (var task in PlayerData.builderTasks)
+            if (task.endTicks <= now) (finished ??= new List<BuilderTaskSave>()).Add(task);
+        if (finished == null) return;
+        foreach (var task in finished)
+        {
+            PlayerData.builderTasks.Remove(task);
+            if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
+                ApplyInstanceUpgrade(task.slotId, type);
+        }
         SaveGame();
-        OnBuilderTaskCompleted?.Invoke(task);
+        foreach (var task in finished) OnBuilderTaskCompleted?.Invoke(task);
+    }
+
+    // ==================== İNŞAATÇI KİRALAMA ====================
+
+    public enum HireBlock { None, MaxReached, MainBaseLevel, NoGold, NoGems }
+
+    /// <summary>Sıradaki inşaatçının bedeli (en fazlaya ulaşıldıysa 0,0).</summary>
+    public (int gold, int gems) NextBuilderCost => Progression.BuilderCost(BuilderCount + 1);
+
+    public HireBlock CanHireBuilder()
+    {
+        if (PlayerData == null || BuilderCount >= Progression.MaxBuilders) return HireBlock.MaxReached;
+        if (GetMainBaseLevel() < Progression.SecondBuilderMainBaseLevel) return HireBlock.MainBaseLevel;
+        var cost = NextBuilderCost;
+        if (cost.gold > Gold) return HireBlock.NoGold;
+        if (cost.gems > Gems) return HireBlock.NoGems;
+        return HireBlock.None;
+    }
+
+    public bool HireBuilder()
+    {
+        if (CanHireBuilder() != HireBlock.None) return false;
+        var cost = NextBuilderCost;
+        if (cost.gold > 0 && !SpendGold(cost.gold)) return false;
+        if (cost.gems > 0 && !SpendGems(cost.gems)) return false;
+        PlayerData.builderCount = BuilderCount + 1;
+        SaveGame();
+        OnBuilderHired?.Invoke(PlayerData.builderCount);
+        AudioManager.Instance?.PlaySfx("levelUp");
+        return true;
     }
 
     /// <summary>

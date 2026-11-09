@@ -157,12 +157,8 @@ public class BaseDebugOverlay : MonoBehaviour
                 renderer.sortingOrder = 901;
             }
         }
-        var hut = GameObject.Find("BuilderHut");
-        if (hut != null)
-        {
-            Vector2 center = hut.transform.position;
-            Outline(new Rect(center.x - 1, center.y - 1, 2, 2), Color.green, 0.11f);
-        }
+        foreach (var hut in BuilderHut.All)
+            if (hut != null) Outline(hut.Footprint, Color.green, 0.11f);
         var camp = GameObject.Find("HeroCamp");
         if (camp != null)
         {

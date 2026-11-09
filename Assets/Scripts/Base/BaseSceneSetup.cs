@@ -402,7 +402,7 @@ public class BaseSceneSetup : MonoBehaviour
     {
         if (_builderStatusText != null && BuilderSystem.Instance != null)
         {
-            _builderStatusText.text = BuilderSystem.Instance.HasAvailableBuilder() ? "1/1" : "0/1";
+            _builderStatusText.text = $"{BuilderSystem.Instance.FreeCount}/{BuilderSystem.Instance.TotalCount}";
         }
     }
 
@@ -999,9 +999,10 @@ public class BaseSceneSetup : MonoBehaviour
             {
                 BaseMapManager.Instance.RequestRemoveObject(mapObj);
             }
-            else if (mapObj.objectType == MapObjectType.Building)
+            else if (mapObj.objectType == MapObjectType.Building ||
+                     mapObj.objectType == MapObjectType.BuilderHut)
             {
-                // Taşıma modu
+                // Taşıma modu (inşaatçı kulübeleri de taşınır)
                 if (mapObj.buildingType != BuildingType.MainBase)
                     PlacementController.Instance.BeginMove(mapObj);
             }
@@ -1116,9 +1117,12 @@ public class BaseSceneSetup : MonoBehaviour
                 DecorPlacementController.Instance?.ShowActions(touchedDecor);
                 return;
             }
-            if (hit.collider.gameObject.name == "BuilderHut")
+            var touchedHut = hit.collider.GetComponent<BuilderHut>();
+            if (touchedHut != null)
             {
-                FindObjectOfType<BuilderVisualController>()?.ShowHutLabel();
+                HideRemovePrompt();
+                FindObjectOfType<BuilderVisualController>()?.ShowHutLabel(touchedHut);
+                BuilderPanel.Show();
                 return;
             }
             var mapObj = BaseMapManager.Instance.GetMapObject(hit.collider.gameObject);

@@ -9,7 +9,7 @@ using System.Linq;
 
 // ==================== VERİ TİPLERİ ====================
 
-public enum MapObjectType { Building, Tree, Rock, Fence }
+public enum MapObjectType { Building, Tree, Rock, Fence, BuilderHut }
 
 /// <summary>Haritadaki canlı bir objeyi temsil eder</summary>
 public class PlacedMapObject
@@ -950,7 +950,59 @@ public class BaseMapManager : MonoBehaviour
     public bool CanPlaceBuildingAt(BuildingType type, Vector2 center, PlacedMapObject moving = null)
     {
         if (type == BuildingType.MainBase) return false;
-        Vector2 size = BaseWorldLayout.Footprint(type);
+        return CanPlaceFootprintAt(BaseWorldLayout.Footprint(type), center, moving);
+    }
+
+    /// <summary>Haritadaki bir nesnenin kapladığı alan (bina türüne göre; kulübe 2×2).</summary>
+    public static Vector2Int FootprintOf(PlacedMapObject obj) =>
+        obj != null && obj.objectType == MapObjectType.Building && obj.buildingType.HasValue
+            ? BaseWorldLayout.Footprint(obj.buildingType.Value)
+            : BuilderHut.FootprintSize;
+
+    public bool CanPlaceObjectAt(PlacedMapObject obj, Vector2 center)
+    {
+        if (obj == null) return false;
+        if (obj.objectType == MapObjectType.Building)
+            return obj.buildingType.HasValue && CanPlaceBuildingAt(obj.buildingType.Value, center, obj);
+        return obj.objectType == MapObjectType.BuilderHut && CanPlaceFootprintAt(FootprintOf(obj), center, obj);
+    }
+
+    // ==================== İNŞAATÇI KULÜBELERİ ====================
+
+    public PlacedMapObject RegisterBuilderHut(GameObject hut, int index)
+    {
+        var existing = _mapObjects.Find(o => o.gameObject == hut);
+        if (existing != null) return existing;
+        var placed = new PlacedMapObject
+        {
+            gameObject = hut,
+            objectType = MapObjectType.BuilderHut,
+            id = "builder_hut_" + index
+        };
+        _mapObjects.Add(placed);
+        return placed;
+    }
+
+    /// <summary>Verilen boyutta, <paramref name="near"/>'a en yakın boş yer (yoksa near).</summary>
+    public Vector3 NearestFreeSpot(Vector2Int size, Vector3 near, PlacedMapObject moving = null)
+    {
+        Vector3 best = near;
+        float bestDistance = float.MaxValue;
+        var area = _buildableRect.width > 0 ? _buildableRect : BaseWorldLayout.Buildable;
+        for (int y = area.yMin; y <= area.yMax - size.y; y++)
+        for (int x = area.xMin; x <= area.xMax - size.x; x++)
+        {
+            var candidate = new Vector3(x + size.x * 0.5f, y + size.y * 0.5f, near.z);
+            float distance = (candidate - near).sqrMagnitude;
+            if (distance >= bestDistance || !CanPlaceFootprintAt(size, candidate, moving)) continue;
+            best = candidate;
+            bestDistance = distance;
+        }
+        return best;
+    }
+
+    public bool CanPlaceFootprintAt(Vector2 size, Vector2 center, PlacedMapObject moving = null)
+    {
         int left = Mathf.RoundToInt(center.x - size.x * 0.5f);
         int bottom = Mathf.RoundToInt(center.y - size.y * 0.5f);
         var footprint = new RectInt(left, bottom, Mathf.RoundToInt(size.x), Mathf.RoundToInt(size.y));
@@ -963,18 +1015,16 @@ public class BaseMapManager : MonoBehaviour
         for (int x = footprint.xMin; x < footprint.xMax; x++)
         {
             if (!_buildableRect.Contains(new Vector2Int(x, y))) return false;
-            foreach (string fixedName in new[] { "BuilderHut", "HeroCamp" })
-            {
-                var fixedObject = GameObject.Find(fixedName);
-                if (fixedObject != null && new Rect(fixedObject.transform.position.x - 1f,
-                    fixedObject.transform.position.y - 1f, 2f, 2f)
-                    .Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
-            }
+            var camp = GameObject.Find("HeroCamp");
+            if (camp != null && new Rect(camp.transform.position.x - 1f,
+                camp.transform.position.y - 1f, 2f, 2f)
+                .Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
             foreach (var other in _mapObjects)
             {
-                if (other == moving || other.gameObject == null || other.isBeingRemoved ||
-                    other.objectType != MapObjectType.Building || !other.buildingType.HasValue) continue;
-                Vector2 otherSize = BaseWorldLayout.Footprint(other.buildingType.Value);
+                if (other == moving || other.gameObject == null || other.isBeingRemoved) continue;
+                bool building = other.objectType == MapObjectType.Building && other.buildingType.HasValue;
+                if (!building && other.objectType != MapObjectType.BuilderHut) continue;
+                Vector2 otherSize = FootprintOf(other);
                 var otherRect = new Rect(other.gameObject.transform.position.x - otherSize.x * 0.5f,
                     other.gameObject.transform.position.y - otherSize.y * 0.5f, otherSize.x, otherSize.y);
                 if (otherRect.Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
@@ -1009,14 +1059,15 @@ public class BaseMapManager : MonoBehaviour
 
     public bool MoveObjectTo(PlacedMapObject obj, Vector3 newPos)
     {
-        if (obj?.gameObject == null || !obj.buildingType.HasValue ||
-            !CanPlaceBuildingAt(obj.buildingType.Value, newPos, obj)) return false;
+        if (obj?.gameObject == null || !CanPlaceObjectAt(obj, newPos)) return false;
 
         Vector3 target = new Vector3(newPos.x, newPos.y, obj.gameObject.transform.position.z);
         obj.gameObject.transform.DOKill();
         obj.gameObject.transform.position = target;
         obj.gameObject.transform.DOPunchScale(Vector3.one * 0.08f, 0.2f);
         BaseGroundPaths.Instance?.Refresh();
+        var hut = obj.gameObject.GetComponent<BuilderHut>();
+        if (hut != null) hut.OnMoved();
         SaveAll();
         HeroMovementController.Instance?.RefreshWalkable();
         return true;
@@ -1075,12 +1126,23 @@ public class BaseMapManager : MonoBehaviour
             item.gameObject.transform.position = new Vector3(slot.center.x, slot.center.y,
                 item.gameObject.transform.position.z);
         }
-        foreach (string name in new[] { "BuilderHut", "HeroCamp" })
+        var camp = GameObject.Find("HeroCamp");
+        if (camp != null)
         {
-            var obj = GameObject.Find(name);
-            if (obj == null) continue;
-            var slot = BaseWorldLayout.Get(name == "BuilderHut" ? "builder" : "camp");
-            obj.transform.position = new Vector3(slot.center.x, slot.center.y, obj.transform.position.z);
+            var slot = BaseWorldLayout.Get("camp");
+            camp.transform.position = new Vector3(slot.center.x, slot.center.y, camp.transform.position.z);
+        }
+        // İlk kulübe önerilen yerine, diğerleri ona en yakın boş yere.
+        var huts = new List<BuilderHut>(BuilderHut.All);
+        huts.Sort((a, b) => a.Index.CompareTo(b.Index));
+        foreach (var hut in huts)
+        {
+            var placed = GetMapObject(hut.gameObject);
+            Vector3 home = BaseWorldLayout.Get("builder").center;
+            Vector3 spot = hut.Index == 0 && CanPlaceFootprintAt(BuilderHut.FootprintSize, home, placed)
+                ? home : NearestFreeSpot(BuilderHut.FootprintSize, home, placed);
+            hut.transform.position = new Vector3(spot.x, spot.y, hut.transform.position.z);
+            hut.OnMoved();
         }
         BaseGroundPaths.Instance?.Refresh();
         HeroMovementController.Instance?.RefreshWalkable();

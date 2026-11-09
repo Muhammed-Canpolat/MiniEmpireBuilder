@@ -66,7 +66,7 @@ public class PlacementController : MonoBehaviour
         if (obj?.gameObject == null || obj.buildingType == BuildingType.MainBase) return;
 
         _isPlacing = true;
-        _placingBuildingType = obj.buildingType ?? BuildingType.MainBase; // fallback
+        _placingBuildingType = obj.buildingType ?? BuildingType.MainBase; // fallback (kulübe)
         _movingObject = obj;
         _buildDuration = 0f;
         _hasClickedDownSinceStart = true;
@@ -153,7 +153,7 @@ public class PlacementController : MonoBehaviour
             Vector3 pointerWorld = Camera.main.ScreenToWorldPoint(new Vector3(pointerPos.x, pointerPos.y, 0f));
             if (_movingObject != null)
             {
-                Vector2 size = BaseWorldLayout.Footprint(_placingBuildingType);
+                Vector2 size = CurrentFootprint();
                 _lastValidWorldPos = new Vector3(
                     Mathf.Floor(pointerWorld.x - size.x * 0.5f) + size.x * 0.5f,
                     Mathf.Floor(pointerWorld.y - size.y * 0.5f) + size.y * 0.5f, -1f);
@@ -205,12 +205,17 @@ public class PlacementController : MonoBehaviour
     {
         if (IsPointerOverBlockingUI()) return false;
         if (_movingObject != null)
-            return BaseMapManager.Instance != null && BaseMapManager.Instance.CanPlaceBuildingAt(
-                _placingBuildingType, pos, _movingObject);
+            return BaseMapManager.Instance != null && BaseMapManager.Instance.CanPlaceObjectAt(
+                _movingObject, pos);
         return BaseMapManager.Instance != null && BaseMapManager.Instance.TryGetAvailableSlot(
             _placingBuildingType, pos, _movingObject?.id, out var slot)
             && Vector2.Distance(pos, slot.center) < 0.1f;
     }
+
+    /// <summary>Taşınan nesnenin (bina ya da kulübe) ya da yeni binanın kapladığı alan.</summary>
+    private Vector2 CurrentFootprint() => _movingObject != null
+        ? (Vector2)BaseMapManager.FootprintOf(_movingObject)
+        : (Vector2)BaseWorldLayout.Footprint(_placingBuildingType);
     private bool IsPointerOverBlockingUI()
     {
         if (UnityEngine.EventSystems.EventSystem.current == null) return false;
@@ -263,13 +268,11 @@ public class PlacementController : MonoBehaviour
                 {
                     // İnşaatçıyı meşgul et
                     string name = BaseMapManager.GetBuildingDisplayName(_placingBuildingType);
-                    PlacedMapObject completedBuilding = null;
+                    // Binayı oluştur; görev binanın slotuna bağlanır (inşa bitmeden yükseltilemez).
+                    PlacedMapObject completedBuilding = BaseMapManager.Instance?.SpawnBuilding(_placingBuildingType, pos);
                     BuilderSystem.Instance.TryStartTask(name + " İnşası", _buildDuration, pos,
                         () => completedBuilding?.gameObject?.GetComponent<BaseBuildingVisual>()
-                            ?.PlayConstructionComplete());
-
-                    // Binayı oluştur
-                    completedBuilding = BaseMapManager.Instance?.SpawnBuilding(_placingBuildingType, pos);
+                            ?.PlayConstructionComplete(), completedBuilding?.id ?? "");
                     if (completedBuilding != null)
                         AudioManager.Instance?.PlaySfx("buildingPlace");
 
@@ -360,7 +363,7 @@ public class PlacementController : MonoBehaviour
         var renderer = _footprint.AddComponent<SpriteRenderer>();
         renderer.sprite = square;
         renderer.sortingOrder = 99;
-        var size = BaseWorldLayout.Footprint(_placingBuildingType);
+        var size = CurrentFootprint();
         _footprint.transform.localScale = new Vector3(size.x / square.bounds.size.x,
             size.y / square.bounds.size.y, 1f);
     }
