@@ -78,6 +78,8 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **İnşaatçılar:** 2. inşaatçı **Ana Üs 5'te** açılır, bedeli = Ana Üs 5→6 yükseltme bedeli
   (`Progression.UpgradeCost(MainBase, 6)`, şu an 850 altın). 3./4./5. = 100/200/300 elmas; en fazla 5.
   İnşaatçı binaları (inşa edilmiş ve mevcut olan) taşınabilir olacak.
+  ✅ Uygulandı (`b34bc5f`): `GameManager` builderTasks listesi (kayıt v5), `BuilderHut` (MapObjectType.BuilderHut,
+  basılı tut → taşı), `BuilderPanel` (kiralama), `GemCounter`/`GemIcon` (üst bar). Dev APK: elmas hapına 5 hızlı dokunuş = +100.
 - **Can:** 5 can, 30 dk'da bir yenilenir; sefer yenilgisi ve pes etme 1 can düşürür. Sınırsız can paketi (14/30 gün).
 - **Satış:** Başlangıç Paketi, inşaatçılar (yukarıdaki), Reklamsız, Kraliyet Üyeliği (sınırsız can, +%20 maden, günlük elmas),
   Sezon Bileti, kozmetik (kahraman/kale görünümü, ücretli dekor), elmas paketleri.
