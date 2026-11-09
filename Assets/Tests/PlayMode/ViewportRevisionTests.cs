@@ -301,7 +301,7 @@ public class ViewportRevisionTests
         Assert.NotNull(pawnSprite.sprite);
         var hero = Object.FindFirstObjectByType(Type("HeroController")) as Component;
         var heroSprite = hero.GetComponent<SpriteRenderer>();
-        Assert.AreEqual(heroSprite.sortingOrder - 1, pawnSprite.sortingOrder);
+        Assert.AreEqual(heroSprite.sortingOrder + 1, pawnSprite.sortingOrder); // Çırak kahramanın önünde
         Assert.AreEqual(1.925f, pawnSprite.bounds.size.y, 0.12f); // kahraman 1.75 × pawn boşluk payı 1.1
         Assert.NotNull(hero.transform.Find("ReadableVisual"));
         var battleBase = Object.FindFirstObjectByType(Type("MainBaseController")) as Component;
@@ -309,7 +309,7 @@ public class ViewportRevisionTests
         Assert.IsFalse(Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)
             .Any(item => item.name.StartsWith("Prop_") && item.enabled));
         Assert.Less(Vector2.Distance(apprentice.transform.position,
-            hero.transform.position + new Vector3(-0.9f, 0.2f)), 0.7f);
+            hero.transform.position + new Vector3(-1.1f, -0.15f)), 0.7f);
         var debug = Object.FindFirstObjectByType(Type("BattleDebugOverlay")) as Component;
         Assert.NotNull(debug);
         Capture("revision-04-forest-clean.png");

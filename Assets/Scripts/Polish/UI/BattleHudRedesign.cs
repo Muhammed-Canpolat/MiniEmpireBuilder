@@ -66,7 +66,7 @@ public static class BattleHudRedesign
     }
 
     /// <summary>Kart: çerçeve, solda portre yuvası, üstte ad + değer, altta yuvarlak can çubuğu.</summary>
-    public static void StyleCard(RectTransform root, int column, Sprite icon, Color accent)
+    public static void StyleCard(RectTransform root, int column, Sprite icon, Color accent, float iconZoom = 1f)
     {
         if (root == null || root.Find("CardFrame") != null) return;
         float left = 0.02f + column * 0.327f;
@@ -96,7 +96,11 @@ public static class BattleHudRedesign
         ring.effectDistance = new Vector2(1f, -1f);
         if (icon != null)
         {
-            var portrait = ReferenceUiVisuals.Image(well.rectTransform, "Portrait", Vector2.zero, Vector2.one,
+            // Boşluklu karelerde (Çırak) görsel yuvada büyütülüp kenarlardan maskelenir.
+            if (iconZoom > 1f) well.gameObject.AddComponent<RectMask2D>();
+            float half = 0.5f * iconZoom;
+            var portrait = ReferenceUiVisuals.Image(well.rectTransform, "Portrait",
+                new Vector2(0.5f - half, 0.5f - half), new Vector2(0.5f + half, 0.5f + half),
                 new Vector2(3f, 3f), new Vector2(-3f, -3f), Color.white);
             portrait.sprite = icon;
             portrait.preserveAspect = true;

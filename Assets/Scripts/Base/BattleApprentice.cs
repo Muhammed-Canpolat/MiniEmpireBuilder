@@ -79,18 +79,19 @@ public sealed class BattleApprentice : MonoBehaviour
             transform.localScale = Vector3.one * (targetHeight /
                 Mathf.Max(0.01f, renderer.sprite.bounds.size.y));
         }
-        renderer.sortingOrder = heroRenderer != null ? heroRenderer.sortingOrder - 1 : 34;
+        // Kahramanın biraz önünde durduğu için onun üstünde çizilir.
+        renderer.sortingOrder = heroRenderer != null ? heroRenderer.sortingOrder + 1 : 34;
         CreateHud();
     }
 
-    // Kahramanın sol arkası, yakın: savaşta birlikte okunurlar.
-    private static readonly Vector2 FollowOffset = new Vector2(-0.8f, 0.15f);
+    // Kahramanın solunda, hafif önünde: kahramanın gövdesi (≈0.8 yarı genişlik) onu örtmez.
+    private static readonly Vector2 FollowOffset = new Vector2(-1.1f, -0.15f);
 
     private void Update()
     {
         if (hero == null || currentHealth <= 0f || battle == null || !battle.IsBattleActive) return;
         var heroRenderer = hero.GetComponent<SpriteRenderer>();
-        renderer.sortingOrder = heroRenderer != null ? heroRenderer.sortingOrder - 1 : 34;
+        renderer.sortingOrder = heroRenderer != null ? heroRenderer.sortingOrder + 1 : 34;
         Vector2 desired = (Vector2)hero.transform.position + FollowOffset;
         Vector2 before = transform.position;
         Vector2 followed = Vector2.SmoothDamp(before, desired, ref followVelocity, 0.12f);
@@ -205,8 +206,9 @@ public sealed class BattleApprentice : MonoBehaviour
         healthFill.fillMethod = Image.FillMethod.Horizontal;
         healthFill.color = new Color(0.37f, 0.75f, 0.47f);
         healthFill.fillAmount = 1f;
+        // Pawn karesi atlas içinde ve boşluklu (kırpılamıyor): yuvada maskelenip büyütülür.
         BattleHudRedesign.StyleCard(rect, 2, renderer != null ? HeroPortraitSprite.Get(renderer.sprite) : null,
-            ReferenceUiVisuals.Hex(0x6FB8E8));
+            ReferenceUiVisuals.Hex(0x6FB8E8), 2.4f);
     }
 
     private void OnDestroy()
