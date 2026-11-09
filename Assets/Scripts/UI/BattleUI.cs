@@ -194,6 +194,8 @@ public class BattleUI : MonoBehaviour
             rect.offsetMin = new Vector2(i == 0 ? 0f : 2f, 0f);
             rect.offsetMax = new Vector2(i == total - 1 ? 0f : -2f, 0f);
             waveSegments[i] = segment.GetComponent<Image>();
+            waveSegments[i].sprite = ReferenceUiVisuals.SolidPillSprite();
+            waveSegments[i].type = Image.Type.Sliced;
         }
     }
 

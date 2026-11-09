@@ -230,7 +230,7 @@ public static class DarkFantasyHudPolish
     {
         if (canvas == null) return;
         var safe = ReferenceUiVisuals.SafeArea(canvas.transform);
-        canvas.gameObject.AddComponent<WorldViewportBars>().Initialize(canvas, 84f, 139f, 0f);
+        canvas.gameObject.AddComponent<WorldViewportBars>().Initialize(canvas, 84f, BattleHudRedesign.DockHeight, 0f);
         string[] safeChildren = { "TopBar", "HeroBarBg", "BaseBarBg", "VirtualJoystick", "Minimap" };
         foreach (string name in safeChildren)
         {
@@ -350,6 +350,7 @@ public static class DarkFantasyHudPolish
         if (player?.firstBattleTowerBuilt == true || !ownsTower)
             buildHint.gameObject.SetActive(false);
         MoveHint.TryShow(safe);
+        BattleHudRedesign.Apply(safe as RectTransform);
     }
 
     private static void StyleBattleHealth(RectTransform root, Vector2 min, Vector2 max,

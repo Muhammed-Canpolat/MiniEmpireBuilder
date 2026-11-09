@@ -61,7 +61,7 @@ public static class BattleWorldMarkers
         canvas.sortingOrder = 12;
         var canvasRect = caption.GetComponent<RectTransform>();
         // Tek satır, okunur boyut: 1.5 x 0.42 dünya birimi.
-        canvasRect.sizeDelta = new Vector2(150, 42);
+        canvasRect.sizeDelta = new Vector2(92, 40);
         canvasRect.localScale = Vector3.one * 0.01f;
         var pill = caption.AddComponent<UnityEngine.UI.Image>();
         pill.sprite = ReferenceUiVisuals.PillSprite();
@@ -97,6 +97,7 @@ public sealed class BattleSlotRights : MonoBehaviour
         int remaining = 0;
         foreach (var type in Types) remaining += manager.GetBattleBuildRemaining(type);
         if (canvas != null) canvas.enabled = remaining > 0;
-        label.text = UiStrings.Upper($"Kule kur · {remaining} hak");
+        // Halkanın içindeki "+" kurmayı anlatır; etiket yalnız kalan hakkı söyler (tek satır).
+        label.text = UiStrings.Upper($"{remaining} hak");
     }
 }

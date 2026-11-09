@@ -204,6 +204,8 @@ public sealed class BattleApprentice : MonoBehaviour
         healthFill.fillMethod = Image.FillMethod.Horizontal;
         healthFill.color = new Color(0.37f, 0.75f, 0.47f);
         healthFill.fillAmount = 1f;
+        BattleHudRedesign.StyleCard(rect, 2, renderer != null ? HeroPortraitSprite.Get(renderer.sprite) : null,
+            ReferenceUiVisuals.Hex(0x6FB8E8));
     }
 
     private void OnDestroy()

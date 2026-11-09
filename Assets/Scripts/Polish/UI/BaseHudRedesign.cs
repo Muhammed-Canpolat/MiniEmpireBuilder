@@ -179,7 +179,7 @@ public static class BaseHudRedesign
     /// Dock: koyu meşe tahta dokusu, altın üst kenarlık ve altın perçinler. Eski gri çelik
     /// raylar ve iç çerçeve gizlenir (ekranın sağında/solunda görünen grilik onlardı).
     /// </summary>
-    private static void SkinDock(RectTransform dock)
+    public static void SkinDock(RectTransform dock)
     {
         if (dock == null || dock.Find("WoodGrainShade") != null) return;
         var image = dock.GetComponent<Image>();
