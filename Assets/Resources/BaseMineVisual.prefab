@@ -44,9 +44,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eaf4384e335dbf6499d3a8d92e0cc0e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseMineVisual
-  tunnelSprite: {fileID: 0}
-  cartSprite: {fileID: 0}
-  greyRockSprite: {fileID: 0}
-  goldVeinSprite: {fileID: 0}
   minerController: {fileID: 0}
-  minerAnchorCell: {x: 1.15, y: 0.72}
+  minerAnchorCell: {x: 2.05, y: 1.8}

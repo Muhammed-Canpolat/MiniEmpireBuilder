@@ -135,6 +135,12 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 099a3e9fd39fd40efa61fb2fa8acf5f6, type: 3}
   - {fileID: 21300000, guid: 5a4aa1c2f2ac84011bdacd0445d7cf5b, type: 3}
   goldIcon: {fileID: 21300000, guid: b9b23c4ec748b4bc7bb3afb24a2ed197, type: 3}
+  mineHouses:
+  - {fileID: 21300000, guid: 96ad664d87f2f48b7babf2f621531ae5, type: 3}
+  - {fileID: 21300000, guid: 255d981ca436d413d84f7803cad52e4b, type: 3}
+  - {fileID: 21300000, guid: b6eafc6c638784324becfa1966effa56, type: 3}
+  - {fileID: 21300000, guid: 4072398f97c2a4bd69440a0d7d29983b, type: 3}
+  - {fileID: 21300000, guid: c94d66993de80409fb65b3577475c483, type: 3}
   cloudShadows:
   - {fileID: 21300000, guid: f6f0e53d863ee47e59f269cada8e711a, type: 3}
   - {fileID: 21300000, guid: ed913e18216254ce6a098078c02ef683, type: 3}

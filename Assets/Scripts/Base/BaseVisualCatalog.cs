@@ -28,6 +28,8 @@ public class BaseVisualCatalog : ScriptableObject
     public RuntimeAnimatorController[] heroControllers;
     public Sprite[] goldStones;
     public Sprite goldIcon;
+    [Tooltip("Altın madeni evi; renk kademesine göre (mavi, sarı, kırmızı, mor, siyah)")]
+    public Sprite[] mineHouses;
     public Sprite[] cloudShadows;
     public Sprite[] bushes;
     public RuntimeAnimatorController[] bushControllers;

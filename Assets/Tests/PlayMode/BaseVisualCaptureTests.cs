@@ -52,22 +52,10 @@ public class BaseVisualCaptureTests
         Assert.NotNull(Object.FindFirstObjectByType(RuntimeType("FirstBaseGuide")));
 
         var mine = Object.FindFirstObjectByType(RuntimeType("BaseMineVisual")) as Component;
-        var authoredMine = mine.transform.Find("MineLayers/MineAuthoredArt");
-        if (authoredMine != null)
-        {
-            StringAssert.StartsWith("mine_stage_",
-                authoredMine.GetComponent<SpriteRenderer>().sprite.name);
-            var box = mine.transform.Find("MineLayers/MineLiftBox");
-            Assert.NotNull(box);
-            Assert.NotNull(box.Find("CartGoldFill"));
-        }
-        else
-        {
-            Assert.GreaterOrEqual(mine.GetComponentsInChildren<SpriteRenderer>()
-                .Count(sprite => sprite.gameObject.name == "BackGreyRock"), 7);
-            Assert.NotNull(mine.transform.Find("MineLayers/TunnelEntrance"));
-            Assert.NotNull(mine.transform.Find("MineLayers/MineCart"));
-        }
+        Assert.NotNull(mine.transform.Find("MineLayers/MineHouse"));
+        Assert.GreaterOrEqual(mine.GetComponentsInChildren<SpriteRenderer>()
+            .Count(sprite => sprite.gameObject.name.StartsWith("MineGoldStone_")), 2);
+        Assert.NotNull(mine.transform.Find("MineLayers/MinePawn"));
         Assert.GreaterOrEqual(mine.GetComponentsInChildren<Animator>()
             .Count(animator => animator.gameObject.name == "MinePawn"), 1);
 

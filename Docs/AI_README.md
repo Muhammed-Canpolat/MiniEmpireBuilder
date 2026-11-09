@@ -62,6 +62,25 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 `Assets/Tests/PlayMode/*` (yansıma ile Assembly-CSharp'a erişir). Önemliler: `ProgressionTests`, `BattleStructureTests`,
 `UiFixPassTests`, `ForestRegionMechanicsTests`, `ViewportRevisionTests`, `HudExpansionReviewTests`.
 
+## Onaylanan yol haritası (9 Kasım 2026 kararları)
+- **Maden:** Tiny Swords parçalarından (`BaseMineVisual`): Gold Stone kayaları (kademe başına +1, 2–6),
+  renk kademeli maden evi (`BaseVisualCatalog.mineHouses` = House3), depo doluluğuna göre 0–6 külçe yığını,
+  dolunca kayalar parlar. Eski `mine_stage_*` görselleri yalnız savaştaki maden bölgesi dekorunda.
+- **Kahraman:** Tek kahraman = Tiny Swords Warrior (renk kademeli). Okçu/Mızrakçı seçimi kalkacak. Ninja paketi kullanılmayacak (stil/tema uyumsuz).
+- **Dragon Warrior:** Yeni **6. bölgenin** boss'u + "Ejder İstilası" etkinlik boss'u (lisans kontrol edilecek).
+- **Sosyal:** Gerçek zamanlı PvP yok. Eşzamansız: aynı tohumla Savunma Düellosu, arkadaşa can gönderme, haftalık skor tablosu.
+- **Savaş öncesi 3 kart:** %10 kahraman hasarı, %10 kahraman canı, %10 kule+Ana Üs canı; ödüllü reklamla alınır.
+- **7 günlük giriş takvimi** (7. gün az elmas).
+- **İnşaatçılar:** 2. inşaatçı belli Ana Üs seviyesinde altınla; 3./4./5. = 100/200/300 elmas; en fazla 5.
+  İnşaatçı binaları taşınabilir olacak.
+- **Can:** 5 can, 30 dk'da bir yenilenir; sefer yenilgisi ve pes etme 1 can düşürür. Sınırsız can paketi (14/30 gün).
+- **Satış:** Başlangıç Paketi, inşaatçılar (yukarıdaki), Reklamsız, Kraliyet Üyeliği (sınırsız can, +%20 maden, günlük elmas),
+  Sezon Bileti, kozmetik (kahraman/kale görünümü, ücretli dekor), elmas paketleri.
+- **Ödüllü reklamlar:** yenilgide devam (savaş başına 1), zaferde 2x ödül, inşaatta -30 dk (günde 3–5), madende 2 sa 2x,
+  can bitince +1 can (günde 3), dükkânda günlük sandık. Geçiş reklamı yalnız sonuç ekranında, sık değil.
+- **Yayın:** Google Play + App Store (kullanıcının iki geliştirici hesabı var; test: Android tablet + iPhone).
+  Satıştan önce bulut kaydı, satın alma geri yükleme, makbuz doğrulama, KVKK/GDPR izni şart. iOS derlemesi Mac/Xcode ister.
+
 ## Açık konular / sıradaki fikirler
 - Ses efektlerinin bağlanması (paket bekleniyor).
 - Denge: düşman rolleri menzilleri, yıkılma sıklığı, 15 seviyelik bedel/süreler oynanarak ayarlanacak.

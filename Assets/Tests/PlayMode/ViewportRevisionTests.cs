@@ -245,40 +245,33 @@ public class ViewportRevisionTests
             else if (item.name.StartsWith("Exterior_2_")) Assert.LessOrEqual(bounds.max.y, 1.01f);
             else if (item.name.StartsWith("Exterior_3_")) Assert.GreaterOrEqual(bounds.min.y, 36.99f);
         }
-        Assert.NotNull(GameObject.Find("MineAuthoredArt"));
-        Assert.AreEqual("mine_stage_1", GameObject.Find("MineAuthoredArt")
+        Assert.NotNull(GameObject.Find("MineHouse"));
+        StringAssert.StartsWith("House3", GameObject.Find("MineHouse")
             .GetComponent<SpriteRenderer>().sprite.name);
-        var lift = GameObject.Find("MineLiftBox");
-        Assert.NotNull(lift);
-        float liftMin = lift.transform.localPosition.y;
-        float liftMax = liftMin;
-        for (int sample = 0; sample < 5; sample++)
-        {
-            yield return new WaitForSecondsRealtime(0.20f);
-            liftMin = Mathf.Min(liftMin, lift.transform.localPosition.y);
-            liftMax = Mathf.Max(liftMax, lift.transform.localPosition.y);
-        }
-        Assert.Greater(liftMax - liftMin, 0.08f);
+        Assert.NotNull(GameObject.Find("MinePawn"));
         Assert.Greater(Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
             .Count(item => item.name == "FenceLantern"), 0);
         Assert.NotNull(GameObject.Find("DockRivet_0_0"));
         Capture("ux-base-level5-clean.png");
         Capture("reference-base-level5.png");
         CaptureWorldCloseup("reference-mine-closeup.png",
-            GameObject.Find("MineAuthoredArt").transform.position, 6.1f);
+            GameObject.Find("MineHouse").transform.position, 6.1f);
         var mineVisual = Object.FindFirstObjectByType(Type("BaseMineVisual")) as Component;
         var upgradeMine = mineVisual.GetType().GetMethod("OnBuildingUpgraded",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        for (int mineLevel = 1; mineLevel <= 8; mineLevel++)
+        int previousStones = 0;
+        for (int mineLevel = 1; mineLevel <= 15; mineLevel += 3)
         {
             upgradeMine.Invoke(mineVisual, new object[] {
                 Enum.Parse(Type("BuildingType"), "GoldMine"), mineLevel });
             yield return null;
-            Assert.AreEqual("mine_stage_" + mineLevel, GameObject.Find("MineAuthoredArt")
-                .GetComponent<SpriteRenderer>().sprite.name);
+            int stones = mineVisual.GetComponentsInChildren<SpriteRenderer>()
+                .Count(item => item.name.StartsWith("MineGoldStone_"));
+            Assert.Greater(stones, previousStones, "Maden seviye kademesinde kaya eklemedi: " + mineLevel);
+            previousStones = stones;
         }
-        CaptureWorldCloseup("reference-mine-stage8-closeup.png",
-            GameObject.Find("MineAuthoredArt").transform.position, 6.1f);
+        CaptureWorldCloseup("reference-mine-tier5-closeup.png",
+            GameObject.Find("MineHouse").transform.position, 6.1f);
     }
 
     [UnityTest]

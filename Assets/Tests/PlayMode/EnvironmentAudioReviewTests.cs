@@ -36,20 +36,8 @@ public class EnvironmentAudioReviewTests
         for (int i = 0; i < 35; i++) yield return null;
         yield return new WaitForSecondsRealtime(0.6f);
         Assert.NotNull(Object.FindFirstObjectByType(Type("BaseMineVisual")));
-        var authoredMine = GameObject.Find("MineAuthoredArt");
-        if (authoredMine != null)
-        {
-            StringAssert.StartsWith("mine_stage_",
-                authoredMine.GetComponent<SpriteRenderer>().sprite.name);
-            var box = GameObject.Find("MineLiftBox");
-            Assert.NotNull(box);
-            Assert.NotNull(box.transform.Find("CartGoldFill"));
-        }
-        else
-        {
-            Assert.NotNull(GameObject.Find("TunnelEntrance"));
-            Assert.NotNull(GameObject.Find("MineCart"));
-        }
+        Assert.NotNull(GameObject.Find("MineHouse"));
+        Assert.NotNull(GameObject.Find("MinePawn"));
         Assert.AreEqual(new Vector2Int(4, 4), Type("BaseWorldLayout").GetMethod("Footprint")
             .Invoke(null, new[] { Enum.Parse(Type("BuildingType"), "GoldMine") }));
         Capture("new-item-01-mine.png");
