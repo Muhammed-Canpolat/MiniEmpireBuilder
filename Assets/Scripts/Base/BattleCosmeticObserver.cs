@@ -115,12 +115,13 @@ public sealed class BattleCosmeticObserver : MonoBehaviour
 /// <summary>Enlarges only the rendered copy; combat transforms and colliders keep their size.</summary>
 public sealed class BattleActorPresentation : MonoBehaviour
 {
-    public const float HeroHeight = 2.5f;
+    public const float HeroHeight = 1.75f;
     public const float BaseHeight = 2.6f;
 
     private SpriteRenderer source;
     private SpriteRenderer visual;
     private float targetHeight;
+    private bool healthBarPlaced;
 
     public void Initialize(float height)
     {
@@ -150,6 +151,14 @@ public sealed class BattleActorPresentation : MonoBehaviour
         visual.transform.localPosition = Vector3.up *
             (targetHeight - originalHeight) * 0.5f /
             Mathf.Max(0.01f, Mathf.Abs(transform.lossyScale.y));
+        if (!healthBarPlaced)
+        {
+            // Can çubuğu büyütülmüş görselin tepesinin hemen üstünde (başın ortasından geçmesin).
+            healthBarPlaced = true;
+            float top = targetHeight - originalHeight * 0.5f + 0.18f;
+            foreach (var bar in FindObjectsByType<HealthBar>(FindObjectsSortMode.None))
+                if (bar.Target == transform) bar.Offset = new Vector3(0f, top, 0f);
+        }
     }
 
     private void OnDestroy()

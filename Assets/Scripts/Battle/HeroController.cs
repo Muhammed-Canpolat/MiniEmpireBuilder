@@ -121,6 +121,9 @@ public class HeroController : MonoBehaviour
         UpdateCombatSprite();
     }
 
+    public static readonly Vector2 FeetOffset = new Vector2(0f, -0.25f);
+    public const float FeetRadius = 0.35f;
+
     public void SetMoveInput(Vector2 input)
     {
         moveInput = Vector2.ClampMagnitude(input, 1f);
@@ -140,7 +143,11 @@ public class HeroController : MonoBehaviour
         }
 
         Vector3 direction = new Vector3(moveInput.x, moveInput.y, 0f).normalized;
-        transform.position += direction * moveSpeed * Time.deltaTime;
+        Vector3 next = transform.position + direction * moveSpeed * Time.deltaTime;
+        // Binaların içinden geçme: ayak noktası engellerin dışına itilir.
+        Vector2 feet = (Vector2)next + FeetOffset;
+        Vector2 resolved = BattleObstacles.Resolve(feet, FeetRadius);
+        transform.position = new Vector3(resolved.x - FeetOffset.x, resolved.y - FeetOffset.y, next.z);
 
         if (spriteRenderer != null && Mathf.Abs(direction.x) > 0.01f)
             spriteRenderer.flipX = direction.x < 0;

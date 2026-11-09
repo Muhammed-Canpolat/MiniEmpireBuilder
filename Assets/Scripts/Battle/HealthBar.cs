@@ -14,6 +14,8 @@ public class HealthBar : MonoBehaviour
     [SerializeField] private Vector2 barSize = new Vector2(0.8f, 0.1f);
 
     private Transform targetTransform;
+    public Transform Target => targetTransform;
+    public Vector3 Offset { get => offset; set => offset = value; }
     private SpriteRenderer fillRenderer;
     private float maxHealth = 1f;
     private float currentHealth = -1f;

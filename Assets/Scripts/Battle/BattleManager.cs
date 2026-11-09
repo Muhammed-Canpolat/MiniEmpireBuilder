@@ -24,8 +24,6 @@ public class BattleManager : MonoBehaviour
     private int currentWaveIndex = 0;
     private int enemiesAlive = 0;
     private int totalGoldEarned = 0;
-    // Kahraman üssün sağ altında başlar: üssün ve yuvaların üstüne binmez (yuva tetik yarıçapı 1.35).
-    private static readonly Vector3 HeroSpawnPosition = new Vector3(2.6f, -1.7f, 0f);
     public int GoldEarned => totalGoldEarned;
     private bool battleActive = false;
     private bool battleWon = false;
@@ -306,20 +304,31 @@ public class BattleManager : MonoBehaviour
             return;
         // Ana Üs görseli yaklaşık x∈[-1.9, 1.9], y∈[-1.0, 1.6] kaplar (BattleActorPresentation).
         // Yuvalar (yarıçap 0.95 + alt etiket) bu alanın dışında. Sayı bölgeye göre 3–5.
-        int count = CampaignCatalog.BattleSlotCount(BattleSession.IsCampaign ? BattleSession.RegionId : 1);
-        for (int i = 0; i < count && i < SlotPositions.Length; i++)
-            CreateBuildSlot(SlotPositions[i], BuildingType.ArcherTower, archerBattleBuildCost);
+        foreach (var position in SlotLayout(SlotCount))
+            CreateBuildSlot(position, BuildingType.ArcherTower, archerBattleBuildCost);
     }
 
-    // Sıra önemli: ilk üçü her bölgede, 4. ve 5. ileri bölgelerde açılır.
-    private static readonly Vector3[] SlotPositions =
+    private static int SlotCount =>
+        CampaignCatalog.BattleSlotCount(BattleSession.IsCampaign ? BattleSession.RegionId : 1);
+
+    // Ana Üs merkezli dikdörtgenin köşeleri: her köşe üsse eşit uzaklıkta.
+    private const float SlotX = 3.3f, SlotTop = 2.7f, SlotBottom = -2.5f;
+
+    /// <summary>3: üst köşeler + alt orta · 4: dört çapraz köşe · 5: dört köşe + üst orta.</summary>
+    public static Vector3[] SlotLayout(int count)
     {
-        new Vector3(-2.9f, 2.4f, 0f),   // üst sol
-        new Vector3(2.9f, 2.4f, 0f),    // üst sağ
-        new Vector3(0f, -2.9f, 0f),     // alt
-        new Vector3(-3.0f, -2.2f, 0f),  // alt sol (Bölge 3+)
-        new Vector3(0f, 4.4f, 0f)       // üst orta (Bölge 5+)
-    };
+        var upperLeft = new Vector3(-SlotX, SlotTop, 0f);
+        var upperRight = new Vector3(SlotX, SlotTop, 0f);
+        var lowerLeft = new Vector3(-SlotX, SlotBottom, 0f);
+        var lowerRight = new Vector3(SlotX, SlotBottom, 0f);
+        if (count <= 3) return new[] { upperLeft, upperRight, new Vector3(0f, -3.4f, 0f) };
+        if (count == 4) return new[] { upperLeft, upperRight, lowerLeft, lowerRight };
+        return new[] { upperLeft, upperRight, lowerLeft, lowerRight, new Vector3(0f, 4.3f, 0f) };
+    }
+
+    /// <summary>Kahraman üssün önünde, hiçbir yuvanın tetik alanında olmadan başlar.</summary>
+    private static Vector3 HeroSpawnPosition => SlotCount <= 3
+        ? new Vector3(2.2f, -2.2f, 0f) : new Vector3(0f, -2.4f, 0f);
 
     /// <summary>Bu türden şu ana kadar kaç kule kuruldu (savaştaki sıra = binanın seviye sırası).</summary>
     private int BuiltCount(BuildingType type)

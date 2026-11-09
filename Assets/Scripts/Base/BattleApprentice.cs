@@ -48,7 +48,7 @@ public sealed class BattleApprentice : MonoBehaviour
         currentHealth = maxHealth;
         damage = progression != null ? progression.Damage(weapon, level)
             : GameManager.Instance.PlayerData.hero.damage * 0.25f;
-        transform.position = hero.transform.position + new Vector3(-1.1f, 0.2f, 0f);
+        transform.position = hero.transform.position + (Vector3)FollowOffset;
         renderer = gameObject.AddComponent<SpriteRenderer>();
         renderer.sortingOrder = 34;
         animator = gameObject.AddComponent<Animator>();
@@ -73,7 +73,8 @@ public sealed class BattleApprentice : MonoBehaviour
         {
             // Pawn frames contain more transparent padding than hero frames.
             // The larger renderer bounds make the painted pawn about 75% of the hero.
-            float targetHeight = BattleActorPresentation.HeroHeight * 1.25f;
+            // Pawn kareleri boşluklu: 1.1 çarpanıyla çizili figür kahramanın ~%70'i.
+            float targetHeight = BattleActorPresentation.HeroHeight * 1.1f;
             transform.localScale = Vector3.one * (targetHeight /
                 Mathf.Max(0.01f, renderer.sprite.bounds.size.y));
         }
@@ -81,17 +82,21 @@ public sealed class BattleApprentice : MonoBehaviour
         CreateHud();
     }
 
+    // Kahramanın sol arkası, yakın: savaşta birlikte okunurlar.
+    private static readonly Vector2 FollowOffset = new Vector2(-0.8f, 0.15f);
+
     private void Update()
     {
         if (hero == null || currentHealth <= 0f || battle == null || !battle.IsBattleActive) return;
         var heroRenderer = hero.GetComponent<SpriteRenderer>();
         renderer.sortingOrder = heroRenderer != null ? heroRenderer.sortingOrder - 1 : 34;
-        Vector2 desired = (Vector2)hero.transform.position + new Vector2(-1.1f, 0.2f);
+        Vector2 desired = (Vector2)hero.transform.position + FollowOffset;
         Vector2 before = transform.position;
         Vector2 followed = Vector2.SmoothDamp(before, desired, ref followVelocity, 0.12f);
         Vector2 fromHero = followed - (Vector2)hero.transform.position;
         if (fromHero.magnitude > 3f)
             followed = (Vector2)hero.transform.position + fromHero.normalized * 3f;
+        followed = BattleObstacles.Resolve(followed + HeroController.FeetOffset, 0.3f) - HeroController.FeetOffset;
         transform.position = followed;
         bool moving = Vector2.Distance(before, followed) > 0.01f;
         if (moving) renderer.flipX = desired.x < before.x;

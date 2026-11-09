@@ -302,7 +302,7 @@ public class ViewportRevisionTests
         var hero = Object.FindFirstObjectByType(Type("HeroController")) as Component;
         var heroSprite = hero.GetComponent<SpriteRenderer>();
         Assert.AreEqual(heroSprite.sortingOrder - 1, pawnSprite.sortingOrder);
-        Assert.AreEqual(3.125f, pawnSprite.bounds.size.y, 0.12f);
+        Assert.AreEqual(1.925f, pawnSprite.bounds.size.y, 0.12f); // kahraman 1.75 × pawn boşluk payı 1.1
         Assert.NotNull(hero.transform.Find("ReadableVisual"));
         var battleBase = Object.FindFirstObjectByType(Type("MainBaseController")) as Component;
         Assert.NotNull(battleBase.transform.Find("ReadableVisual"));
