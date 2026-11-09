@@ -42,7 +42,8 @@ public sealed class BattleApprentice : MonoBehaviour
         battle = FindFirstObjectByType<BattleManager>();
         int level = Mathf.Clamp(GameManager.Instance.PlayerData.apprenticeLevel, 1, Progression.MaxLevel);
         var progression = ApprenticeProgressionData.Instance;
-        color = new[] { "Blue", "Yellow", "Red", "Purple", "Black" }[level - 1];
+        // 15 seviye, 5 renk kademesi: seviye doğrudan indeks değil (6+ seviyede çöküyordu).
+        color = new[] { "Blue", "Yellow", "Red", "Purple", "Black" }[BaseVisualCatalog.ColorIndex(level)];
         var weapon = GameManager.Instance.PlayerData.hero.weaponType;
         maxHealth = progression != null ? progression.Health(weapon, level) : hero.MaxHealth * 0.5f;
         currentHealth = maxHealth;

@@ -110,7 +110,7 @@ public static class BattleHudRedesign
             rt.anchorMin = isValue ? new Vector2(0.34f, 0.50f) : new Vector2(0.34f, 0.50f);
             rt.anchorMax = new Vector2(0.97f, 0.94f);
             rt.offsetMin = rt.offsetMax = Vector2.zero;
-            ReferenceUiVisuals.ApplyFont(text, isValue ? 12f : 13f,
+            ReferenceUiVisuals.ApplyFont(text, isValue ? 14f : 15f,
                 isValue ? ReferenceUiVisuals.Muted : ReferenceUiVisuals.Light, false, !isValue);
             text.alignment = isValue ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
             text.textWrappingMode = TextWrappingModes.NoWrap;
@@ -155,8 +155,8 @@ public static class BattleHudRedesign
         var incoming = safe.Find("IncomingChip") as RectTransform;
         if (incoming != null)
         {
-            incoming.anchorMin = new Vector2(0.18f, 0.835f);
-            incoming.anchorMax = new Vector2(0.82f, 0.878f);
+            incoming.anchorMin = new Vector2(0.18f, 0.818f);
+            incoming.anchorMax = new Vector2(0.82f, 0.860f);
             incoming.offsetMin = incoming.offsetMax = Vector2.zero;
             var image = incoming.GetComponent<Image>();
             if (image != null)
@@ -174,8 +174,8 @@ public static class BattleHudRedesign
         var countdown = safe.Find("NextWaveCountdown") as RectTransform;
         if (countdown != null)
         {
-            countdown.anchorMin = new Vector2(0.24f, 0.805f);
-            countdown.anchorMax = new Vector2(0.76f, 0.833f);
+            countdown.anchorMin = new Vector2(0.24f, 0.788f);
+            countdown.anchorMax = new Vector2(0.76f, 0.816f);
             countdown.offsetMin = countdown.offsetMax = Vector2.zero;
             var text = countdown.GetComponent<TextMeshProUGUI>();
             if (text != null) ReferenceUiVisuals.ApplyFont(text, 15f, ReferenceUiVisuals.Gold, false, true);

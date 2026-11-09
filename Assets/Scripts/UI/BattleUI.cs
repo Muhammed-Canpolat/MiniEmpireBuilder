@@ -124,11 +124,22 @@ public class BattleUI : MonoBehaviour
         {
             levelText.color = ReferenceUiVisuals.Red;
             var safe = levelText.transform.parent.parent;
-            var track = ReferenceUiVisuals.Image(safe, "BossHealthTrack", new Vector2(0.07f, 0.875f),
-                new Vector2(0.93f, 0.885f), Vector2.zero, Vector2.zero, ReferenceUiVisuals.Background);
+            // Çerçeveli boss çubuğu: üst barın hemen altında, adı üzerinde.
+            var track = ReferenceUiVisuals.Image(safe, "BossHealthTrack", new Vector2(0.10f, 0.868f),
+                new Vector2(0.90f, 0.896f), Vector2.zero, Vector2.zero, Color.white);
+            track.sprite = ReferenceUiVisuals.PillSprite();
+            track.type = Image.Type.Sliced;
+            var frame = track.gameObject.AddComponent<Outline>();
+            frame.effectColor = new Color(0.76f, 0.27f, 0.18f, 0.9f);
+            frame.effectDistance = new Vector2(1.5f, -1.5f);
             bossTrack = track.gameObject;
             bossFill = ReferenceUiVisuals.Image(track.transform, "BossHealthFill", Vector2.zero,
-                Vector2.one, Vector2.zero, Vector2.zero, ReferenceUiVisuals.Red);
+                Vector2.one, new Vector2(4f, 4f), new Vector2(-4f, -4f), ReferenceUiVisuals.Hex(0xC2452D));
+            bossFill.sprite = ReferenceUiVisuals.SolidPillSprite();
+            bossFill.type = Image.Type.Sliced;
+            ReferenceUiVisuals.Text(track.transform, "BossName", UiStrings.Upper(BattleSession.Region.bossName),
+                12, Color.white, TMPro.TextAlignmentOptions.Center, Vector2.zero, Vector2.one,
+                Vector2.zero, Vector2.zero, title: true).transform.SetAsLastSibling();
             bossTrack.SetActive(false);
         }
     }

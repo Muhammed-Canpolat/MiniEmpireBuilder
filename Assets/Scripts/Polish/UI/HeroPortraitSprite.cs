@@ -13,6 +13,8 @@ public static class HeroPortraitSprite
         try
         {
             var texture = source.texture;
+            // Atlasa paketlenmiş dokular okunamaz: kırpmadan özgün sprite kullanılır.
+            if (texture == null || !texture.isReadable) return cache[source] = source;
             var pixels = texture.GetPixels32();
             var rect = source.rect;
             int left = Mathf.RoundToInt(rect.xMin);
@@ -35,7 +37,7 @@ public static class HeroPortraitSprite
             cropped.name = source.name + "_portrait";
             return cache[source] = cropped;
         }
-        catch (UnityException)
+        catch (System.Exception)
         {
             return cache[source] = source;
         }

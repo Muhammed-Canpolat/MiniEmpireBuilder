@@ -14,7 +14,9 @@ public class BattleStructureTests
     private static Type Type(string name) => AppDomain.CurrentDomain.GetAssemblies()
         .Select(assembly => assembly.GetType(name)).First(type => type != null);
 
-    private static IEnumerator StartBattle(int region)
+    private static IEnumerator StartBattle(int region) => StartBattle(region, 1);
+
+    private static IEnumerator StartBattle(int region, int apprenticeLevel)
     {
         Screen.SetResolution(390, 844, false);
         var managerType = Type("GameManager");
@@ -23,12 +25,30 @@ public class BattleStructureTests
         yield return null;
         var save = Type("PlayerSaveData").GetMethod("CreateNew").Invoke(null,
             new[] { Enum.Parse(Type("WeaponType"), "Spear") });
+        save.GetType().GetField("apprenticeLevel").SetValue(save, apprenticeLevel);
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance)
             .Invoke(manager, null);
         Type("BattleSession").GetMethod("Begin").Invoke(null, new object[] { region, 1 });
         SceneManager.LoadScene("BattleScene");
         for (int frame = 0; frame < 45; frame++) yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator ApprenticeAboveLevelFiveStillSpawnsWithStyledCard()
+    {
+        // 15 seviyelik ilerlemede Çırak 6+ seviyede renk dizisinin dışına taşıp kayboluyordu.
+        yield return StartBattle(1, 8);
+        for (int frame = 0; frame < 30; frame++) yield return null;
+        var apprentice = Object.FindFirstObjectByType(Type("BattleApprentice")) as Component;
+        Assert.NotNull(apprentice, "Çırak sahnede olmalı");
+        var renderer = apprentice.GetComponent<SpriteRenderer>();
+        Assert.NotNull(renderer, "Çırak görseli kurulmalı");
+        Assert.NotNull(renderer.sprite);
+        var card = GameObject.Find("ApprenticeHealth");
+        Assert.NotNull(card, "Çırak kartı oluşmalı");
+        Assert.NotNull(card.transform.Find("CardFrame"), "Kart yeni tasarımla stillenmeli");
+        Type("BattleSession").GetMethod("Clear").Invoke(null, null);
     }
 
     [UnityTest]

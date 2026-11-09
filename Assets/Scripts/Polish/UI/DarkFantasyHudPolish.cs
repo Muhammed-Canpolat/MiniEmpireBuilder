@@ -283,7 +283,7 @@ public static class DarkFantasyHudPolish
             SetAnchors(top.Find("EnemyText") as RectTransform, new Vector2(0.108f, 0.52f), new Vector2(0.31f, 0.90f));
             var enemyIcon = ReferenceUiVisuals.Image(top, "EnemyChipIcon",
                 new Vector2(0.047f, 0.59f), new Vector2(0.102f, 0.84f),
-                Vector2.zero, Vector2.zero, ReferenceUiVisuals.Red);
+                Vector2.zero, Vector2.zero, ReferenceUiVisuals.Hex(0xFF6A5C)); // koyu zeminde okunur
             enemyIcon.sprite = SpriteManager.Instance?.IconBattleNew;
             enemyIcon.preserveAspect = true;
             SetAnchors(top.Find("GoldText") as RectTransform, new Vector2(0.75f, 0.52f), new Vector2(0.86f, 0.90f));
