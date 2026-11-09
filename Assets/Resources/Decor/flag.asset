@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: flag
   displayName: Sancak
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 12
   unlockMainBaseLevel: 1
   sprite: {fileID: -8987002224583354746, guid: fbbf647aa68df2244afbec6ac2afb64b, type: 3}

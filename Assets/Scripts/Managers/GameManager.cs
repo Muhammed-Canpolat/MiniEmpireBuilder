@@ -787,18 +787,26 @@ public class GameManager : MonoBehaviour
 
     private void OnApplicationPause(bool pauseStatus)
     {
+        // Önce o ana kadarki üretim madene yazılır, sonra zaman damgası ilerler. Eskiden damga
+        // doğrudan "şimdi"ye çekiliyordu: savaş/sefer ekranındaki ve arka plandaki üretim siliniyordu.
+        if (PlayerData == null) return;
         if (pauseStatus)
         {
-            if (PlayerData != null)
-                PlayerData.goldMineLastCollectTime = DateTime.UtcNow.Ticks;
+            ApplyOfflineGoldMineProduction();
             SaveGame();
+        }
+        else if (FindFirstObjectByType<BaseWorldController>() != null)
+        {
+            // Üs açıkken geri dönüldü: arka planda geçen süre şimdi eklenir
+            // (savaştaysa üsse dönüşte BaseWorldController.Start ekler).
+            ApplyOfflineGoldMineProduction();
         }
     }
 
     private void OnApplicationQuit()
     {
         if (PlayerData != null)
-            PlayerData.goldMineLastCollectTime = DateTime.UtcNow.Ticks;
+            ApplyOfflineGoldMineProduction();
         SaveGame();
     }
 }

@@ -131,15 +131,35 @@ public class ViewportRevisionTests
         Assert.GreaterOrEqual(trees.Length, 8);
         Assert.IsTrue(trees.Any(item => item.transform.position.y > 5f &&
             item.transform.position.y < 33f));
-        var treeCount = trees.Length;
-        map.GetType().GetField("minTreeCount", BindingFlags.NonPublic | BindingFlags.Instance)
-            .SetValue(map, treeCount + 1);
-        map.GetType().GetField("_respawnTargetTime", BindingFlags.NonPublic | BindingFlags.Instance)
-            .SetValue(map, 0.01f);
-        yield return Frames(3);
-        Assert.Greater(Object.FindObjectsByType(Type("MapObjectTag"),
-            FindObjectsSortMode.None).Cast<Component>()
-            .Count(item => item.name.StartsWith("Tree_")), treeCount);
+        // Temizlenen ağaçlar hemen geri gelmez: tavan doluyken hiç, altındayken 18 saatte bir tane.
+        var resourceManager = Type("GameManager").GetProperty("Instance").GetValue(null);
+        var saveData = resourceManager.GetType().GetProperty("PlayerData").GetValue(resourceManager);
+        var growTicks = saveData.GetType().GetField("terrainLastGrowTicks");
+        var grow = map.GetType().GetMethod("GrowTerrainResources");
+        growTicks.SetValue(saveData, DateTime.UtcNow.AddHours(-19).Ticks);
+        Assert.IsFalse((bool)grow.Invoke(map, null), "Tavan doluyken ağaç çıkmaz");
+        var mapObjects = (IList)map.GetType().GetField("_mapObjects",
+            BindingFlags.NonPublic | BindingFlags.Instance).GetValue(map);
+        int TreeCount() => mapObjects.Cast<object>().Count(o =>
+            o.GetType().GetField("objectType").GetValue(o).ToString() == "Tree");
+        while (TreeCount() > 4)
+        {
+            var tree = mapObjects.Cast<object>().First(o =>
+                o.GetType().GetField("objectType").GetValue(o).ToString() == "Tree");
+            Object.Destroy((GameObject)tree.GetType().GetField("gameObject").GetValue(tree));
+            mapObjects.Remove(tree);
+        }
+        growTicks.SetValue(saveData, DateTime.UtcNow.AddHours(-17).Ticks);
+        Assert.IsFalse((bool)grow.Invoke(map, null), "18 saat dolmadan ağaç çıkmaz");
+        growTicks.SetValue(saveData, DateTime.UtcNow.AddHours(-40).Ticks);
+        Assert.IsTrue((bool)grow.Invoke(map, null));
+        Assert.IsFalse((bool)grow.Invoke(map, null), "Uzun süre geçse de yalnız bir tane çıkar");
+        var savedResources = (IList)saveData.GetType().GetField("terrainResources").GetValue(saveData);
+        Assert.AreEqual(mapObjects.Cast<object>().Count(o =>
+        {
+            string kind = o.GetType().GetField("objectType").GetValue(o).ToString();
+            return kind == "Tree" || kind == "Rock";
+        }), savedResources.Count, "Ağaç/kayalar kayda yazılır");
 
         foreach (var entry in new[] { new[] { "ArcherTower", "archer_1" },
                      new[] { "CannonTower", "cannon_1" },

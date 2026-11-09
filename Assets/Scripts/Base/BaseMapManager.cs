@@ -19,6 +19,8 @@ public class PlacedMapObject
     public BuildingType? buildingType;
     public string id;
     public bool isBeingRemoved;
+    // Ağaç/kaya için görsel yükseklik (kayıtta aynı boyda geri gelsin diye).
+    public float size;
 }
 
 /// <summary>
@@ -85,31 +87,83 @@ public class BaseMapManager : MonoBehaviour
     public RectInt BuildableRect => _buildableRect;
 
 
-    [Header("Respawn")]
-    [SerializeField] private int minTreeCount = 8;
-    [SerializeField] private int minRockCount = 4;
-    [SerializeField] private float respawnIntervalMin = 10f;
-    [SerializeField] private float respawnIntervalMax = 18f;
-
-    private float _respawnTimer;
-    private float _respawnTargetTime;
+    // ==================== AĞAÇ / KAYA BÜYÜMESİ ====================
+    /// <summary>Temizlenen ağaç/kayaların yerine bu kadar saatte bir yalnız tek bir tane çıkar.</summary>
+    public const double ResourceGrowHours = 18d;
+    /// <summary>Kendiliğinden büyüme bu sayıların altındayken olur (ilk açılışta 8 ağaç + 4 kaya konur).</summary>
+    public const int GrowTreeCap = 6;
+    public const int GrowRockCap = 3;
+    private float _growCheckTimer;
+    private bool _terrainLoaded;
 
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        _respawnTargetTime = UnityEngine.Random.Range(respawnIntervalMin, respawnIntervalMax);
     }
 
     private void Update()
     {
         if (BaseSceneSetup.Instance == null) return;
-        _respawnTimer += Time.deltaTime;
-        if (_respawnTimer < _respawnTargetTime) return;
-        _respawnTimer = 0f;
-        _respawnTargetTime = UnityEngine.Random.Range(respawnIntervalMin, respawnIntervalMax);
-        TryRespawn(MapObjectType.Tree, minTreeCount);
-        TryRespawn(MapObjectType.Rock, minRockCount);
+        _growCheckTimer += Time.deltaTime;
+        if (_growCheckTimer < 30f) return;
+        _growCheckTimer = 0f;
+        GrowTerrainResources();
+    }
+
+    /// <summary>
+    /// Kayıtlı ağaç/kayaları yükler. Kayıtta hiç yoksa (yeni oyun ya da eski kayıt) seed ile
+    /// bir kez oluşturur ve kaydeder; böylece temizlenenler savaştan dönünce geri gelmez.
+    /// </summary>
+    public void LoadOrSeedTerrainResources(Action seed)
+    {
+        var data = GameManager.Instance?.PlayerData;
+        _terrainLoaded = true;
+        if (data == null) { seed?.Invoke(); return; }
+        if (!data.terrainResourcesSeeded)
+        {
+            seed?.Invoke();
+            data.terrainResourcesSeeded = true;
+            data.terrainLastGrowTicks = DateTime.UtcNow.Ticks;
+            SaveAll();
+            return;
+        }
+        foreach (var saved in data.terrainResources)
+        {
+            if (saved == null) continue;
+            var position = new Vector3(saved.x, saved.y, 0f);
+            if (saved.type == nameof(MapObjectType.Rock)) SpawnRock(position, saved.id, saved.size);
+            else SpawnTree(position, saved.id, saved.size);
+        }
+        GrowTerrainResources();
+    }
+
+    /// <summary>
+    /// Sayı tavanın altındaysa ve son büyümeden 18 saat geçtiyse tek bir ağaç ya da kaya çıkarır.
+    /// Tavan doluyken sayaç işlemez: süre, oyuncu bir şey temizledikten sonra başlar.
+    /// </summary>
+    public bool GrowTerrainResources()
+    {
+        var data = GameManager.Instance?.PlayerData;
+        if (data == null || !data.terrainResourcesSeeded || BaseSceneSetup.Instance == null) return false;
+        long now = DateTime.UtcNow.Ticks;
+        bool roomForTree = CountObjects(MapObjectType.Tree) < GrowTreeCap;
+        bool roomForRock = CountObjects(MapObjectType.Rock) < GrowRockCap;
+        if (data.terrainLastGrowTicks <= 0 || data.terrainLastGrowTicks > now || (!roomForTree && !roomForRock))
+        {
+            data.terrainLastGrowTicks = now;
+            return false;
+        }
+        if (now - data.terrainLastGrowTicks < TimeSpan.FromHours(ResourceGrowHours).Ticks) return false;
+
+        MapObjectType type = !roomForTree ? MapObjectType.Rock
+            : !roomForRock ? MapObjectType.Tree
+            : CountObjects(MapObjectType.Rock) * 2 < CountObjects(MapObjectType.Tree)
+                ? MapObjectType.Rock : MapObjectType.Tree;
+        if (!TrySpawnRandomResource(type)) return false;
+        data.terrainLastGrowTicks = now;
+        SaveAll();
+        return true;
     }
 
     private void OnEnable()
@@ -716,9 +770,10 @@ public class BaseMapManager : MonoBehaviour
     }
 
     /// <summary>Haritaya ağaç spawn et</summary>
-    public PlacedMapObject SpawnTree(Vector3 pos, string id = null)
+    public PlacedMapObject SpawnTree(Vector3 pos, string id = null, float size = 0f)
     {
         id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
+        if (size <= 0f) size = UnityEngine.Random.Range(1.5f, 2.1f);
 
         GameObject go = new GameObject($"Tree_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0.3f);
@@ -726,8 +781,7 @@ public class BaseMapManager : MonoBehaviour
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = GetRandomTreeSprite() ?? SpriteManager.Instance?.Tree ?? MakeCircleSprite(new Color(0.15f, 0.5f, 0.15f));
         sr.sortingOrder = 3;
-        float treeScale = UnityEngine.Random.Range(1.5f, 2.1f) /
-            Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        float treeScale = size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
         go.transform.localScale = new Vector3(treeScale, treeScale, 1f);
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
@@ -745,7 +799,8 @@ public class BaseMapManager : MonoBehaviour
             gameObject = go,
             objectType = MapObjectType.Tree,
             id = id,
-            isBeingRemoved = false
+            isBeingRemoved = false,
+            size = size
         };
 
         _mapObjects.Add(obj);
@@ -753,9 +808,10 @@ public class BaseMapManager : MonoBehaviour
     }
 
     /// <summary>Haritaya kaya spawn et</summary>
-    public PlacedMapObject SpawnRock(Vector3 pos, string id = null)
+    public PlacedMapObject SpawnRock(Vector3 pos, string id = null, float size = 0f)
     {
         id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
+        if (size <= 0f) size = UnityEngine.Random.Range(0.9f, 1.35f);
 
         GameObject go = new GameObject($"Rock_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0.4f);
@@ -763,8 +819,7 @@ public class BaseMapManager : MonoBehaviour
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = SpriteManager.Instance?.Rock ?? MakeCircleSprite(new Color(0.52f, 0.48f, 0.42f));
         sr.sortingOrder = 4;
-        float rockScale = UnityEngine.Random.Range(0.9f, 1.35f) /
-            Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        float rockScale = size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
         go.transform.localScale = new Vector3(rockScale, rockScale, 1f);
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
@@ -782,7 +837,8 @@ public class BaseMapManager : MonoBehaviour
             gameObject = go,
             objectType = MapObjectType.Rock,
             id = id,
-            isBeingRemoved = false
+            isBeingRemoved = false,
+            size = size
         };
 
         _mapObjects.Add(obj);
@@ -1098,6 +1154,24 @@ public class BaseMapManager : MonoBehaviour
         }
 
         GameManager.Instance.PlayerData.placedBuildings = list;
+
+        // Ağaç/kayalar sahneye yüklendikten sonra yazılır; bina yüklemesi sırasındaki SaveAll
+        // henüz sahnede olmayan ağaçları silmesin.
+        if (_terrainLoaded && GameManager.Instance.PlayerData.terrainResourcesSeeded)
+        {
+            var resources = new List<TerrainResourceSave>();
+            foreach (var obj in _mapObjects)
+            {
+                if (obj.gameObject == null || obj.isBeingRemoved) continue;
+                if (obj.objectType != MapObjectType.Tree && obj.objectType != MapObjectType.Rock) continue;
+                Vector3 p = obj.gameObject.transform.position;
+                resources.Add(new TerrainResourceSave
+                {
+                    id = obj.id, type = obj.objectType.ToString(), x = p.x, y = p.y, size = obj.size
+                });
+            }
+            GameManager.Instance.PlayerData.terrainResources = resources;
+        }
         GameManager.Instance.SaveGame();
     }
 
@@ -1238,19 +1312,15 @@ public class BaseMapManager : MonoBehaviour
         return true;
     }
 
-    private void TryRespawn(MapObjectType type, int minCount)
+    private bool TrySpawnRandomResource(MapObjectType type)
     {
         if (BaseSceneSetup.Instance == null)
-            return;
-
-        int current = CountObjects(type);
-        if (current >= minCount)
-            return;
+            return false;
 
         float width = BaseSceneSetup.Instance.width;
         float height = BaseSceneSetup.Instance.height;
 
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 40; i++)
         {
             float rx = UnityEngine.Random.Range(2.7f, width - 2.7f);
             float ry = UnityEngine.Random.Range(2.7f, height - 2.7f);
@@ -1262,8 +1332,9 @@ public class BaseMapManager : MonoBehaviour
             else if (type == MapObjectType.Rock)
                 SpawnRock(pos);
 
-            return;
+            return true;
         }
+        return false;
     }
 
     // ==================== EFEKTLER ====================

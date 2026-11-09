@@ -120,7 +120,10 @@ public sealed class BattleApprentice : MonoBehaviour
                 if (!nearest.IsDead && distance <= 0.85f && Time.time >= nextContactDamage)
                 {
                     var stats = EnemyStats.GetBaseStats(nearest.Type);
-                    stats.ScaleToLevel(GameManager.Instance.PlayerData.currentBattleLevel);
+                    // Seferde düşmanla aynı seviye (bölge×5 + aşama); eskiden hep 1 alınıyordu.
+                    stats.ScaleToLevel(BattleSession.IsCampaign
+                        ? (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber
+                        : GameManager.Instance.PlayerData.currentBattleLevel);
                     TakeDamage(stats.damage);
                     nextContactDamage = Time.time + 1f;
                 }

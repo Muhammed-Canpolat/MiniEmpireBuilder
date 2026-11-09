@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: lantern
   displayName: Fener
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 20
   unlockMainBaseLevel: 1
   sprite: {fileID: -3633224223434720437, guid: 6514c5d10cfb3524faf8cfc0b9a03b16, type: 3}

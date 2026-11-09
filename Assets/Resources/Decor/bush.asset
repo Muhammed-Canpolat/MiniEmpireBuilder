@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: bush
   displayName: Çalı
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 5
   unlockMainBaseLevel: 1
   sprite: {fileID: -7511650321784113099, guid: a84dffbcf25d54440af977606896fc46, type: 3}

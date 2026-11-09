@@ -225,6 +225,13 @@ public sealed class VictoryReferenceView : MonoBehaviour
         values[1].text = "+" + (won ? bonus : 0);
         values[2].text = "−" + buildCost;
         int transfer = won ? enemyGold + bonus - buildCost : 0;
+        bool replay = won && BattleManager.Instance != null && BattleManager.Instance.IsReplay;
+        if (replay)
+        {
+            transfer = BattleManager.Instance.LastPayout;
+            if (starReason != null)
+                starReason.text += $"\n<color=#C9B48A>Tamamlanmış aşama: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u</color>";
+        }
         values[3].text = "0";
         panel.localScale = Vector3.one * 0.8f;
         panel.DOScale(1, 0.25f).SetEase(Ease.OutBack);

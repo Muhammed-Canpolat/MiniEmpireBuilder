@@ -182,6 +182,25 @@ public class CampaignSceneSetup : MonoBehaviour
         icon.sprite = GetStarSprite();
     }
 
+    public static readonly Color EmptyStar = ReferenceUiVisuals.Hex(0x4A3C28);
+
+    /// <summary>3 yıldız yuvası: ilk <paramref name="earned"/> tanesi altın, kalanlar koyu.</summary>
+    private static RectTransform StarRow(Transform parent, string name, float x, float top, float size,
+        float step, int earned)
+    {
+        var row = TopRect(parent, name, x, top, step * 2 + size, size);
+        for (int i = 0; i < 3; i++)
+        {
+            var star = TopBox(row, "Star" + (i + 1), i * step, i == 1 ? -3f : 0f, size, size,
+                i < earned ? ReferenceUiVisuals.Gold : EmptyStar);
+            star.sprite = GetStarSprite();
+            var outline = star.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.1f, 0.06f, 0.02f, 0.85f);
+            outline.effectDistance = new Vector2(1f, -1f);
+        }
+        return row;
+    }
+
     private void ShowMap()
     {
         selectedRegion = null;
@@ -360,11 +379,11 @@ public class CampaignSceneSetup : MonoBehaviour
             if (!open) ShowToast($"Önce {level - 1}. seviyeyi tamamla");
             else SelectLevel(level);
         });
-        TopLabel(node.transform, "NodeText", stars > 0 ? "" : level == 5 ? "B" : level.ToString(),
+        TopLabel(node.transform, "NodeText", level == 5 ? "B" : level.ToString(),
             3, 4, size - 6, size - 8, 21,
             stars > 0 ? ReferenceUiVisuals.Panel : open ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted, true);
-        if (stars > 0) Star(node.transform, size * 0.28f, size * 0.28f,
-            size * 0.44f, ReferenceUiVisuals.Panel);
+        // Kazanılan yıldızlar: 3 yuva, kazanılanlar altın, kalanlar koyu.
+        if (open) StarRow(node.transform, "NodeStars", size * 0.5f - 27f, -16f, 16f, 19f, stars);
         var hint = TopLabel(node.transform, "ActiveHint", "▼", size * 0.5f - 10, -21,
             20, 18, 13, ReferenceUiVisuals.Gold, true);
         hint.gameObject.SetActive(false);
@@ -447,12 +466,18 @@ public class CampaignSceneSetup : MonoBehaviour
         TopLabel(closeRect, "X", "X", 0, 0, 44, 44, 21, Color.white, true);
         TopLabel(detailPanel, "LevelDescription", level.description,
             13, 54, 330, 43, 14, ReferenceUiVisuals.Muted, false, TextAlignmentOptions.Left);
-        TopLabel(detailPanel, "Meta", $"Düşman: {level.TotalEnemies}       Ödül: {level.reward}",
+        bool replay = CampaignProgress.Stars(selectedRegion.id, selectedLevel) > 0;
+        string reward = replay
+            ? $"Ödül: %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)} (tekrar)"
+            : $"Ödül: {level.reward}";
+        TopLabel(detailPanel, "Meta", $"Düşman: {level.TotalEnemies}       {reward}",
             13, 103, 255, 29, 13, ReferenceUiVisuals.Gold, false, TextAlignmentOptions.Left);
         TopLabel(detailPanel, "Modifier", string.IsNullOrEmpty(level.modifier) ? "NORMAL" : level.modifier,
             270, 103, 72, 29, 12, ReferenceUiVisuals.Muted);
-        for (int i = 0; i < 3; i++)
-            Star(detailPanel, 281 + i * 18, 132, 15, ReferenceUiVisuals.Gold);
+        int best = CampaignProgress.Stars(selectedRegion.id, selectedLevel);
+        TopLabel(detailPanel, "BestLabel", best > 0 ? "EN İYİ" : "OYNANMADI", 196, 130, 80, 20, 11,
+            ReferenceUiVisuals.Muted, false, TextAlignmentOptions.Right);
+        StarRow(detailPanel, "BestStars", 281, 132, 15, 18, best);
         var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle", "SAVAŞA BAŞLA", true,
             Vector2.zero, Vector2.zero, new Vector2(14, 9), new Vector2(345, 61), 19);
         battle.interactable = CampaignProgress.IsLevelOpen(selectedRegion, selectedLevel);

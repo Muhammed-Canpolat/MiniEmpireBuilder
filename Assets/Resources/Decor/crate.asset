@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: crate
   displayName: Sandık
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 5
   unlockMainBaseLevel: 1
   sprite: {fileID: 21300000, guid: 7810966f0f690954c87305933cabf2b0, type: 3}

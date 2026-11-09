@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: tree
   displayName: Ağaç
-  footprint: {x: 2, y: 2}
+  footprint: {x: 3, y: 3}
   cost: 15
   unlockMainBaseLevel: 1
   sprite: {fileID: -9130447484784962851, guid: c5a6a054a96fc4546851fdd38f73c8bb, type: 3}

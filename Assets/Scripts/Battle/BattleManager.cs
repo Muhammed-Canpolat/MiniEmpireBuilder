@@ -30,6 +30,13 @@ public class BattleManager : MonoBehaviour
     private bool battleWon = false;
     private int lastStars;
 
+    /// <summary>Daha önce kazanılmış bir sefer aşaması tekrar oynanınca toplam ödülün bu oranı verilir.</summary>
+    public const float ReplayRewardRate = 0.3f;
+    /// <summary>Bu savaş, önceden en az 1 yıldızla geçilmiş bir aşamanın tekrarı mı.</summary>
+    public bool IsReplay { get; private set; }
+    /// <summary>Zaferde cüzdana aktarılan son tutar (tekrar oynama kesintisi dahil).</summary>
+    public int LastPayout { get; private set; }
+
     // Level verisi
     private LevelData currentLevel;
 
@@ -68,6 +75,7 @@ public class BattleManager : MonoBehaviour
         {
             battleLevel = (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber;
             currentLevel = CreateCampaignWaves(BattleSession.Region, BattleSession.Level);
+            IsReplay = CampaignProgress.Stars(BattleSession.RegionId, BattleSession.LevelNumber) > 0;
         }
         else currentLevel = LevelData.GenerateLevel(battleLevel);
 
@@ -737,6 +745,9 @@ public class BattleManager : MonoBehaviour
             CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
         }
         int totalPayout = totalGoldEarned + GetVictoryBonus();
+        // Tamamlanmış aşamayı tekrar oynamak altın kasma yolu olmasın: toplamın %30'u.
+        if (IsReplay) totalPayout = Mathf.RoundToInt(totalPayout * ReplayRewardRate);
+        LastPayout = totalPayout;
 
         Debug.Log($"[BattleManager] SAVAŞ KAZANILDI! Savas ici kalan altin: {totalGoldEarned}, Odul: {GetVictoryBonus()}, Toplam: {totalPayout}");
 

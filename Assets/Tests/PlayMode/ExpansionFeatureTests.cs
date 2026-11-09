@@ -30,7 +30,7 @@ public class ExpansionFeatureTests
         var fountain = decor.Single(item => (string)Value(item, "id") == "fountain");
         Assert.AreEqual(80, Value(fountain, "cost"));
         Assert.AreEqual(3, Value(fountain, "unlockMainBaseLevel"));
-        Assert.AreEqual(new Vector2Int(2, 2), Value(
+        Assert.AreEqual(new Vector2Int(3, 3), Value(
             decor.Single(item => (string)Value(item, "id") == "tree"), "footprint"));
         Assert.IsTrue(decor.All(item => Value(item, "sprite") != null));
         var placement = Object.FindFirstObjectByType(RuntimeType("DecorPlacementController"));

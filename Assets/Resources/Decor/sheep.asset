@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: sheep
   displayName: Koyun
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 25
   unlockMainBaseLevel: 1
   sprite: {fileID: -6879290243380990860, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}

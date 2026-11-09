@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: rock
   displayName: Kaya
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 8
   unlockMainBaseLevel: 1
   sprite: {fileID: 21300000, guid: 8ea2ea1f28e7447ac943714f1ef7fae9, type: 3}

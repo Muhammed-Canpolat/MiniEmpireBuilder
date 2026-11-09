@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DecorData
   id: flowers
   displayName: Ayçiçeği
-  footprint: {x: 1, y: 1}
+  footprint: {x: 2, y: 2}
   cost: 10
   unlockMainBaseLevel: 1
   sprite: {fileID: 21300264, guid: 7810966f0f690954c87305933cabf2b0, type: 3}

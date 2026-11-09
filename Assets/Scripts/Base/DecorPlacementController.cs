@@ -51,17 +51,8 @@ public sealed class DecorPlacementController : MonoBehaviour
             if (placed.Exists(item => item != null && item.InstanceId == id)) continue;
             var data = Array.Find(decor, item => item.id == clusters[i].Item1);
             if (data == null) continue;
-            bool placedClusterItem = false;
-            for (int radius = 0; radius <= 2 && !placedClusterItem; radius++)
-            for (int dx = -radius; dx <= radius && !placedClusterItem; dx++)
-            for (int dy = -radius; dy <= radius && !placedClusterItem; dy++)
-            {
-                if (Mathf.Abs(dx) + Mathf.Abs(dy) != radius) continue;
-                var cell = clusters[i].Item2 + new Vector2Int(dx, dy);
-                if (!CanPlace(data, cell)) continue;
+            if (TryFindNearestFree(data, clusters[i].Item2, 4, out var cell))
                 Spawn(data, cell, id);
-                placedClusterItem = true;
-            }
         }
         Save();
     }
@@ -72,12 +63,49 @@ public sealed class DecorPlacementController : MonoBehaviour
     {
         var records = GameManager.Instance?.PlayerData?.placedDecor;
         if (records == null) return;
+        bool changed = false;
+        int refund = 0;
         foreach (var record in records)
         {
             var data = Array.Find(All, item => item.id == record.decorId);
-            if (data != null && CanPlace(data, new Vector2Int(record.x, record.y)))
-                Spawn(data, new Vector2Int(record.x, record.y), record.instanceId);
+            if (data == null) continue;
+            var cell = new Vector2Int(record.x, record.y);
+            // Dekor alanları büyüdü (1×1 → 2×2): eski kayıtta komşusuyla çakışan en yakın boş yere geçer.
+            if (!CanPlace(data, cell))
+            {
+                changed = true;
+                if (!TryFindNearestFree(data, cell, 6, out cell))
+                {
+                    refund += data.cost;
+                    continue;
+                }
+            }
+            Spawn(data, cell, record.instanceId);
         }
+        if (!changed) return;
+        if (refund > 0)
+        {
+            // Yer kalmadıysa dekor kaybolmasın: bedeli geri verilir.
+            GameManager.Instance.AddGold(refund);
+            GoldPopupManager.ShowGoldChange(refund);
+        }
+        Save();
+    }
+
+    /// <summary>Hücreye en yakın (artan halkalarla) yerleştirilebilir hücreyi bulur.</summary>
+    public bool TryFindNearestFree(DecorData data, Vector2Int origin, int maxRadius, out Vector2Int cell,
+        DecorInstance except = null)
+    {
+        for (int radius = 0; radius <= maxRadius; radius++)
+        for (int dy = -radius; dy <= radius; dy++)
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) != radius) continue;
+            cell = origin + new Vector2Int(dx, dy);
+            if (CanPlace(data, cell, except)) return true;
+        }
+        cell = origin;
+        return false;
     }
 
     private void OnDestroy()

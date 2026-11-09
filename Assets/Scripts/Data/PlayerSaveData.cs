@@ -47,6 +47,12 @@ public class PlayerSaveData
     public List<BuilderTaskSave> builderTasks = new List<BuilderTaskSave>();
     public List<BuilderHutSave> builderHuts = new List<BuilderHutSave>();
 
+    // Ana üsteki ağaç ve kayalar: ilk açılışta bir kez oluşturulur, sonra kayıttan okunur.
+    // Temizlenenlerin yerine 18 saatte bir tek bir tane çıkar (terrainLastGrowTicks).
+    public bool terrainResourcesSeeded;
+    public List<TerrainResourceSave> terrainResources = new List<TerrainResourceSave>();
+    public long terrainLastGrowTicks;
+
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
     /// </summary>
@@ -119,6 +125,9 @@ public class PlayerSaveData
         data.gems = 0;
         data.buildableSize = 17;
         data.removedFenceIds = new List<string>();
+        data.terrainResourcesSeeded = false;
+        data.terrainResources = new List<TerrainResourceSave>();
+        data.terrainLastGrowTicks = 0;
 
         return data;
     }
@@ -133,6 +142,17 @@ public class BuilderHutSave
     public bool hasPosition;
     public float x;
     public float y;
+}
+
+/// <summary>Ana üsteki bir ağaç ya da kaya (type: "Tree" / "Rock"; size: dünya birimi yükseklik).</summary>
+[Serializable]
+public class TerrainResourceSave
+{
+    public string id;
+    public string type;
+    public float x;
+    public float y;
+    public float size;
 }
 
 /// <summary>
@@ -325,6 +345,7 @@ public static class SaveSystem
             }
             if (data.builderTasks == null) data.builderTasks = new List<BuilderTaskSave>();
             if (data.builderHuts == null) data.builderHuts = new List<BuilderHutSave>();
+            if (data.terrainResources == null) data.terrainResources = new List<TerrainResourceSave>();
             if (data.saveVersion < 5)
             {
                 // Tek görev listeye taşınır; 1 inşaatçı ve 0 elmasla devam edilir.
