@@ -201,8 +201,9 @@ public class HeroController : MonoBehaviour
                 spriteRenderer.flipX = dirX < 0;
         }
 
-        // Hasar ver
+        // Hasar ver; vurulan düşman kısa süre kahramana döner.
         target.TakeDamage(attackDamage);
+        target.Provoke();
 
         // Screen shake (güçlü hasarda)
         if (BattleVfxManager.Instance != null)

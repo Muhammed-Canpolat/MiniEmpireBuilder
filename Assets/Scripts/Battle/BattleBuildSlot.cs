@@ -7,6 +7,14 @@ public class BattleBuildSlot : MonoBehaviour
 {
     private BattleManager battleManager;
     private bool isBuilt;
+    private int destroyCount;
+    private GameObject ruin;
+
+    /// <summary>Bu yuvada kaç yapı yıkıldı; yeniden kurma bedeli her yıkılışta +%50.</summary>
+    public int DestroyCount => destroyCount;
+    public float CostMultiplier => 1f + 0.5f * destroyCount;
+    public int CostFor(BuildingType type) =>
+        Mathf.RoundToInt(battleManager.GetBuildCost(type) * CostMultiplier);
     private BuildingType builtType;
     private GameObject visualMarker;
     private Vector3 markerRestScale;
@@ -136,7 +144,7 @@ public class BattleBuildSlot : MonoBehaviour
             choices[i].gameObject.SetActive(show);
             if (!show) continue;
 
-            int cost = battleManager.GetBuildCost(type);
+            int cost = CostFor(type);
             int remaining = battleManager.GetBattleBuildRemaining(type);
             bool canBuild = battleManager.CanBuildFromSlot(type, cost);
             choices[i].interactable = canBuild;
@@ -146,6 +154,7 @@ public class BattleBuildSlot : MonoBehaviour
 
             string status = remaining <= 0 ? "Hak kalmadı"
                 : battleManager.GoldEarned < cost ? "Altın yetersiz"
+                : destroyCount > 0 ? "Yeniden kur"
                 : $"{remaining}/{owned} hak";
             choiceTexts[i].text = UiStrings.Upper(Name(type)) +
                 $"\n<size=16>{cost}</size> <size=11>ALTIN</size>\n<size=10>{UiStrings.Upper(status)}</size>";
@@ -176,10 +185,11 @@ public class BattleBuildSlot : MonoBehaviour
 
     private void TryBuild(BuildingType type)
     {
-        int cost = battleManager.GetBuildCost(type);
+        int cost = CostFor(type);
         if (!battleManager.TryBuildFromSlot(this, type, transform.position, cost)) return;
         builtType = type;
         isBuilt = true;
+        if (ruin != null) Destroy(ruin);
         if (GameManager.Instance?.PlayerData != null &&
             !GameManager.Instance.PlayerData.firstBattleTowerBuilt)
         {
@@ -192,8 +202,50 @@ public class BattleBuildSlot : MonoBehaviour
         if (choiceCanvas != null) Destroy(choiceCanvas);
     }
 
+    /// <summary>Üstündeki yapı yıkıldı: yuva yeniden kurulabilir, yerinde yıkıntı kalır.</summary>
+    public void OnStructureDestroyed()
+    {
+        isBuilt = false;
+        destroyCount++;
+        if (visualMarker != null) visualMarker.SetActive(true);
+        if (ruin != null) Destroy(ruin);
+        ruin = CreateRuin(transform.position);
+    }
+
+    /// <summary>Koyu yanık iz ve birkaç kırık taş.</summary>
+    private static GameObject CreateRuin(Vector3 center)
+    {
+        var root = new GameObject("StructureRuin");
+        root.transform.position = new Vector3(center.x, center.y - 0.35f, 0f);
+        var scorch = new GameObject("Scorch");
+        scorch.transform.SetParent(root.transform, false);
+        var scorchRenderer = scorch.AddComponent<SpriteRenderer>();
+        scorchRenderer.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+        scorchRenderer.color = new Color(0.08f, 0.06f, 0.05f, 0.55f);
+        scorchRenderer.sortingOrder = 2;
+        Vector2 circle = scorchRenderer.sprite.bounds.size;
+        scorch.transform.localScale = new Vector3(1.7f / circle.x, 0.7f / circle.y, 1f);
+        var rock = Resources.Load<Sprite>("BaseDecor/rock");
+        if (rock == null) return root;
+        Vector3[] pieces = { new Vector3(-0.42f, 0.05f), new Vector3(0.36f, 0.12f), new Vector3(0.02f, -0.12f) };
+        float[] sizes = { 0.42f, 0.34f, 0.28f };
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            var piece = new GameObject("Rubble");
+            piece.transform.SetParent(root.transform, false);
+            piece.transform.localPosition = pieces[i];
+            var renderer = piece.AddComponent<SpriteRenderer>();
+            renderer.sprite = rock;
+            renderer.color = new Color(0.55f, 0.5f, 0.46f);
+            renderer.sortingOrder = 3;
+            piece.transform.localScale = Vector3.one * (sizes[i] / Mathf.Max(0.01f, rock.bounds.size.x));
+        }
+        return root;
+    }
+
     private void OnDestroy()
     {
         if (choiceCanvas != null) Destroy(choiceCanvas);
+        if (ruin != null) Destroy(ruin);
     }
 }

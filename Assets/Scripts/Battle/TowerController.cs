@@ -1,30 +1,31 @@
 using UnityEngine;
 
 /// <summary>
-/// Okçu/Topçu Kulesi — otomatik olarak en yakın düşmana saldırır
+/// Okçu/Topçu kulesi saldırısı. Can ve yıkılma <see cref="BattleStructure"/>'da.
+/// Menzil halkası sürekli görünmez: kurulduktan sonra kısa süre ve kahraman yaklaşınca belirir.
 /// </summary>
 public class TowerController : MonoBehaviour
 {
-    [Header("Kule Tipi")]
-    [SerializeField] private BuildingType towerType = BuildingType.ArcherTower;
+    private const float RingRevealDistance = 3.2f;
+    private const float RingAfterBuildSeconds = 2.5f;
 
-    [Header("Statlar")]
-    [SerializeField] private float maxHealth = 80f;
+    [SerializeField] private BuildingType towerType = BuildingType.ArcherTower;
     [SerializeField] private float damage = 8f;
     [SerializeField] private float attackRange = 6f;
     [SerializeField] private float attackCooldown = 0.7f;
     [SerializeField] private int unitCount = 1;
 
-    private float currentHealth;
     private float lastAttackTime;
-    private SpriteRenderer spriteRenderer;
-    private HealthBar healthBar;
-
-    public float HealthPercent => currentHealth / maxHealth;
-    public bool IsDestroyed => currentHealth <= 0;
-    public float AttackRange => attackRange;
-
     private int level = -1;
+    private BattleStructure structure;
+    private GameObject rangeRing;
+    private float ringUntil;
+    private HeroController hero;
+
+    public float HealthPercent => structure != null ? structure.HealthPercent : 1f;
+    public bool IsDestroyed => structure != null && structure.IsDestroyed;
+    public float AttackRange => attackRange;
+    public BuildingType Type => towerType;
 
     /// <summary>Kule, onu sağlayan Ana Üs binasının seviyesiyle kurulur.</summary>
     public void Initialize(BuildingType type, int towerLevel)
@@ -40,9 +41,7 @@ public class TowerController : MonoBehaviour
 
     private void Start()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
-
-        // GameManager'dan stat al
+        structure = GetComponent<BattleStructure>();
         if (GameManager.Instance != null && GameManager.Instance.Buildings.ContainsKey(towerType))
         {
             var towerData = level > 0 ? GameManager.Instance.CreateLevelData(towerType, level)
@@ -50,99 +49,75 @@ public class TowerController : MonoBehaviour
             if (towerData.isUnlocked && towerData.level > 0)
             {
                 towerData.ApplyLevelStats();
-                maxHealth = towerData.maxHealth;
                 damage = towerData.damage;
                 attackRange = towerData.attackRange;
                 unitCount = towerData.unitCount;
-                attackCooldown = 1f / towerData.attackSpeed;
+                attackCooldown = 1f / Mathf.Max(0.1f, towerData.attackSpeed);
             }
         }
-
-        currentHealth = maxHealth;
-
-        // Health bar'ı oluştur
-        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.8f, 0));
-        BattleWorldMarkers.DashedCircle(transform, attackRange,
-            new Color(0.94f, 0.76f, 0.29f, 0.22f), 36);
-
-        // Kule rengini ayarla (geçici, gerçek sprite yoksa)
-        if (spriteRenderer != null && (spriteRenderer.sprite == null || spriteRenderer.sprite.name == "Square"))
-        {
-            spriteRenderer.color = towerType == BuildingType.ArcherTower
-                ? new Color(0.2f, 0.6f, 1f)   // Mavi — Okçu
-                : new Color(1f, 0.4f, 0.1f);  // Turuncu — Topçu
-        }
+        rangeRing = BattleWorldMarkers.DashedCircle(transform, attackRange,
+            new Color(0.94f, 0.76f, 0.29f, 0.35f), 36);
+        // Halka yapının tabanında olsun (kök görselin ortasında).
+        if (structure != null)
+            rangeRing.transform.position = new Vector3(structure.BasePoint.x, structure.BasePoint.y, 0.05f);
+        ringUntil = Time.time + RingAfterBuildSeconds;
     }
 
     private void Update()
     {
-        if (currentHealth <= 0) return;
+        if (IsDestroyed) return;
+        UpdateRing();
+        if (Time.time - lastAttackTime < attackCooldown) return;
+        EnemyController target = FindNearestEnemy();
+        if (target == null) return;
+        Attack(target);
+        lastAttackTime = Time.time;
+    }
 
-        // Saldırı cooldown kontrolü
-        if (Time.time - lastAttackTime >= attackCooldown)
-        {
-            EnemyController target = FindNearestEnemy();
-            if (target != null)
-            {
-                Attack(target);
-                lastAttackTime = Time.time;
-            }
-        }
+    private void UpdateRing()
+    {
+        if (rangeRing == null) return;
+        if (hero == null) hero = FindFirstObjectByType<HeroController>();
+        bool near = hero != null && Vector2.Distance(hero.transform.position, transform.position) < RingRevealDistance;
+        bool show = near || Time.time < ringUntil;
+        if (rangeRing.activeSelf != show) rangeRing.SetActive(show);
     }
 
     private EnemyController FindNearestEnemy()
     {
-        EnemyController[] enemies = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
         EnemyController nearest = null;
         float nearestDist = attackRange;
-
-        foreach (var enemy in enemies)
+        Vector2 origin = structure != null ? structure.BasePoint : (Vector2)transform.position;
+        foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
         {
             if (enemy.IsDead || !FogOfWar.IsVisible(enemy.transform.position)) continue;
-
-            float dist = Vector2.Distance(transform.position, enemy.transform.position);
+            float dist = Vector2.Distance(origin, enemy.transform.position);
             if (dist < nearestDist)
             {
                 nearestDist = dist;
                 nearest = enemy;
             }
         }
-
         return nearest;
     }
 
     private void Attack(EnemyController target)
     {
-        // Kule tipine göre mermi tipi belirle
         ProjectileType pType = towerType == BuildingType.ArcherTower ? ProjectileType.Arrow : ProjectileType.Axe;
-
         GameObject projObj = new GameObject("TowerProjectile");
         ProjectileController proj = projObj.AddComponent<ProjectileController>();
-
-        // Her birim ayrı saldırır (örneğin 3 okçu varsa 3 katı hasar, görsel olarak tek mermi fırlatılır)
         float totalDamage = damage * unitCount;
-
         proj.Launch(transform.position + Vector3.up * 0.5f, target.transform.position, pType, () =>
         {
-            if (target != null && !target.IsDead)
-            {
-                target.TakeDamage(totalDamage);
-            }
+            if (target != null && !target.IsDead) target.TakeDamage(totalDamage);
         });
+        var garrison = GetComponent<BattleGarrison>();
+        if (garrison != null) garrison.Fire();
     }
 
+    /// <summary>Geriye uyum: hasar yapıya iletilir.</summary>
     public void TakeDamage(float dmg)
     {
-        currentHealth -= dmg;
-        currentHealth = Mathf.Max(0, currentHealth);
-
-        if (healthBar != null)
-            healthBar.UpdateHealth(currentHealth);
-
-        if (currentHealth <= 0)
-        {
-            Debug.Log($"[Tower] {towerType} yıkıldı!");
-            Destroy(gameObject);
-        }
+        if (structure != null) structure.TakeDamage(dmg);
     }
 }

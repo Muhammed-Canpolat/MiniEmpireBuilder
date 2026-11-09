@@ -211,80 +211,141 @@ public class EnemyController : MonoBehaviour
 
     // ==================== HEDEF BULMA ====================
 
-    /// <summary>
-    /// Hedef önceliği: Yolda karşılaşılan Kahraman → Duvar → Ana Üs
-    /// Kahraman yakındaysa ona saldır, değilse üsse yürü
-    /// </summary>
+    /// <summary>Düşman rolü: kime öncelik verdiği (tasarım tablosu).</summary>
+    public enum Role { Hunter, Besieger, Breaker, Siege }
+
+    public Role EnemyRole => enemyType == EnemyType.Wolf || enemyType == EnemyType.ShadowWolf ? Role.Hunter
+        : enemyType == EnemyType.Zombie ? Role.Besieger
+        : enemyType == EnemyType.Orc ? Role.Breaker
+        : Role.Siege;
+
+    private const float HunterAggro = 3f;      // Avcı: kahraman/Çırak'a atılma mesafesi
+    private const float BesiegerReach = 4f;    // Kuşatıcı: yolundaki kuleyi fark etme
+    private const float BreakerReach = 5.5f;   // Yıkıcı: kuleleri arama
+    private const float ProvokeSeconds = 3f;   // Kahraman vurunca ona dönme süresi
+    private const float RetargetInterval = 0.25f;
+    private const float BaseRadius = 1.2f;     // Ana Üs görseli geniş: kenarından vurulur
+    private const float StructureRadius = 0.55f;
+
+    private Vector2 targetPoint;
+    private float targetRadius;
+    private float nextRetarget;
+    private float provokedUntil;
+
+    /// <summary>Kahraman bu düşmana vurdu: kısa süre kahramana döner (oyuncu kuleyi koruyabilir).</summary>
+    public void Provoke() => provokedUntil = Time.time + ProvokeSeconds;
+
+    private bool TargetStillValid()
+    {
+        if (currentTarget == null) return false;
+        var structure = currentTarget.GetComponent<BattleStructure>();
+        if (structure != null) return !structure.IsDestroyed;
+        var heroTarget = currentTarget.GetComponent<HeroController>();
+        if (heroTarget != null) return heroTarget.CurrentHealth > 0f;
+        var apprentice = currentTarget.GetComponent<BattleApprentice>();
+        if (apprentice != null) return apprentice.CurrentHealth > 0f;
+        return true;
+    }
+
     private void FindBestTarget()
     {
-        // 1) Kahraman yakında mı? (Ana üs'ten uzakta karşılaşma)
+        if (Time.time < nextRetarget && TargetStillValid())
+        {
+            RefreshTargetPoint();
+            return;
+        }
+        nextRetarget = Time.time + RetargetInterval * UnityEngine.Random.Range(0.8f, 1.2f);
+        Vector2 position = transform.position;
         HeroController hero = FindFirstObjectByType<HeroController>();
-        if (hero != null && hero.CurrentHealth > 0)
-        {
-            float distToHero = Vector2.Distance(transform.position, hero.transform.position);
-            float heroEngageRange = attackRange + 1.5f; // Algılama mesafesi
+        bool heroAlive = hero != null && hero.CurrentHealth > 0f;
+        float heroDistance = heroAlive ? Vector2.Distance(position, hero.transform.position) : float.MaxValue;
 
-            if (distToHero <= heroEngageRange)
-            {
-                currentTarget = hero.transform;
-                return;
-            }
+        // Ortak kurallar: kışkırtılmışsa kahraman; kahraman dibindeyse (vuruş menzili) kahraman.
+        if (heroAlive && (Time.time < provokedUntil || heroDistance <= attackRange + 0.3f))
+        {
+            SetTarget(hero.transform, hero.transform.position, 0f);
+            return;
         }
 
-        // 2) Duvar var mı kontrol et
-        WallController wall = FindNearestAlive<WallController>();
-        if (wall != null)
+        switch (EnemyRole)
         {
-            float dist = Vector2.Distance(transform.position, wall.transform.position);
-            if (dist < attackRange + 2f)
+            case Role.Hunter:
             {
-                currentTarget = wall.transform;
-                return;
+                Transform prey = null;
+                float best = HunterAggro;
+                if (heroAlive && heroDistance <= best) { prey = hero.transform; best = heroDistance; }
+                var apprentice = FindFirstObjectByType<BattleApprentice>();
+                if (apprentice != null && apprentice.CurrentHealth > 0f)
+                {
+                    float d = Vector2.Distance(position, apprentice.transform.position);
+                    if (d < best) { prey = apprentice.transform; best = d; }
+                }
+                if (prey != null) { SetTarget(prey, prey.position, 0f); return; }
+                break;
+            }
+            case Role.Besieger:
+            case Role.Breaker:
+            {
+                float reach = EnemyRole == Role.Breaker ? BreakerReach : BesiegerReach;
+                var structure = NearestStructure(position, reach);
+                if (structure != null) { SetTarget(structure.transform, structure.BasePoint, StructureRadius); return; }
+                break;
+            }
+            case Role.Siege:
+            {
+                // Boss üsse yürür; yolunun üstündeki kuleyi ezer.
+                var structure = NearestStructure(position, attackRange + 1f);
+                if (structure != null) { SetTarget(structure.transform, structure.BasePoint, StructureRadius); return; }
+                break;
             }
         }
-
-        // 3) Ana Üs her zaman son hedef
-        currentTarget = mainBaseTransform;
+        if (mainBaseTransform != null)
+            SetTarget(mainBaseTransform, mainBaseTransform.position, BaseRadius);
     }
 
-    private T FindNearestAlive<T>() where T : MonoBehaviour
+    private void SetTarget(Transform target, Vector2 point, float radius)
     {
-        T[] objects = FindObjectsByType<T>(FindObjectsSortMode.None);
-        T nearest = null;
-        float nearestDist = Mathf.Infinity;
+        currentTarget = target;
+        targetPoint = point;
+        targetRadius = radius;
+    }
 
-        foreach (var obj in objects)
+    /// <summary>Hareketli hedeflerde (kahraman, Çırak) nokta her karede güncellenir.</summary>
+    private void RefreshTargetPoint()
+    {
+        if (currentTarget == null) return;
+        if (currentTarget.GetComponent<BattleStructure>() is BattleStructure structure && structure != null)
+            targetPoint = structure.BasePoint;
+        else targetPoint = currentTarget.position;
+    }
+
+    private static BattleStructure NearestStructure(Vector2 from, float reach)
+    {
+        BattleStructure nearest = null;
+        float best = reach;
+        foreach (var structure in BattleStructure.All)
         {
-            float dist = Vector2.Distance(transform.position, obj.transform.position);
-            if (dist < nearestDist)
-            {
-                nearestDist = dist;
-                nearest = obj;
-            }
+            if (structure == null || structure.IsDestroyed) continue;
+            float d = Vector2.Distance(from, structure.BasePoint);
+            if (d < best) { best = d; nearest = structure; }
         }
-
         return nearest;
     }
+
+    private float DistanceToTarget => Vector2.Distance(transform.position, targetPoint) - targetRadius;
 
     // ==================== HAREKET ====================
 
     private void MoveToTarget()
     {
         if (currentTarget == null) return;
-
-        float distance = Vector2.Distance(transform.position, currentTarget.position);
-
-        if (distance > attackRange)
-        {
-            Vector3 direction = (currentTarget.position - transform.position).normalized;
-            transform.position += direction * moveSpeed * Time.deltaTime;
-
-            // Sprite yönü
-            if (spriteRenderer != null && direction.x != 0)
-            {
-                spriteRenderer.flipX = direction.x > 0; // Düşmanlar sağdan gelirse sola baksın
-            }
-        }
+        if (DistanceToTarget <= attackRange) return;
+        Vector3 direction = ((Vector3)targetPoint - transform.position);
+        direction.z = 0f;
+        direction.Normalize();
+        transform.position += direction * moveSpeed * Time.deltaTime;
+        if (spriteRenderer != null && direction.x != 0)
+            spriteRenderer.flipX = direction.x > 0; // Düşmanlar sağdan gelirse sola baksın
     }
 
     // ==================== SALDIRI ====================
@@ -292,10 +353,7 @@ public class EnemyController : MonoBehaviour
     private void TryAttack()
     {
         if (currentTarget == null) return;
-
-        float distance = Vector2.Distance(transform.position, currentTarget.position);
-
-        if (distance <= attackRange && Time.time - lastAttackTime >= attackCooldown)
+        if (DistanceToTarget <= attackRange && Time.time - lastAttackTime >= attackCooldown)
         {
             lastAttackTime = Time.time;
             AttackTarget();
@@ -304,31 +362,17 @@ public class EnemyController : MonoBehaviour
 
     private void AttackTarget()
     {
-        // Ana Üs'e saldırı
-        MainBaseController baseCtrl = currentTarget.GetComponent<MainBaseController>();
-        if (baseCtrl != null)
-        {
-            baseCtrl.TakeDamage(damage);
-            return;
-        }
-
-        // Duvara saldırı
-        WallController wallCtrl = currentTarget.GetComponent<WallController>();
-        if (wallCtrl != null)
-        {
-            wallCtrl.TakeDamage(damage);
-            return;
-        }
-
-        // Kahramana saldırı
-        HeroController heroCtrl = currentTarget.GetComponent<HeroController>();
-        if (heroCtrl != null)
-        {
-            heroCtrl.TakeDamage(damage);
-            return;
-        }
-
-        // Kule'ye saldırı (ileride eklenecek)
+        if (currentTarget == null) return;
+        var baseCtrl = currentTarget.GetComponent<MainBaseController>();
+        if (baseCtrl != null) { baseCtrl.TakeDamage(damage); return; }
+        var structure = currentTarget.GetComponent<BattleStructure>();
+        if (structure != null) { structure.TakeDamage(damage); return; }
+        var heroCtrl = currentTarget.GetComponent<HeroController>();
+        if (heroCtrl != null) { heroCtrl.TakeDamage(damage); return; }
+        var apprentice = currentTarget.GetComponent<BattleApprentice>();
+        if (apprentice != null) { apprentice.TakeDamage(damage); return; }
+        var wallCtrl = currentTarget.GetComponent<WallController>();
+        if (wallCtrl != null) wallCtrl.TakeDamage(damage);
     }
 
     // ==================== HASAR ALMA ====================

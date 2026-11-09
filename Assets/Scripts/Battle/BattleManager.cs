@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -365,49 +366,82 @@ public class BattleManager : MonoBehaviour
         slot.Setup(this, type, cost);
     }
 
-    private void CreateTower(Vector3 position, BuildingType type)
+    // Yapıların görünen boyları (Ana Üs 2.6, kahraman 1.75 ile orantılı).
+    private const float ArcherTowerHeight = 2.3f;
+    private const float CannonTowerHeight = 2.0f;
+    private const float MonasteryHeight = 2.2f;
+
+    private void CreateTower(Vector3 position, BuildingType type) => BuildTower(position, type, null);
+
+    private void BuildTower(Vector3 position, BuildingType type, BattleBuildSlot slot)
     {
-        var sm = SpriteManager.Instance;
-        GameObject towerObj;
-
-        if (sm != null)
-        {
-            Sprite towerSprite = type == BuildingType.ArcherTower ? sm.ArcherTower : sm.CannonTower;
-            towerObj = CreateSpriteObject(type.ToString(), towerSprite, position, new Vector3(0.4f, 0.4f, 1f));
-        }
-        else
-        {
-            Color c = type == BuildingType.ArcherTower ? new Color(0.2f, 0.6f, 1f) : new Color(1f, 0.4f, 0.1f);
-            towerObj = CreateSimpleSprite(type.ToString(), c, position, new Vector3(0.7f, 1f, 1f));
-        }
-
         // İlk kurulan kule en yüksek seviyeli binanın, ikincisi sonrakinin seviyesini alır.
         int level = GameManager.Instance != null ? GameManager.Instance.GetBattleTowerLevel(type, BuiltCount(type)) : 1;
+        float height = type == BuildingType.ArcherTower ? ArcherTowerHeight : CannonTowerHeight;
+        var towerObj = CreateStructureVisual(type.ToString(), type, level, position, height);
         TowerController tower = towerObj.AddComponent<TowerController>();
         tower.Initialize(type, level);
-        if (GameManager.Instance?.Buildings != null &&
-            GameManager.Instance.Buildings.TryGetValue(type, out var building))
-        {
-            var visual = building.VisualForLevel(level);
-            var renderer = towerObj.GetComponent<SpriteRenderer>();
-            if (renderer != null && visual != null)
-            {
-                if (visual.sprite != null) renderer.sprite = visual.sprite;
-                renderer.color = visual.color;
-            }
-        }
+        FinishStructure(towerObj, type, level, slot, position, height);
     }
 
-    private void CreateMonastery(Vector3 position)
+    private void CreateMonastery(Vector3 position) => BuildMonastery(position, null);
+
+    private void BuildMonastery(Vector3 position, BattleBuildSlot slot)
     {
         int level = GameManager.Instance != null
             ? GameManager.Instance.GetBattleTowerLevel(BuildingType.Monastery, BuiltCount(BuildingType.Monastery)) : 1;
-        var visual = GameManager.Instance?.Buildings != null &&
-            GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var data)
-            ? data.VisualForLevel(level) : null;
-        var monastery = CreateSpriteObject("Monastery", visual?.sprite,
-            position, new Vector3(0.4f, 0.4f, 1f));
+        var monastery = CreateStructureVisual("Monastery", BuildingType.Monastery, level, position, MonasteryHeight);
         monastery.AddComponent<MonasteryHealer>().Level = level;
+        FinishStructure(monastery, BuildingType.Monastery, level, slot, position, MonasteryHeight);
+    }
+
+    /// <summary>
+    /// Seviye görseliyle, tabanı yuvanın biraz altına oturan, verilen boyda bina.
+    /// Kök nesne görseldir (testler ve garnizon kökteki SpriteRenderer'ı kullanır).
+    /// </summary>
+    private GameObject CreateStructureVisual(string name, BuildingType type, int level, Vector3 slotPosition, float height)
+    {
+        Sprite sprite = null;
+        if (GameManager.Instance?.Buildings != null && GameManager.Instance.Buildings.TryGetValue(type, out var data))
+            sprite = data.VisualForLevel(level)?.sprite;
+        if (sprite == null && SpriteManager.Instance != null)
+            sprite = type == BuildingType.ArcherTower ? SpriteManager.Instance.ArcherTower
+                : type == BuildingType.CannonTower ? SpriteManager.Instance.CannonTower : null;
+        GameObject obj = sprite != null
+            ? CreateSpriteObject(name, sprite, slotPosition, Vector3.one)
+            : CreateSimpleSprite(name, new Color(0.5f, 0.6f, 0.8f), slotPosition, Vector3.one);
+        var renderer = obj.GetComponent<SpriteRenderer>();
+        Bounds local = renderer.sprite.bounds;
+        float scale = height / Mathf.Max(0.01f, local.size.y);
+        obj.transform.localScale = new Vector3(scale, scale, 1f);
+        // Görselin alt kenarı yuva merkezinin 0.45 altında: yapı yuvanın üstünde "durur".
+        float bottom = slotPosition.y - 0.45f;
+        obj.transform.position = new Vector3(slotPosition.x, bottom - local.min.y * scale, 0f);
+        renderer.sortingOrder = 6;
+        renderer.color = Color.white;
+        // Zemin gölgesi
+        var shadow = new GameObject("StructureShadow");
+        shadow.transform.SetParent(obj.transform, false);
+        var shadowRenderer = shadow.AddComponent<SpriteRenderer>();
+        shadowRenderer.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+        shadowRenderer.color = new Color(0f, 0f, 0f, 0.32f);
+        shadowRenderer.sortingOrder = 5;
+        Vector2 circle = shadowRenderer.sprite.bounds.size;
+        shadow.transform.localScale = new Vector3(1.6f / (circle.x * scale), 0.45f / (circle.y * scale), 1f);
+        shadow.transform.position = new Vector3(slotPosition.x, bottom + 0.08f, 0f);
+        return obj;
+    }
+
+    private void FinishStructure(GameObject obj, BuildingType type, int level, BattleBuildSlot slot,
+        Vector3 slotPosition, float height)
+    {
+        var structure = obj.AddComponent<BattleStructure>();
+        Vector2 basePoint = new Vector2(slotPosition.x, slotPosition.y - 0.45f);
+        structure.Initialize(type, level, slot, basePoint, height);
+        obj.AddComponent<BattleGarrison>().Initialize(type, level, height);
+        obj.transform.localScale = new Vector3(obj.transform.localScale.x, obj.transform.localScale.y * 0.2f, 1f);
+        float targetY = obj.transform.localScale.y / 0.2f;
+        obj.transform.DOScaleY(targetY, 0.35f).SetEase(Ease.OutBack);
     }
 
     private GameObject CreateEnemyPrefab()
@@ -614,13 +648,13 @@ public class BattleManager : MonoBehaviour
         switch (type)
         {
             case BuildingType.ArcherTower:
-                CreateTower(position, BuildingType.ArcherTower);
+                BuildTower(position, BuildingType.ArcherTower, slot);
                 break;
             case BuildingType.CannonTower:
-                CreateTower(position, BuildingType.CannonTower);
+                BuildTower(position, BuildingType.CannonTower, slot);
                 break;
             case BuildingType.Monastery:
-                CreateMonastery(position);
+                BuildMonastery(position, slot);
                 break;
             default:
                 return false;
