@@ -1,92 +1,72 @@
-# Mini Empire Builder - AI Context README
+# Mini Empire Builder — Yapay Zekâ Devir Notu
 
-Bu dosya yeni bir AI sohbetine proje baglamini hizli aktarmak icin hazirlanmistir.
+Yeni bir sohbette projeye hızlıca devam edebilmek için güncel bağlam. Son güncelleme: 9 Kasım 2026.
+Dal: `ui/dark-fantasy-hud` (GitHub: Muhammed-Canpolat/MiniEmpireBuilder). Unity 6000.3.9f1, URP 2D, Android (dikey).
 
-## Kisa Ozet
-- Oyun: mobil dikey (portrait) bir base-builder + wave-based battle oyunu.
-- Akis: Intro/MainMenu -> Base (us dunyasi) -> Battle (savas) -> Base.
-- Sistemlerin cogu sahnede programatik olarak olusturuluyor (prefab yerine kod).
-- Kayit sistemi PlayerPrefs + JSON.
-- UI revamp sistemi token tabanli (UiStyleToken + UiRevampApplier).
+## Çalışma şekli (kullanıcı tercihleri)
+- Kullanıcıyla **Türkçe** konuşulur. Önce analiz/öneri sunulur, onay gelince uygulanır.
+- Her iş: derleme kontrolü → anlamlı Türkçe commit → push. Commit sonu: `Co-Authored-By: Claude ...`.
+- Unity editörü genelde açıktır: PlayMode testleri komut satırından koşturulamaz; derleme
+  `dotnet build Assembly-CSharp.csproj` (+ `BasePresentationTests.csproj`, `Assembly-CSharp-Editor.csproj`) ile doğrulanır.
+  Yeni .cs dosyaları Unity csproj'u yenileyene kadar csproj'a elle `<Compile Include>` eklenerek denenir.
+- Kullanıcı cihazda (Android tablet) APK ile test edip ekran görüntüsü paylaşır.
+  APK: Unity → **Tools → Mini Empire Builder → Android Test APK (Development)** (`Assets/Editor/AndroidTestBuild.cs`).
+- Python düzenleme betiklerinde `\n` kaçışları kabukta bozulabiliyor: kaçış içeren düzenlemeler Edit aracıyla
+  ya da betik dosyası yazılıp çalıştırılarak yapılmalı. `GlobalUiThemeApplier.cs` UTF-8 değil (bayt düzeyinde düzenle).
 
-## Oyun Amaci ve Temel Loop
-- Oyuncu imparatorlugunu yeniden kurar: altin biriktir, binalari gelistir, kahramani guclendir.
-- Base sahnesinde binalara tiklayip upgrade yapar, altin madeninden birikim alir.
-- Battle sahnesinde dalgalar gelir; kahraman hareket eder, savunma slotlarina giderek kule/duvar kurar.
-- Savas kazaninca altin gelir ve battle level artar.
+## Oyun özeti
+Base-builder + dalga savunması. Akış: Ana menü → **Ana Üs** (BaseScene) → **Sefer haritası** (CampaignScene, 5 bölge × 5 seviye)
+→ **Savaş** (BattleScene) → bölgeye dönüş. Sahneler kodla kurulur: `SceneAutoSetup` → `*SceneSetup`.
+Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem.Load`).
 
-## Sahne Akisi
-- MainMenuScene: intro/hero secimi ve continue.
-- BaseScene: us dunyasi (bina/hero upgrade, altin maden).
-- BattleScene: dalga bazli savas.
+## İlerleme sistemi (15 seviye)
+- Tek kaynak: `Progression` (`Assets/Scripts/Data/GameData.cs`): tavan 15, renk her 3 seviyede bir
+  (mavi/sarı/kırmızı/mor/siyah), yükseltme süreleri (15 sn, 1 dk, 30 dk, 1/3/6/12/18/24 sa, 30–48 sa), bedeller.
+- Açılma: Okçu 2 (2. bina 5), Topçu 4 (8), Manastır 6 (10); her türden en fazla 2. Maden 1 adet.
+- **Her binanın kendi seviyesi** var (`PlacedBuildingData.level`); sahnede `BuildingInstance` bileşeni.
+  `GameManager.Buildings[type].level` = o türün en yüksek bina seviyesi.
+- İnşaatçı görevi gerçek saatle `GameManager`'da (`BuilderTaskSave`, UTC tick): oyun kapalıyken/savaşta ilerler.
+  `BuilderSystem` yalnız görünüm; bina üstünde sayaç `BuilderTaskMarker`.
+- Kahraman ve Çırak tavanı = Ana Üs seviyesi. Arazi Ana Üs 4/7/10/13'te genişler (`BaseWorldLayout.CleanAtLevel`).
+- Bölge şartı 1/3/6/9/12; savaş yuvası Bölge 1–2: 3, 3–4: 4, 5 ve Sonsuz: 5 (`CampaignCatalog.BattleSlotCount`).
 
-Otomatik kurulum: her sahne yuklenince SceneAutoSetup ilgili setup scriptini ekler.
+## Ana Üs (BaseScene)
+- `BaseSceneSetup`, `BaseMapManager` (binalar, çit, slotlar), `BaseWorldUI` (bina/kahraman panelleri).
+- HUD: `BaseHudRedesign` (süslü üst şerit, seviye arması `LevelCrest`, ahşap dock; İnşa Et · SEFER · KAHRAMAN).
+- Çit: kesintisiz döşenen kirişler + taş direkler, kaldırılamaz (`BaseMapManager.BuildBuildableFence`).
+- Dekor: `DecorData` (Resources/Decor, 17 dekor; Cainos Village Props + Tiny Swords + özel sanat),
+  `DecorPlacementController`, menüde kaydırılabilir ızgara (`BuildMenuController.CreateDecorGrid`).
+- Kahramana dokunma görsel gövdeye/kamp bayrağına göre (`BaseSceneSetup.IsHeroTap`).
 
-## Ana Sistemler
-### GameManager (Singleton)
-- Save/Load, altin ekonomisi, bina/hero upgrade, battle level ilerlemesi.
-- Olaylar: OnGoldChanged, OnBuildingUpgraded, OnHeroLevelUp, OnBattleLevelChanged.
-- Sahne gecisleri (fade ile).
+## Savaş (BattleScene)
+- `BattleManager` (dalgalar, yuvalar `SlotLayout`, yapılar `BuildTower`/`BuildMonastery`), `BattleBuildSlot`.
+- Yapılar: `BattleStructure` (can, yıkılma, yıkıntı, yeniden inşa +%50/yıkılış), `TowerController`, `MonasteryHealer`
+  (kahraman + Ana Üs + kuleleri iyileştirir), `BattleGarrison` (kulede asker).
+- `BattleObstacles`: Ana Üs/kuleler yürünemez; kahraman/Çırak konumla hareket eder, engellerden itilir.
+- Düşman rolleri (`EnemyController.Role`): Kurt/Gölge Kurt = Avcı (kahraman/Çırak), Zombi = Kuşatıcı (yakın kule),
+  Ork = Yıkıcı (kuleler), Trol/boss = Kuşatma (üs). Kahraman vurduğu düşmanı 3 sn çeker (`Provoke`).
+- Bölge 2 Sisli Orman: `FogOfWar` (görüş), Gölge Kurt, Orman Cadısı boss (`ForestWitchBoss`).
+- Bölge 3 Terk Edilmiş Maden: kayalı zemin (`Resources/Battle/ground_mine_rocks.png`) ve maden dekoru
+  (`BattleRegionEnvironment.AddMineScatter`).
+- HUD: `BattleHudRedesign` (ahşap alt panel, portreli can kartları, afiş), `BattleOffscreenIndicators` (yöne göre gruplu).
+- Görsel ölçek: kahraman 1.75, Ana Üs 2.6 birim (`BattleActorPresentation`). Çırak kahramanın sol önünde.
 
-### Save System
-- PlayerSaveData JSON olarak PlayerPrefs icinde tutulur.
+## Ses
+- Tüm klipler `Assets/Resources/AudioLibrary.asset` üzerinden (AudioManager çalışma anında oluşur, Inspector'dan atanamaz).
+- Müzik bağlı: menü/sefer Lyric & Fantasy, Ana Üs Emotional Themes çalma listesi, savaş Battle Loop (rastgele),
+  boss Epic Battle Loop, sis katmanı Mystical Ambient. Parça başına ses çarpanı. Dosyalar Git LFS'te.
+- **Eksik:** ses efektleri (tıklama, altın, vuruş, zafer, yenilgi, rüzgar/kuş). Kullanıcı ücretsiz paket arıyor
+  (öneri: Asset Store "Casual Game Sounds", "Free Sound Effects Pack Starter", "Nature Sound FX"; ya da kenney.nl RPG/UI Audio).
 
-### Base World
-- BaseWorldController (PlayerController.cs icinde) altin madeninin online/offline uretimini yurutur.
-- BaseSceneSetup sahneyi ve UI'yi kodla kurar.
+## Testler
+`Assets/Tests/PlayMode/*` (yansıma ile Assembly-CSharp'a erişir). Önemliler: `ProgressionTests`, `BattleStructureTests`,
+`UiFixPassTests`, `ForestRegionMechanicsTests`, `ViewportRevisionTests`, `HudExpansionReviewTests`.
 
-### Battle
-- BattleManager dalga uretimi, spawn, zafer/yenilgi ve battle-icinde altin havuzu.
-- BattleBuildSlot: hero slot alana girdiginde yeterli altin varsa insa eder.
-- HeroController: joystick input ile hareket, otomatik saldiri.
-- EnemyController: hedef onceligi (hero/duvar/us) ve saldiri.
-- TowerController / WallController / MainBaseController: savunma bilesenleri.
-
-### UI Revamp
-- UiStyleToken + UiRevampApplier ile isimlere gore otomatik tema uygulamasi.
-- RevampTheme ScriptableObject ile palette/typography/motion tanimi.
-
-## Kontroller
-- Battle sahnesi: VirtualJoystick ile hero hareketi.
-- Base sahnesi: bina/hero tiklamalari ve panel butonlari.
-
-## Ekonomi ve Seviye
-- Gold kapasitesi: MainBase level ile artar.
-- GoldMine: saniyede uretim + offline birikim; ceket altin limitine takilinca maden depoda kalir.
-- Hero max level: MainBase level + 1.
-- Building unlock: MainBase level kosullarina bagli.
-
-## Onemli Dosyalar
-- Game state ve sahne akisi: [Assets/Scripts/Managers/GameManager.cs](Assets/Scripts/Managers/GameManager.cs)
-- Bootstrapper ve auto setup: [Assets/Scripts/Managers/GameBootstrapper.cs](Assets/Scripts/Managers/GameBootstrapper.cs), [Assets/Scripts/Managers/SceneAutoSetup.cs](Assets/Scripts/Managers/SceneAutoSetup.cs)
-- Veri model ve save: [Assets/Scripts/Data/GameData.cs](Assets/Scripts/Data/GameData.cs), [Assets/Scripts/Data/PlayerSaveData.cs](Assets/Scripts/Data/PlayerSaveData.cs)
-- Intro kurulum: [Assets/Scripts/Intro/IntroSceneSetup.cs](Assets/Scripts/Intro/IntroSceneSetup.cs)
-- Base kurulum ve UI: [Assets/Scripts/Base/BaseSceneSetup.cs](Assets/Scripts/Base/BaseSceneSetup.cs), [Assets/Scripts/UI/BaseWorldUI.cs](Assets/Scripts/UI/BaseWorldUI.cs)
-- Base world controller: [Assets/Scripts/PlayerController.cs](Assets/Scripts/PlayerController.cs)
-- Battle kurulum: [Assets/Scripts/Battle/BattleSceneSetup.cs](Assets/Scripts/Battle/BattleSceneSetup.cs)
-- Battle core: [Assets/Scripts/Battle/BattleManager.cs](Assets/Scripts/Battle/BattleManager.cs)
-- Battle actors: [Assets/Scripts/Battle/HeroController.cs](Assets/Scripts/Battle/HeroController.cs), [Assets/Scripts/Battle/EnemyController.cs](Assets/Scripts/Battle/EnemyController.cs)
-- Defans: [Assets/Scripts/Battle/TowerController.cs](Assets/Scripts/Battle/TowerController.cs), [Assets/Scripts/Battle/WallController.cs](Assets/Scripts/Battle/WallController.cs), [Assets/Scripts/Battle/MainBaseController.cs](Assets/Scripts/Battle/MainBaseController.cs)
-- Battle UI: [Assets/Scripts/UI/BattleUI.cs](Assets/Scripts/UI/BattleUI.cs)
-- Build slot: [Assets/Scripts/Battle/BattleBuildSlot.cs](Assets/Scripts/Battle/BattleBuildSlot.cs)
-- Joystick: [Assets/Scripts/UI/VirtualJoystick.cs](Assets/Scripts/UI/VirtualJoystick.cs)
-- Sprite sistemi: [Assets/Scripts/Managers/SpriteManager.cs](Assets/Scripts/Managers/SpriteManager.cs)
-- UI Revamp: [Assets/Scripts/Polish/Revamp/RevampTheme.cs](Assets/Scripts/Polish/Revamp/RevampTheme.cs), [Assets/Scripts/Polish/Revamp/UiStyleToken.cs](Assets/Scripts/Polish/Revamp/UiStyleToken.cs), [Assets/Scripts/Polish/Revamp/UiRevampApplier.cs](Assets/Scripts/Polish/Revamp/UiRevampApplier.cs), [Assets/Scripts/Polish/Revamp/UiRevampBootstrap.cs](Assets/Scripts/Polish/Revamp/UiRevampBootstrap.cs)
-- Revamp checklist: [Docs/REVAMP_CHECKLIST.md](Docs/REVAMP_CHECKLIST.md)
-
-## Kaynaklar ve Asset Yerleri
-- Sprites: [Assets/Resources/Sprites](Assets/Resources/Sprites)
-- VFX: [Assets/Resources/VFX](Assets/Resources/VFX)
-- DOTween ayarlari: [Assets/Resources/DOTweenSettings.asset](Assets/Resources/DOTweenSettings.asset)
-
-## Notlar / Teknik Detaylar
-- Sahne objeleri buyuk oranda runtime olusturuluyor (kodla UI ve sprite yerlesimi).
-- DOTween: UI/healthbar ve animasyonlarda kullaniliyor.
-- Input System: EventSystem + InputSystemUIInputModule aktif.
-- SpriteManager Resources uzerinden sprite yukler, bulamazsa placeholder uretir.
-
-## Hedefler (Revamp)
-
-
----
-Bu README, yeni bir AI sohbetinde hizli baglam saglamak icindir. Yeni gorevleri buradan referans alarak spesifik dosyalara odaklanabilirsiniz.
+## Açık konular / sıradaki fikirler
+- Ses efektlerinin bağlanması (paket bekleniyor).
+- Denge: düşman rolleri menzilleri, yıkılma sıklığı, 15 seviyelik bedel/süreler oynanarak ayarlanacak.
+  Tek inşaatçı darboğaz olabilir (kilitli ikinci inşaatçı yeri `BuilderSystem.Builders[1]`).
+- Bölge 4–5 için kimlik (zemin, dekor, özel mekanik "Don") ve boss'lar; Sonsuz Sefer henüz yok.
+- Savaşta kamera yuvaları ekran kenarında kesebiliyor (kamera sınırı önerildi).
+- APK ~118 MB: `Resources` içindeki büyük görseller ve kullanılmayan Firebase incelenebilir.
+- Ayrıntılı geçmiş: `git log` ve `UIReviewScreenshots/*/README.md`, `*_PASS.md`.
