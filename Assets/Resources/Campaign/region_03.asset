@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "Terk Edilmi\u015F Maden"
   requiredBaseLevel: 6
   colorTone: {r: 0.41568628, g: 0.41568628, b: 0.44705883, a: 1}
-  groundTile: {fileID: 21300000, guid: 8592c4d543adc074b93fb12e80515978, type: 3}
+  groundTile: {fileID: 21300000, guid: 712e210574724f0a9dc732e4a388d915, type: 3}
   enemyTypes: 00000000010000000200000003000000
   specialMechanic: 
   bossName: "Maden Gardiyan\u0131"

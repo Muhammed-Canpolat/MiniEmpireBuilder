@@ -11,7 +11,10 @@ public class HealthBar : MonoBehaviour
     private const float SmoothDuration = 0.3f;
 
     [SerializeField] private Vector3 offset = new Vector3(0f, 0.7f, 0f);
-    [SerializeField] private Vector2 barSize = new Vector2(0.8f, 0.1f);
+    // Sprite 2 x 0.5 birim: varsayılan çubuk 1.1 x 0.1 dünya birimi (eskiden 0.05 kalınlık, çizgi gibiydi).
+    [SerializeField] private Vector2 barSize = new Vector2(0.55f, 0.2f);
+    private Transform frameTransform;
+    private Transform backgroundTransform;
 
     private Transform targetTransform;
     public Transform Target => targetTransform;
@@ -94,13 +97,23 @@ public class HealthBar : MonoBehaviour
 
     private void BuildBar()
     {
+        // Koyu çerçeve + boş yuva: her zeminde okunur.
+        GameObject frameObj = new GameObject("BarFrame");
+        frameObj.transform.SetParent(transform);
+        var frameRenderer = frameObj.AddComponent<SpriteRenderer>();
+        frameRenderer.sprite = CreateRoundedBarSprite();
+        frameRenderer.color = new Color(0.04f, 0.03f, 0.02f, 0.92f);
+        frameRenderer.sortingOrder = 9;
+        frameTransform = frameObj.transform;
+
         GameObject bgObj = new GameObject("BarBg");
         bgObj.transform.SetParent(transform);
         SpriteRenderer bgRenderer = bgObj.AddComponent<SpriteRenderer>();
         bgRenderer.sprite = CreateRoundedBarSprite();
-        bgRenderer.color = new Color(0.15f, 0.15f, 0.15f, 0.8f);
+        bgRenderer.color = new Color(0.24f, 0.21f, 0.18f, 0.95f);
         bgRenderer.sortingOrder = 10;
-        bgObj.transform.localScale = new Vector3(barSize.x, barSize.y, 1f);
+        backgroundTransform = bgObj.transform;
+        ApplyFrameScale();
 
         GameObject fillObj = new GameObject("BarFill");
         fillObj.transform.SetParent(transform);
@@ -109,6 +122,22 @@ public class HealthBar : MonoBehaviour
         fillRenderer.color = baseColor;
         fillRenderer.sortingOrder = 11;
         fillObj.transform.localScale = new Vector3(barSize.x, barSize.y, 1f);
+    }
+
+    private void ApplyFrameScale()
+    {
+        if (frameTransform != null)
+            frameTransform.localScale = new Vector3(barSize.x + 0.04f, barSize.y + 0.16f, 1f);
+        if (backgroundTransform != null)
+            backgroundTransform.localScale = new Vector3(barSize.x, barSize.y, 1f);
+    }
+
+    /// <summary>Çubuk boyutunu değiştirir (sprite birimi: x 2, y 0.5 dünya birimi çarpanı).</summary>
+    public void Resize(Vector2 size)
+    {
+        barSize = size;
+        ApplyFrameScale();
+        ApplyFill(maxHealth > 0f ? Mathf.Clamp01(Mathf.Max(0f, currentHealth) / maxHealth) : 1f);
     }
 
     private void ApplyFillTween(float ratio)

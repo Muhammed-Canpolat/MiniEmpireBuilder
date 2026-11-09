@@ -41,6 +41,7 @@ public sealed class BattleStructure : MonoBehaviour
         CurrentHealth = MaxHealth;
         float top = basePoint.y + visualHeight + 0.15f - transform.position.y;
         healthBar = HealthBar.Create(transform, MaxHealth, new Vector3(0f, top, 0f), ReferenceUiVisuals.Hex(0x7FC8F8));
+        healthBar.Resize(new Vector2(0.65f, 0.32f)); // kule çubuğu: 1.3 x 0.16, çerçeveli
         // Kahraman ve Çırak yapının içinden geçemez.
         BattleObstacles.Register(this, BattleObstacles.Footprint(basePoint, 1.25f, 0.25f, 0.75f));
         registry.Add(this);
