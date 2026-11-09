@@ -439,15 +439,23 @@ public class BaseWorldUI : MonoBehaviour
         }
 
         if (heroNameText != null)
-            heroNameText.text = $"Ana Savaşçı ({GetWeaponName(hero.weaponType)})";
+            heroNameText.text = "Ana Savaşçı";
 
         if (heroLevelText != null)
             heroLevelText.text = $"Seviye {hero.level}";
 
         if (heroStatsText != null)
         {
-            heroStatsText.text = $"XP: —\nCan: {hero.maxHealth:F0}\n" +
-                                 $"Hasar: {hero.damage:F0}\n" +
+            // Bir sonraki seviyenin değerleri ok ile gösterilir (kalkan: %10 + seviye başına %2).
+            var next = new HeroData { weaponType = hero.weaponType,
+                level = Mathf.Min(hero.level + 1, GameManager.Instance.GetHeroMaxLevel()) };
+            next.ApplyLevelStats();
+            bool more = next.level > hero.level;
+            string Up(string now, string then) => more && now != then ? $"{now} → {then} ▲" : now;
+            heroStatsText.text = $"XP: —\n" +
+                                 $"Can: {Up(hero.maxHealth.ToString("F0"), next.maxHealth.ToString("F0"))}\n" +
+                                 $"Hasar: {Up(hero.damage.ToString("F0"), next.damage.ToString("F0"))}\n" +
+                                 $"Kalkan: {Up("%" + Mathf.RoundToInt(hero.shield * 100f), "%" + Mathf.RoundToInt(next.shield * 100f))}\n" +
                                  $"Menzil: {hero.attackRange:F1}\n" +
                                  $"Saldırı Hızı: {hero.attackSpeed:F1}/sn";
         }

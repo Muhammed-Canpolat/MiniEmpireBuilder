@@ -24,6 +24,7 @@ public sealed class BattleCosmeticObserver : MonoBehaviour
         {
             new GameObject("BattleCosmeticObserver").AddComponent<BattleCosmeticObserver>();
             new GameObject("BattleApprentice").AddComponent<BattleApprentice>();
+            new GameObject("BattleObjectiveHud").AddComponent<BattleObjectiveHud>();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             new GameObject("BattleDebugOverlay").AddComponent<BattleDebugOverlay>();
 #endif

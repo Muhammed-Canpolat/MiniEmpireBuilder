@@ -50,6 +50,14 @@ public class HealthBar : MonoBehaviour
         return hb;
     }
 
+    /// <summary>Can tavanını değiştirir ve çubuğu doldurur.</summary>
+    public void SetMax(float maxHp)
+    {
+        maxHealth = Mathf.Max(1f, maxHp);
+        currentHealth = maxHealth;
+        ApplyFill(1f);
+    }
+
     /// <summary>
     /// Updates health value with smooth fill and low-health pulse.
     /// </summary>

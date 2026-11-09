@@ -299,9 +299,18 @@ public class EnemyController : MonoBehaviour
                 break;
             }
         }
+        // "Madeni koru": yağmacı düşman, maden ayaktayken üs yerine madene yürür.
+        if (RaidTarget != null && !RaidTarget.IsDestroyed)
+        {
+            SetTarget(RaidTarget.transform, RaidTarget.BasePoint, StructureRadius);
+            return;
+        }
         if (mainBaseTransform != null)
             SetTarget(mainBaseTransform, mainBaseTransform.position, BaseRadius);
     }
+
+    /// <summary>"Madeni koru" aşamasında bu düşmanın asıl hedefi olan maden (yoksa null: Ana Üs).</summary>
+    public BattleStructure RaidTarget { get; set; }
 
     private void SetTarget(Transform target, Vector2 point, float radius)
     {

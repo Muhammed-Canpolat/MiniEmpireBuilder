@@ -23,6 +23,22 @@ public class HeroController : MonoBehaviour
     private float currentHealth;
     private float lastAttackTime;
     private bool isDead;
+    private float shield;
+    private float invulnerableUntil;
+
+    /// <summary>Savaşçı düşünce bu kadar saniye sonra Ana Üs önünde dirilir (yenilgi yalnız Ana Üs yıkılınca).</summary>
+    public const float RespawnSeconds = 8f;
+    /// <summary>Dirildikten sonra kısa süre hasar almaz (doğduğu yerde hemen tekrar düşmesin).</summary>
+    public const float RespawnGraceSeconds = 2f;
+    /// <summary>Bu savaşta kaç kez düştü (yıldız kuralı: hiç düşmeden %50 üstü can).</summary>
+    public int TimesDowned { get; private set; }
+    public bool IsDowned => isDead;
+    /// <summary>Düşmüşse dirilmeye kalan süre (sn); ayaktaysa 0.</summary>
+    public float RespawnRemaining => isDead ? Mathf.Max(0f, respawnAt - Time.time) : 0f;
+    public float Shield => shield;
+    private float respawnAt;
+    private Vector3 respawnPoint;
+    private int heroLevel = 1;
     private Vector2 moveInput;
 
     private SpriteRenderer spriteRenderer;
@@ -64,13 +80,17 @@ public class HeroController : MonoBehaviour
             attackCooldown = 1f / hero.attackSpeed;
             maxHealth = hero.maxHealth;
             weaponType = hero.weaponType;
+            shield = hero.shield;
+            heroLevel = hero.level;
         }
 
         currentHealth = maxHealth;
+        respawnPoint = transform.position;
         healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.8f, 0));
 
         // Unity Animator entegrasyonu
         SetupAnimator();
+        respawnScale = transform.localScale;
 
         // Animator yoksa sprite-swap ile devam et
         if (!useAnimator)
@@ -84,8 +104,18 @@ public class HeroController : MonoBehaviour
     private void SetupAnimator()
     {
         // AnimatorController bul
-        RuntimeAnimatorController ctrl = null;
-        if (SpriteManager.Instance != null)
+        // Tek kahraman: seviyenin renk kademesinde Tiny Swords Warrior (kalkanlı Guard animasyonu dahil).
+        RuntimeAnimatorController ctrl = weaponType == WeaponType.Axe ? HeroLook.Controller(heroLevel) : null;
+        if (ctrl != null)
+        {
+            // Warrior kareleri 64 px/birim: eski 100 px/birim kareleriyle aynı boyda görünsün,
+            // çarpışma kutusu da dünyada aynı boyda kalsın.
+            transform.localScale = new Vector3(transform.localScale.x * HeroLook.WarriorScale,
+                transform.localScale.y * HeroLook.WarriorScale, 1f);
+            var box = GetComponent<BoxCollider2D>();
+            if (box != null) box.size /= HeroLook.WarriorScale;
+        }
+        if (ctrl == null && SpriteManager.Instance != null)
             ctrl = SpriteManager.Instance.GetHeroAnimatorController(weaponType);
 
         if (ctrl == null)
@@ -115,7 +145,11 @@ public class HeroController : MonoBehaviour
 
     private void Update()
     {
-        if (isDead) return;
+        if (isDead)
+        {
+            if (Time.time >= respawnAt) Respawn();
+            return;
+        }
         HandleMovement();
         HandleAutoAttack();
         UpdateCombatSprite();
@@ -463,8 +497,11 @@ public class HeroController : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        if (isDead) return;
+        if (isDead || damage <= 0f) return;
+        if (Time.time < invulnerableUntil) return;
 
+        // Kalkan: gelen her hasarı seviyeye göre azaltır (%10 + seviye başına %2).
+        damage *= 1f - Mathf.Clamp01(shield);
         currentHealth -= damage;
         currentHealth = Mathf.Max(0f, currentHealth);
 
@@ -496,12 +533,43 @@ public class HeroController : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
+        TimesDowned++;
+        respawnAt = Time.time + RespawnSeconds;
+        moveInput = Vector2.zero;
         StartCoroutine(HeroDeathEffect());
 
         BattleManager battleManager = FindFirstObjectByType<BattleManager>();
         if (battleManager != null)
             battleManager.OnHeroDied();
     }
+
+    /// <summary>Düşen savaşçı Ana Üs önündeki başlangıç noktasında tam canla kalkar.</summary>
+    private void Respawn()
+    {
+        var battle = BattleManager.Instance;
+        if (battle != null && !battle.IsBattleActive) return;
+        isDead = false;
+        currentHealth = maxHealth;
+        if (healthBar != null) healthBar.UpdateHealth(currentHealth);
+        transform.DOKill();
+        transform.position = respawnPoint;
+        transform.rotation = Quaternion.identity;
+        transform.localScale = respawnScale != Vector3.zero ? respawnScale : transform.localScale;
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.DOKill();
+            spriteRenderer.color = Color.white;
+            // Koruma süresince yanıp söner.
+            spriteRenderer.DOFade(0.45f, 0.2f).SetLoops(Mathf.RoundToInt(RespawnGraceSeconds / 0.2f), LoopType.Yoyo)
+                .OnComplete(() => { if (spriteRenderer != null) spriteRenderer.color = Color.white; });
+        }
+        invulnerableUntil = Time.time + RespawnGraceSeconds;
+        if (useAnimator && heroAnimator != null) heroAnimator.Play("Idle", 0, 0f);
+        if (BattleVfxManager.Instance != null) BattleVfxManager.Instance.SpawnBuild(transform.position);
+        if (battle != null) battle.OnHeroRespawned();
+    }
+
+    private Vector3 respawnScale;
 
     private IEnumerator HeroDeathEffect()
     {

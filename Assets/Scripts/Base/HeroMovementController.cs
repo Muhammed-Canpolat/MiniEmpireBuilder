@@ -42,6 +42,17 @@ public class HeroMovementController : MonoBehaviour
         var controller = BaseVisualCatalog.Instance?.heroControllers != null
             && BaseVisualCatalog.Instance.heroControllers.Length > weaponIndex
             ? BaseVisualCatalog.Instance.heroControllers[weaponIndex] : null;
+        // Tek kahraman: seviyenin renk kademesindeki Warrior (64 px/birim kareler: ölçek dengelenir).
+        var warrior = weapon == WeaponType.Axe
+            ? HeroLook.Controller(GameManager.Instance?.PlayerData?.hero?.level ?? 1) : null;
+        if (warrior != null)
+        {
+            controller = warrior;
+            transform.localScale = new Vector3(transform.localScale.x * HeroLook.WarriorScale,
+                transform.localScale.y * HeroLook.WarriorScale, 1f);
+            var circle = GetComponent<CircleCollider2D>();
+            if (circle != null) circle.radius /= HeroLook.WarriorScale;
+        }
         if (controller != null)
         {
             visualAnimator = gameObject.AddComponent<Animator>();

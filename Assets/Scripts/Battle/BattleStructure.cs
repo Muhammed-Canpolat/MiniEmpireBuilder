@@ -47,6 +47,14 @@ public sealed class BattleStructure : MonoBehaviour
         registry.Add(this);
     }
 
+    /// <summary>Can tavanını değiştirir ve canı doldurur ("Madeni koru" madeni gibi özel yapılar).</summary>
+    public void SetMaxHealth(float value)
+    {
+        MaxHealth = Mathf.Max(1f, value);
+        CurrentHealth = MaxHealth;
+        if (healthBar != null) healthBar.SetMax(MaxHealth);
+    }
+
     public void TakeDamage(float amount)
     {
         if (IsDestroyed || amount <= 0f) return;

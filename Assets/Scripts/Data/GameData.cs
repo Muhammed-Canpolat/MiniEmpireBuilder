@@ -78,6 +78,12 @@ public class HeroData
     public float attackRange = 1.5f;
     public float attackSpeed = 1f;      // saldırı / saniye
     public float moveSpeed = 3f;
+    /// <summary>Kalkan: düşmandan gelen hasarı bu oranda azaltır (0.10 = %10).</summary>
+    public float shield = 0.10f;
+
+    /// <summary>Kalkan gücü: 1. seviyede %10, her seviyede +%2 (15. seviyede %38).</summary>
+    public static float ShieldForLevel(int level) =>
+        0.10f + 0.02f * (Mathf.Clamp(level, 1, Progression.MaxLevel) - 1);
 
     /// <summary>
     /// Silah tipine ve seviyeye göre istatistikleri hesapla
@@ -85,14 +91,16 @@ public class HeroData
     public void ApplyLevelStats()
     {
         float levelMultiplier = 1f + (level - 1) * 0.15f;
+        shield = ShieldForLevel(level);
 
         switch (weaponType)
         {
             case WeaponType.Axe:
+                // Tek kahraman (Warrior): taban can 130'dan 200'e çıktı (çok çabuk ölüyordu).
                 damage = 15f * levelMultiplier;
                 attackRange = 1.5f;
                 attackSpeed = 0.8f;
-                maxHealth = 130f * levelMultiplier;
+                maxHealth = 200f * levelMultiplier;
                 moveSpeed = 2.5f;
                 break;
 
@@ -435,11 +443,13 @@ public class EnemyStats
     /// <summary>
     /// Seviyeye göre statları ölçekle
     /// </summary>
+    public const float DamageGrowthPerLevel = 0.06f;
+
     public void ScaleToLevel(int level)
     {
-        float multiplier = 1f + (level - 1) * 0.085f;
-        health *= multiplier;
-        damage *= multiplier;
+        // Can aşama başına %8,5, hasar %6 artar (hasar eskiden %8,5'ti: kahraman çok çabuk ölüyordu).
+        health *= 1f + (level - 1) * 0.085f;
+        damage *= 1f + (level - 1) * DamageGrowthPerLevel;
         // goldDrop da hafif artar
         goldDrop = Mathf.RoundToInt(goldDrop * (1f + (level - 1) * 0.08f));
     }

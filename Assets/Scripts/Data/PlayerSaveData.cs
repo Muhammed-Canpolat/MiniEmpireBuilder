@@ -63,7 +63,8 @@ public class PlayerSaveData
 
         // Ana Savaşçı
         data.hero = new HeroData();
-        data.hero.weaponType = selectedWeapon;
+        // Tek kahraman: Warrior (eski silah seçimi yok sayılır).
+        data.hero.weaponType = WeaponType.Axe;
         data.hero.level = 1;
         data.hero.ApplyLevelStats();
         data.apprenticeLevel = 1;
@@ -360,6 +361,11 @@ public static class SaveSystem
                 data.saveVersion = 5;
                 Save(data);
             }
+            // Tek kahraman: Okçu/Mızrakçı seçmiş eski oyuncular da Warrior olur.
+            if (data.hero == null) data.hero = new HeroData();
+            data.hero.weaponType = WeaponType.Axe;
+            data.hero.level = Mathf.Clamp(data.hero.level, 1, Progression.MaxLevel);
+            data.hero.ApplyLevelStats();
             data.builderCount = Mathf.Clamp(data.builderCount, 1, Progression.MaxBuilders);
             data.gems = Mathf.Max(0, data.gems);
             data.builderTasks.RemoveAll(task => task == null || !task.IsActive);

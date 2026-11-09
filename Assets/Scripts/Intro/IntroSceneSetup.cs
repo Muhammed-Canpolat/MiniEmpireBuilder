@@ -811,8 +811,16 @@ public class IntroSceneSetup : MonoBehaviour
 
     private void OnNewGameClicked()
     {
-        Debug.Log("[Intro] Yeni Oyun → Kahraman Seçim Paneli (Aynı Sahnede)");
-        ShowWeaponSelection();
+        // Tek kahraman (Warrior): silah seçimi yok, doğrudan yeni oyun başlar.
+        Debug.Log("[Intro] Yeni Oyun → Savaşçı ile başla");
+        if (weaponSelectionLocked) return;
+        weaponSelectionLocked = true;
+        if (playBtnCG != null)
+        {
+            playBtnCG.interactable = false;
+            playBtnCG.blocksRaycasts = false;
+        }
+        StartCoroutine(ConfirmWeapon(WeaponType.Axe));
     }
 
     // ──────────────────────────────────────────────────────────────────────

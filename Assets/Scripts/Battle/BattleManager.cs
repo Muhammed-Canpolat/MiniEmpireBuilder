@@ -37,6 +37,25 @@ public class BattleManager : MonoBehaviour
     /// <summary>Zaferde cüzdana aktarılan son tutar (tekrar oynama kesintisi dahil).</summary>
     public int LastPayout { get; private set; }
 
+    // ==================== GÖREV TÜRLERİ ====================
+    /// <summary>"Zamana karşı" aşamalarında süre (sn): dolmadan tüm düşmanlar temizlenmezse yenilgi.</summary>
+    public const float TimeTrialSeconds = 180f;
+    /// <summary>"Madeni koru" aşamalarında madenin canı, Ana Üs canının bu oranı.</summary>
+    public const float DefendedMineHealthRatio = 0.6f;
+    /// <summary>Süreli aşamada mı (zamana karşı).</summary>
+    public bool HasTimeLimit => BattleSession.IsCampaign && BattleSession.Level?.kind == CampaignLevelKind.TimeTrial;
+    /// <summary>Süreli aşamada kalan süre (sn); süre başlamadıysa tam süre.</summary>
+    public float TimeRemaining => !HasTimeLimit ? 0f
+        : timeLimitEndsAt <= 0f ? TimeTrialSeconds : Mathf.Max(0f, timeLimitEndsAt - Time.time);
+    private float timeLimitEndsAt;
+    /// <summary>"Madeni koru" aşamasında korunacak maden (yoksa null).</summary>
+    public BattleStructure DefendedMine { get; private set; }
+    /// <summary>Son yenilginin sebebi (sonuç ekranı için): "base", "time", "mine".</summary>
+    public string DefeatReason { get; private set; } = "";
+    public event System.Action OnHeroDowned;
+    public event System.Action OnHeroBack;
+    private int spawnedCount;
+
     // Level verisi
     private LevelData currentLevel;
 
@@ -237,6 +256,8 @@ public class BattleManager : MonoBehaviour
 
         // Savunma birimleri savaş sırasında slotlardan otomatik inşa edilir
         CreateBattleBuildSlots();
+        if (BattleSession.IsCampaign && BattleSession.Level?.kind == CampaignLevelKind.DefendMine)
+            CreateDefendedMine();
 
         // Düşman prefab yoksa basit bir tane oluştur
         if (enemyPrefab == null)
@@ -508,6 +529,7 @@ public class BattleManager : MonoBehaviour
         yield return new WaitForSeconds(1.5f); // Başlangıç bekleme
 
         battleActive = true;
+        if (HasTimeLimit) timeLimitEndsAt = Time.time + TimeTrialSeconds;
 
         for (int w = 0; w < currentLevel.waves.Count; w++)
         {
@@ -624,6 +646,10 @@ public class BattleManager : MonoBehaviour
                 ? (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber
                 : GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
             enemy.Initialize(type, battleLevel, mainBaseTransform);
+            // "Madeni koru": her iki düşmandan biri (boss hariç) madene yürür.
+            if (DefendedMine != null && !EnemyTypeInfo.IsBoss(type))
+                enemy.RaidTarget = spawnedCount % 2 == 0 ? DefendedMine : null;
+            spawnedCount++;
         }
 
         enemiesAlive++;
@@ -716,16 +742,59 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Savaşçı düştü: savaş sürer, savaşçı HeroController.RespawnSeconds sonra Ana Üs önünde kalkar.
+    /// Yenilgi yalnız Ana Üs (ya da "Madeni koru"da maden) yıkılınca veya süre bitince olur.
+    /// </summary>
     public void OnHeroDied()
     {
         if (!battleActive) return;
-        Debug.Log("[BattleManager] Kahraman öldü! Savaş kaybedildi!");
-        BattleLost();
+        Debug.Log("[BattleManager] Savaşçı düştü, birazdan dirilecek.");
+        OnHeroDowned?.Invoke();
+    }
+
+    public void OnHeroRespawned() => OnHeroBack?.Invoke();
+
+    private void Update()
+    {
+        if (battleActive && HasTimeLimit && timeLimitEndsAt > 0f && Time.time >= timeLimitEndsAt)
+        {
+            DefeatReason = "time";
+            BattleLost();
+        }
+    }
+
+    /// <summary>"Madeni koru": düşmanların bir kısmının saldırdığı maden; yıkılırsa savaş kaybedilir.</summary>
+    private void CreateDefendedMine()
+    {
+        int mineLevel = 1;
+        float baseHealth = 200f;
+        if (GameManager.Instance != null)
+        {
+            if (GameManager.Instance.Buildings.TryGetValue(BuildingType.GoldMine, out var mineData))
+                mineLevel = Mathf.Max(1, mineData.level);
+            baseHealth = GameManager.Instance.CreateLevelData(BuildingType.MainBase,
+                Mathf.Max(1, GameManager.Instance.GetMainBaseLevel()))?.maxHealth ?? baseHealth;
+        }
+        // Yuvaların boş kaldığı yer: 5 yuvalı düzende üst orta dolu olduğundan alta konur.
+        Vector3 position = SlotCount >= 5 ? new Vector3(0f, -4.4f, 0f) : new Vector3(0f, 4.3f, 0f);
+        var mine = CreateStructureVisual("DefendedMine", BuildingType.GoldMine, mineLevel, position, 1.9f);
+        var structure = mine.AddComponent<BattleStructure>();
+        structure.Initialize(BuildingType.GoldMine, mineLevel, null, position, 1.9f);
+        structure.SetMaxHealth(baseHealth * DefendedMineHealthRatio);
+        structure.Destroyed += _ =>
+        {
+            if (!battleActive) return;
+            DefeatReason = "mine";
+            BattleLost();
+        };
+        DefendedMine = structure;
     }
 
     public void OnMainBaseDestroyed()
     {
         if (!battleActive) return;
+        DefeatReason = "base";
         BattleLost();
     }
 
@@ -739,9 +808,11 @@ public class BattleManager : MonoBehaviour
         {
             float baseHealth = mainBaseTransform != null
                 ? mainBaseTransform.GetComponent<MainBaseController>()?.HealthPercent ?? 0f : 0f;
-            float heroHealth = heroTransform != null
-                ? heroTransform.GetComponent<HeroController>()?.HealthPercent ?? 0f : 0f;
-            lastStars = 1 + (baseHealth > 0.5f ? 1 : 0) + (heroHealth > 0.5f ? 1 : 0);
+            var heroController = heroTransform != null ? heroTransform.GetComponent<HeroController>() : null;
+            float heroHealth = heroController != null ? heroController.HealthPercent : 0f;
+            // Savaşçı yıldızı: hiç düşmeden ve canı %50'nin üstünde bitirmek.
+            bool heroStar = heroHealth > 0.5f && (heroController == null || heroController.TimesDowned == 0);
+            lastStars = 1 + (baseHealth > 0.5f ? 1 : 0) + (heroStar ? 1 : 0);
             CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
         }
         int totalPayout = totalGoldEarned + GetVictoryBonus();

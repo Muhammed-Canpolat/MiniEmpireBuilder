@@ -120,14 +120,17 @@ public sealed class VictoryReferenceView : MonoBehaviour
     private static string StarReasonText()
     {
         float baseHealth = FindFirstObjectByType<MainBaseController>()?.HealthPercent ?? 0f;
-        float heroHealth = FindFirstObjectByType<HeroController>()?.HealthPercent ?? 0f;
-        bool baseStar = baseHealth > 0.5f, heroStar = heroHealth > 0.5f;
+        var hero = FindFirstObjectByType<HeroController>();
+        float heroHealth = hero != null ? hero.HealthPercent : 0f;
+        bool downed = hero != null && hero.TimesDowned > 0;
+        bool baseStar = baseHealth > 0.5f, heroStar = heroHealth > 0.5f && !downed;
         if (baseStar && heroStar) return "<color=#F0C24A>Kusursuz zafer!</color>";
         string Part(string name, float value, bool ok) => ok
             ? $"<color=#7BC67B>{name} %{Mathf.RoundToInt(value * 100f)}</color>"
             : $"<color=#E07A5F>{name} %{Mathf.RoundToInt(value * 100f)}</color>";
-        return $"{Part("Ana Üs", baseHealth, baseStar)}  ·  {Part("Savaşçı", heroHealth, heroStar)}\n" +
-               "Her biri %50'nin üstünde kalırsa +1 yıldız";
+        string heroPart = downed ? "<color=#E07A5F>Savaşçı düştü</color>" : Part("Savaşçı", heroHealth, heroStar);
+        return $"{Part("Ana Üs", baseHealth, baseStar)}  ·  {heroPart}\n" +
+               "Hiç düşmeden %50'nin üstünde kalan her biri +1 yıldız";
     }
 
     private const float FrameFillInset = 0.55f;
@@ -211,6 +214,15 @@ public sealed class VictoryReferenceView : MonoBehaviour
             {
                 starReason.gameObject.SetActive(won);
                 if (won) starReason.text = StarReasonText();
+                else if (BattleManager.Instance != null)
+                {
+                    // Yenilginin sebebi: süre mi bitti, maden mi düştü, üs mü yıkıldı.
+                    string reason = BattleManager.Instance.DefeatReason == "time" ? "Süre doldu!"
+                        : BattleManager.Instance.DefeatReason == "mine" ? "Maden yıkıldı!"
+                        : BattleManager.Instance.DefeatReason == "base" ? "Ana Üs yıkıldı!" : "";
+                    starReason.gameObject.SetActive(reason.Length > 0);
+                    starReason.text = $"<color=#E07A5F>{reason}</color>";
+                }
             }
             if (returnButton != null)
             {

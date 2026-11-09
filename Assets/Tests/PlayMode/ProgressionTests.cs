@@ -18,6 +18,39 @@ public class ProgressionTests
         type.GetMethod(method, BindingFlags.Public | BindingFlags.Static).Invoke(null, args);
 
     [Test]
+    public void HeroShieldAndBalanceMatchDesign()
+    {
+        // Kalkan: 1. seviye %10, seviye başına +%2, 15. seviye %38.
+        var heroType = Type("HeroData");
+        for (int level = 1; level <= 15; level++)
+            Assert.AreEqual(0.10f + 0.02f * (level - 1), (float)Call(heroType, "ShieldForLevel", level), 0.0001f,
+                "kalkan seviye " + level);
+        Assert.AreEqual(0.38f, (float)Call(heroType, "ShieldForLevel", 99), 0.0001f, "tavan 15. seviye");
+
+        // Tek kahraman (Warrior): taban can 200, kalkan veride.
+        var hero = Activator.CreateInstance(heroType);
+        heroType.GetField("weaponType").SetValue(hero, Enum.Parse(Type("WeaponType"), "Axe"));
+        heroType.GetField("level").SetValue(hero, 1);
+        heroType.GetMethod("ApplyLevelStats").Invoke(hero, null);
+        Assert.AreEqual(200f, (float)heroType.GetField("maxHealth").GetValue(hero), 0.01f);
+        Assert.AreEqual(0.10f, (float)heroType.GetField("shield").GetValue(hero), 0.0001f);
+
+        // Düşman hasarı aşama başına %6, canı %8,5 artar.
+        var statsType = Type("EnemyStats");
+        var wolf = Call(statsType, "GetBaseStats", Enum.Parse(Type("EnemyType"), "Wolf"));
+        float baseDamage = (float)statsType.GetField("damage").GetValue(wolf);
+        float baseHealth = (float)statsType.GetField("health").GetValue(wolf);
+        statsType.GetMethod("ScaleToLevel").Invoke(wolf, new object[] { 11 });
+        Assert.AreEqual(baseDamage * 1.6f, (float)statsType.GetField("damage").GetValue(wolf), 0.01f);
+        Assert.AreEqual(baseHealth * 1.85f, (float)statsType.GetField("health").GetValue(wolf), 0.01f);
+
+        // Yeni kayıt her zaman Warrior ile başlar (eski silah seçimi yok sayılır).
+        var save = Call(Type("PlayerSaveData"), "CreateNew", Enum.Parse(Type("WeaponType"), "Bow"));
+        var savedHero = save.GetType().GetField("hero").GetValue(save);
+        Assert.AreEqual("Axe", heroType.GetField("weaponType").GetValue(savedHero).ToString());
+    }
+
+    [Test]
     public void TablesMatchDesign()
     {
         var progression = Type("Progression");
