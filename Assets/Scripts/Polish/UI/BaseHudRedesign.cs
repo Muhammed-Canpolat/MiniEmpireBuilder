@@ -102,15 +102,19 @@ public static class BaseHudRedesign
             }
         }
 
-        // Seviye çubuğu armanın altında, açıklaması onun altında.
-        SetAnchors(hud.Find("BaseLevelTrack") as RectTransform, new Vector2(0.38f, 0.909f), new Vector2(0.62f, 0.915f));
-        SetAnchors(hud.Find("BaseLevelCaption") as RectTransform, new Vector2(0.25f, 0.886f), new Vector2(0.75f, 0.908f));
+        // Seviye yalnız armada: altındaki çubuk ve "Sev. N için…" yazısı gösterilmez.
+        foreach (string name in new[] { "BaseLevelTrack", "BaseLevelCaption" })
+        {
+            var item = hud.Find(name);
+            if (item != null) item.gameObject.SetActive(false);
+        }
     }
 
     // ==================== ALT BAR ====================
 
     private static void StyleDock(Transform hud)
     {
+        SkinDock(hud.Find("BottomDock") as RectTransform);
         var build = hud.Find("BuildBtn") as RectTransform;
         var battle = hud.Find("BattleBtn") as RectTransform;
         StackedButton(build, new Vector2(0.17f, 0f), DockButtonWidth, DockButtonHeight, 46f, false, "İNŞA ET");
@@ -169,6 +173,99 @@ public static class BaseHudRedesign
             label.characterSpacing = 1f;
             label.alignment = TextAlignmentOptions.Center;
         }
+    }
+
+    /// <summary>
+    /// Dock: koyu meşe tahta dokusu, altın üst kenarlık ve altın perçinler. Eski gri çelik
+    /// raylar ve iç çerçeve gizlenir (ekranın sağında/solunda görünen grilik onlardı).
+    /// </summary>
+    private static void SkinDock(RectTransform dock)
+    {
+        if (dock == null || dock.Find("WoodGrainShade") != null) return;
+        var image = dock.GetComponent<Image>();
+        if (image != null)
+        {
+            image.sprite = WoodPlankSprite();
+            image.type = Image.Type.Tiled;
+            image.pixelsPerUnitMultiplier = 0.5f; // tahta başına ~16 birim yükseklik
+            image.color = Color.white;
+        }
+        foreach (string name in new[] { "LeftRail", "RightRail", "BottomRule", "DockInset", "TopShadow" })
+        {
+            var part = dock.Find(name);
+            if (part != null) part.gameObject.SetActive(false);
+        }
+        // Üstten aşağı koyulaşan gölge: düğmeler tahta üstünde okunur kalsın.
+        var shade = ReferenceUiVisuals.Image(dock, "WoodGrainShade", Vector2.zero, Vector2.one,
+            Vector2.zero, Vector2.zero, Color.white);
+        shade.sprite = VerticalShade();
+        shade.transform.SetSiblingIndex(0);
+        var rule = dock.Find("TopRule")?.GetComponent<Image>();
+        if (rule != null)
+        {
+            rule.color = ReferenceUiVisuals.Gold;
+            SetAnchors(rule.rectTransform, new Vector2(0f, 1f), Vector2.one);
+            rule.rectTransform.offsetMin = new Vector2(0f, -3f);
+            rule.transform.SetAsLastSibling();
+        }
+        var line = ReferenceUiVisuals.Image(dock, "TopRuleShadow", new Vector2(0f, 1f), Vector2.one,
+            new Vector2(0f, -6f), new Vector2(0f, -3f), ReferenceUiVisuals.Hex(0x1A100A));
+        line.transform.SetAsLastSibling();
+        foreach (Transform child in dock)
+        {
+            if (!child.name.StartsWith("DockRivet_")) continue;
+            var rivet = child.GetComponent<Image>();
+            if (rivet == null) continue;
+            rivet.sprite = ReferenceUiVisuals.SolidPillSprite();
+            rivet.color = ReferenceUiVisuals.Hex(0xD9A93C);
+            child.SetAsLastSibling();
+        }
+    }
+
+    private static Sprite woodPlanks;
+    private static Sprite verticalShade;
+
+    /// <summary>Yatay meşe tahtalar: koyu kahve, damar çizgileri, tahta aralarında derz.</summary>
+    private static Sprite WoodPlankSprite()
+    {
+        if (woodPlanks != null) return woodPlanks;
+        const int w = 64, h = 32, plank = 8;
+        var random = new System.Random(511);
+        var texture = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+        Color baseColor = ReferenceUiVisuals.Hex(0x3A2616);
+        Color dark = ReferenceUiVisuals.Hex(0x24170D);
+        Color light = ReferenceUiVisuals.Hex(0x4B3220);
+        for (int y = 0; y < h; y++)
+        {
+            int row = y / plank;
+            float rowTone = (float)random.NextDouble() * 0.12f - 0.06f;
+            for (int x = 0; x < w; x++)
+            {
+                Color c = Color.Lerp(baseColor, row % 2 == 0 ? light : dark, 0.25f + rowTone);
+                if (y % plank == 0) c = dark;                                   // derz
+                else if (y % plank == plank - 1) c = Color.Lerp(c, light, 0.5f); // üst kenar ışığı
+                else if (random.NextDouble() < 0.08) c = Color.Lerp(c, dark, 0.6f); // damar
+                int seam = (row * 23) % w;                                       // tahta uç birleşimi
+                if (x == seam && y % plank != 0) c = dark;
+                texture.SetPixel(x, y, c);
+            }
+        }
+        texture.Apply();
+        woodPlanks = Sprite.Create(texture, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f,
+            0, SpriteMeshType.FullRect);
+        return woodPlanks;
+    }
+
+    private static Sprite VerticalShade()
+    {
+        if (verticalShade != null) return verticalShade;
+        var texture = new Texture2D(1, 32, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+        for (int y = 0; y < 32; y++)
+            texture.SetPixel(0, y, new Color(0f, 0f, 0f, Mathf.Lerp(0.55f, 0.05f, y / 31f)));
+        texture.Apply();
+        verticalShade = Sprite.Create(texture, new Rect(0, 0, 1, 32), new Vector2(0.5f, 0.5f), 100f);
+        return verticalShade;
     }
 
     // ==================== YARDIMCI ====================

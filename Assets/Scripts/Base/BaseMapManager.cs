@@ -208,57 +208,124 @@ public class BaseMapManager : MonoBehaviour
         go.transform.localScale = new Vector3(size.x / sprW, size.y / sprH, 1f);
     }
 
+    /// <summary>
+    /// Ana Üs çit halkası: kenar boyunca kesintisiz döşenmiş ahşap kirişler, yaklaşık 3 birimde
+    /// bir dik taş direk, köşelerde büyük direk, seçili direklerde fener. Çarpışma hücre başına
+    /// görünmez parçalarla sağlanır (kahraman geçemez). Çit kaldırılamaz: sınırda boşluk kalmaz.
+    /// </summary>
     private void BuildBuildableFence()
     {
         ClearFenceObjects();
-        MigrateRemovedFenceIds();
-
         _buildableFenceRoot = new GameObject("BuildableFence");
 
-        Sprite segmentSprite = BaseCustomArt.Get("fence_oak_rail")
-            ?? LoadFullFenceSprite("fence_wood_segment");
-        Sprite cornerSprite = BaseCustomArt.Get("fence_stone_pillar")
-            ?? LoadFullFenceSprite("fence_wood_corner");
+        const float left = 1.5f, right = 20.5f, bottom = 1.5f, top = 36.5f;
+        Sprite beams = FenceBeamSprite();
+        Sprite pillar = BaseCustomArt.Get("fence_stone_pillar") ?? LoadFullFenceSprite("fence_wood_corner");
+        Sprite lantern = BaseCustomArt.Get("fence_lantern");
 
-        if (segmentSprite == null && cornerSprite == null)
-            return;
-
-        if (cornerSprite == null)
-            Debug.LogWarning("[BMM] fence_wood_corner sprite bulunamadi, kose objeleri olusturulmayacak.");
-
-        // One continuous ring inside the thin exterior ground strip.
-        float left = 1.5f;
-        float right = 20.5f;
-        float bottom = 1.5f;
-        float top = 36.5f;
-
-        // Corners
-        if (cornerSprite != null)
+        // Kirişler (yatay kenarlar düz, dikey kenarlar 90° dönük döşeme).
+        if (beams != null)
         {
-            CreateFencePiece(cornerSprite, new Vector3(left, bottom, 0.2f), 0f, true, GetFenceId("corner", 0, 0));
-            CreateFencePiece(cornerSprite, new Vector3(right, bottom, 0.2f), 90f, true, GetFenceId("corner", _buildableRect.width, 0), flipX: true);
-            CreateFencePiece(cornerSprite, new Vector3(right, top, 0.2f), 180f, true, GetFenceId("corner", _buildableRect.width, _buildableRect.height), flipX: true);
-            CreateFencePiece(cornerSprite, new Vector3(left, top, 0.2f), 270f, true, GetFenceId("corner", 0, _buildableRect.height));
+            FenceBeam(beams, new Vector3((left + right) * 0.5f, bottom, 0.2f), right - left, false, 300);
+            FenceBeam(beams, new Vector3((left + right) * 0.5f, top, 0.2f), right - left, false, 300);
+            FenceBeam(beams, new Vector3(left, (bottom + top) * 0.5f, 0.2f), top - bottom, true, 299);
+            FenceBeam(beams, new Vector3(right, (bottom + top) * 0.5f, 0.2f), top - bottom, true, 299);
         }
 
-        if (segmentSprite == null)
-            return;
-
-        // Horizontal edges
-        for (int x = 2; x <= 19; x++)
+        // Direkler: kenarı eşit aralıklara böl (≈3 birim), köşeler daha büyük.
+        if (pillar != null)
         {
-            float wx = x + 0.5f;
-            CreateFencePiece(segmentSprite, new Vector3(wx, bottom, 0.2f), 0f, false, GetFenceId("bottom", x, 0), 1.1f);
-            CreateFencePiece(segmentSprite, new Vector3(wx, top, 0.2f), 0f, false, GetFenceId("top", x, 0), 1.1f);
+            int horizontalSpans = Mathf.Max(1, Mathf.RoundToInt((right - left) / 3f));
+            int verticalSpans = Mathf.Max(1, Mathf.RoundToInt((top - bottom) / 3f));
+            for (int i = 0; i <= horizontalSpans; i++)
+            {
+                float x = Mathf.Lerp(left, right, i / (float)horizontalSpans);
+                bool corner = i == 0 || i == horizontalSpans;
+                FencePost(pillar, new Vector3(x, bottom, 0f), corner, lantern, i == 2 || i == horizontalSpans - 2);
+                FencePost(pillar, new Vector3(x, top, 0f), corner, lantern, i == 2 || i == horizontalSpans - 2);
+            }
+            for (int i = 1; i < verticalSpans; i++)
+            {
+                float y = Mathf.Lerp(bottom, top, i / (float)verticalSpans);
+                bool lamp = i == verticalSpans / 3 || i == verticalSpans * 2 / 3;
+                FencePost(pillar, new Vector3(left, y, 0f), false, lantern, lamp);
+                FencePost(pillar, new Vector3(right, y, 0f), false, lantern, lamp);
+            }
         }
 
-        // Vertical edges
+        // Görünmez çarpışma: her sınır hücresine bir parça (tanı katmanı da bunları sayar).
+        for (int x = 1; x <= 20; x++)
+        {
+            FenceBlocker(new Vector3(x + 0.5f, bottom, 0f));
+            FenceBlocker(new Vector3(x + 0.5f, top, 0f));
+        }
         for (int y = 2; y <= 35; y++)
         {
-            float wy = y + 0.5f;
-            CreateFencePiece(segmentSprite, new Vector3(left, wy, 0.2f), 90f, false, GetFenceId("left", 0, y), 1.1f);
-            CreateFencePiece(segmentSprite, new Vector3(right, wy, 0.2f), 90f, false, GetFenceId("right", 0, y), 1.1f);
+            FenceBlocker(new Vector3(left, y + 0.5f, 0f));
+            FenceBlocker(new Vector3(right, y + 0.5f, 0f));
         }
+    }
+
+    private static Sprite fenceBeamSprite;
+
+    /// <summary>Meşe ray görselinden yalnız iki kiriş (metal bağlantısız bölüm): döşenebilir.</summary>
+    private static Sprite FenceBeamSprite()
+    {
+        if (fenceBeamSprite != null) return fenceBeamSprite;
+        var texture = Resources.Load<Texture2D>("CustomBaseArt/fence_oak_rail");
+        if (texture == null) return null;
+        texture.filterMode = FilterMode.Point;
+        // Kaynak 2164x727: kirişler x 200–1000, y (yukarıdan) 250–465 → normalize.
+        var rect = new Rect(texture.width * 0.0925f, texture.height * 0.36f,
+            texture.width * 0.37f, texture.height * 0.296f);
+        float pixelsPerUnit = rect.height / 0.46f; // iki kiriş birlikte 0.46 birim kalınlık
+        fenceBeamSprite = Sprite.Create(texture, rect, new Vector2(0.5f, 0.5f), pixelsPerUnit,
+            0, SpriteMeshType.FullRect);
+        fenceBeamSprite.name = "fence_beams";
+        return fenceBeamSprite;
+    }
+
+    private void FenceBeam(Sprite sprite, Vector3 center, float length, bool vertical, int order)
+    {
+        var go = new GameObject(vertical ? "FenceBeamVertical" : "FenceBeamHorizontal");
+        go.transform.SetParent(_buildableFenceRoot.transform, false);
+        go.transform.position = center;
+        go.transform.rotation = Quaternion.Euler(0f, 0f, vertical ? 90f : 0f);
+        var renderer = go.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.drawMode = SpriteDrawMode.Tiled;
+        renderer.tileMode = SpriteTileMode.Continuous;
+        renderer.size = new Vector2(length, sprite.bounds.size.y);
+        renderer.sortingOrder = order;
+    }
+
+    private void FencePost(Sprite pillar, Vector3 basePosition, bool corner, Sprite lantern, bool lamp)
+    {
+        Vector2 size = corner ? new Vector2(0.62f, 1.5f) : new Vector2(0.46f, 1.15f);
+        var post = new GameObject(corner ? "FenceCorner" : "StoneFencePost");
+        post.transform.SetParent(_buildableFenceRoot.transform, false);
+        // Direğin tabanı çit çizgisinin biraz altında: kirişler direğe oturuyormuş gibi.
+        post.transform.position = new Vector3(basePosition.x, basePosition.y - 0.22f + size.y * 0.5f, 0.15f);
+        var renderer = post.AddComponent<SpriteRenderer>();
+        renderer.sprite = pillar;
+        renderer.sortingOrder = 301;
+        post.transform.localScale = new Vector3(size.x / Mathf.Max(0.01f, pillar.bounds.size.x),
+            size.y / Mathf.Max(0.01f, pillar.bounds.size.y), 1f);
+        if (!lamp || lantern == null) return;
+        Vector3 top = new Vector3(basePosition.x, basePosition.y - 0.22f + size.y + 0.12f, 0f);
+        AddFenceAdornment(post.transform, BaseMapManager.MakeCircleSprite(Color.white), "FenceLanternGlow",
+            top + new Vector3(0f, 0.06f, 0f), new Vector2(0.7f, 0.7f), 302, new Color(1f, 0.59f, 0.15f, 0.20f));
+        AddFenceAdornment(post.transform, lantern, "FenceLantern", top, new Vector2(0.26f, 0.40f), 303);
+    }
+
+    private void FenceBlocker(Vector3 position)
+    {
+        var go = new GameObject("FenceSegment");
+        go.transform.SetParent(_buildableFenceRoot.transform, false);
+        go.transform.position = position;
+        var collider = go.AddComponent<BoxCollider2D>();
+        collider.size = new Vector2(1f, 0.7f);
+        go.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
     }
 
     private static Sprite LoadFullFenceSprite(string name)
@@ -586,8 +653,8 @@ public class BaseMapManager : MonoBehaviour
             : GetBuildingDisplayName(type), type == BuildingType.MainBase,
             sr.sprite.bounds.extents.y * targetScale.y + 0.34f, targetScale.x,
             type == BuildingType.MainBase ? null : $"Sev. {instanceLevel}");
-        if (type != BuildingType.MainBase)
-            go.transform.Find("ReadableLabel")?.gameObject.SetActive(false);
+        // Etiketler dokununca kısa süre görünür; Ana Üs seviyesi üst bardaki armada gösterilir.
+        go.transform.Find("ReadableLabel")?.gameObject.SetActive(false);
 
         var obj = new PlacedMapObject
         {
