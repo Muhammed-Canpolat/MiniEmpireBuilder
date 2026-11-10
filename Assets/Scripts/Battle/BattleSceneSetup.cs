@@ -516,7 +516,7 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI enemyText = CreateText(topBar.transform, "EnemyText",
             new Vector2(0.65f, 0.55f), new Vector2(0.98f, 0.95f),
             Vector2.zero, Vector2.zero,
-            "Düşman 0", 24, TextAlignmentOptions.Right);
+            L.T("Düşman 0", "Enemies 0"), 24, TextAlignmentOptions.Right);
         enemyText.fontStyle = FontStyles.Bold;
 
         // Altın — alt satır
@@ -610,7 +610,7 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI rewardText = CreateText(endInner.transform, "RewardText",
             new Vector2(0.05f, 0.40f), new Vector2(0.95f, 0.60f),
             Vector2.zero, Vector2.zero,
-            "Kazanılan Altın: 0", 24, TextAlignmentOptions.Center);
+            L.T("Kazanılan Altın: 0", "Gold Earned: 0"), 24, TextAlignmentOptions.Center);
 
         // Devam butonu
         GameObject btnObj = CreateButton(endInner.transform, "VictoryReturnButton",

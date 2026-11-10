@@ -31,7 +31,7 @@ public sealed class MoveHint : MonoBehaviour
         background.sprite = ReferenceUiVisuals.ToastSprite();
         background.type = Image.Type.Sliced;
         background.raycastTarget = false;
-        ReferenceUiVisuals.Text(root, "Text", "Ekrana dokunup <color=#F0C24A>sürükleyerek</color> hareket et",
+        ReferenceUiVisuals.Text(root, "Text", L.T("Ekrana dokunup <color=#F0C24A>sürükleyerek</color> hareket et", "Touch and <color=#F0C24A>drag</color> to move"),
             15, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
             new Vector2(0.18f, 0f), Vector2.one, new Vector2(0f, 4f), new Vector2(-12f, -4f), bodyBold: true);
 

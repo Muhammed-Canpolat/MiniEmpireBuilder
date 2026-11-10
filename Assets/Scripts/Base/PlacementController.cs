@@ -270,7 +270,7 @@ public class PlacementController : MonoBehaviour
                     string name = BaseMapManager.GetBuildingDisplayName(_placingBuildingType);
                     // Binayı oluştur; görev binanın slotuna bağlanır (inşa bitmeden yükseltilemez).
                     PlacedMapObject completedBuilding = BaseMapManager.Instance?.SpawnBuilding(_placingBuildingType, pos);
-                    BuilderSystem.Instance.TryStartTask(name + " İnşası", _buildDuration, pos,
+                    BuilderSystem.Instance.TryStartTask(L.T(name + " İnşası", name + " Construction"), _buildDuration, pos,
                         () => completedBuilding?.gameObject?.GetComponent<BaseBuildingVisual>()
                             ?.PlayConstructionComplete(), completedBuilding?.id ?? "");
                     if (completedBuilding != null)

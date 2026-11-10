@@ -75,13 +75,13 @@ public static class DailyRewards
         switch (day)
         {
             case 1: return Make(day, DailyRewardKind.Gold, 50 + 50 * level, "Altın", "ui_icon_coin");
-            case 2: return Make(day, DailyRewardKind.BuildSpeedup, 30, "30 dk hızlandırma", "ui_icon_hammer");
+            case 2: return Make(day, DailyRewardKind.BuildSpeedup, 30, L.T("30 dk hızlandırma", "30 min speed-up"), "ui_icon_hammer");
             case 3: return Make(day, DailyRewardKind.Gold, 100 + 100 * level, "Altın", "ui_icon_coin");
-            case 4: return Make(day, DailyRewardKind.CardToken, 1, "Savaş kartı jetonu", "ui_icon_sword");
-            case 5: return Make(day, DailyRewardKind.MineBoost, 60, "1 sa 2x maden", "ui_icon_coin");
-            case 6: return Make(day, DailyRewardKind.UnlimitedLives, 120, "2 sa sınırsız can", "ui_icon_heart");
+            case 4: return Make(day, DailyRewardKind.CardToken, 1, L.T("Savaş kartı jetonu", "Battle card token"), "ui_icon_sword");
+            case 5: return Make(day, DailyRewardKind.MineBoost, 60, L.T("1 sa 2x maden", "1 h 2x mine"), "ui_icon_coin");
+            case 6: return Make(day, DailyRewardKind.UnlimitedLives, 120, L.T("2 sa sınırsız can", "2 h unlimited lives"), "ui_icon_heart");
             default:
-                var chest = Make(Days, DailyRewardKind.GemsChest, 20, "20 elmas + sandık", "gem");
+                var chest = Make(Days, DailyRewardKind.GemsChest, 20, L.T("20 elmas + sandık", "20 gems + chest"), "gem");
                 chest.chestGold = 150 * level;
                 return chest;
         }
@@ -89,7 +89,7 @@ public static class DailyRewards
 
     private static DailyReward Make(int day, DailyRewardKind kind, int amount, string title, string icon)
     {
-        if (kind == DailyRewardKind.Gold) title = $"{amount} Altın";
+        if (kind == DailyRewardKind.Gold) title = L.T($"{amount} Altın", $"{amount} Gold");
         return new DailyReward { day = day, kind = kind, amount = amount, title = title, icon = icon };
     }
 

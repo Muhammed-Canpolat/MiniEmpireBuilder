@@ -267,7 +267,7 @@ public class BaseSceneSetup : MonoBehaviour
         goldTextRt.offsetMax = new Vector2(0f, 0f);     // -Right, -Top
         // +X/sn
         TextMeshProUGUI gpsText = CreateText(goldPill.transform, "GpsText",
-            "+0.0 altın/sn",
+            L.T("+0.0 altın/sn", "+0.0 gold/s"),
             new Vector2(0.28f, 0.04f), new Vector2(0.98f, 0.36f),
             14, TextAlignmentOptions.Left, new Color(0.85f, 0.85f, 0.85f));
         gpsText.gameObject.SetActive(false);
@@ -355,19 +355,19 @@ public class BaseSceneSetup : MonoBehaviour
         // ─── SAVAŞA GİT BUTONU (Tool_03) ──────────────────────
         Button battleBtn = CreateRoundIconButton(hudRoot.transform, "BattleBtn",
             new Vector2(0.86f, 0.10f), new Vector2(320f, 140f),
-            iconBattle, "Savaşa Git", new Color(0.85f, 0.25f, 0.2f), buttonBg);
+            iconBattle, L.T("Savaşa Git", "To Battle"), new Color(0.85f, 0.25f, 0.2f), buttonBg);
 
         // ─── İNŞA ET BUTONU (Tool_04) ─────────────────────────
         Button buildBtn = CreateRoundIconButton(hudRoot.transform, "BuildBtn",
             new Vector2(0.86f, 0.22f), new Vector2(320f, 140f),
-            iconBuild, "İnşa Et", new Color(0.2f, 0.55f, 0.85f), buttonBg);
+            iconBuild, L.T("İnşa Et", "Build"), new Color(0.2f, 0.55f, 0.85f), buttonBg);
 
         // --- Info Panels (Building + Hero) ---
         GameObject buildingInfoPanel = CreatePanel(canvasObj.transform, "BuildingInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-        TextMeshProUGUI bName = CreateText(buildingInfoPanel.transform, "Name", "Bina Adı", new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.95f), 45, TextAlignmentOptions.Center, Color.white);
+        TextMeshProUGUI bName = CreateText(buildingInfoPanel.transform, "Name", L.T("Bina Adı", "Building"), new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.95f), 45, TextAlignmentOptions.Center, Color.white);
         TextMeshProUGUI bLvl = CreateText(buildingInfoPanel.transform, "Level", "Seviye 1", new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.8f), 35, TextAlignmentOptions.Center, Color.yellow);
         TextMeshProUGUI bStats = CreateText(buildingInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f), 28, TextAlignmentOptions.TopLeft, Color.white);
-        Button bUpBtn = CreateButton(buildingInfoPanel.transform, "UpBtn", "Yükselt", new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
+        Button bUpBtn = CreateButton(buildingInfoPanel.transform, "UpBtn", L.T("Yükselt", "Upgrade"), new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
         TextMeshProUGUI bCost = bUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
         Button bClose = CreateButton(buildingInfoPanel.transform, "CloseBtn", "X", new Vector2(0.85f, 0.85f), new Vector2(0.95f, 0.95f), Color.red);
 
@@ -375,7 +375,7 @@ public class BaseSceneSetup : MonoBehaviour
         TextMeshProUGUI hName = CreateText(heroInfoPanel.transform, "Name", "Kahraman", new Vector2(0.1f, 0.85f), new Vector2(0.84f, 0.96f), 37, TextAlignmentOptions.Center, Color.white);
         TextMeshProUGUI hLvl = CreateText(heroInfoPanel.transform, "Level", "Seviye 1", new Vector2(0.1f, 0.60f), new Vector2(0.9f, 0.72f), 31, TextAlignmentOptions.Center, Color.yellow);
         TextMeshProUGUI hStats = CreateText(heroInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.34f), new Vector2(0.9f, 0.60f), 25, TextAlignmentOptions.TopLeft, Color.white);
-        Button hUpBtn = CreateButton(heroInfoPanel.transform, "UpBtn", "Yükselt", new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
+        Button hUpBtn = CreateButton(heroInfoPanel.transform, "UpBtn", L.T("Yükselt", "Upgrade"), new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
         TextMeshProUGUI hCost = hUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
         Button hClose = CreateButton(heroInfoPanel.transform, "CloseBtn", "X", new Vector2(0.85f, 0.85f), new Vector2(0.95f, 0.95f), Color.red);
 
@@ -1207,8 +1207,8 @@ public class BaseSceneSetup : MonoBehaviour
     {
         int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
         int next = BaseWorldLayout.NextLandLevel(level);
-        return ShowToastRoutine(next == 0 ? "Kalıcı doğal sınır"
-            : $"Ana Üs Sev. {next} ile temizlenir");
+        return ShowToastRoutine(next == 0 ? L.T("Kalıcı doğal sınır", "Permanent natural border")
+            : L.T($"Ana Üs Sev. {next} ile temizlenir", $"Cleared at Main Base Lv. {next}"));
     }
 
     private System.Collections.IEnumerator ShowToastRoutine(string message)
@@ -1255,16 +1255,16 @@ public class BaseSceneSetup : MonoBehaviour
         outline.effectColor = new Color(0.94f, 0.76f, 0.29f, 0.7f);
         outline.effectDistance = new Vector2(1.5f, -1.5f);
 
-        string title = obj.objectType == MapObjectType.Tree ? "Ağaç"
+        string title = obj.objectType == MapObjectType.Tree ? L.T("Ağaç", "Tree")
             : obj.objectType == MapObjectType.Rock ? "Kaya"
-            : obj.objectType == MapObjectType.Fence ? "Çit" : "Nesne";
+            : obj.objectType == MapObjectType.Fence ? L.T("Çit", "Fence") : L.T("Nesne", "Object");
         bool builderFree = BuilderSystem.Instance == null || BuilderSystem.Instance.HasAvailableBuilder();
         ReferenceUiVisuals.Text(rt, "Title", UiStrings.Upper(title), 16, ReferenceUiVisuals.Gold,
             TextAlignmentOptions.Center, new Vector2(0f, 0.70f), new Vector2(1f, 0.95f),
             new Vector2(10f, 0f), new Vector2(-10f, 0f), title: true);
         ReferenceUiVisuals.Text(rt, "Info", builderFree
-                ? "İnşaatçı temizler · 5 sn"
-                : "<color=#E07A5F>İnşaatçı şu an meşgul</color>", 12, ReferenceUiVisuals.Muted,
+                ? L.T("İnşaatçı temizler · 5 sn", "A builder clears it · 5 s")
+                : L.T("<color=#E07A5F>İnşaatçı şu an meşgul</color>", "<color=#E07A5F>Builder is busy</color>"), 12, ReferenceUiVisuals.Muted,
             TextAlignmentOptions.Center, new Vector2(0f, 0.50f), new Vector2(1f, 0.70f),
             new Vector2(10f, 0f), new Vector2(-10f, 0f), bodyBold: true);
 
@@ -1278,7 +1278,7 @@ public class BaseSceneSetup : MonoBehaviour
             BaseMapManager.Instance?.RequestRemoveObject(obj);
             HideRemovePrompt();
         });
-        var cancel = ReferenceUiVisuals.Button(rt, "RemoveCancel", "VAZGEÇ", false,
+        var cancel = ReferenceUiVisuals.Button(rt, "RemoveCancel", L.T("VAZGEÇ", "CANCEL"), false,
             new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(4f, 10f), new Vector2(100f, 48f), 14);
         cancel.onClick.AddListener(HideRemovePrompt);
 

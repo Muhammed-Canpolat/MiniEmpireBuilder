@@ -38,6 +38,16 @@ public static class L
     public static string T(string turkish, string english) =>
         English && !string.IsNullOrEmpty(english) ? english : turkish;
 
+    /// <summary>
+    /// Oyun verisinden (asset) gelen Türkçe metin: İngilizcede <see cref="AssetText"/> sözlüğünden çevrilir,
+    /// sözlükte yoksa olduğu gibi kalır.
+    /// </summary>
+    public static string Asset(string turkish)
+    {
+        if (!English || string.IsNullOrEmpty(turkish)) return turkish;
+        return AssetText.English.TryGetValue(turkish.Trim(), out var english) ? english : turkish;
+    }
+
     /// <summary>Dile uygun büyük harf (Türkçe: i → İ; İngilizce: i → I).</summary>
     public static string Upper(string value)
     {

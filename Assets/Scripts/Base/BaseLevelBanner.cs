@@ -64,8 +64,8 @@ public sealed class BaseLevelBanner : MonoBehaviour
         if (after.width * after.height > before.width * before.height)
             unlocked.Add("Yeni arazi");
         text.text = (after.width * after.height > before.width * before.height
-            ? "YENİ ARAZİ AÇILDI\n" : "") + $"ANA ÜS SEV. {level}!" +
-            (unlocked.Count > 0 ? "\nAçıldı: " + string.Join(" · ", unlocked) : "");
+            ? L.T("YENİ ARAZİ AÇILDI\n", "NEW LAND UNLOCKED\n") : "") + L.T($"ANA ÜS SEV. {level}!", $"MAIN BASE LV. {level}!") +
+            (unlocked.Count > 0 ? L.T("\nAçıldı: ", "\nUnlocked: ") + string.Join(" · ", unlocked) : "");
         banner.gameObject.SetActive(true);
         banner.DOKill();
         group.DOKill();

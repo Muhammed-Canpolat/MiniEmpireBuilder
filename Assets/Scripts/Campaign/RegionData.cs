@@ -74,10 +74,10 @@ public static class CampaignCatalog
     {
         switch (kind)
         {
-            case CampaignLevelKind.Survive: return "Hayatta kal";
-            case CampaignLevelKind.DefendBase: return "Üssü koru";
-            case CampaignLevelKind.DefendMine: return "Madeni koru";
-            case CampaignLevelKind.TimeTrial: return "Zamana karşı";
+            case CampaignLevelKind.Survive: return L.T("Hayatta kal", "Survive");
+            case CampaignLevelKind.DefendBase: return L.T("Üssü koru", "Defend the base");
+            case CampaignLevelKind.DefendMine: return L.T("Madeni koru", "Defend the mine");
+            case CampaignLevelKind.TimeTrial: return L.T("Zamana karşı", "Time trial");
             default: return "Boss";
         }
     }

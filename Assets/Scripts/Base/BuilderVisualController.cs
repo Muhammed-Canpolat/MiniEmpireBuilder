@@ -90,8 +90,8 @@ public class BuilderVisualController : MonoBehaviour
             hut.transform.localScale, sr.sortingOrder - 1);
         var hutCollider = hut.AddComponent<BoxCollider2D>();
         hutCollider.size = sr.sprite.bounds.size;
-        BaseMapManager.CreateReadableLabel(hut.transform, "İnşaatçı", false,
-            sr.sprite.bounds.extents.y * scale + 0.34f, scale, $"{index + 1}. inşaatçı");
+        BaseMapManager.CreateReadableLabel(hut.transform, L.T("İnşaatçı", "Builder"), false,
+            sr.sprite.bounds.extents.y * scale + 0.34f, scale, L.T($"{index + 1}. inşaatçı", $"Builder {index + 1}"));
         hut.transform.Find("ReadableLabel")?.gameObject.SetActive(false);
 
         unit.hut = hut.AddComponent<BuilderHut>();

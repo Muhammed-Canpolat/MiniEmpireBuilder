@@ -152,8 +152,8 @@ public class BattleBuildSlot : MonoBehaviour
             if (group == null) group = choices[i].gameObject.AddComponent<CanvasGroup>();
             group.alpha = canBuild ? 1f : 0.55f;
 
-            string status = remaining <= 0 ? "Hak kalmadı"
-                : battleManager.GoldEarned < cost ? "Altın yetersiz"
+            string status = remaining <= 0 ? L.T("Hak kalmadı", "No builds left")
+                : battleManager.GoldEarned < cost ? L.T("Altın yetersiz", "Not enough gold")
                 : destroyCount > 0 ? "Yeniden kur"
                 : $"{remaining}/{owned} hak";
             choiceTexts[i].text = UiStrings.Upper(Name(type)) +
@@ -176,12 +176,12 @@ public class BattleBuildSlot : MonoBehaviour
             GameManager.Instance.Buildings.TryGetValue(BuildingType.ArcherTower, out var archer) &&
             archer.isUnlocked;
         return archerUnlocked
-            ? "Kule kurmak için önce\n<color=#F0C24A>Ana Üs'te Okçu binası</color> inşa et"
-            : "Kuleler <color=#F0C24A>Ana Üs Sev. 2</color> ile açılır";
+            ? L.T("Kule kurmak için önce\n<color=#F0C24A>Ana Üs'te Okçu binası</color> inşa et", "To build towers, first build\n<color=#F0C24A>an Archer at the Main Base</color>")
+            : L.T("Kuleler <color=#F0C24A>Ana Üs Sev. 2</color> ile açılır", "Towers unlock at <color=#F0C24A>Main Base Lv. 2</color>");
     }
 
     private static string Name(BuildingType type) => type == BuildingType.ArcherTower
-        ? "Okçu" : type == BuildingType.CannonTower ? "Topçu" : "Manastır";
+        ? L.T("Okçu", "Archer") : type == BuildingType.CannonTower ? L.T("Topçu", "Cannon") : L.T("Manastır", "Monastery");
 
     private void TryBuild(BuildingType type)
     {

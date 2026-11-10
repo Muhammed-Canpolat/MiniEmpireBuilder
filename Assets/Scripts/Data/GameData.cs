@@ -59,12 +59,12 @@ public static class EnemyTypeInfo
     {
         switch (type)
         {
-            case EnemyType.Wolf: return "Kurt";
-            case EnemyType.Zombie: return "Zombi";
-            case EnemyType.Orc: return "Ork";
-            case EnemyType.Troll: return "Muhafız";
-            case EnemyType.ShadowWolf: return "Gölge Kurt";
-            case EnemyType.ForestWitch: return "Orman Cadısı";
+            case EnemyType.Wolf: return L.T("Kurt", "Wolf");
+            case EnemyType.Zombie: return L.T("Zombi", "Zombie");
+            case EnemyType.Orc: return L.T("Ork", "Orc");
+            case EnemyType.Troll: return L.T("Muhafız", "Guardian");
+            case EnemyType.ShadowWolf: return L.T("Gölge Kurt", "Shadow Wolf");
+            case EnemyType.ForestWitch: return L.T("Orman Cadısı", "Forest Witch");
             case EnemyType.DragonWarrior: return L.T("Ejder Savaşçısı", "Dragon Warrior");
             case EnemyType.CastleGuardian: return L.T("Kale Muhafızı", "Castle Guardian");
             case EnemyType.MineWarden: return L.T("Maden Gardiyanı", "Mine Warden");

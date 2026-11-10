@@ -648,7 +648,7 @@ public class BaseWorldUI : MonoBehaviour
         }
         if (BaseWorldLayout.NextLandLevel(currentLevel) == nextLevel) unlocked.Add("yeni arazi");
         foreach (var region in CampaignCatalog.Regions)
-            if (region.requiredBaseLevel == nextLevel) unlocked.Add(region.displayName);
+            if (region.requiredBaseLevel == nextLevel) unlocked.Add(L.Asset(region.displayName));
         return unlocked.Count > 0 ? $"Sev. {nextLevel}: {string.Join(" + ", unlocked)}" : "";
     }
 

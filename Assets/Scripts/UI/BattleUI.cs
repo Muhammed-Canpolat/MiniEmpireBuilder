@@ -117,10 +117,10 @@ public class BattleUI : MonoBehaviour
         if (levelText != null)
             levelText.text = BattleSession.IsCampaign && BattleSession.Region != null
                 ? BattleSession.Level?.kind == CampaignLevelKind.Boss
-                    ? $"BOSS · {UiStrings.Upper(BattleSession.Region.bossName)}"
+                    ? $"BOSS · {UiStrings.Upper(L.Asset(BattleSession.Region.bossName))}"
                     : BattleSession.IsEndless ? L.T($"SONSUZ SEFER · KAT {BattleSession.Floor}", $"ENDLESS · FLOOR {BattleSession.Floor}")
-                    : $"{BattleSession.Region.displayName} · Seviye {BattleSession.LevelNumber}"
-                : $"SEVİYE {GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1}";
+                    : $"{L.Asset(BattleSession.Region.displayName)} · " + L.T("Seviye ", "Level ") + BattleSession.LevelNumber
+                : L.T("SEVİYE ", "LEVEL ") + (GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1);
         if (BattleSession.Level?.kind == CampaignLevelKind.Boss && levelText != null)
         {
             levelText.color = ReferenceUiVisuals.Red;
@@ -138,7 +138,7 @@ public class BattleUI : MonoBehaviour
                 Vector2.one, new Vector2(4f, 4f), new Vector2(-4f, -4f), ReferenceUiVisuals.Hex(0xC2452D));
             bossFill.sprite = ReferenceUiVisuals.SolidPillSprite();
             bossFill.type = Image.Type.Sliced;
-            ReferenceUiVisuals.Text(track.transform, "BossName", UiStrings.Upper(BattleSession.Region.bossName),
+            ReferenceUiVisuals.Text(track.transform, "BossName", UiStrings.Upper(L.Asset(BattleSession.Region.bossName)),
                 12, Color.white, TMPro.TextAlignmentOptions.Center, Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero, title: true).transform.SetAsLastSibling();
             bossTrack.SetActive(false);
@@ -224,7 +224,7 @@ public class BattleUI : MonoBehaviour
         else if (change < 0) battleBuildCost -= change;
         lastReportedGold = gold;
         if (netGoldText != null)
-            netGoldText.text = $"Şu anki net kazanç: {grossBattleGold} − {battleBuildCost} = {gold}";
+            netGoldText.text = L.T("Şu anki net kazanç: ", "Current net gain: ") + $"{grossBattleGold} − {battleBuildCost} = {gold}";
         if (goldText != null)
         {
             DOTween.To(() => displayedGold, x => 
@@ -253,7 +253,7 @@ public class BattleUI : MonoBehaviour
 
         if (resultText != null)
         {
-            resultText.text = won ? "ZAFER!" : "YENİLGİ!";
+            resultText.text = won ? L.T("ZAFER!", "VICTORY!") : L.T("YENİLGİ!", "DEFEAT!");
             resultText.color = won ? Color.yellow : Color.red;
         }
 
@@ -265,11 +265,11 @@ public class BattleUI : MonoBehaviour
                 if (won)
                 {
                     int total = bm.TotalGoldEarned + bm.VictoryBonus;
-                    rewardText.text = $"Kazanılan Altın: {total} (Savaş: {bm.TotalGoldEarned} + Ödül: {bm.VictoryBonus})";
+                    rewardText.text = L.T($"Kazanılan Altın: {total} (Savaş: {bm.TotalGoldEarned} + Ödül: {bm.VictoryBonus})", $"Gold Earned: {total} (Battle: {bm.TotalGoldEarned} + Reward: {bm.VictoryBonus})");
                 }
                 else
                 {
-                    rewardText.text = "Üssünü güçlendir ve tekrar dene!";
+                    rewardText.text = L.T("Üssünü güçlendir ve tekrar dene!", "Strengthen your base and try again!");
                 }
             }
         }
@@ -290,7 +290,7 @@ public class BattleUI : MonoBehaviour
         {
             incomingChip.SetActive(true);
             var label = incomingChip.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
-            if (label != null) label.text = $"▼ {enemyCount} düşman yaklaşıyor";
+            if (label != null) label.text = L.T($"▼ {enemyCount} düşman yaklaşıyor", $"▼ {enemyCount} enemies approaching");
             var group = incomingChip.GetComponent<CanvasGroup>();
             if (group == null) group = incomingChip.AddComponent<CanvasGroup>();
             group.DOKill();

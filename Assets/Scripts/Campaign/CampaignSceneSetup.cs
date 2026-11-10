@@ -362,7 +362,7 @@ public class CampaignSceneSetup : MonoBehaviour
         }
 
         HeaderStrip(mapRoot, MapHeader);
-        Label(mapRoot, "MapTitle", "SEFER HARİTASI", 23, ReferenceUiVisuals.Gold, true,
+        Label(mapRoot, "MapTitle", L.T("SEFER HARİTASI", "CAMPAIGN MAP"), 23, ReferenceUiVisuals.Gold, true,
             new Vector2(0, 1), Vector2.one, new Vector2(16, -46), new Vector2(-16, -8));
         CreateLivesChip(mapRoot, new Vector2(0, 1), new Vector2(14, -88), new Vector2(150, -54));
         int total = CampaignCatalog.Regions.Length * 15;
@@ -426,8 +426,8 @@ public class CampaignSceneSetup : MonoBehaviour
         {
             if (open) ShowRegion(region);
             else ShowToast(GameManager.Instance.GetMainBaseLevel() < region.requiredBaseLevel
-                ? $"Ana Üs Sev. {region.requiredBaseLevel} gerekir."
-                : $"Önce Bölge {region.id - 1} bossunu yen.");
+                ? L.T($"Ana Üs Sev. {region.requiredBaseLevel} gerekir.", $"Requires Main Base Lv. {region.requiredBaseLevel}.")
+                : L.T($"Önce Bölge {region.id - 1} bossunu yen.", $"First defeat the Region {region.id - 1} boss."));
         });
 
         // Bölge adı şeridi (adanın üst kenarında, köprünün üstünde tabela gibi).
@@ -435,7 +435,7 @@ public class CampaignSceneSetup : MonoBehaviour
         string ribbon = !open ? "ui_ribbon_dark" : complete ? "ui_ribbon_blue" : "ui_ribbon_red";
         var top = new Vector2(0.5f, 1f);
         ArtAt(tile, "Ribbon", ribbon, top, new Vector2(0, -26), new Vector2(214, 56), false);
-        var name = LabelAt(tile, "Name", $"{region.id} · {UiStrings.Upper(region.displayName)}", top,
+        var name = LabelAt(tile, "Name", $"{region.id} · {UiStrings.Upper(L.Asset(region.displayName))}", top,
             new Vector2(0, -24), new Vector2(146, 24), 14, open ? ReferenceUiVisuals.Light : ReferenceUiVisuals.Muted, true);
         Shadowed(name, 1.8f);
 
@@ -452,7 +452,7 @@ public class CampaignSceneSetup : MonoBehaviour
         {
             ArtAt(chip.transform, "Lock", "ui_icon_lock", new Vector2(0, 0.5f), new Vector2(18, 0), new Vector2(18, 18));
             bool baseLocked = GameManager.Instance != null && GameManager.Instance.GetMainBaseLevel() < region.requiredBaseLevel;
-            Label(chip.transform, "Status", baseLocked ? $"Ana Üs Sev. {region.requiredBaseLevel}" : $"Bölge {region.id - 1} bossu",
+            Label(chip.transform, "Status", baseLocked ? L.T($"Ana Üs Sev. {region.requiredBaseLevel}", $"Main Base Lv. {region.requiredBaseLevel}") : L.T($"Bölge {region.id - 1} bossu", $"Region {region.id - 1} boss"),
                 12, InkMuted, false, Vector2.zero, Vector2.one, new Vector2(30, 0), new Vector2(-8, 0));
             ArtAt(tile, "BigLock", "ui_icon_lock", new Vector2(0.5f, 0.45f), Vector2.zero, new Vector2(46, 46));
         }
@@ -554,14 +554,14 @@ public class CampaignSceneSetup : MonoBehaviour
         HeaderStrip(regionRoot, RegionTop);
         var back = TopButton(regionRoot, "BackToMap", "‹ Harita", 14, 30, 87, 34, false, 14);
         back.onClick.AddListener(ShowMap);
-        TopLabel(regionRoot, "RegionTitle", UiStrings.Upper(selectedRegion.displayName),
+        TopLabel(regionRoot, "RegionTitle", UiStrings.Upper(L.Asset(selectedRegion.displayName)),
             110, 28, 168, 38, 20, ReferenceUiVisuals.Gold, true, TextAlignmentOptions.Left);
         CreateLivesChip(regionRoot, Vector2.one, new Vector2(-112, -64), new Vector2(-12, -30));
         var banner = ArtImage(regionRoot, "RegionBanner", "ui_paper", new Vector2(0, 1), Vector2.one,
             new Vector2(12, -RegionTop + 10), new Vector2(-12, -76), 20f);
-        Label(banner.transform, "Description", selectedRegion.description, 13, Ink, false,
+        Label(banner.transform, "Description", L.Asset(selectedRegion.description), 13, Ink, false,
             Vector2.zero, Vector2.one, new Vector2(14, 28), new Vector2(-14, -8), TextAlignmentOptions.TopLeft);
-        Label(banner.transform, "Enemies", $"Düşmanlar: {EnemyList(selectedRegion)}  ·  Boss: {selectedRegion.bossName}",
+        Label(banner.transform, "Enemies", L.T("Düşmanlar: ", "Enemies: ") + $"{EnemyList(selectedRegion)}  ·  Boss: {L.Asset(selectedRegion.bossName)}",
             11.5f, InkGold, false, new Vector2(0, 0), new Vector2(1, 0), new Vector2(14, 6), new Vector2(-14, 28),
             TextAlignmentOptions.Left);
 
@@ -627,7 +627,7 @@ public class CampaignSceneSetup : MonoBehaviour
         button.transition = Selectable.Transition.None;
         button.onClick.AddListener(() =>
         {
-            if (!open) ShowToast($"Önce {level - 1}. seviyeyi tamamla");
+            if (!open) ShowToast(L.T($"Önce {level - 1}. seviyeyi tamamla", $"Complete level {level - 1} first"));
             else SelectLevel(level);
         });
         var center = new Vector2(0.5f, 0.5f);
@@ -654,7 +654,7 @@ public class CampaignSceneSetup : MonoBehaviour
         if (open) StarRow(node.rectTransform, "NodeStars", new Vector2(0.5f, 1f), new Vector2(0, 12), 17f, 19f, stars);
 
         // Altında tür adı: koyu, okunur bir pul.
-        string caption = boss ? "BOSS · " + selectedRegion.bossName : CampaignCatalog.KindName(kind);
+        string caption = boss ? "BOSS · " + L.Asset(selectedRegion.bossName) : CampaignCatalog.KindName(kind);
         var captionBox = Box(anchor, "NodeCaption_" + level, center, center,
             new Vector2(-58, -size * 0.5f - 24), new Vector2(58, -size * 0.5f - 6), new Color(0.12f, 0.08f, 0.05f, 0.72f));
         captionBox.sprite = ReferenceUiVisuals.PillSprite();
@@ -746,7 +746,7 @@ public class CampaignSceneSetup : MonoBehaviour
             "Battle cards boost your warrior or castle by 10% for this battle. Your first card is free!"));
         Clear(detailPanel);
         var level = selectedRegion.levels[selectedLevel - 1];
-        TopLabel(detailPanel, "DetailTitle", $"SEVİYE {selectedLevel} · {UiStrings.Upper(CampaignCatalog.KindName(level.kind))}",
+        TopLabel(detailPanel, "DetailTitle", L.T($"SEVİYE {selectedLevel}", $"LEVEL {selectedLevel}") + $" · {UiStrings.Upper(CampaignCatalog.KindName(level.kind))}",
             46, 14, 250, 32, 17, Ink, true, TextAlignmentOptions.Left);
         ArtImage(detailPanel, "KindIcon", KindIcon(level.kind), Vector2.up, Vector2.up,
             new Vector2(16, -42), new Vector2(40, -18), 0f, true).raycastTarget = false;
@@ -758,31 +758,31 @@ public class CampaignSceneSetup : MonoBehaviour
         closeButton.targetGraphic = closeImage;
         closeButton.onClick.AddListener(CloseDetail);
         TopLabel(closeRect, "X", "X", 0, 0, 40, 38, 18, Color.white, true);
-        TopLabel(detailPanel, "LevelDescription", level.description,
+        TopLabel(detailPanel, "LevelDescription", L.Asset(level.description),
             18, 50, 322, 42, 14, InkMuted, false, TextAlignmentOptions.Left);
         bool replay = CampaignProgress.Stars(selectedRegion.id, selectedLevel) > 0;
         string reward = replay
-            ? $"Ödül: %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)} (tekrar)"
-            : $"Ödül: {level.reward}";
+            ? L.T($"Ödül: %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)} (tekrar)", $"Reward: {Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}% (replay)")
+            : L.T($"Ödül: {level.reward}", $"Reward: {level.reward}");
         string extra = level.kind == CampaignLevelKind.TimeTrial
-            ? $"   ·   Süre: {Mathf.RoundToInt(BattleManager.TimeTrialSeconds / 60f)} dk" : "";
-        TopLabel(detailPanel, "Meta", $"Düşman: {level.TotalEnemies}    {reward}{extra}",
+            ? L.T($"   ·   Süre: {Mathf.RoundToInt(BattleManager.TimeTrialSeconds / 60f)} dk", $"   ·   Time: {Mathf.RoundToInt(BattleManager.TimeTrialSeconds / 60f)} min") : "";
+        TopLabel(detailPanel, "Meta", L.T("Düşman: ", "Enemies: ") + $"{level.TotalEnemies}    {reward}{extra}",
             18, 96, 236, 26, 13, InkGold, false, TextAlignmentOptions.Left);
         if (!string.IsNullOrEmpty(level.modifier))
-            TopLabel(detailPanel, "Modifier", level.modifier, 262, 96, 80, 26, 12, ReferenceUiVisuals.Red, true);
+            TopLabel(detailPanel, "Modifier", L.Asset(level.modifier), 262, 96, 80, 26, 12, ReferenceUiVisuals.Red, true);
         int best = CampaignProgress.Stars(selectedRegion.id, selectedLevel);
-        TopLabel(detailPanel, "BestLabel", best > 0 ? "EN İYİ" : "HENÜZ OYNANMADI", 18, 122, 140, 22, 11,
+        TopLabel(detailPanel, "BestLabel", best > 0 ? L.T("EN İYİ", "BEST") : L.T("HENÜZ OYNANMADI", "NOT PLAYED YET"), 18, 122, 140, 22, 11,
             InkMuted, false, TextAlignmentOptions.Left);
         StarRow(detailPanel, "BestStars", Vector2.up, new Vector2(best > 0 ? 100 : 176, -133), 17f, 20f, best);
 
         // Savaş kartları: bu savaş için +%10 (Kraliyet %15).
-        TopLabel(detailPanel, "CardsTitle", "SAVAŞ KARTLARI", 18, 148, 130, 20, 12, Ink, true, TextAlignmentOptions.Left);
+        TopLabel(detailPanel, "CardsTitle", L.T("SAVAŞ KARTLARI", "BATTLE CARDS"), 18, 148, 130, 20, 12, Ink, true, TextAlignmentOptions.Left);
         TopLabel(detailPanel, "CardsHint", CardsHint(), 150, 148, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
         for (int i = 0; i < BattleCards.Count; i++) CreateCard((BattleCard)i, i);
 
         bool canPlay = LivesSystem.CanPlay;
         var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle",
-            canPlay ? "SAVAŞA BAŞLA" : $"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}", canPlay,
+            canPlay ? L.T("SAVAŞA BAŞLA", "START BATTLE") : L.T("CAN YOK · ", "NO LIVES · ") + LivesSystem.Format(LivesSystem.NextLifeIn), canPlay,
             Vector2.zero, new Vector2(1, 0), new Vector2(16, 14), new Vector2(-16, 66), canPlay ? 19 : 16);
         battle.interactable = CampaignProgress.IsLevelOpen(selectedRegion, selectedLevel);
         battle.onClick.AddListener(() =>
@@ -797,10 +797,10 @@ public class CampaignSceneSetup : MonoBehaviour
 
     private static string CardsHint()
     {
-        if (BattleCards.IsRoyal) return $"Kraliyet: hepsi açık, %{BattleCards.BonusPercent}";
-        if (BattleCards.FreeCardAvailable) return "İlk savaşına 1 kart BEDAVA";
-        if (BattleCards.Tokens > 0) return $"Kart jetonun: {BattleCards.Tokens}";
-        return $"Reklam ya da {GemEconomy.BattleCardCost} elmasla aç";
+        if (BattleCards.IsRoyal) return L.T($"Kraliyet: hepsi açık, %{BattleCards.BonusPercent}", $"Royal: all active, {BattleCards.BonusPercent}%");
+        if (BattleCards.FreeCardAvailable) return L.T("İlk savaşına 1 kart BEDAVA", "1 FREE card for your first battle");
+        if (BattleCards.Tokens > 0) return L.T($"Kart jetonun: {BattleCards.Tokens}", $"Card tokens: {BattleCards.Tokens}");
+        return L.T($"Reklam ya da {GemEconomy.BattleCardCost} elmasla aç", $"Unlock with an ad or {GemEconomy.BattleCardCost} gems");
     }
 
     private static string CardIcon(BattleCard card)
@@ -829,22 +829,22 @@ public class CampaignSceneSetup : MonoBehaviour
             new Vector2(0, 0.66f), Vector2.one, new Vector2(34, 0), new Vector2(-4, -3), TextAlignmentOptions.Left);
         Label(rect, "CardName", BattleCards.Name(card), 12, ReferenceUiVisuals.Light, false,
             new Vector2(0, 0.34f), new Vector2(1, 0.66f), new Vector2(34, 0), new Vector2(-4, 0), TextAlignmentOptions.Left);
-        string state = active ? "AÇIK"
-            : BattleCards.FreeCardAvailable ? "BEDAVA AL"
-            : BattleCards.Tokens > 0 ? "JETONLA AÇ" : $"▶ / {GemEconomy.BattleCardCost} ELMAS";
+        string state = active ? L.T("AÇIK", "ON")
+            : BattleCards.FreeCardAvailable ? L.T("BEDAVA AL", "GET FREE")
+            : BattleCards.Tokens > 0 ? L.T("JETONLA AÇ", "USE TOKEN") : L.T($"▶ / {GemEconomy.BattleCardCost} ELMAS", $"▶ / {GemEconomy.BattleCardCost} GEMS");
         Label(rect, "State", state, 10.5f, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8D5B0), false,
             Vector2.zero, new Vector2(1, 0.34f), new Vector2(34, 3), new Vector2(-4, 0), TextAlignmentOptions.Left);
         button.onClick.AddListener(() =>
         {
-            if (BattleCards.IsUnlocked(card)) { ShowToast($"{BattleCards.Description(card)} kartı bu savaş için açık."); return; }
+            if (BattleCards.IsUnlocked(card)) { ShowToast(L.T($"{BattleCards.Description(card)} kartı bu savaş için açık.", $"{BattleCards.Description(card)} card is active for this battle.")); return; }
             if (BattleCards.TryUnlockWithoutAd(card)) { RenderLevelDetail(); return; }
             // Elmasla hemen aç ya da reklam izle.
-            GemConfirm.Show("SAVAŞ KARTI",
-                $"{BattleCards.Description(card)} bu savaş için +%{BattleCards.BonusPercent}.",
-                GemEconomy.BattleCardCost, "AÇ", () =>
+            GemConfirm.Show(L.T("SAVAŞ KARTI", "BATTLE CARD"),
+                L.T($"{BattleCards.Description(card)} bu savaş için +%{BattleCards.BonusPercent}.", $"{BattleCards.Description(card)} +{BattleCards.BonusPercent}% for this battle."),
+                GemEconomy.BattleCardCost, L.T("AÇ", "UNLOCK"), () =>
                 {
                     if (BattleCards.UnlockWithGems(card) && detailOpen) RenderLevelDetail();
-                }, null, false, "▶ REKLAM İZLE", () => RewardedAds.Show("battle_card", ok =>
+                }, null, false, L.T("▶ REKLAM İZLE", "▶ WATCH AD"), () => RewardedAds.Show("battle_card", ok =>
                 {
                     if (!ok) return;
                     BattleCards.UnlockFromAd(card);
@@ -861,11 +861,11 @@ public class CampaignSceneSetup : MonoBehaviour
         var level = EndlessMode.Level(floor);
         var theme = EndlessMode.Theme(floor);
         bool boss = EndlessMode.IsBossFloor(floor);
-        string themeName = theme != null ? theme.displayName : "";
+        string themeName = theme != null ? L.Asset(theme.displayName) : "";
         string body =
             L.T($"<b>En iyi kat:</b> {EndlessMode.BestFloor}\n", $"<b>Best floor:</b> {EndlessMode.BestFloor}\n") +
             L.T($"<b>Kat {floor}:</b> {CampaignCatalog.KindName(level.kind)}", $"<b>Floor {floor}:</b> {CampaignCatalog.KindName(level.kind)}") +
-            (boss && theme != null ? $" · {theme.bossName}" : "") + "\n" +
+            (boss && theme != null ? $" · {L.Asset(theme.bossName)}" : "") + "\n" +
             L.T($"<b>Tema:</b> {themeName}\n", $"<b>Theme:</b> {themeName}\n") +
             L.T($"<b>Ödül:</b> {level.reward} altın", $"<b>Reward:</b> {level.reward} gold") +
             (boss ? L.T($" + {EndlessMode.MilestoneGems} elmas", $" + {EndlessMode.MilestoneGems} gems") : "") + "\n\n" +
@@ -968,12 +968,12 @@ public class CampaignSceneSetup : MonoBehaviour
     {
         if (LivesSystem.Unlimited)
         {
-            ShowToast($"Sınırsız can: {LivesSystem.Format(LivesSystem.UnlimitedRemaining)} kaldı");
+            ShowToast(L.T("Sınırsız can: ", "Unlimited lives: ") + LivesSystem.Format(LivesSystem.UnlimitedRemaining));
             return;
         }
         if (LivesSystem.Lives >= LivesSystem.MaxLives)
         {
-            ShowToast($"Canların dolu ({LivesSystem.MaxLives}). Yenilgi ve pes etme 1 can götürür.");
+            ShowToast(L.T($"Canların dolu ({LivesSystem.MaxLives}). Yenilgi ve pes etme 1 can götürür.", $"Lives full ({LivesSystem.MaxLives}). A defeat or surrender costs 1 life."));
             return;
         }
         // Canları elmasla doldur; günlük reklam hakkı varsa ikinci seçenek +1 can.
@@ -983,21 +983,21 @@ public class CampaignSceneSetup : MonoBehaviour
             if (detailOpen) RenderLevelDetail();
         }
         bool adOption = LivesSystem.CanWatchAdForLife;
-        GemConfirm.Show("CAN",
-            $"Can {LivesSystem.Lives}/{LivesSystem.MaxLives} · sonraki can {LivesSystem.Format(LivesSystem.NextLifeIn)} sonra.\n" +
-            "Canları elmasla hemen doldurabilirsin.",
-            GemEconomy.RefillLivesCost, "DOLDUR", () =>
+        GemConfirm.Show(L.T("CAN", "LIVES"),
+            L.T($"Can {LivesSystem.Lives}/{LivesSystem.MaxLives} · sonraki can {LivesSystem.Format(LivesSystem.NextLifeIn)} sonra.\nCanları elmasla hemen doldurabilirsin.",
+                $"Lives {LivesSystem.Lives}/{LivesSystem.MaxLives} · next life in {LivesSystem.Format(LivesSystem.NextLifeIn)}.\nRefill them now with gems."),
+            GemEconomy.RefillLivesCost, L.T("DOLDUR", "REFILL"), () =>
             {
                 if (!LivesSystem.RefillWithGems()) return;
-                ShowToast("Canlar doldu!");
+                ShowToast(L.T("Canlar doldu!", "Lives refilled!"));
                 AfterChange();
             }, null, false,
-            adOption ? $"▶ REKLAM: +1 CAN ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} hak)" : null,
+            adOption ? L.T($"▶ REKLAM: +1 CAN ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} hak)", $"▶ AD: +1 LIFE ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} left)") : null,
             () => RewardedAds.Show("extra_life", ok =>
             {
                 if (!ok) return;
                 LivesSystem.RewardAdLife();
-                ShowToast($"+1 can! (bugün {LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} reklam hakkın kaldı)");
+                ShowToast(L.T($"+1 can! (bugün {LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} reklam hakkın kaldı)", $"+1 life! ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} ads left today)"));
                 AfterChange();
             }));
     }

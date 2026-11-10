@@ -55,7 +55,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
 
         values = new TextMeshProUGUI[4];
         rows = new CanvasGroup[4];
-        string[] labels = { "Düşman altını", "Zafer ödülü", "İnşa maliyeti", "Üsse aktarılan" };
+        string[] labels = { L.T("Düşman altını", "Enemy gold"), L.T("Zafer ödülü", "Victory reward"), L.T("İnşa maliyeti", "Build cost"), L.T("Üsse aktarılan", "Sent to base") };
         for (int i = 0; i < 4; i++)
         {
             // Satırlar 40 birim aralıklı; toplam satırı ayraçla birlikte 48 birim aşağıda.
@@ -87,7 +87,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
         var text = existingReturn.GetComponentInChildren<TextMeshProUGUI>();
         if (text != null)
         {
-            text.text = BattleSession.IsCampaign ? "BÖLGEYE DÖN" : "ÜSSE DÖN";
+            text.text = BattleSession.IsCampaign ? L.T("BÖLGEYE DÖN", "BACK TO MAP") : L.T("ÜSSE DÖN", "BACK TO BASE");
             text.fontSize = 18;
             text.color = ReferenceUiVisuals.Hex(0x2A1A08);
             if (titleFont != null) text.font = TMP_FontAsset.CreateFontAsset(titleFont);
@@ -107,7 +107,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 ReferenceUiVisuals.Muted, TextAlignmentOptions.Center,
                 new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-120, -276), new Vector2(120, -241),
                 bodyBold: true);
-            retryButton = ReferenceUiVisuals.Button(inner, "RetryCampaignBattle", "TEKRAR OYNA", false,
+            retryButton = ReferenceUiVisuals.Button(inner, "RetryCampaignBattle", L.T("TEKRAR OYNA", "PLAY AGAIN"), false,
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0),
                 new Vector2(-118, 66), new Vector2(118, 118), 17);
             retryButton.onClick.AddListener(() =>
@@ -121,7 +121,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 if (GameManager.Instance.TryStartCampaignBattle()) return;
                 if (BattleSession.IsEndless) BattleSession.BeginEndless(floor);
                 var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (label != null) label.text = $"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}";
+                if (label != null) label.text = L.T("CAN YOK · ", "NO LIVES · ") + LivesSystem.Format(LivesSystem.NextLifeIn);
             });
         }
     }
@@ -166,13 +166,13 @@ public sealed class VictoryReferenceView : MonoBehaviour
         float heroHealth = hero != null ? hero.HealthPercent : 0f;
         bool downed = hero != null && hero.TimesDowned > 0;
         bool baseStar = baseHealth > 0.5f, heroStar = heroHealth > 0.5f && !downed;
-        if (baseStar && heroStar) return "<color=#F0C24A>Kusursuz zafer!</color>";
+        if (baseStar && heroStar) return L.T("<color=#F0C24A>Kusursuz zafer!</color>", "<color=#F0C24A>Flawless victory!</color>");
         string Part(string name, float value, bool ok) => ok
             ? $"<color=#7BC67B>{name} %{Mathf.RoundToInt(value * 100f)}</color>"
             : $"<color=#E07A5F>{name} %{Mathf.RoundToInt(value * 100f)}</color>";
-        string heroPart = downed ? "<color=#E07A5F>Savaşçı düştü</color>" : Part("Savaşçı", heroHealth, heroStar);
-        return $"{Part("Ana Üs", baseHealth, baseStar)}  ·  {heroPart}\n" +
-               "Hiç düşmeden %50'nin üstünde kalan her biri +1 yıldız";
+        string heroPart = downed ? L.T("<color=#E07A5F>Savaşçı düştü</color>", "<color=#E07A5F>Warrior fell</color>") : Part(L.T("Savaşçı", "Warrior"), heroHealth, heroStar);
+        return $"{Part(L.T("Ana Üs", "Main Base"), baseHealth, baseStar)}  ·  {heroPart}\n" +
+               L.T("Hiç düşmeden %50'nin üstünde kalan her biri +1 yıldız", "Each kept above 50% without falling: +1 star");
     }
 
     private const float FrameFillInset = 0.55f;
@@ -231,19 +231,19 @@ public sealed class VictoryReferenceView : MonoBehaviour
 
     public void Present(bool won, int enemyGold, int bonus, int buildCost)
     {
-        title.text = won ? "ZAFER!" : "YENİLGİ!";
+        title.text = won ? L.T("ZAFER!", "VICTORY!") : L.T("YENİLGİ!", "DEFEAT!");
         title.color = won ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Red;
         if (BattleSession.IsCampaign)
         {
             if (returnButton != null)
             {
                 var label = returnButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (label != null) label.text = "BÖLGEYE DÖN";
+                if (label != null) label.text = L.T("BÖLGEYE DÖN", "BACK TO MAP");
             }
             if (retryButton != null)
             {
                 var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (label != null) label.text = won ? "TEKRAR OYNA" : "TEKRAR DENE";
+                if (label != null) label.text = won ? L.T("TEKRAR OYNA", "PLAY AGAIN") : L.T("TEKRAR DENE", "TRY AGAIN");
             }
             if (campaignStars != null)
                 for (int i = 0; i < campaignStars.Length; i++)
@@ -259,12 +259,12 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 else if (BattleManager.Instance != null)
                 {
                     // Yenilginin sebebi: süre mi bitti, maden mi düştü, üs mü yıkıldı.
-                    string reason = BattleManager.Instance.DefeatReason == "time" ? "Süre doldu!"
-                        : BattleManager.Instance.DefeatReason == "mine" ? "Maden yıkıldı!"
-                        : BattleManager.Instance.DefeatReason == "base" ? "Ana Üs yıkıldı!" : "";
+                    string reason = BattleManager.Instance.DefeatReason == "time" ? L.T("Süre doldu!", "Time is up!")
+                        : BattleManager.Instance.DefeatReason == "mine" ? L.T("Maden yıkıldı!", "The mine fell!")
+                        : BattleManager.Instance.DefeatReason == "base" ? L.T("Ana Üs yıkıldı!", "The Main Base fell!") : "";
                     // Yenilgi 1 can götürür (sınırsız can süresinde götürmez).
-                    string lives = LivesSystem.Unlimited ? "Sınırsız can: can kaybı yok"
-                        : $"−1 can · kalan {LivesSystem.Lives}/{LivesSystem.MaxLives}";
+                    string lives = LivesSystem.Unlimited ? L.T("Sınırsız can: can kaybı yok", "Unlimited lives: no life lost")
+                        : L.T($"−1 can · kalan {LivesSystem.Lives}/{LivesSystem.MaxLives}", $"−1 life · {LivesSystem.Lives}/{LivesSystem.MaxLives} left");
                     starReason.gameObject.SetActive(true);
                     starReason.text = (reason.Length > 0 ? $"<color=#E07A5F>{reason}</color>\n" : "") +
                         $"<color=#C9B48A>{lives}</color>";
@@ -288,7 +288,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
         {
             transfer = BattleManager.Instance.LastPayout;
             if (starReason != null)
-                starReason.text += $"\n<color=#C9B48A>Tamamlanmış aşama: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u</color>";
+                starReason.text += L.T($"\n<color=#C9B48A>Tamamlanmış aşama: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u</color>", $"\n<color=#C9B48A>Completed stage: {Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}% of the reward</color>");
         }
         // Yeni yıldız / ilk boss zaferi elması.
         int victoryGems = BattleManager.Instance != null ? BattleManager.Instance.LastVictoryGems : 0;

@@ -154,7 +154,7 @@ public class BuilderSystem : MonoBehaviour
     public string GetStatusText()
     {
         var gm = GameManager.Instance;
-        if (gm == null || gm.HasFreeBuilder) return "İnşaatçı: Müsait";
-        return $"İnşaatçı: {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
+        if (gm == null || gm.HasFreeBuilder) return L.T("İnşaatçı: Müsait", "Builder: Free");
+        return L.T("İnşaatçı: ", "Builder: ") + Progression.FormatDuration(gm.BuilderSecondsRemaining);
     }
 }

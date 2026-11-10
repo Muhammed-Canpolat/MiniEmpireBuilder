@@ -150,7 +150,7 @@ public static class DarkFantasyHudPolish
         rt.offsetMin = rt.offsetMax = Vector2.zero;
         var bg = panel.GetComponent<Image>();
         if (bg != null) bg.color = ReferenceUiVisuals.Panel;
-        ReferenceUiVisuals.Text(panel, "Header", "İNŞA ET", 24,
+        ReferenceUiVisuals.Text(panel, "Header", L.T("İNŞA ET", "BUILD"), 24,
             ReferenceUiVisuals.Gold, TextAlignmentOptions.Left,
             new Vector2(0.05f, 0.84f), new Vector2(0.78f, 0.98f),
             Vector2.zero, Vector2.zero, bodyBold: true);
@@ -215,7 +215,7 @@ public static class DarkFantasyHudPolish
         }
         // Dekor kartları kaydırılabilir ızgarada; alan sekmelerin altından ipucunun üstüne.
         SetAnchors(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
-        ReferenceUiVisuals.Text(panel, "BuildMenuHint", "Kilitli yapılar üs geliştikçe açılır.", 12,
+        ReferenceUiVisuals.Text(panel, "BuildMenuHint", L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows."), 12,
             SoftGold, TextAlignmentOptions.Center, new Vector2(0, 0.005f),
             new Vector2(1, 0.085f), new Vector2(12, 0), new Vector2(-12, 0));
     }

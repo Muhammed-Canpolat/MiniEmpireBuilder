@@ -115,7 +115,7 @@ public class BuildMenuController : MonoBehaviour
     private void CreateRecommendedLayoutControl()
     {
         var button = ReferenceUiVisuals.Button(_panelRoot.transform, "RecommendedLayout",
-            "ÖNERİLEN DÜZEN", false, new Vector2(0.26f, 0.015f),
+            L.T("ÖNERİLEN DÜZEN", "SUGGESTED LAYOUT"), false, new Vector2(0.26f, 0.015f),
             new Vector2(0.74f, 0.10f), Vector2.zero, Vector2.zero, 13f);
         _recommendedButton = button.gameObject;
         button.onClick.AddListener(() => _recommendedConfirm?.SetActive(true));
@@ -124,7 +124,7 @@ public class BuildMenuController : MonoBehaviour
             Vector2.zero, Vector2.zero, ReferenceUiVisuals.Panel);
         _recommendedConfirm = confirm.gameObject;
         ReferenceUiVisuals.Text(confirm.transform, "Question",
-            "Binalar önerilen konumlara taşınsın mı? Dekorlar korunur.", 16,
+            L.T("Binalar önerilen konumlara taşınsın mı? Dekorlar korunur.", "Move buildings to the suggested spots? Decorations stay."), 16,
             ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
             new Vector2(0.06f, 0.44f), new Vector2(0.94f, 0.91f),
             Vector2.zero, Vector2.zero);
@@ -137,7 +137,7 @@ public class BuildMenuController : MonoBehaviour
             _recommendedConfirm.SetActive(false);
             Hide();
         });
-        var no = ReferenceUiVisuals.Button(confirm.transform, "Cancel", "VAZGEÇ", false,
+        var no = ReferenceUiVisuals.Button(confirm.transform, "Cancel", L.T("VAZGEÇ", "CANCEL"), false,
             new Vector2(0.52f, 0.09f), new Vector2(0.92f, 0.39f),
             Vector2.zero, Vector2.zero, 15f);
         no.onClick.AddListener(() => _recommendedConfirm.SetActive(false));
@@ -200,8 +200,8 @@ public class BuildMenuController : MonoBehaviour
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.CannonTower, out var cannon) && !cannon.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var monastery) && !monastery.isUnlocked);
             hint.gameObject.SetActive(index == 1 || hasLocked);
-            hint.text = index == 0 ? "Kilitli yapılar üs geliştikçe açılır." :
-                "Dekora uzun bas: taşı veya sil (%50 iade).";
+            hint.text = index == 0 ? L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows.") :
+                L.T("Dekora uzun bas: taşı veya sil (%50 iade).", "Long-press decor: move or remove (50% refund).");
         }
         RefreshButtons();
     }
@@ -268,7 +268,7 @@ public class BuildMenuController : MonoBehaviour
         icon.sprite = data.Visual;
         icon.preserveAspect = true;
 
-        var text = ReferenceUiVisuals.Text(go.transform, "Label", data.displayName, 11,
+        var text = ReferenceUiVisuals.Text(go.transform, "Label", L.Asset(data.displayName), 11,
             ReferenceUiVisuals.Light, TextAlignmentOptions.Center, new Vector2(0f, 0.19f),
             new Vector2(1f, 0.40f), new Vector2(3f, 0f), new Vector2(-3f, 0f), bodyBold: true);
         text.fontSizeMin = 8f;
@@ -331,7 +331,7 @@ public class BuildMenuController : MonoBehaviour
         costRt.anchorMax = new Vector2(1f, 0.2f);
         costRt.offsetMin = costRt.offsetMax = Vector2.zero;
         TextMeshProUGUI costTmp = costGO.AddComponent<TextMeshProUGUI>();
-        costTmp.text = $"{cost} Altın";
+        costTmp.text = L.T($"{cost} Altın", $"{cost} Gold");
         costTmp.color = new Color(1f, 0.85f, 0.2f);
         costTmp.alignment = TextAlignmentOptions.Center;
         costTmp.fontSize = 16f;
@@ -445,9 +445,9 @@ public class BuildMenuController : MonoBehaviour
             btn.interactable = builderAvailable && unlocked && placed < limit;
             if (cost != null)
             {
-                cost.text = unlocked ? (type == BuildingType.ArcherTower ? "50 Altın"
-                    : type == BuildingType.CannonTower ? "80 Altın" : "60 Altın")
-                    : $"Ana Üs Sev. {data?.GetRequiredMainBaseLevel() ?? 1}";
+                cost.text = unlocked ? (type == BuildingType.ArcherTower ? L.T("50 Altın", "50 Gold")
+                    : type == BuildingType.CannonTower ? L.T("80 Altın", "80 Gold") : L.T("60 Altın", "60 Gold"))
+                    : L.T("Ana Üs Sev. ", "Main Base Lv. ") + (data?.GetRequiredMainBaseLevel() ?? 1);
                 cost.color = unlocked ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted;
             }
         }

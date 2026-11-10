@@ -34,7 +34,7 @@ public sealed class BuilderTaskMarker : MonoBehaviour
                 var marker = markers[used++];
                 if (!marker.root.activeSelf) marker.root.SetActive(true);
                 marker.root.transform.position = AnchorFor(task);
-                string what = task.kind == "upgrade" ? task.label : "İnşa";
+                string what = task.kind == "upgrade" ? task.label : L.T("İnşa", "Build");
                 marker.label.text = $"{what} · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
                 marker.fill.anchorMax = new Vector2(Mathf.Max(0.02f, GameManager.TaskProgress(task)), 1f);
             }

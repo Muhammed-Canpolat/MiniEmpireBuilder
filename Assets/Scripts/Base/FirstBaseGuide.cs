@@ -12,8 +12,8 @@ public sealed class FirstBaseGuide : MonoBehaviour
 {
     public static FirstBaseGuide Instance { get; private set; }
 
-    private const string MineText = "Madene dokun ve biriken <color=#F0C24A>altını topla</color>";
-    private const string BattleText = "Hazırsın! <color=#F0C24A>Savaşa Git</color>'e bas";
+    private static string MineText => L.T("Madene dokun ve biriken <color=#F0C24A>altını topla</color>", "Tap the mine to <color=#F0C24A>collect the gold</color>");
+    private static string BattleText => L.T("Hazırsın! <color=#F0C24A>Savaşa Git</color>'e bas", "Ready! Tap <color=#F0C24A>To Battle</color>");
     private const float BubbleWidth = 236f;
     private const float BubbleHeight = 58f;
     private const float PointerSize = 18f;

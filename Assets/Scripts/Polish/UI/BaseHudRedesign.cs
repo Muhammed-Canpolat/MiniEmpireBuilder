@@ -140,7 +140,7 @@ public static class BaseHudRedesign
         SkinDock(hud.Find("BottomDock") as RectTransform);
         var build = hud.Find("BuildBtn") as RectTransform;
         var battle = hud.Find("BattleBtn") as RectTransform;
-        StackedButton(build, new Vector2(0.17f, 0f), DockButtonWidth, DockButtonHeight, 46f, false, "İNŞA ET");
+        StackedButton(build, new Vector2(0.17f, 0f), DockButtonWidth, DockButtonHeight, 46f, false, L.T("İNŞA ET", "BUILD"));
         StackedButton(battle, new Vector2(0.5f, 0f), CenterButtonWidth, CenterButtonHeight, 52f, true, "SEFER");
 
         if (hud.Find("HeroBtn") == null)
@@ -343,7 +343,7 @@ public sealed class LevelCrest : MonoBehaviour
             TextAlignmentOptions.Center, new Vector2(0f, 0.22f), new Vector2(1f, 0.92f),
             Vector2.zero, Vector2.zero, title: true);
         number.enableAutoSizing = false;
-        var caption = ReferenceUiVisuals.Text(root, "Caption", "ANA ÜS", 7, ReferenceUiVisuals.Light,
+        var caption = ReferenceUiVisuals.Text(root, "Caption", L.T("ANA ÜS", "BASE"), 7, ReferenceUiVisuals.Light,
             TextAlignmentOptions.Center, new Vector2(0f, 0.08f), new Vector2(1f, 0.3f),
             Vector2.zero, Vector2.zero, title: true);
         caption.enableAutoSizing = false;

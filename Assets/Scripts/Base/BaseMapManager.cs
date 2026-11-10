@@ -892,7 +892,7 @@ public class BaseMapManager : MonoBehaviour
 
         if (BuilderSystem.Instance != null && !BuilderSystem.Instance.HasAvailableBuilder())
         {
-            SpawnFloatingText("İnşaatçı meşgul!", obj.gameObject.transform.position, new Color(1f, 0.4f, 0.2f));
+            SpawnFloatingText(L.T("İnşaatçı meşgul!", "Builder busy!"), obj.gameObject.transform.position, new Color(1f, 0.4f, 0.2f));
             return;
         }
 
@@ -908,7 +908,7 @@ public class BaseMapManager : MonoBehaviour
         if (!started)
         {
             obj.isBeingRemoved = false;
-            SpawnFloatingText("İnşaatçı meşgul!", obj.gameObject.transform.position, new Color(1f, 0.4f, 0.2f));
+            SpawnFloatingText(L.T("İnşaatçı meşgul!", "Builder busy!"), obj.gameObject.transform.position, new Color(1f, 0.4f, 0.2f));
             return;
         }
 
@@ -1566,11 +1566,11 @@ public class BaseMapManager : MonoBehaviour
     {
         switch (type)
         {
-            case BuildingType.MainBase: return "Ana Üs";
+            case BuildingType.MainBase: return L.T("Ana Üs", "Main Base");
             case BuildingType.GoldMine: return "Maden";
-            case BuildingType.ArcherTower: return "Okçu";
-            case BuildingType.CannonTower: return "Topçu";
-            case BuildingType.Monastery: return "Manastır";
+            case BuildingType.ArcherTower: return L.T("Okçu", "Archer");
+            case BuildingType.CannonTower: return L.T("Topçu", "Cannon");
+            case BuildingType.Monastery: return L.T("Manastır", "Monastery");
             default: return type.ToString();
         }
     }

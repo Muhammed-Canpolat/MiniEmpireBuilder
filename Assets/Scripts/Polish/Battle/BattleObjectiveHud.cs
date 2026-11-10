@@ -41,7 +41,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
             outline.effectColor = timed ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8B04A);
             outline.effectDistance = new Vector2(1.5f, -1.5f);
             timerText = ReferenceUiVisuals.Text(timerPill.transform, "ObjectiveText",
-                timed ? FormatTime(BattleManager.TimeTrialSeconds) : "MADENİ KORU", 16, ReferenceUiVisuals.Gold,
+                timed ? FormatTime(BattleManager.TimeTrialSeconds) : L.T("MADENİ KORU", "DEFEND THE MINE"), 16, ReferenceUiVisuals.Gold,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f), true);
         }
 
@@ -57,7 +57,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
             cardPill.sprite = ReferenceUiVisuals.SolidPillSprite();
             cardPill.type = Image.Type.Sliced;
             ReferenceUiVisuals.Text(cardPill.transform, "ActiveCardsText",
-                $"KART +%{BattleCards.ActiveBattlePercent}: {string.Join(" · ", cards)}", 12, ReferenceUiVisuals.Light,
+                L.T($"KART +%{BattleCards.ActiveBattlePercent}: ", $"CARDS +{BattleCards.ActiveBattlePercent}%: ") + string.Join(" · ", cards), 12, ReferenceUiVisuals.Light,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
             stackBottom = -(top - 24f);
         }
@@ -138,7 +138,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
     private static string FormatTime(float seconds)
     {
         int total = Mathf.CeilToInt(Mathf.Max(0f, seconds));
-        return $"SÜRE {total / 60}:{total % 60:00}";
+        return L.T("SÜRE ", "TIME ") + $"{total / 60}:{total % 60:00}";
     }
 
     private void Update()
@@ -162,7 +162,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         }
         else if (timerText != null && battle.DefendedMine != null)
         {
-            timerText.text = $"MADEN %{Mathf.CeilToInt(battle.DefendedMine.HealthPercent * 100f)}";
+            timerText.text = L.T($"MADEN %{Mathf.CeilToInt(battle.DefendedMine.HealthPercent * 100f)}", $"MINE {Mathf.CeilToInt(battle.DefendedMine.HealthPercent * 100f)}%");
             timerText.color = battle.DefendedMine.HealthPercent < 0.35f ? ReferenceUiVisuals.Red : ReferenceUiVisuals.Gold;
         }
 
@@ -175,9 +175,9 @@ public sealed class BattleObjectiveHud : MonoBehaviour
             FirstTimeTips.Show("respawn", L.T(
                 "Savaşçın düştü ama savaş sürüyor: birkaç saniye sonra Ana Üs'ün önünde kalkar. Yenilgi yalnız Ana Üs yıkılınca olur.",
                 "Your warrior fell but the battle goes on: they rise again at the Main Base in a few seconds. You only lose if the Main Base falls."));
-            respawnText.text = $"Savaşçı düştü · {Mathf.CeilToInt(hero.RespawnRemaining)} sn sonra üste döner";
+            respawnText.text = L.T($"Savaşçı düştü · {Mathf.CeilToInt(hero.RespawnRemaining)} sn sonra üste döner", $"Warrior down · back at base in {Mathf.CeilToInt(hero.RespawnRemaining)} s");
             bool enough = GameManager.Instance != null && GameManager.Instance.Gems >= GemEconomy.InstantRespawnCost;
-            respawnLabel.text = enough ? $"   HEMEN KALK · {GemEconomy.InstantRespawnCost}" : "   ELMAS YETMİYOR";
+            respawnLabel.text = enough ? L.T($"   HEMEN KALK · {GemEconomy.InstantRespawnCost}", $"   RISE NOW · {GemEconomy.InstantRespawnCost}") : L.T("   ELMAS YETMİYOR", "   NOT ENOUGH GEMS");
         }
     }
 }

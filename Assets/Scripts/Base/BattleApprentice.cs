@@ -172,7 +172,7 @@ public sealed class BattleApprentice : MonoBehaviour
         var box = group.AddComponent<Image>();
         box.color = ReferenceUiVisuals.Background;
         box.raycastTarget = false;
-        ReferenceUiVisuals.Text(rect, "Name", "Çırak", 28,
+        ReferenceUiVisuals.Text(rect, "Name", L.T("Çırak", "Apprentice"), 28,
             ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
             new Vector2(0.04f, 0.66f), new Vector2(0.96f, 0.98f),
             Vector2.zero, Vector2.zero);

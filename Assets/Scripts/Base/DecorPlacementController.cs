@@ -262,7 +262,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         rect.sizeDelta = new Vector2(150f, 48f);
         undoToast.GetComponent<Image>().color = Color.clear;
         var toast = undoToast;
-        MakeButton(rect, "GERİ AL", Vector2.zero, () =>
+        MakeButton(rect, L.T("GERİ AL", "UNDO"), Vector2.zero, () =>
         {
             if (moved != null && CanPlace(moved.Data, previous, moved))
             {
@@ -300,8 +300,8 @@ public sealed class DecorPlacementController : MonoBehaviour
         panelImage.sprite = ReferenceUiVisuals.ToastSprite();
         panelImage.type = Image.Type.Sliced;
         panelImage.color = Color.white;
-        MakeButton(rect, "TAŞI", new Vector2(-50f, 0f), () => BeginMove(item), false, 92f);
-        MakeButton(rect, $"SİL +{item.Data.cost / 2}", new Vector2(50f, 0f), () => Delete(item), false, 92f);
+        MakeButton(rect, L.T("TAŞI", "MOVE"), new Vector2(-50f, 0f), () => BeginMove(item), false, 92f);
+        MakeButton(rect, L.T($"SİL +{item.Data.cost / 2}", $"REMOVE +{item.Data.cost / 2}"), new Vector2(50f, 0f), () => Delete(item), false, 92f);
     }
 
     private void HideActions()
@@ -414,9 +414,9 @@ public sealed class DecorPlacementController : MonoBehaviour
         barImage.type = Image.Type.Sliced;
         barImage.color = Color.white;
         // ✓/✗ simgeleri fontta yoktu ve boş kare görünüyordu: yazılı düğmeler.
-        string confirmLabel = moving != null ? "YERLEŞTİR" : $"YERLEŞTİR · {selected.cost}";
+        string confirmLabel = moving != null ? L.T("YERLEŞTİR", "PLACE") : L.T("YERLEŞTİR · ", "PLACE · ") + selected.cost;
         confirmButton = MakeButton(rect, confirmLabel, new Vector2(-62f, 0f), Confirm, true, 140f);
-        MakeButton(rect, "İPTAL", new Vector2(80f, 0f), Cancel, false, 96f);
+        MakeButton(rect, L.T("İPTAL", "CANCEL"), new Vector2(80f, 0f), Cancel, false, 96f);
     }
 
     /// <summary>Ortak düğme görünümü (kabartmalı kenar, oyunun başlık fontu).</summary>

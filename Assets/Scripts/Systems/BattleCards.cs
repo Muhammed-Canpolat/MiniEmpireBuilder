@@ -42,9 +42,9 @@ public static class BattleCards
     {
         switch (card)
         {
-            case BattleCard.HeroDamage: return "Hasar";
-            case BattleCard.HeroHealth: return "Can";
-            default: return "Kale";
+            case BattleCard.HeroDamage: return L.T("Hasar", "Damage");
+            case BattleCard.HeroHealth: return L.T("Can", "Health");
+            default: return L.T("Kale", "Fort");
         }
     }
 
@@ -52,9 +52,9 @@ public static class BattleCards
     {
         switch (card)
         {
-            case BattleCard.HeroDamage: return "Savaşçı hasarı";
-            case BattleCard.HeroHealth: return "Savaşçı canı";
-            default: return "Kule ve Ana Üs canı";
+            case BattleCard.HeroDamage: return L.T("Savaşçı hasarı", "Warrior damage");
+            case BattleCard.HeroHealth: return L.T("Savaşçı canı", "Warrior health");
+            default: return L.T("Kule ve Ana Üs canı", "Tower and Main Base health");
         }
     }
 
