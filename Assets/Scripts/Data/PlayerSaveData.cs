@@ -95,6 +95,9 @@ public class PlayerSaveData
     public List<int> questProgress = new List<int>();
     public List<bool> questClaimed = new List<bool>();
     public bool questBonusClaimed;
+    // Sonsuz Sefer en iyi kat; Ejder İstilası ilk zafer ödülünün alındığı hafta (yıl × 100 + hafta).
+    public int endlessBestFloor;
+    public int invasionRewardWeek;
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur

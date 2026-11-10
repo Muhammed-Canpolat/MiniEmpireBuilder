@@ -113,7 +113,8 @@ public class CampaignSceneSetup : MonoBehaviour
             Vector2.zero, Vector2.one, new Vector2(12, 2), new Vector2(-12, -2));
         toastBackground.gameObject.AddComponent<PanelController>().Initialize(false);
         ShowMap();
-        if (BattleSession.IsCampaign)
+        if (BattleSession.IsEndless) ShowEndlessPanel(); // Sonsuz Sefer'den dönüş: sıradaki kat hazır
+        else if (BattleSession.IsCampaign && !BattleSession.IsSpecial)
         {
             var lastRegion = CampaignCatalog.Get(BattleSession.RegionId);
             if (lastRegion != null) ShowRegion(lastRegion);
@@ -372,8 +373,10 @@ public class CampaignSceneSetup : MonoBehaviour
         Label(chip.transform, "Count", $"{CampaignProgress.TotalStars()}/{total}", 15, Ink, true,
             Vector2.zero, Vector2.one, new Vector2(28, 0), new Vector2(-6, 0));
 
+        CreateInvasionButton();
+
         FooterStrip(mapRoot, MapFooter);
-        var back = ReferenceUiVisuals.Button(mapRoot, "ReturnToBase", "ÜSSE DÖN", false,
+        var back = ReferenceUiVisuals.Button(mapRoot, "ReturnToBase", L.T("ÜSSE DÖN", "BACK TO BASE"), false,
             new Vector2(0.06f, 0), new Vector2(0.94f, 0), new Vector2(0, 20), new Vector2(0, 74), 18);
         back.onClick.AddListener(() => GameManager.Instance.LoadBaseWorld());
     }
@@ -477,16 +480,20 @@ public class CampaignSceneSetup : MonoBehaviour
         var tile = tileImage.rectTransform;
         var button = tile.gameObject.AddComponent<Button>();
         button.transition = Selectable.Transition.None;
-        button.onClick.AddListener(() => ShowToast(unlocked
-            ? "Sonsuz Sefer sonraki aşamada açılacak."
-            : $"Bölge {LastRegionId} bossunu yenerek açılır."));
+        button.onClick.AddListener(() =>
+        {
+            if (unlocked) ShowEndlessPanel();
+            else ShowToast(L.T($"Bölge {LastRegionId} bossunu yenerek açılır.", $"Unlocks after defeating the Region {LastRegionId} boss."));
+        });
         var top = new Vector2(0.5f, 1f);
         ArtAt(tile, "Ribbon", "ui_ribbon_purple", top, new Vector2(0, -26), new Vector2(214, 56), false);
         var name = LabelAt(tile, "EndlessName", "SONSUZ SEFER", top, new Vector2(0, -24), new Vector2(146, 24), 14,
             ReferenceUiVisuals.Light, true);
         Shadowed(name);
         var chip = ArtImage(tile, "StatusChip", "ui_paper", top, top, new Vector2(-92, -80), new Vector2(92, -56), 16f);
-        Label(chip.transform, "EndlessDetail", unlocked ? "Sınırsız seviye, artan zorluk" : $"Bölge {LastRegionId} bossunu yen",
+        Label(chip.transform, "EndlessDetail", unlocked
+                ? L.T($"En iyi kat: {EndlessMode.BestFloor} · Sıradaki: {EndlessMode.NextFloor}", $"Best floor: {EndlessMode.BestFloor} · Next: {EndlessMode.NextFloor}")
+                : L.T($"Bölge {LastRegionId} bossunu yen", $"Defeat the Region {LastRegionId} boss"),
             12, InkMuted, false, Vector2.zero, Vector2.one, new Vector2(8, 0), new Vector2(-8, 0));
         return tile;
     }
@@ -844,6 +851,93 @@ public class CampaignSceneSetup : MonoBehaviour
                     if (detailOpen) RenderLevelDetail();
                 }));
         });
+    }
+
+    // ==================== ÖZEL MODLAR ====================
+
+    private void ShowEndlessPanel()
+    {
+        int floor = EndlessMode.NextFloor;
+        var level = EndlessMode.Level(floor);
+        var theme = EndlessMode.Theme(floor);
+        bool boss = EndlessMode.IsBossFloor(floor);
+        string themeName = theme != null ? theme.displayName : "";
+        string body =
+            L.T($"<b>En iyi kat:</b> {EndlessMode.BestFloor}\n", $"<b>Best floor:</b> {EndlessMode.BestFloor}\n") +
+            L.T($"<b>Kat {floor}:</b> {CampaignCatalog.KindName(level.kind)}", $"<b>Floor {floor}:</b> {CampaignCatalog.KindName(level.kind)}") +
+            (boss && theme != null ? $" · {theme.bossName}" : "") + "\n" +
+            L.T($"<b>Tema:</b> {themeName}\n", $"<b>Theme:</b> {themeName}\n") +
+            L.T($"<b>Ödül:</b> {level.reward} altın", $"<b>Reward:</b> {level.reward} gold") +
+            (boss ? L.T($" + {EndlessMode.MilestoneGems} elmas", $" + {EndlessMode.MilestoneGems} gems") : "") + "\n\n" +
+            L.T("Her kat biraz daha zor. Kaldığın kattan devam edersin; yenilgi 1 can götürür.",
+                "Each floor is harder. You continue from your best floor; a defeat costs 1 life.");
+        bool canPlay = LivesSystem.CanPlay;
+        ModeLaunchPanel.Show(L.T("SONSUZ SEFER", "ENDLESS CAMPAIGN"), body,
+            canPlay ? L.T($"KAT {floor} · BAŞLA", $"FLOOR {floor} · START")
+                : L.T($"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}", $"NO LIVES · {LivesSystem.Format(LivesSystem.NextLifeIn)}"),
+            true, () =>
+            {
+                BattleSession.BeginEndless(floor);
+                if (GameManager.Instance.TryStartCampaignBattle()) return;
+                OfferLifeAd();
+            });
+    }
+
+    /// <summary>Başlıkta Ejder İstilası düğmesi: hafta sonu kırmızı ve parlak, hafta içi kalan süre.</summary>
+    private void CreateInvasionButton()
+    {
+        if (!DragonInvasion.Unlocked) return;
+        bool active = DragonInvasion.Active;
+        var rect = ReferenceUiVisuals.Rect(mapRoot, "InvasionButton", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(-58, -92), new Vector2(42, -50));
+        var image = rect.gameObject.AddComponent<Image>();
+        image.sprite = Art(active ? "ui_ribbon_red" : "ui_ribbon_dark");
+        image.preserveAspect = true;
+        var button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        string text = active ? L.T("İSTİLA!", "INVASION!")
+            : L.T("İSTİLA ", "INVASION ") + Progression.FormatDuration(DragonInvasion.TimeLeft(System.DateTime.Now).TotalSeconds);
+        var label = Label(rect, "Label", text, 11, ReferenceUiVisuals.Light, true, new Vector2(0.12f, 0.15f), new Vector2(0.88f, 0.9f),
+            Vector2.zero, Vector2.zero);
+        Shadowed(label);
+        if (active)
+            rect.DOScale(1.08f, 0.55f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(rect.gameObject);
+        button.onClick.AddListener(() =>
+        {
+            if (!DragonInvasion.Active)
+            {
+                ShowToast(L.T("Ejder İstilası hafta sonu gelir: ", "The Dragon Invasion arrives on the weekend: ") +
+                          Progression.FormatDuration(DragonInvasion.TimeLeft(System.DateTime.Now).TotalSeconds));
+                return;
+            }
+            ShowInvasionPanel();
+        });
+    }
+
+    private void ShowInvasionPanel()
+    {
+        int level = DragonInvasion.BattleLevel;
+        int gold = DragonInvasion.Gold(level);
+        bool first = DragonInvasion.FirstWinAvailable;
+        string body =
+            L.T("Ejder Savaşçısı ordusuyla krallığa saldırıyor!\n\n", "The Dragon Warrior attacks the kingdom with his army!\n\n") +
+            (first
+                ? L.T($"<b>Bu hafta sonunun ilk zaferi:</b> {gold} altın + {DragonInvasion.FirstWinGems} elmas\n",
+                      $"<b>First win this weekend:</b> {gold} gold + {DragonInvasion.FirstWinGems} gems\n")
+                : L.T($"<b>İlk zafer alındı.</b> Sonraki zaferler: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u\n",
+                      $"<b>First win claimed.</b> Further wins: {Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}% of the reward\n")) +
+            L.T("<b>Kalan süre:</b> ", "<b>Time left:</b> ") +
+            Progression.FormatDuration(DragonInvasion.TimeLeft(System.DateTime.Now).TotalSeconds);
+        bool canPlay = LivesSystem.CanPlay;
+        ModeLaunchPanel.Show(L.T("EJDER İSTİLASI", "DRAGON INVASION"), body,
+            canPlay ? L.T("SAVAŞA BAŞLA", "START BATTLE")
+                : L.T($"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}", $"NO LIVES · {LivesSystem.Format(LivesSystem.NextLifeIn)}"),
+            true, () =>
+            {
+                BattleSession.BeginInvasion();
+                if (GameManager.Instance.TryStartCampaignBattle()) return;
+                OfferLifeAd();
+            }, "ui_ribbon_red");
     }
 
     // ==================== CAN ====================

@@ -83,6 +83,8 @@ public sealed class DevMenu : MonoBehaviour
             (battle ? "DÜŞMANLARI ÖLDÜR" : "SAHNEYİ YENİLE", battle ? (Action)KillEnemies : () => { }, !battle),
             ("KRALİYET AÇ/KAPAT", () => { if (gm != null) { gm.PlayerData.royalUntilTicks = BattleCards.IsRoyal ? 0 : DateTime.UtcNow.AddDays(1).Ticks; gm.PlayerData.royalGemDay = 0; gm.SaveGame(); } }, true),
             ("REKLAM HAKLARINI SIFIRLA", () => { if (gm != null) { var d = gm.PlayerData; d.adSpeedupDay = d.adMineDay = d.adChestDay = d.gemAdDay = d.adLivesDay = 0; gm.SaveGame(); } }, false),
+            ("SONSUZ SEFER +5 KAT", () => { if (gm != null) { gm.PlayerData.endlessBestFloor += 5; gm.SaveGame(); } }, true),
+            ("İSTİLAYI AÇ/KAPAT", () => { DragonInvasion.ForceActive = !DragonInvasion.ForceActive; if (gm != null) { gm.PlayerData.invasionRewardWeek = 0; gm.SaveGame(); } }, true),
             ("TAKVİMİ SIFIRLA", () => { if (gm != null) { gm.PlayerData.dailyStreak = 0; gm.PlayerData.dailyLastClaimDay = 0; DailyRewards.TodayOverride = null; gm.SaveGame(); } }, true),
         };
 

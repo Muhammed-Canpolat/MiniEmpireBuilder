@@ -122,7 +122,7 @@ public sealed class BattleApprentice : MonoBehaviour
                     var stats = EnemyStats.GetBaseStats(nearest.Type);
                     // Seferde düşmanla aynı seviye (bölge×5 + aşama); eskiden hep 1 alınıyordu.
                     stats.ScaleToLevel(BattleSession.IsCampaign
-                        ? (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber
+                        ? BattleSession.BattleLevel
                         : GameManager.Instance.PlayerData.currentBattleLevel);
                     TakeDamage(stats.damage);
                     nextContactDamage = Time.time + 1f;

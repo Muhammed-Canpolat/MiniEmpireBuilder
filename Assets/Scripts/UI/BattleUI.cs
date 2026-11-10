@@ -118,6 +118,7 @@ public class BattleUI : MonoBehaviour
             levelText.text = BattleSession.IsCampaign && BattleSession.Region != null
                 ? BattleSession.Level?.kind == CampaignLevelKind.Boss
                     ? $"BOSS · {UiStrings.Upper(BattleSession.Region.bossName)}"
+                    : BattleSession.IsEndless ? L.T($"SONSUZ SEFER · KAT {BattleSession.Floor}", $"ENDLESS · FLOOR {BattleSession.Floor}")
                     : $"{BattleSession.Region.displayName} · Seviye {BattleSession.LevelNumber}"
                 : $"SEVİYE {GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1}";
         if (BattleSession.Level?.kind == CampaignLevelKind.Boss && levelText != null)

@@ -36,6 +36,8 @@ public class BattleManager : MonoBehaviour
     public bool IsReplay { get; private set; }
     /// <summary>Zaferde cüzdana aktarılan son tutar (tekrar oynama kesintisi dahil).</summary>
     public int LastPayout { get; private set; }
+    /// <summary>Bu zaferde kazanılan elmas (yeni yıldız, ilk boss, Sonsuz Sefer dönüm katı, İstila ilk zaferi).</summary>
+    public int LastVictoryGems { get; private set; }
 
     // ==================== GÖREV TÜRLERİ ====================
     /// <summary>"Zamana karşı" aşamalarında süre (sn): dolmadan tüm düşmanlar temizlenmezse yenilgi.</summary>
@@ -92,9 +94,12 @@ public class BattleManager : MonoBehaviour
 
         if (BattleSession.IsCampaign)
         {
-            battleLevel = (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber;
+            battleLevel = BattleSession.BattleLevel;
             currentLevel = CreateCampaignWaves(BattleSession.Region, BattleSession.Level);
-            IsReplay = CampaignProgress.Stars(BattleSession.RegionId, BattleSession.LevelNumber) > 0;
+            // Tekrar: sefer aşaması yıldızlıysa; Sonsuz Sefer'de geçilmiş kat; İstila'da haftanın ilk zaferi alındıysa.
+            IsReplay = BattleSession.IsEndless ? BattleSession.Floor <= EndlessMode.BestFloor
+                : BattleSession.IsInvasion ? !DragonInvasion.FirstWinAvailable
+                : CampaignProgress.Stars(BattleSession.RegionId, BattleSession.LevelNumber) > 0;
         }
         else currentLevel = LevelData.GenerateLevel(battleLevel);
 
@@ -643,7 +648,7 @@ public class BattleManager : MonoBehaviour
         if (enemy != null)
         {
             int battleLevel = BattleSession.IsCampaign
-                ? (BattleSession.RegionId - 1) * 5 + BattleSession.LevelNumber
+                ? BattleSession.BattleLevel
                 : GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
             enemy.Initialize(type, battleLevel, mainBaseTransform);
             // "Madeni koru": her iki düşmandan biri (boss hariç) madene yürür.
@@ -876,12 +881,17 @@ public class BattleManager : MonoBehaviour
             // Savaşçı yıldızı: hiç düşmeden ve canı %50'nin üstünde bitirmek.
             bool heroStar = heroHealth > 0.5f && (heroController == null || heroController.TimesDowned == 0);
             lastStars = 1 + (baseHealth > 0.5f ? 1 : 0) + (heroStar ? 1 : 0);
-            // Yeni yıldız ve ilk boss zaferi elmas getirir (kayıttan önce: eski yıldızla karşılaştırılır).
-            int starsBefore = CampaignProgress.Stars(BattleSession.RegionId, BattleSession.LevelNumber);
             DailyQuests.Report(QuestKind.WinCampaign);
-            DailyQuests.Report(QuestKind.EarnStars, Mathf.Max(0, lastStars - starsBefore));
-            GemRewards.ForVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
-            CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
+            if (BattleSession.IsEndless) LastVictoryGems = EndlessMode.RecordClear(BattleSession.Floor);
+            else if (BattleSession.IsInvasion) LastVictoryGems = DragonInvasion.RecordWin();
+            else
+            {
+                // Yeni yıldız ve ilk boss zaferi elmas getirir (kayıttan önce: eski yıldızla karşılaştırılır).
+                int starsBefore = CampaignProgress.Stars(BattleSession.RegionId, BattleSession.LevelNumber);
+                DailyQuests.Report(QuestKind.EarnStars, Mathf.Max(0, lastStars - starsBefore));
+                LastVictoryGems = GemRewards.ForVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
+                CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
+            }
         }
         int totalPayout = totalGoldEarned + GetVictoryBonus();
         // Tamamlanmış aşamayı tekrar oynamak altın kasma yolu olmasın: toplamın %30'u.

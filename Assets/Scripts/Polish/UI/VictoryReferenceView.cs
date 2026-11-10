@@ -114,8 +114,12 @@ public sealed class VictoryReferenceView : MonoBehaviour
             {
                 // Zaferde önce "2x ödül" reklamı sunulur; izlenince düğme tekrar oynamaya döner.
                 if (doubleAmount > 0) { WatchDoubleReward(); return; }
+                // Sonsuz Sefer: kazanınca sıradaki kata geçilir (can yoksa kat değişmez).
+                int floor = BattleSession.Floor;
+                if (BattleSession.IsEndless && lastWon) BattleSession.BeginEndless(floor + 1);
                 // Tekrar deneme de can ister; kartlar tek savaşlıktır (bölge ekranında yeniden açılır).
                 if (GameManager.Instance.TryStartCampaignBattle()) return;
+                if (BattleSession.IsEndless) BattleSession.BeginEndless(floor);
                 var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (label != null) label.text = $"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}";
             });
@@ -123,6 +127,12 @@ public sealed class VictoryReferenceView : MonoBehaviour
     }
 
     private int doubleAmount;
+    private bool lastWon;
+
+    /// <summary>Tekrar düğmesinin yazısı: Sonsuz Sefer'de zaferden sonra "SONRAKİ KAT".</summary>
+    private string NextLabel() => BattleSession.IsEndless && lastWon
+        ? L.T($"SONRAKİ KAT ({BattleSession.Floor + 1})", $"NEXT FLOOR ({BattleSession.Floor + 1})")
+        : lastWon ? L.T("TEKRAR OYNA", "PLAY AGAIN") : L.T("TEKRAR DENE", "TRY AGAIN");
     private int shownTotal;
 
     /// <summary>Ödüllü reklam: savaşta kazanılan altın bir kez daha verilir (savaş başına 1).</summary>
@@ -141,7 +151,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 .SetEase(Ease.OutQuad);
             shownTotal += amount;
             var label = retryButton != null ? retryButton.GetComponentInChildren<TextMeshProUGUI>() : null;
-            if (label != null) label.text = L.T("TEKRAR OYNA", "PLAY AGAIN");
+            if (label != null) label.text = NextLabel();
             if (retryButton != null) ReferenceUiVisuals.ApplyButtonSkin(retryButton, false);
         });
     }
@@ -281,8 +291,11 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 starReason.text += $"\n<color=#C9B48A>Tamamlanmış aşama: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u</color>";
         }
         // Yeni yıldız / ilk boss zaferi elması.
-        if (won && BattleSession.IsCampaign && GemRewards.LastVictoryGems > 0 && starReason != null)
-            starReason.text += $"\n<color=#8FD3FF>+{GemRewards.LastVictoryGems} elmas kazandın!</color>";
+        int victoryGems = BattleManager.Instance != null ? BattleManager.Instance.LastVictoryGems : 0;
+        if (won && BattleSession.IsCampaign && victoryGems > 0 && starReason != null)
+            starReason.text += L.T($"\n<color=#8FD3FF>+{victoryGems} elmas kazandın!</color>",
+                $"\n<color=#8FD3FF>+{victoryGems} gems earned!</color>");
+        lastWon = won;
         values[3].text = "0";
         shownTotal = transfer;
         // Zafer: "Tekrar oyna" düğmesi önce "▶ 2X ÖDÜL" olur.
@@ -292,6 +305,11 @@ public sealed class VictoryReferenceView : MonoBehaviour
             var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null) label.text = L.T($"▶ 2X ÖDÜL  +{doubleAmount}", $"▶ 2X REWARD  +{doubleAmount}");
             ReferenceUiVisuals.ApplyButtonSkin(retryButton, true);
+        }
+        else if (retryButton != null)
+        {
+            var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null) label.text = NextLabel();
         }
         panel.localScale = Vector3.one * 0.8f;
         panel.DOScale(1, 0.25f).SetEase(Ease.OutBack);
