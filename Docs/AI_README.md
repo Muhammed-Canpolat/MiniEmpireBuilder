@@ -1,6 +1,6 @@
 # Mini Empire Builder — Yapay Zekâ Devir Notu
 
-Yeni bir sohbette projeye hızlıca devam edebilmek için güncel bağlam. Son güncelleme: 9 Kasım 2026.
+Yeni bir sohbette projeye hızlıca devam edebilmek için güncel bağlam. Son güncelleme: 10 Kasım 2026.
 Dal: `ui/dark-fantasy-hud` (GitHub: Muhammed-Canpolat/MiniEmpireBuilder). Unity 6000.3.9f1, URP 2D, Android (dikey).
 
 ## Çalışma şekli (kullanıcı tercihleri)
@@ -89,6 +89,24 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
   Satıştan önce bulut kaydı, satın alma geri yükleme, makbuz doğrulama, KVKK/GDPR izni şart.
   **Mac yok** → iOS derlemesi bulut servisiyle (Codemagic / Unity Build Automation), TestFlight ile iPhone'a.
   **Play hesabı kişisel** → üretime çıkmadan önce 12+ test kullanıcısıyla 14 gün kesintisiz kapalı test zorunlu.
+
+## 10 Kasım 2026: arkadaş testi düzeltmeleri (A–D paketleri)
+- **A `8459dd2`:** Sefer yıldızları aşama başına 3 yuva olarak gösterilir. Ağaç/kayalar kaydedilir
+  (`PlayerSaveData.terrainResources`); 6 ağaç / 3 kaya altındayken **18 saatte yalnız 1** tane çıkar
+  (`BaseMapManager.GrowTerrainResources`). Tamamlanmış aşamayı tekrar oynamak toplam ödülün **%30**'unu verir
+  (`BattleManager.ReplayRewardRate`). Arka planda maden üretimi artık kaybolmaz. Dekorlar 2x2 (kuyu/ağaç 3x3);
+  çakışan eski dekor en yakın boş yere geçer.
+- **B `ced9e12`:** Tek kahraman Warrior (`HeroLook`: seviye renk kademesi, darbe alınca Guard animasyonu;
+  Tiny Swords kareleri 64 px/birim → `WarriorScale` 0.64). Kalkan `HeroData.ShieldForLevel` = %10 + seviye
+  başına %2. Savaşçı düşünce **8 sn sonra dirilir**; yenilgi yalnız Ana Üs (ya da maden) yıkılınca / süre bitince.
+  Savaşçı yıldızı: hiç düşmeden %50 üstü can. Warrior taban can 200; düşman hasar artışı aşama başına %6.
+  "Zamana karşı" 3 dk sayaç; "Madeni koru" savaşta maden (`BattleManager.DefendedMine`, düşmanların yarısı
+  `EnemyController.RaidTarget`). Göstergeler `BattleObjectiveHud`.
+- **C `c85c84f`:** Sefer haritası/bölge ekranı resimli: `Resources/CampaignArt` (üreteç
+  `Tools/campaign_art/generate.py`, Pillow). Aşama noktaları `CampaignSceneSetup.RoadNodes` = `NODES_UI`.
+- **D `2146e7e`:** `EnemyMotion` (tek kareli düşmanlara kodla yürüme/atılma/geri tepme), ağaç sallanması,
+  top patlaması ve enkaz ateşi (`TinyFx`, katalogda tree/explosion/fireControllers).
+- Not: Yeni dosyaların `.meta`'ları Unity açılınca oluşur; sonraki commit'e eklenmeli.
 
 ## Açık konular / sıradaki fikirler
 - Ses efektlerinin bağlanması (paket bekleniyor).
