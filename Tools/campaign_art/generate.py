@@ -558,11 +558,31 @@ def lock_icon():
     return outline_draw(64, fn)
 
 
+def heart_icon():
+    def fn(d, s):
+        dark, red, light = (40, 22, 22, 255), (214, 64, 64, 255), (246, 150, 140, 255)
+        pts = [(s / 2, s - 8)]
+        import math as m
+        for i in range(0, 181, 6):
+            t = m.radians(i)
+            pts.append((s / 2 + 26 * m.sin(t) * abs(m.sin(t)) ** 0.0, 0))
+        # Basit kalp: iki daire + üçgen.
+        d.ellipse((8, 10, s / 2 + 2, s / 2 + 8), fill=dark)
+        d.ellipse((s / 2 - 2, 10, s - 8, s / 2 + 8), fill=dark)
+        d.polygon([(9, s / 2 - 2), (s - 9, s / 2 - 2), (s / 2, s - 7)], fill=dark)
+        d.ellipse((12, 14, s / 2 - 1, s / 2 + 5), fill=red)
+        d.ellipse((s / 2 + 1, 14, s - 12, s / 2 + 5), fill=red)
+        d.polygon([(13, s / 2 - 2), (s - 13, s / 2 - 2), (s / 2, s - 12)], fill=red)
+        d.ellipse((18, 19, 27, 27), fill=light)
+    return outline_draw(64, fn)
+
+
 def ui_parts():
     for name, rel in UI_COPY.items():
         save_raw(trim(load(rel)), name)
     save_raw(clock_icon(), "ui_icon_clock")
     save_raw(lock_icon(), "ui_icon_lock")
+    save_raw(heart_icon(), "ui_icon_heart")
     # Kahraman işareti: haritada bulunulan yerde duran mavi Warrior (bekleme karesi).
     hero = trim(frame("Units/Blue Units/Warrior/Warrior_Idle.png", (192, 192), 0))
     save_raw(hero, "ui_hero_marker")

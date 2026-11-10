@@ -37,7 +37,8 @@ public sealed class BattleStructure : MonoBehaviour
         BasePoint = basePoint;
         body = GetComponent<SpriteRenderer>();
         var data = GameManager.Instance != null ? GameManager.Instance.CreateLevelData(type, Level) : null;
-        MaxHealth = data != null && data.maxHealth > 0f ? data.maxHealth : 100f;
+        MaxHealth = (data != null && data.maxHealth > 0f ? data.maxHealth : 100f)
+            * BattleCards.Multiplier(BattleCard.Fortify);
         CurrentHealth = MaxHealth;
         float top = basePoint.y + visualHeight + 0.15f - transform.position.y;
         healthBar = HealthBar.Create(transform, MaxHealth, new Vector3(0f, top, 0f), ReferenceUiVisuals.Hex(0x7FC8F8));

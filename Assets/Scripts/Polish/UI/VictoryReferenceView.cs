@@ -110,7 +110,13 @@ public sealed class VictoryReferenceView : MonoBehaviour
             retryButton = ReferenceUiVisuals.Button(inner, "RetryCampaignBattle", "TEKRAR OYNA", false,
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0),
                 new Vector2(-118, 66), new Vector2(118, 118), 17);
-            retryButton.onClick.AddListener(() => GameManager.Instance.StartBattle());
+            retryButton.onClick.AddListener(() =>
+            {
+                // Tekrar deneme de can ister; kartlar tek savaşlıktır (bölge ekranında yeniden açılır).
+                if (GameManager.Instance.TryStartCampaignBattle()) return;
+                var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (label != null) label.text = $"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}";
+            });
         }
     }
 
@@ -220,8 +226,12 @@ public sealed class VictoryReferenceView : MonoBehaviour
                     string reason = BattleManager.Instance.DefeatReason == "time" ? "Süre doldu!"
                         : BattleManager.Instance.DefeatReason == "mine" ? "Maden yıkıldı!"
                         : BattleManager.Instance.DefeatReason == "base" ? "Ana Üs yıkıldı!" : "";
-                    starReason.gameObject.SetActive(reason.Length > 0);
-                    starReason.text = $"<color=#E07A5F>{reason}</color>";
+                    // Yenilgi 1 can götürür (sınırsız can süresinde götürmez).
+                    string lives = LivesSystem.Unlimited ? "Sınırsız can: can kaybı yok"
+                        : $"−1 can · kalan {LivesSystem.Lives}/{LivesSystem.MaxLives}";
+                    starReason.gameObject.SetActive(true);
+                    starReason.text = (reason.Length > 0 ? $"<color=#E07A5F>{reason}</color>\n" : "") +
+                        $"<color=#C9B48A>{lives}</color>";
                 }
             }
             if (returnButton != null)

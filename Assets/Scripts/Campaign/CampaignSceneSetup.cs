@@ -59,8 +59,16 @@ public class CampaignSceneSetup : MonoBehaviour
         new Vector2(262, 176), new Vector2(190, 76)
     };
 
+    private TextMeshProUGUI livesLabel;
+    private float nextLivesRefresh;
+
     private void Update()
     {
+        if (livesLabel != null && Time.unscaledTime >= nextLivesRefresh)
+        {
+            nextLivesRefresh = Time.unscaledTime + 0.5f;
+            livesLabel.text = LivesText();
+        }
         if (regionRoot != null && regionRoot.gameObject.activeInHierarchy && detailOpen
             && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             CloseDetail();
@@ -290,7 +298,7 @@ public class CampaignSceneSetup : MonoBehaviour
 
     // ==================== SEFER HARİTASI ====================
 
-    private const float MapHeader = 84f, MapFooter = 96f;
+    private const float MapHeader = 96f, MapFooter = 96f;
 
     /// <summary>Kahramanın durduğu bölge: bossu henüz yenilmemiş en yüksek açık bölge.</summary>
     private static int CurrentRegionId()
@@ -339,11 +347,12 @@ public class CampaignSceneSetup : MonoBehaviour
         }
 
         HeaderStrip(mapRoot, MapHeader);
-        TopLabel(mapRoot, "MapTitle", "SEFER HARİTASI", 16, 24, 240, 42, 24, ReferenceUiVisuals.Gold, true,
-            TextAlignmentOptions.Left);
+        Label(mapRoot, "MapTitle", "SEFER HARİTASI", 23, ReferenceUiVisuals.Gold, true,
+            new Vector2(0, 1), Vector2.one, new Vector2(16, -46), new Vector2(-16, -8));
+        CreateLivesChip(mapRoot, new Vector2(0, 1), new Vector2(14, -88), new Vector2(150, -54));
         int total = CampaignCatalog.Regions.Length * 15;
         var chip = ArtImage(mapRoot, "StarsChip", "ui_paper", Vector2.one, Vector2.one,
-            new Vector2(-104, -66), new Vector2(-14, -30), 18f);
+            new Vector2(-104, -88), new Vector2(-14, -54), 18f);
         Box(chip.transform, "Star", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(9, -9), new Vector2(27, 9),
             ReferenceUiVisuals.Gold).sprite = GetStarSprite();
         Label(chip.transform, "Count", $"{CampaignProgress.TotalStars()}/{total}", 15, Ink, true,
@@ -526,7 +535,8 @@ public class CampaignSceneSetup : MonoBehaviour
         var back = TopButton(regionRoot, "BackToMap", "‹ Harita", 14, 30, 87, 34, false, 14);
         back.onClick.AddListener(ShowMap);
         TopLabel(regionRoot, "RegionTitle", UiStrings.Upper(selectedRegion.displayName),
-            110, 28, 266, 38, 22, ReferenceUiVisuals.Gold, true, TextAlignmentOptions.Left);
+            110, 28, 168, 38, 20, ReferenceUiVisuals.Gold, true, TextAlignmentOptions.Left);
+        CreateLivesChip(regionRoot, Vector2.one, new Vector2(-112, -64), new Vector2(-12, -30));
         var banner = ArtImage(regionRoot, "RegionBanner", "ui_paper", new Vector2(0, 1), Vector2.one,
             new Vector2(12, -RegionTop + 10), new Vector2(-12, -76), 20f);
         Label(banner.transform, "Description", selectedRegion.description, 13, Ink, false,
@@ -536,9 +546,9 @@ public class CampaignSceneSetup : MonoBehaviour
             TextAlignmentOptions.Left);
 
         detailPanel = ArtImage(regionRoot, "LevelDetail", "ui_paper", new Vector2(0.03f, 0), new Vector2(0.97f, 0),
-            new Vector2(0, 16), new Vector2(0, 236), 22f).rectTransform;
+            new Vector2(0, 16), new Vector2(0, DetailHeight + 16), 22f).rectTransform;
         detailPanel.GetComponent<Image>().raycastTarget = true;
-        detailPanel.anchoredPosition = new Vector2(detailPanel.anchoredPosition.x, 126);
+        detailPanel.anchoredPosition = new Vector2(detailPanel.anchoredPosition.x, 16 + DetailHeight * 0.5f);
         detailPanel.gameObject.AddComponent<PanelController>().Initialize();
         UpdateNodeSelection();
     }
@@ -677,7 +687,7 @@ public class CampaignSceneSetup : MonoBehaviour
         {
             detailOpen = true;
             detailPanel.GetComponent<PanelController>().Show();
-            roadViewport.offsetMin = new Vector2(0, 244);
+            roadViewport.offsetMin = new Vector2(0, DetailHeight + 24);
         }
         RenderLevelDetail();
         UpdateNodeSelection();
@@ -738,16 +748,126 @@ public class CampaignSceneSetup : MonoBehaviour
         if (!string.IsNullOrEmpty(level.modifier))
             TopLabel(detailPanel, "Modifier", level.modifier, 262, 96, 80, 26, 12, ReferenceUiVisuals.Red, true);
         int best = CampaignProgress.Stars(selectedRegion.id, selectedLevel);
-        TopLabel(detailPanel, "BestLabel", best > 0 ? "EN İYİ" : "HENÜZ OYNANMADI", 18, 124, 140, 22, 11,
+        TopLabel(detailPanel, "BestLabel", best > 0 ? "EN İYİ" : "HENÜZ OYNANMADI", 18, 122, 140, 22, 11,
             InkMuted, false, TextAlignmentOptions.Left);
-        StarRow(detailPanel, "BestStars", Vector2.up, new Vector2(best > 0 ? 100 : 176, -135), 17f, 20f, best);
-        var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle", "SAVAŞA BAŞLA", true,
-            Vector2.zero, new Vector2(1, 0), new Vector2(16, 14), new Vector2(-16, 66), 19);
+        StarRow(detailPanel, "BestStars", Vector2.up, new Vector2(best > 0 ? 100 : 176, -133), 17f, 20f, best);
+
+        // Savaş kartları: bu savaş için +%10 (Kraliyet %15).
+        TopLabel(detailPanel, "CardsTitle", "SAVAŞ KARTLARI", 18, 148, 130, 20, 12, Ink, true, TextAlignmentOptions.Left);
+        TopLabel(detailPanel, "CardsHint", CardsHint(), 150, 148, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
+        for (int i = 0; i < BattleCards.Count; i++) CreateCard((BattleCard)i, i);
+
+        bool canPlay = LivesSystem.CanPlay;
+        var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle",
+            canPlay ? "SAVAŞA BAŞLA" : $"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}", canPlay,
+            Vector2.zero, new Vector2(1, 0), new Vector2(16, 14), new Vector2(-16, 66), canPlay ? 19 : 16);
         battle.interactable = CampaignProgress.IsLevelOpen(selectedRegion, selectedLevel);
         battle.onClick.AddListener(() =>
         {
             BattleSession.Begin(selectedRegion.id, selectedLevel);
-            GameManager.Instance.StartBattle();
+            if (GameManager.Instance.TryStartCampaignBattle()) return;
+            OfferLifeAd();
+        });
+    }
+
+    private const float DetailHeight = 300f;
+
+    private static string CardsHint()
+    {
+        if (BattleCards.IsRoyal) return $"Kraliyet: hepsi açık, %{BattleCards.BonusPercent}";
+        if (BattleCards.FreeCardAvailable) return "İlk savaşına 1 kart BEDAVA";
+        if (BattleCards.Tokens > 0) return $"Kart jetonun: {BattleCards.Tokens}";
+        return "Reklam izle, bu savaş için aç";
+    }
+
+    private static string CardIcon(BattleCard card)
+        => card == BattleCard.HeroDamage ? "ui_icon_sword" : card == BattleCard.HeroHealth ? "ui_icon_heart" : "ui_icon_shield";
+
+    private void CreateCard(BattleCard card, int index)
+    {
+        bool active = BattleCards.IsUnlocked(card);
+        // Panel genişliğinin üçte biri: kenarlardan 16, aralar 8.
+        var rect = ReferenceUiVisuals.Rect(detailPanel, "Card_" + card, new Vector2(index / 3f, 1), new Vector2((index + 1) / 3f, 1),
+            new Vector2(index == 0 ? 16 : 4, -232), new Vector2(index == 2 ? -16 : -4, -170));
+        var image = rect.gameObject.AddComponent<Image>();
+        image.sprite = ReferenceUiVisuals.PillSprite();
+        image.type = Image.Type.Sliced;
+        image.color = active ? ReferenceUiVisuals.Hex(0x3E7A3A) : ReferenceUiVisuals.Hex(0x5A4127);
+        var edge = rect.gameObject.AddComponent<Outline>();
+        edge.effectColor = active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x2A1C10);
+        edge.effectDistance = new Vector2(1.5f, -1.5f);
+        var button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        ArtImage(rect, "Icon", CardIcon(card), new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(6, -14), new Vector2(34, 14), 0f, true).raycastTarget = false;
+        Label(rect, "Bonus", $"+%{BattleCards.BonusPercent} {BattleCards.Name(card)}", 13, ReferenceUiVisuals.Light, true,
+            new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(36, -2), new Vector2(-4, -4), TextAlignmentOptions.Left);
+        string state = active ? "AÇIK ✓"
+            : BattleCards.FreeCardAvailable ? "BEDAVA AL"
+            : BattleCards.Tokens > 0 ? "JETONLA AÇ" : "▶ REKLAM";
+        Label(rect, "State", state, 11, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted, false,
+            Vector2.zero, new Vector2(1, 0.5f), new Vector2(36, 4), new Vector2(-4, 2), TextAlignmentOptions.Left);
+        button.onClick.AddListener(() =>
+        {
+            if (BattleCards.IsUnlocked(card)) { ShowToast($"{BattleCards.Description(card)} kartı bu savaş için açık."); return; }
+            if (BattleCards.TryUnlockWithoutAd(card)) { RenderLevelDetail(); return; }
+            RewardedAds.Show("battle_card", ok =>
+            {
+                if (!ok) return;
+                BattleCards.UnlockFromAd(card);
+                if (detailOpen) RenderLevelDetail();
+            });
+        });
+    }
+
+    // ==================== CAN ====================
+
+    private static string LivesText()
+    {
+        if (LivesSystem.Unlimited) return $"∞ <size=70%>{LivesSystem.Format(LivesSystem.UnlimitedRemaining)}</size>";
+        int lives = LivesSystem.Lives;
+        return lives >= LivesSystem.MaxLives ? $"{lives}/{LivesSystem.MaxLives}"
+            : $"{lives} <size=70%>{LivesSystem.Format(LivesSystem.NextLifeIn)}</size>";
+    }
+
+    private void CreateLivesChip(Transform parent, Vector2 anchor, Vector2 low, Vector2 high)
+    {
+        var chip = ArtImage(parent, "LivesChip", "ui_paper", anchor, anchor, low, high, 18f);
+        chip.raycastTarget = true;
+        ArtImage(chip.transform, "Heart", "ui_icon_heart", new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(6, -12), new Vector2(30, 12), 0f, true).raycastTarget = false;
+        livesLabel = Label(chip.transform, "Lives", LivesText(), 15, Ink, true, Vector2.zero, Vector2.one,
+            new Vector2(32, 0), new Vector2(-6, 0));
+        var button = chip.gameObject.AddComponent<Button>();
+        button.targetGraphic = chip;
+        button.onClick.AddListener(OfferLifeAd);
+    }
+
+    /// <summary>Can bilgisi; can eksikse ve günlük hak varsa reklamla +1 can teklif eder.</summary>
+    private void OfferLifeAd()
+    {
+        if (LivesSystem.Unlimited)
+        {
+            ShowToast($"Sınırsız can: {LivesSystem.Format(LivesSystem.UnlimitedRemaining)} kaldı");
+            return;
+        }
+        if (LivesSystem.Lives >= LivesSystem.MaxLives)
+        {
+            ShowToast($"Canların dolu ({LivesSystem.MaxLives}). Yenilgi ve pes etme 1 can götürür.");
+            return;
+        }
+        if (!LivesSystem.CanWatchAdForLife)
+        {
+            ShowToast($"Sonraki can {LivesSystem.Format(LivesSystem.NextLifeIn)} sonra");
+            return;
+        }
+        RewardedAds.Show("extra_life", ok =>
+        {
+            if (!ok) return;
+            LivesSystem.RewardAdLife();
+            ShowToast($"+1 can! (bugün {LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} reklam hakkın kaldı)");
+            if (livesLabel != null) livesLabel.text = LivesText();
+            if (detailOpen) RenderLevelDetail();
         });
     }
 

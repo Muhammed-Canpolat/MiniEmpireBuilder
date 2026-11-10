@@ -43,6 +43,22 @@ public sealed class BattleObjectiveHud : MonoBehaviour
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f), true);
         }
 
+        // Bu savaşta açık kartlar: küçük bir pul (ör. "KART +%10: Hasar · Can").
+        var cards = new System.Collections.Generic.List<string>();
+        for (int i = 0; i < BattleCards.Count; i++)
+            if (BattleCards.ActiveInBattle((BattleCard)i)) cards.Add(BattleCards.Name((BattleCard)i));
+        if (cards.Count > 0)
+        {
+            float top = timed || mine ? -136f : -102f;
+            var cardPill = ReferenceUiVisuals.Image(safe, "ActiveCardsPill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(-110f, top - 24f), new Vector2(110f, top), new Color(0.16f, 0.32f, 0.16f, 0.88f));
+            cardPill.sprite = ReferenceUiVisuals.PillSprite();
+            cardPill.type = Image.Type.Sliced;
+            ReferenceUiVisuals.Text(cardPill.transform, "ActiveCardsText",
+                $"KART +%{BattleCards.ActiveBattlePercent}: {string.Join(" · ", cards)}", 12, ReferenceUiVisuals.Light,
+                TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+        }
+
         var respawnBox = ReferenceUiVisuals.Image(safe, "RespawnNotice", new Vector2(0.12f, 0.56f),
             new Vector2(0.88f, 0.56f), new Vector2(0f, -26f), new Vector2(0f, 26f),
             new Color(0.1f, 0.07f, 0.05f, 0.85f));

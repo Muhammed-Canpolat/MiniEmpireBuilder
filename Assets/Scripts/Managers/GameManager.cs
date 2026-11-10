@@ -652,6 +652,17 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Savaşı başlat — savaş sahnesine geç
     /// </summary>
+    /// <summary>
+    /// Sefer savaşı: can varsa açık kartları savaşa geçirip başlatır; can yoksa false.
+    /// </summary>
+    public bool TryStartCampaignBattle()
+    {
+        if (!LivesSystem.CanPlay) return false;
+        BattleCards.BeginBattle();
+        StartBattle();
+        return true;
+    }
+
     public void StartBattle()
     {
         IsInBattle = true;
@@ -665,6 +676,7 @@ public class GameManager : MonoBehaviour
     public void BattleWon(int goldEarned)
     {
         IsInBattle = false;
+        BattleCards.EndBattle();
         AddGold(goldEarned);
 
         if (BattleSession.IsCampaign)
@@ -692,6 +704,9 @@ public class GameManager : MonoBehaviour
     public void BattleLost()
     {
         IsInBattle = false;
+        BattleCards.EndBattle();
+        // Sefer yenilgisi ve pes etme 1 can düşürür (sınırsız can süresinde düşmez).
+        if (BattleSession.IsCampaign) LivesSystem.LoseLife();
         SaveGame();
         Debug.Log($"[GameManager] Savaş kaybedildi! Level {PlayerData.currentBattleLevel}");
     }

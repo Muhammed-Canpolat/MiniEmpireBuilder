@@ -34,7 +34,7 @@ public class MainBaseController : MonoBehaviour
         {
             var baseData = GameManager.Instance.Buildings[BuildingType.MainBase];
             baseData.ApplyLevelStats();
-            maxHealth = baseData.maxHealth;
+            maxHealth = baseData.maxHealth * BattleCards.Multiplier(BattleCard.Fortify);
         }
 
         currentHealth = maxHealth;

@@ -76,9 +76,10 @@ public class HeroController : MonoBehaviour
 
             moveSpeed = hero.moveSpeed;
             attackRange = hero.attackRange;
-            attackDamage = hero.damage;
+            // Savaş kartları: +%10 (Kraliyet %15) hasar ve can.
+            attackDamage = hero.damage * BattleCards.Multiplier(BattleCard.HeroDamage);
             attackCooldown = 1f / hero.attackSpeed;
-            maxHealth = hero.maxHealth;
+            maxHealth = hero.maxHealth * BattleCards.Multiplier(BattleCard.HeroHealth);
             weaponType = hero.weaponType;
             shield = hero.shield;
             heroLevel = hero.level;

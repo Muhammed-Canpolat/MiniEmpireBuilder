@@ -53,6 +53,20 @@ public class PlayerSaveData
     public List<TerrainResourceSave> terrainResources = new List<TerrainResourceSave>();
     public long terrainLastGrowTicks;
 
+    // Can: en fazla 5, 30 dakikada bir yenilenir (LivesSystem). Sınırsız can süresi UTC tick.
+    public int lives = 5;
+    public long livesLastRegenTicks;
+    public long unlimitedLivesUntilTicks;
+    // Reklamla can: günde en fazla 3 (gün = yyyyMMdd).
+    public int adLivesDay;
+    public int adLivesCount;
+
+    // Savaş kartları (BattleCards): ilk savaşta 1 kart bedava; jeton reklamsız kart açar.
+    public bool freeCardUsed;
+    public int cardTokens;
+    // Kraliyet Üyeliği bitişi (UTC tick): tüm kartlar otomatik %15.
+    public long royalUntilTicks;
+
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
     /// </summary>
