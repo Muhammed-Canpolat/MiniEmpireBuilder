@@ -10,6 +10,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
     private TextMeshProUGUI musicLabel;
     private TextMeshProUGUI effectsLabel;
     private TextMeshProUGUI languageLabel;
+    private TextMeshProUGUI notificationsLabel;
     private Texture2D gearTexture;
     private Sprite gearSprite;
     private GameObject blocker;
@@ -69,8 +70,8 @@ public sealed class AudioSettingsUI : MonoBehaviour
         }
 
         panel = ReferenceUiVisuals.Image(safe, "AudioSettingsPanel",
-            new Vector2(0.1f, battleScene ? 0.29f : 0.31f),
-            new Vector2(0.9f, battleScene ? 0.71f : 0.69f), Vector2.zero, Vector2.zero,
+            new Vector2(0.1f, battleScene ? 0.29f : 0.27f),
+            new Vector2(0.9f, battleScene ? 0.71f : 0.73f), Vector2.zero, Vector2.zero,
             new Color(0.09f, 0.075f, 0.06f, 0.98f)).gameObject;
         panel.GetComponent<Image>().raycastTarget = true;
         var frame = panel.AddComponent<Outline>();
@@ -78,10 +79,10 @@ public sealed class AudioSettingsUI : MonoBehaviour
         frame.effectDistance = new Vector2(3f, -3f);
         ReferenceUiVisuals.Text(panel.transform, "Title", L.T("AYARLAR", "SETTINGS"), 21,
             ReferenceUiVisuals.Gold, TextAlignmentOptions.Center,
-            new Vector2(0.08f, battleScene ? 0.76f : 0.82f), new Vector2(0.92f, 0.96f), Vector2.zero, Vector2.zero, true);
+            new Vector2(0.08f, battleScene ? 0.76f : 0.84f), new Vector2(0.92f, 0.97f), Vector2.zero, Vector2.zero, true);
         var music = ReferenceUiVisuals.Button(panel.transform, "MusicToggle", "", false,
-            new Vector2(0.12f, battleScene ? 0.55f : 0.65f),
-            new Vector2(0.88f, battleScene ? 0.69f : 0.79f), Vector2.zero, Vector2.zero, 17);
+            new Vector2(0.12f, battleScene ? 0.55f : 0.70f),
+            new Vector2(0.88f, battleScene ? 0.69f : 0.81f), Vector2.zero, Vector2.zero, 17);
         musicLabel = music.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
         music.onClick.AddListener(() =>
         {
@@ -91,8 +92,8 @@ public sealed class AudioSettingsUI : MonoBehaviour
             RefreshLabels();
         });
         var effects = ReferenceUiVisuals.Button(panel.transform, "EffectsToggle", "", false,
-            new Vector2(0.12f, battleScene ? 0.37f : 0.48f),
-            new Vector2(0.88f, battleScene ? 0.51f : 0.62f), Vector2.zero, Vector2.zero, 17);
+            new Vector2(0.12f, battleScene ? 0.37f : 0.57f),
+            new Vector2(0.88f, battleScene ? 0.51f : 0.68f), Vector2.zero, Vector2.zero, 17);
         effectsLabel = effects.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
         effects.onClick.AddListener(() =>
         {
@@ -104,8 +105,16 @@ public sealed class AudioSettingsUI : MonoBehaviour
         // Dil: savaş dışında tek dokunuşla Türkçe ⇄ İngilizce; arayüz kodla kurulduğu için sahne yeniden yüklenir.
         if (!battleScene)
         {
+            var notifications = ReferenceUiVisuals.Button(panel.transform, "NotificationsToggle", "", false,
+                new Vector2(0.12f, 0.44f), new Vector2(0.88f, 0.55f), Vector2.zero, Vector2.zero, 17);
+            notificationsLabel = notifications.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
+            notifications.onClick.AddListener(() =>
+            {
+                GameNotifications.Enabled = !GameNotifications.Enabled;
+                RefreshLabels();
+            });
             var language = ReferenceUiVisuals.Button(panel.transform, "LanguageToggle", "", false,
-                new Vector2(0.12f, 0.31f), new Vector2(0.88f, 0.45f), Vector2.zero, Vector2.zero, 17);
+                new Vector2(0.12f, 0.31f), new Vector2(0.88f, 0.42f), Vector2.zero, Vector2.zero, 17);
             languageLabel = language.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
             language.onClick.AddListener(() =>
             {
@@ -117,7 +126,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
         var close = ReferenceUiVisuals.Button(panel.transform, "CloseAudioSettings",
             battleScene ? L.T("DEVAM ET", "RESUME") : L.T("KAPAT", "CLOSE"), true,
             new Vector2(battleScene ? 0.12f : 0.28f, battleScene ? 0.20f : 0.07f),
-            new Vector2(battleScene ? 0.88f : 0.72f, battleScene ? 0.34f : 0.24f),
+            new Vector2(battleScene ? 0.88f : 0.72f, battleScene ? 0.34f : 0.20f),
             Vector2.zero, Vector2.zero, 15);
         close.onClick.AddListener(Close);
         if (battleScene) CreateForfeitControls();
@@ -200,6 +209,8 @@ public sealed class AudioSettingsUI : MonoBehaviour
         if (effectsLabel != null) effectsLabel.text = L.T("EFEKTLER  ", "EFFECTS  ") +
             (audio == null || audio.SfxEnabled ? on : off);
         if (languageLabel != null) languageLabel.text = L.T("DİL  TÜRKÇE", "LANGUAGE  ENGLISH");
+        if (notificationsLabel != null) notificationsLabel.text = L.T("BİLDİRİMLER  ", "NOTIFICATIONS  ") +
+            (GameNotifications.Enabled ? on : off);
     }
 
     private Sprite CreateGearSprite()
