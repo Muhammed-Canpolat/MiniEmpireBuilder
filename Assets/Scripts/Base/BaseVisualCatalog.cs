@@ -34,6 +34,12 @@ public class BaseVisualCatalog : ScriptableObject
     public Sprite[] bushes;
     public RuntimeAnimatorController[] bushControllers;
     public GameObject garrisonPrefab;
+    [Tooltip("Tiny Swords ağaç sallanma animasyonları (Tree 1-4); Ana Üs ağaçları")]
+    public RuntimeAnimatorController[] treeControllers;
+    [Tooltip("Top mermisi isabeti (Explosion 1-2)")]
+    public RuntimeAnimatorController[] explosionControllers;
+    [Tooltip("Yıkılan yapının enkazında yanan ateş (Fire 1-3)")]
+    public RuntimeAnimatorController[] fireControllers;
 
     private static BaseVisualCatalog instance;
     public static BaseVisualCatalog Instance => instance != null

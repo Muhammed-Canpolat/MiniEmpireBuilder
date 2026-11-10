@@ -30,6 +30,12 @@ public class EnemyController : MonoBehaviour
 
     // Public erişim
     public bool IsDead => isDead;
+    /// <summary>Son saldırı anı (EnemyMotion atılma animasyonu için).</summary>
+    public float LastAttackTime => lastAttackTime;
+    /// <summary>Son hasar alma anı (EnemyMotion geri tepme animasyonu için).</summary>
+    public float LastHitTime { get; private set; }
+    /// <summary>Saldırılan hedef noktası.</summary>
+    public Vector2 AttackPoint => targetPoint;
     public EnemyType Type => enemyType;
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
@@ -114,6 +120,8 @@ public class EnemyController : MonoBehaviour
                 transform.localScale = new Vector3(scale, scale, 1f);
                 if (type == EnemyType.ShadowWolf)
                     spriteRenderer.color = new Color(0.42f, 0.36f, 0.58f);
+                // Tek kareli görsel: yürüme, saldırı ve vurulma kodla canlandırılır.
+                if (GetComponent<EnemyMotion>() == null) gameObject.AddComponent<EnemyMotion>();
             }
             else switch (type)
             {
@@ -390,6 +398,7 @@ public class EnemyController : MonoBehaviour
     {
         if (isDead || Invulnerable) return;
 
+        LastHitTime = Time.time;
         currentHealth -= dmg;
         currentHealth = Mathf.Max(0, currentHealth);
 

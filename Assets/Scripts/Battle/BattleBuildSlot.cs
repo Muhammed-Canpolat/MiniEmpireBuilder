@@ -210,6 +210,8 @@ public class BattleBuildSlot : MonoBehaviour
         if (visualMarker != null) visualMarker.SetActive(true);
         if (ruin != null) Destroy(ruin);
         ruin = CreateRuin(transform.position);
+        // Enkazda ateş yanar; yapı yeniden kurulunca enkazla birlikte söner.
+        TinyFx.Fire(ruin.transform.position + Vector3.up * 0.35f, ruin.transform);
     }
 
     /// <summary>Koyu yanık iz ve birkaç kırık taş.</summary>

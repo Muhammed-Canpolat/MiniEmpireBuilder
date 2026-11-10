@@ -156,3 +156,15 @@ MonoBehaviour:
   - {fileID: 9100000, guid: 5876823563b294090818a0892c9cc77d, type: 2}
   - {fileID: 9100000, guid: 32f1bb8ea40c249bc80a02eca9c5a449, type: 2}
   garrisonPrefab: {fileID: 8143114522711915737, guid: 0b5e988bb94a1744180e0007df305e08, type: 3}
+  treeControllers:
+  - {fileID: 9100000, guid: 43056e41cc9bd4e1d838e60bba29190d, type: 2}
+  - {fileID: 9100000, guid: c41da7d3e3e604ac6808d0fbf0b857e7, type: 2}
+  - {fileID: 9100000, guid: 070b8abcf130c45319deddb7cc75fe69, type: 2}
+  - {fileID: 9100000, guid: 8b7f86d0c13fe41709df9766a2a1824e, type: 2}
+  explosionControllers:
+  - {fileID: 9100000, guid: 16b7a4e4fd8484de18c7680a2ac5b91c, type: 2}
+  - {fileID: 9100000, guid: 33d3ac4d988184bc89c539e4e791aff2, type: 2}
+  fireControllers:
+  - {fileID: 9100000, guid: d1e675da3b76347d9939c1d4d2daf23d, type: 2}
+  - {fileID: 9100000, guid: 8f481cf90097d45c6be15feb81ab7542, type: 2}
+  - {fileID: 9100000, guid: f77bbdae6faaa48d49a3a8d0c0d7e315, type: 2}

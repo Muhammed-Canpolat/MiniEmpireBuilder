@@ -107,8 +107,12 @@ public class TowerController : MonoBehaviour
         GameObject projObj = new GameObject("TowerProjectile");
         ProjectileController proj = projObj.AddComponent<ProjectileController>();
         float totalDamage = damage * unitCount;
-        proj.Launch(transform.position + Vector3.up * 0.5f, target.transform.position, pType, () =>
+        Vector3 impact = target.transform.position;
+        bool cannon = towerType == BuildingType.CannonTower;
+        proj.Launch(transform.position + Vector3.up * 0.5f, impact, pType, () =>
         {
+            // Top mermisi isabet ettiği yerde patlar (Tiny Swords Explosion).
+            if (cannon) TinyFx.Explosion(target != null ? target.transform.position : impact);
             if (target != null && !target.IsDead) target.TakeDamage(totalDamage);
         });
         var garrison = GetComponent<BattleGarrison>();

@@ -783,6 +783,15 @@ public class BaseMapManager : MonoBehaviour
         sr.sortingOrder = 3;
         float treeScale = size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
         go.transform.localScale = new Vector3(treeScale, treeScale, 1f);
+        // Rüzgârda sallanma (Tiny Swords Tree 1); her ağaç farklı karede başlar.
+        var treeControllers = BaseVisualCatalog.Instance?.treeControllers;
+        if (treeControllers != null && treeControllers.Length > 0 && treeControllers[0] != null)
+        {
+            var animator = go.AddComponent<Animator>();
+            animator.runtimeAnimatorController = treeControllers[0];
+            animator.cullingMode = AnimatorCullingMode.CullCompletely;
+            animator.Play("Tree 1_Idle", 0, UnityEngine.Random.value);
+        }
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
         col.isTrigger = false;
