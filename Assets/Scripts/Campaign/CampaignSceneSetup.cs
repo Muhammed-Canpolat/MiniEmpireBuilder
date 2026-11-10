@@ -425,14 +425,13 @@ public class CampaignSceneSetup : MonoBehaviour
         });
 
         // Bölge adı şeridi (adanın üst kenarında, köprünün üstünde tabela gibi).
-        string ribbon = !open ? "ui_ribbon_dark" : complete ? "ui_ribbon_blue" : "ui_ribbon_gold";
+        // Sıradaki bölge kırmızı şeritte: paketin sarı şeridi soluk, üstündeki yazı okunmuyordu.
+        string ribbon = !open ? "ui_ribbon_dark" : complete ? "ui_ribbon_blue" : "ui_ribbon_red";
         var top = new Vector2(0.5f, 1f);
         ArtAt(tile, "Ribbon", ribbon, top, new Vector2(0, -26), new Vector2(214, 56), false);
-        bool goldRibbon = ribbon == "ui_ribbon_gold";
         var name = LabelAt(tile, "Name", $"{region.id} · {UiStrings.Upper(region.displayName)}", top,
-            new Vector2(0, -24), new Vector2(146, 24), 14,
-            goldRibbon ? Ink : open ? ReferenceUiVisuals.Light : ReferenceUiVisuals.Muted, true);
-        if (!goldRibbon) Shadowed(name);
+            new Vector2(0, -24), new Vector2(146, 24), 14, open ? ReferenceUiVisuals.Light : ReferenceUiVisuals.Muted, true);
+        Shadowed(name, 1.8f);
 
         // Durum fişi: yıldızlar ya da kilit şartı.
         var chip = ArtImage(tile, "StatusChip", "ui_paper", top, top, new Vector2(-68, -80), new Vector2(68, -56), 16f);
@@ -499,7 +498,7 @@ public class CampaignSceneSetup : MonoBehaviour
         RenderRegion();
     }
 
-    private const float RegionTop = 182f;
+    private const float RegionTop = 162f;
 
     private void RenderRegion()
     {
@@ -801,7 +800,8 @@ public class CampaignSceneSetup : MonoBehaviour
         var rect = ReferenceUiVisuals.Rect(detailPanel, "Card_" + card, new Vector2(index / 3f, 1), new Vector2((index + 1) / 3f, 1),
             new Vector2(index == 0 ? 16 : 4, -232), new Vector2(index == 2 ? -16 : -4, -170));
         var image = rect.gameObject.AddComponent<Image>();
-        image.sprite = ReferenceUiVisuals.PillSprite();
+        // Beyaz hap: renk Image.color'dan gelir (PillSprite koyu zemin taşır, rengi siyaha boğar).
+        image.sprite = ReferenceUiVisuals.SolidPillSprite();
         image.type = Image.Type.Sliced;
         image.color = active ? ReferenceUiVisuals.Hex(0x3E7A3A) : ReferenceUiVisuals.Hex(0x5A4127);
         var edge = rect.gameObject.AddComponent<Outline>();
@@ -809,15 +809,18 @@ public class CampaignSceneSetup : MonoBehaviour
         edge.effectDistance = new Vector2(1.5f, -1.5f);
         var button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
+        // Simge solda; sağında üç satır: oran, kart adı, durum. Yazı simgenin altına girmez.
         ArtImage(rect, "Icon", CardIcon(card), new Vector2(0, 0.5f), new Vector2(0, 0.5f),
-            new Vector2(6, -14), new Vector2(34, 14), 0f, true).raycastTarget = false;
-        Label(rect, "Bonus", $"+%{BattleCards.BonusPercent} {BattleCards.Name(card)}", 13, ReferenceUiVisuals.Light, true,
-            new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(36, -2), new Vector2(-4, -4), TextAlignmentOptions.Left);
-        string state = active ? "AÇIK ✓"
+            new Vector2(5, -13), new Vector2(31, 13), 0f, true).raycastTarget = false;
+        Label(rect, "Bonus", $"+%{BattleCards.BonusPercent}", 14, ReferenceUiVisuals.Gold, true,
+            new Vector2(0, 0.66f), Vector2.one, new Vector2(34, 0), new Vector2(-4, -3), TextAlignmentOptions.Left);
+        Label(rect, "CardName", BattleCards.Name(card), 12, ReferenceUiVisuals.Light, false,
+            new Vector2(0, 0.34f), new Vector2(1, 0.66f), new Vector2(34, 0), new Vector2(-4, 0), TextAlignmentOptions.Left);
+        string state = active ? "AÇIK"
             : BattleCards.FreeCardAvailable ? "BEDAVA AL"
             : BattleCards.Tokens > 0 ? "JETONLA AÇ" : "▶ REKLAM";
-        Label(rect, "State", state, 11, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted, false,
-            Vector2.zero, new Vector2(1, 0.5f), new Vector2(36, 4), new Vector2(-4, 2), TextAlignmentOptions.Left);
+        Label(rect, "State", state, 10.5f, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8D5B0), false,
+            Vector2.zero, new Vector2(1, 0.34f), new Vector2(34, 3), new Vector2(-4, 0), TextAlignmentOptions.Left);
         button.onClick.AddListener(() =>
         {
             if (BattleCards.IsUnlocked(card)) { ShowToast($"{BattleCards.Description(card)} kartı bu savaş için açık."); return; }
@@ -838,7 +841,7 @@ public class CampaignSceneSetup : MonoBehaviour
         if (LivesSystem.Unlimited) return $"∞ <size=70%>{LivesSystem.Format(LivesSystem.UnlimitedRemaining)}</size>";
         int lives = LivesSystem.Lives;
         return lives >= LivesSystem.MaxLives ? $"{lives}/{LivesSystem.MaxLives}"
-            : $"{lives} <size=70%>{LivesSystem.Format(LivesSystem.NextLifeIn)}</size>";
+            : $"{lives} <size=70%>· +1 {LivesSystem.Format(LivesSystem.NextLifeIn)}</size>";
     }
 
     private void CreateLivesChip(Transform parent, Vector2 anchor, Vector2 low, Vector2 high)

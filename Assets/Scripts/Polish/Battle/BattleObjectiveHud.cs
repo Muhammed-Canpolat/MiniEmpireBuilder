@@ -1,3 +1,4 @@
+using System.Collections;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -15,6 +16,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
     private CanvasGroup respawnGroup;
     private HeroController hero;
     private int lastWholeSecond = -1;
+    private float stackBottom;
 
     private void Start()
     {
@@ -32,7 +34,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         if (timed || mine)
         {
             timerPill = ReferenceUiVisuals.Image(safe, "ObjectivePill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(-82f, -132f), new Vector2(82f, -102f), new Color(0.12f, 0.09f, 0.06f, 0.88f));
+                new Vector2(-82f, -140f), new Vector2(82f, -110f), new Color(0.12f, 0.09f, 0.06f, 0.88f));
             timerPill.sprite = ReferenceUiVisuals.PillSprite();
             timerPill.type = Image.Type.Sliced;
             var outline = timerPill.gameObject.AddComponent<Outline>();
@@ -49,15 +51,21 @@ public sealed class BattleObjectiveHud : MonoBehaviour
             if (BattleCards.ActiveInBattle((BattleCard)i)) cards.Add(BattleCards.Name((BattleCard)i));
         if (cards.Count > 0)
         {
-            float top = timed || mine ? -136f : -102f;
+            float top = timed || mine ? -144f : -110f;
             var cardPill = ReferenceUiVisuals.Image(safe, "ActiveCardsPill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(-110f, top - 24f), new Vector2(110f, top), new Color(0.16f, 0.32f, 0.16f, 0.88f));
-            cardPill.sprite = ReferenceUiVisuals.PillSprite();
+                new Vector2(-110f, top - 24f), new Vector2(110f, top), new Color(0.2f, 0.4f, 0.18f, 0.9f));
+            cardPill.sprite = ReferenceUiVisuals.SolidPillSprite();
             cardPill.type = Image.Type.Sliced;
             ReferenceUiVisuals.Text(cardPill.transform, "ActiveCardsText",
                 $"KART +%{BattleCards.ActiveBattlePercent}: {string.Join(" · ", cards)}", 12, ReferenceUiVisuals.Light,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+            stackBottom = -(top - 24f);
         }
+        else if (timed || mine) stackBottom = 140f;
+
+        // Dalga duyurusu ("12 düşman yaklaşıyor") ve geri sayım bu pullarla aynı yüksekliğe denk geliyordu:
+        // pul varsa ikisi de pulların altına kayar.
+        if (stackBottom > 0f) StartCoroutine(ShiftWaveNotices(stackBottom + 6f));
 
         var respawnBox = ReferenceUiVisuals.Image(safe, "RespawnNotice", new Vector2(0.12f, 0.56f),
             new Vector2(0.88f, 0.56f), new Vector2(0f, -26f), new Vector2(0f, 26f),
@@ -68,6 +76,34 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         respawnGroup.alpha = 0f;
         respawnText = ReferenceUiVisuals.Text(respawnBox.transform, "RespawnText", "", 17, ReferenceUiVisuals.Light,
             TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-10f, 0f), true);
+    }
+
+    /// <summary>
+    /// HUD kurulumu (BattleHudRedesign) bitince "IncomingChip" ve "NextWaveCountdown"ı, üst kenarları
+    /// <paramref name="clearFromTop"/> biriminin altına düşecek kadar aşağı kaydırır.
+    /// </summary>
+    private IEnumerator ShiftWaveNotices(float clearFromTop)
+    {
+        yield return null;
+        yield return null;
+        RectTransform incoming = null, countdown = null;
+        foreach (var rt in FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (rt.name == "IncomingChip") incoming = rt;
+            else if (rt.name == "NextWaveCountdown") countdown = rt;
+        }
+        if (incoming == null) yield break;
+        var parent = incoming.parent as RectTransform;
+        if (parent == null) yield break;
+        float incomingTop = parent.rect.height * (1f - incoming.anchorMax.y) - incoming.offsetMax.y;
+        float shift = clearFromTop - incomingTop;
+        if (shift <= 0f) yield break;
+        foreach (var rt in new[] { incoming, countdown })
+        {
+            if (rt == null) continue;
+            rt.offsetMin -= new Vector2(0f, shift);
+            rt.offsetMax -= new Vector2(0f, shift);
+        }
     }
 
     private static string FormatTime(float seconds)

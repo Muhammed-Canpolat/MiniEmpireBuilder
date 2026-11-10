@@ -149,9 +149,10 @@ public sealed class DailyRewardsUI : MonoBehaviour
         var rect = ReferenceUiVisuals.Rect(panel, "Day" + day, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
             new Vector2(x, y - height), new Vector2(x + w, y));
         var bg = rect.gameObject.AddComponent<UnityEngine.UI.Image>();
-        bg.sprite = ReferenceUiVisuals.PillSprite();
+        // Beyaz hap: renk doğrudan Image.color'dan gelir (PillSprite koyu zemin taşır, hepsi siyah görünürdü).
+        bg.sprite = ReferenceUiVisuals.SolidPillSprite();
         bg.type = UnityEngine.UI.Image.Type.Sliced;
-        bg.color = done ? ReferenceUiVisuals.Hex(0x7C8F5A) : isToday ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x6B5034);
+        bg.color = done ? ReferenceUiVisuals.Hex(0x4E7A3A) : isToday ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x5A4127);
         var edge = rect.gameObject.AddComponent<Outline>();
         edge.effectColor = isToday ? ReferenceUiVisuals.Hex(0xFFF2B0) : ReferenceUiVisuals.Hex(0x2A1C10);
         edge.effectDistance = new Vector2(isToday ? 2.5f : 1.5f, isToday ? -2.5f : -1.5f);
@@ -176,10 +177,15 @@ public sealed class DailyRewardsUI : MonoBehaviour
         Text(rect, "Amount", amount, 10.5f, text, false, new Vector2(0, 4), new Vector2(0, 34), false, true);
         if (done)
         {
-            var check = Text(rect, "Check", "✓", 30, ReferenceUiVisuals.Hex(0xE8F5C8), true,
-                new Vector2(0, -78), new Vector2(0, -30));
-            var shadow = check.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0, 0, 0, 0.6f);
+            // Alınan gün: simge soluklaşır, üstüne "ALINDI" damgası (✓ yazı tipinde olmayabilir).
+            foreach (var icon in rect.GetComponentsInChildren<UnityEngine.UI.Image>())
+                if (icon != bg) icon.color = new Color(1f, 1f, 1f, 0.45f);
+            var stamp = ReferenceUiVisuals.Image(rect, "ClaimedStamp", new Vector2(0.06f, 0.5f), new Vector2(0.94f, 0.5f),
+                new Vector2(0, -8), new Vector2(0, 14), ReferenceUiVisuals.Hex(0x2F5A24));
+            stamp.sprite = ReferenceUiVisuals.SolidPillSprite();
+            stamp.type = UnityEngine.UI.Image.Type.Sliced;
+            Text(stamp.transform, "Check", "ALINDI", 12, ReferenceUiVisuals.Hex(0xE8F5C8), true,
+                Vector2.zero, Vector2.zero, true);
         }
         if (isToday)
             rect.DOScale(1.06f, 0.7f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(rect.gameObject);

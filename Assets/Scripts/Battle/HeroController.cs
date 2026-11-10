@@ -87,7 +87,7 @@ public class HeroController : MonoBehaviour
 
         currentHealth = maxHealth;
         respawnPoint = transform.position;
-        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.8f, 0));
+        healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 0.9f, 0));
 
         // Unity Animator entegrasyonu
         SetupAnimator();
@@ -110,11 +110,11 @@ public class HeroController : MonoBehaviour
         if (ctrl != null)
         {
             // Warrior kareleri 64 px/birim: eski 100 px/birim kareleriyle aynı boyda görünsün,
-            // çarpışma kutusu da dünyada aynı boyda kalsın.
-            transform.localScale = new Vector3(transform.localScale.x * HeroLook.WarriorScale,
-                transform.localScale.y * HeroLook.WarriorScale, 1f);
+            // çarpışma kutusu da dünyada aynı boyda kalsın. Savaşta görünüm %30 büyük.
+            float scale = HeroLook.WarriorScale * HeroLook.BattleScale;
+            transform.localScale = new Vector3(transform.localScale.x * scale, transform.localScale.y * scale, 1f);
             var box = GetComponent<BoxCollider2D>();
-            if (box != null) box.size /= HeroLook.WarriorScale;
+            if (box != null) box.size /= scale;
         }
         if (ctrl == null && SpriteManager.Instance != null)
             ctrl = SpriteManager.Instance.GetHeroAnimatorController(weaponType);

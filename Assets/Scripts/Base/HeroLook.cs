@@ -17,6 +17,9 @@ public static class HeroLook
     /// </summary>
     public const float WarriorScale = 0.64f;
 
+    /// <summary>Savaşta kahraman kalabalıkta seçilsin diye bir tık büyük çizilir (çarpışma kutusu aynı kalır).</summary>
+    public const float BattleScale = 1.3f;
+
     private static readonly Dictionary<int, RuntimeAnimatorController> cache =
         new Dictionary<int, RuntimeAnimatorController>();
 
