@@ -44,6 +44,7 @@ public class BaseSceneSetup : MonoBehaviour
 
         SetupUI();
         gameObject.AddComponent<BaseLevelBanner>();
+        gameObject.AddComponent<DailyRewardsUI>();
         gameObject.AddComponent<FirstBaseGuide>();
         GenerateWorld();
 

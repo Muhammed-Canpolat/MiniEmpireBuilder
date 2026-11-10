@@ -125,7 +125,7 @@ public class CampaignSceneSetup : MonoBehaviour
     private static readonly Dictionary<string, Sprite> artCache = new Dictionary<string, Sprite>();
 
     /// <summary>Resources/CampaignArt altındaki görsel; border verilirse 9 dilimli kopya üretilir.</summary>
-    private static Sprite Art(string name, float border = 0f)
+    public static Sprite Art(string name, float border = 0f)
     {
         string key = name + "#" + border;
         if (artCache.TryGetValue(key, out var cached) && cached != null) return cached;

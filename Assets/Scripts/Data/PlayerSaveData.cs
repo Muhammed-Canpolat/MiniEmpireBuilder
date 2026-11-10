@@ -67,6 +67,13 @@ public class PlayerSaveData
     // Kraliyet Üyeliği bitişi (UTC tick): tüm kartlar otomatik %15.
     public long royalUntilTicks;
 
+    // 7 günlük giriş takvimi (DailyRewards): bu döngüde alınan gün sayısı ve son alma günü (yyyyMMdd).
+    public int dailyStreak;
+    public int dailyLastClaimDay;
+    // Takvim ödülleri: 2x maden bitişi (UTC tick), sonraki yükseltmeye uygulanacak hızlandırma (dk).
+    public long mineBoostUntilTicks;
+    public int pendingSpeedupMinutes;
+
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
     /// </summary>

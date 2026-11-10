@@ -513,6 +513,7 @@ UI_COPY = {
     "ui_icon_coin": "UI Elements/Icons/Icon_03.png",
     "ui_icon_sword": "UI Elements/Icons/Icon_05.png",
     "ui_icon_shield": "UI Elements/Icons/Icon_06.png",
+    "ui_icon_hammer": "UI Elements/Icons/Icon_01.png",
     "ui_sword_red": "UI Elements/Swords/Swords 2.png",
 }
 
@@ -561,11 +562,6 @@ def lock_icon():
 def heart_icon():
     def fn(d, s):
         dark, red, light = (40, 22, 22, 255), (214, 64, 64, 255), (246, 150, 140, 255)
-        pts = [(s / 2, s - 8)]
-        import math as m
-        for i in range(0, 181, 6):
-            t = m.radians(i)
-            pts.append((s / 2 + 26 * m.sin(t) * abs(m.sin(t)) ** 0.0, 0))
         # Basit kalp: iki daire + üçgen.
         d.ellipse((8, 10, s / 2 + 2, s / 2 + 8), fill=dark)
         d.ellipse((s / 2 - 2, 10, s - 8, s / 2 + 8), fill=dark)
@@ -577,12 +573,28 @@ def heart_icon():
     return outline_draw(64, fn)
 
 
+def calendar_icon():
+    def fn(d, s):
+        dark, paper, red, ink = (40, 30, 26, 255), (246, 236, 210, 255), (200, 64, 52, 255), (120, 90, 60, 255)
+        d.rounded_rectangle((8, 12, s - 8, s - 6), 7, fill=paper, outline=dark, width=4)
+        d.rounded_rectangle((8, 12, s - 8, 26), 7, fill=red, outline=dark, width=4)
+        d.rectangle((10, 22, s - 10, 26), fill=red)
+        for x in (20, s - 20):
+            d.rounded_rectangle((x - 3, 6, x + 3, 18), 2, fill=dark)
+        for r in range(2):
+            for c in range(3):
+                x, y = 17 + c * 11, 32 + r * 11
+                d.rectangle((x, y, x + 7, y + 6), fill=ink)
+    return outline_draw(64, fn)
+
+
 def ui_parts():
     for name, rel in UI_COPY.items():
         save_raw(trim(load(rel)), name)
     save_raw(clock_icon(), "ui_icon_clock")
     save_raw(lock_icon(), "ui_icon_lock")
     save_raw(heart_icon(), "ui_icon_heart")
+    save_raw(calendar_icon(), "ui_icon_calendar")
     # Kahraman işareti: haritada bulunulan yerde duran mavi Warrior (bekleme karesi).
     hero = trim(frame("Units/Blue Units/Warrior/Warrior_Idle.png", (192, 192), 0))
     save_raw(hero, "ui_hero_marker")

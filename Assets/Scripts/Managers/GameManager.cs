@@ -208,7 +208,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        float gps = GetGoldPerSecond();
+        float gps = GetGoldPerSecond(false);
         if (gps <= 0f)
         {
             PlayerData.goldMineLastCollectTime = nowTicks;
@@ -219,7 +219,10 @@ public class GameManager : MonoBehaviour
         if (elapsedSeconds <= 0.5d)
             return;
 
-        int produced = Mathf.FloorToInt((float)(elapsedSeconds * gps));
+        // 2x maden yalnız süresiyle örtüşen kısma uygulanır (takvim 5. gün).
+        long boostEnd = Math.Min(nowTicks, PlayerData.mineBoostUntilTicks);
+        double boostedSeconds = Math.Max(0d, new TimeSpan(boostEnd - PlayerData.goldMineLastCollectTime).TotalSeconds);
+        int produced = Mathf.FloorToInt((float)((elapsedSeconds + boostedSeconds) * gps));
         if (produced > 0)
             AddGoldToMineStorage(produced, false);
 
@@ -500,6 +503,13 @@ public class GameManager : MonoBehaviour
             x = position.x,
             y = position.y
         };
+        // Giriş takviminden bekleyen hızlandırma, sonraki yükseltmeye uygulanır.
+        if (kind == "upgrade" && PlayerData.pendingSpeedupMinutes > 0)
+        {
+            task.endTicks = Math.Max(now + TimeSpan.FromSeconds(1).Ticks,
+                task.endTicks - TimeSpan.FromMinutes(PlayerData.pendingSpeedupMinutes).Ticks);
+            PlayerData.pendingSpeedupMinutes = 0;
+        }
         PlayerData.builderTasks.Add(task);
         LastStartedTask = task;
         SaveGame();
@@ -508,6 +518,30 @@ public class GameManager : MonoBehaviour
     }
 
     public BuilderTaskSave LastStartedTask { get; private set; }
+
+    /// <summary>
+    /// Süren en uzun yükseltmeyi verilen dakika kadar kısaltır; yükseltme yoksa hızlandırma
+    /// bir sonraki yükseltmeye saklanır. Yalnız "upgrade" görevleri (geri çağrısı yok) kısalır.
+    /// </summary>
+    public bool SpeedUpUpgrade(int minutes)
+    {
+        if (PlayerData == null || minutes <= 0) return false;
+        long now = DateTime.UtcNow.Ticks;
+        BuilderTaskSave longest = null;
+        foreach (var task in PlayerData.builderTasks)
+            if (task.kind == "upgrade" && task.endTicks > now && (longest == null || task.endTicks > longest.endTicks))
+                longest = task;
+        if (longest == null)
+        {
+            PlayerData.pendingSpeedupMinutes += minutes;
+            SaveGame();
+            return false;
+        }
+        longest.endTicks = Math.Max(now, longest.endTicks - TimeSpan.FromMinutes(minutes).Ticks);
+        SaveGame();
+        OnBuilderTaskStarted?.Invoke();
+        return true;
+    }
 
     private void Update() => CheckBuilderTask();
 
@@ -788,13 +822,19 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Altın Madeni'nin saniyede ürettiği altın
     /// </summary>
-    public float GetGoldPerSecond()
+    /// <summary>2x maden (giriş takvimi ödülü) süresi devam ediyor mu.</summary>
+    public bool MineBoostActive => PlayerData != null && PlayerData.mineBoostUntilTicks > DateTime.UtcNow.Ticks;
+
+    public float GetGoldPerSecond() => GetGoldPerSecond(true);
+
+    public float GetGoldPerSecond(bool includeBoost)
     {
+        float boost = includeBoost && MineBoostActive ? 2f : 1f;
         if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked)
         {
             int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;
             var progression = ApprenticeProgressionData.Instance;
-            return Buildings[BuildingType.GoldMine].goldPerSecond *
+            return Buildings[BuildingType.GoldMine].goldPerSecond * boost *
                 (1f + (progression != null ? progression.MineBonus(level) : 10) / 100f);
         }
         return 0f;
