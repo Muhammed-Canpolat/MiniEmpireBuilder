@@ -142,6 +142,35 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - Diğer: canları doldur 15 (`LivesSystem.RefillWithGems`; sefer can fişi), maden 2x 4 sa 20 (`BuyMineBoost`),
   seriyi kurtar 10 (`DailyRewards.SaveStreak`, yalnız tek gün kaçtıysa). Testler `GemEconomyTests`.
 
+## 10 Kasım 2026: 2. tur (onaylı sıra tamamlandı)
+- **Firebase kaldırıldı** (`e5a1a37`, kodda kullanılmıyordu, ~379 MB). Bulut kaydı Play Games Saved Games,
+  çökme raporu Unity Cloud Diagnostics ile yapılacak (kullanıcı hesabı gerekir).
+- **Kayıt güvenliği** (`88e082d`): 3 kopya (PlayerPrefs asıl + önceki yedek + `persistentDataPath/save.json`,
+  geçici dosya → taşı); açılışta sağlam en yeni (`lastSavedTicks`); hepsi bozuksa `_Corrupt` anahtarı.
+- **Test menüsü** `UI/DevMenu.cs` (yalnız editör/Development; sol kenarda "DEV"): altın/elmas, Ana Üs ±1,
+  bölge aç, zaman +1/+8 sa (`GameManager.DevAdvanceTime`), takvim günü, canlar, Kraliyet, reklam hakları,
+  Sonsuz +5 kat, İstila aç/kapat, savaşta düşmanları öldür.
+- **Dil** (`a68c362`…`1d17eb5`): `Systems/L.cs` → `L.T("Türkçe", "English")`, `L.Upper`, `L.Asset` (asset metinleri
+  `Systems/AssetText.cs` sözlüğünden). İlk açılışta telefon dili; Ayarlar'da "DİL" düğmesi (savaş dışı, sahne
+  yeniden yüklenir). **Yeni metin her zaman L.T ile yazılmalı; yeni asset metni AssetText'e eklenmeli.**
+- **Reklam noktaları** (`5a9dea5`, `Systems/AdRewards.cs`): zaferde 2x altın, Ana Üs yıkılınca reklamla devam,
+  hemen bitir penceresinde −30 dk (günde 3), dükkânda maden 2 sa (günde 1) ve günlük sandık. Kraliyet:
+  sınırsız can, +%20 maden, günde +10 elmas (satın alma 6. adımda).
+- **Bildirimler** (`539ea47`, `Systems/GameNotifications.cs`, paket `com.unity.mobile.notifications` 2.4.2):
+  inşaat bitti, canlar doldu, maden doldu, günlük ödül 19:00, 3 gün hatırlatma; 22–09 sessiz; Ayarlar'da aç/kapa.
+  Android kısmı `#if UNITY_ANDROID && !UNITY_EDITOR` (dotnet build ile doğrulanamaz).
+- **Günlük görevler / Sen yokken / İpuçları** (`9769a0b`): `DailyQuests`(+UI, takvim altında "GÖREV"),
+  `AwayReport`(+UI, 15 dk+ ayrılık), `FirstTimeTips` (PlayerPrefs `MiniEmpireBuilder_Tip_*`).
+- **Bölge bossları** (`0e05b27`, `Battle/RegionBoss.cs`): Kale Muhafızı / Maden Gardiyanı / Buz Hükümdarı /
+  Karanlık Kral (Trol gövdesi + renk + aura + 2 yetenek). "Don" = `Battle/BattleWeather.cs` kar fırtınası.
+  Savaş kamerası `BattleSceneSetup.CameraSizeFor(aspect)` 8–9,6.
+- **Sonsuz Sefer + Ejder İstilası** (`282bc0c`, `Systems/SpecialModes.cs`): `BattleSession.Special`
+  (Endless id 99 / Invasion id 98) sefer akışını kullanır; `BattleSession.BattleLevel` tek güç kaynağı.
+  Sonsuz: 5 katta bir tema/boss, 30+kat güç, 5'in katlarında +3 elmas. İstila: hafta sonu, Ana Üs 5,
+  ilk zafer +15 elmas.
+- Bash notu: Bash aracı heredoc içindeki `\\` çiftini teke indiriyor; kaçışlı düzenlemeler için betiği Write ile
+  dosyaya yazıp çalıştır (scratchpad `addcs.py` csproj'a dosya ekler).
+
 ## Açık konular / sıradaki fikirler
 - Ses efektlerinin bağlanması (paket bekleniyor).
 - Denge: düşman rolleri menzilleri, yıkılma sıklığı, 15 seviyelik bedel/süreler oynanarak ayarlanacak.
