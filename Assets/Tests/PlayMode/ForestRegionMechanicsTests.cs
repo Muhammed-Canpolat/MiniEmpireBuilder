@@ -57,7 +57,7 @@ public class ForestRegionMechanicsTests
         var types = (Array)forest.GetType().GetField("enemyTypes").GetValue(forest);
         Assert.AreEqual(Enemy("ShadowWolf"), types.GetValue(1));
         Assert.AreEqual(Enemy("ForestWitch"), forest.GetType().GetField("bossType").GetValue(forest));
-        Assert.AreEqual(Enemy("Troll"), first.GetType().GetField("bossType").GetValue(first));
+        Assert.AreEqual(Enemy("CastleGuardian"), first.GetType().GetField("bossType").GetValue(first), "Bölge 1 bossu Kale Muhafızı");
         Assert.AreEqual("Sis", forest.GetType().GetField("specialMechanic").GetValue(forest));
         yield return null;
     }

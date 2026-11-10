@@ -38,13 +38,22 @@ public enum EnemyType
     // Yeni türler hep sona eklenir: RegionData asset'leri enum'u sayı olarak saklar.
     ShadowWolf, // Gölge Kurt — sisin içinde görünmez, kahramana atılır
     ForestWitch, // Orman Cadısı — Bölge 2 boss'u
-    DragonWarrior // Ejder Savaşçısı — Bölge 6 boss'u
+    DragonWarrior, // Ejder Savaşçısı — Bölge 6 boss'u
+    CastleGuardian, // Kale Muhafızı — Bölge 1 boss'u (Kalkan Duvarı, Hücum)
+    MineWarden,     // Maden Gardiyanı — Bölge 3 boss'u (Kaya Yağmuru)
+    FrostLord,      // Buz Hükümdarı — Bölge 4 boss'u (Buz Nefesi)
+    DarkKing        // Karanlık Kral — Bölge 5 boss'u (Gölge Çağrısı, Can Emme)
 }
 
 public static class EnemyTypeInfo
 {
     public static bool IsBoss(EnemyType type) =>
-        type == EnemyType.Troll || type == EnemyType.ForestWitch || type == EnemyType.DragonWarrior;
+        type == EnemyType.Troll || type == EnemyType.ForestWitch || type == EnemyType.DragonWarrior || IsRegionBoss(type);
+
+    /// <summary>Trol gövdesi + renk + kendi yetenekleri (RegionBoss) olan bölge bossları.</summary>
+    public static bool IsRegionBoss(EnemyType type) =>
+        type == EnemyType.CastleGuardian || type == EnemyType.MineWarden
+        || type == EnemyType.FrostLord || type == EnemyType.DarkKing;
 
     public static string DisplayName(EnemyType type)
     {
@@ -56,7 +65,11 @@ public static class EnemyTypeInfo
             case EnemyType.Troll: return "Muhafız";
             case EnemyType.ShadowWolf: return "Gölge Kurt";
             case EnemyType.ForestWitch: return "Orman Cadısı";
-            case EnemyType.DragonWarrior: return "Ejder Savaşçısı";
+            case EnemyType.DragonWarrior: return L.T("Ejder Savaşçısı", "Dragon Warrior");
+            case EnemyType.CastleGuardian: return L.T("Kale Muhafızı", "Castle Guardian");
+            case EnemyType.MineWarden: return L.T("Maden Gardiyanı", "Mine Warden");
+            case EnemyType.FrostLord: return L.T("Buz Hükümdarı", "Frost Lord");
+            case EnemyType.DarkKing: return L.T("Karanlık Kral", "Dark King");
             default: return type.ToString();
         }
     }
@@ -409,6 +422,24 @@ public class EnemyStats
                 stats.attackRange = 1.5f;
                 stats.attackSpeed = 0.7f;
                 stats.goldDrop = 25;
+                break;
+
+            // Bölge bossları: bölge ilerledikçe güçlenir (aşama ölçeği ayrıca uygulanır).
+            case EnemyType.CastleGuardian:
+                stats.health = 220f; stats.damage = 16f; stats.moveSpeed = 0.85f;
+                stats.attackRange = 2.0f; stats.attackSpeed = 0.55f; stats.goldDrop = 100;
+                break;
+            case EnemyType.MineWarden:
+                stats.health = 260f; stats.damage = 18f; stats.moveSpeed = 0.8f;
+                stats.attackRange = 2.0f; stats.attackSpeed = 0.5f; stats.goldDrop = 120;
+                break;
+            case EnemyType.FrostLord:
+                stats.health = 280f; stats.damage = 17f; stats.moveSpeed = 0.85f;
+                stats.attackRange = 2.0f; stats.attackSpeed = 0.55f; stats.goldDrop = 130;
+                break;
+            case EnemyType.DarkKing:
+                stats.health = 300f; stats.damage = 19f; stats.moveSpeed = 0.9f;
+                stats.attackRange = 2.0f; stats.attackSpeed = 0.6f; stats.goldDrop = 140;
                 break;
 
             case EnemyType.Troll:

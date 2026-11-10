@@ -42,7 +42,7 @@ public class BattleSceneSetup : MonoBehaviour
     {
         // Kamerayı ayarla
         Camera.main.orthographic = true;
-        Camera.main.orthographicSize = 8f;
+        Camera.main.orthographicSize = CameraSizeFor(Camera.main.aspect);
         Camera.main.backgroundColor = new Color(0.15f, 0.15f, 0.2f);
 
         // Dünya boyutunu hesapla (Ekranın 3x3 katı)
@@ -411,6 +411,12 @@ public class BattleSceneSetup : MonoBehaviour
 
         Debug.Log("[BattleSceneSetup] Savaş sahnesi hazır!");
     }
+
+    /// <summary>
+    /// Savaş kamerası yüksekliği: yuvalar (x = ±3,3, halkasıyla ±4,4) dar telefonlarda da ekrana sığsın diye
+    /// görüş yarı genişliği en az 4,6 birim; tablette 8 (eski boy), çok dar ekranda en fazla 9,6.
+    /// </summary>
+    public static float CameraSizeFor(float aspect) => Mathf.Clamp(4.6f / Mathf.Max(0.3f, aspect), 8f, 9.6f);
 
     private IEnumerator SetupCameraFollowAndMinimap()
     {

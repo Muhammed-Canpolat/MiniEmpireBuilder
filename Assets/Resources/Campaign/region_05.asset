@@ -20,6 +20,7 @@ MonoBehaviour:
   enemyTypes: 00000000010000000200000003000000
   specialMechanic: 
   bossName: "Karanl\u0131k Kral"
+  bossType: 10
   description: "Karanl\u0131k kalenin ordusunu yen ve son bossla y\xFCzle\u015F."
   levels:
   - number: 1

@@ -178,7 +178,7 @@ public class HeroController : MonoBehaviour
         }
 
         Vector3 direction = new Vector3(moveInput.x, moveInput.y, 0f).normalized;
-        Vector3 next = transform.position + direction * moveSpeed * Time.deltaTime;
+        Vector3 next = transform.position + direction * moveSpeed * SpeedMultiplier * Time.deltaTime;
         // Binaların içinden geçme: ayak noktası engellerin dışına itilir.
         Vector2 feet = (Vector2)next + FeetOffset;
         Vector2 resolved = BattleObstacles.Resolve(feet, FeetRadius);
@@ -545,6 +545,21 @@ public class HeroController : MonoBehaviour
     }
 
     /// <summary>Düşen savaşçı Ana Üs önündeki başlangıç noktasında tam canla kalkar.</summary>
+    private float slowUntil;
+    private float slowFactor = 1f;
+
+    /// <summary>Hız çarpanı: Buz Nefesi gibi süreli yavaşlatma ve "Don" fırtınası (BattleWeather).</summary>
+    public float SpeedMultiplier =>
+        (Time.time < slowUntil ? slowFactor : 1f) * BattleWeather.HeroSpeedMultiplier;
+
+    /// <summary>Süreli yavaşlatma (en güçlüsü geçerli).</summary>
+    public void Slow(float factor, float seconds)
+    {
+        factor = Mathf.Clamp(factor, 0.1f, 1f);
+        if (Time.time >= slowUntil || factor < slowFactor) slowFactor = factor;
+        slowUntil = Mathf.Max(slowUntil, Time.time + seconds);
+    }
+
     /// <summary>Elmasla anında dirilme: geri sayım beklenmeden bir sonraki karede kalkar.</summary>
     public bool RespawnNow()
     {

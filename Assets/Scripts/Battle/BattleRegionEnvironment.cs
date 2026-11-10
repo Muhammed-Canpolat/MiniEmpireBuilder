@@ -25,6 +25,8 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
         }
         if (region.specialMechanic == "Sis" && GetComponent<FogOfWar>() == null)
             gameObject.AddComponent<FogOfWar>();
+        if (region.specialMechanic == "Don" && GetComponent<BattleWeather>() == null)
+            gameObject.AddComponent<BattleWeather>();
         if (region.id == 3) { AddMineScatter(); yield break; }
         if (region.id != 2) yield break;
         hero = FindFirstObjectByType<HeroController>()?.transform;

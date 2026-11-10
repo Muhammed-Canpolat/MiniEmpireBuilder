@@ -20,6 +20,7 @@ MonoBehaviour:
   enemyTypes: 00000000010000000200000003000000
   specialMechanic: Don
   bossName: "Buz H\xFCk\xFCmdar\u0131"
+  bossType: 9
   description: "Donmu\u015F ge\xE7itte so\u011Fuk ve dar yollar savunmay\u0131 zorla\u015Ft\u0131r\u0131r."
   levels:
   - number: 1

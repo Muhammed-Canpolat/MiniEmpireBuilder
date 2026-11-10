@@ -254,6 +254,10 @@ public class SpriteManager : MonoBehaviour
             case EnemyType.ShadowWolf: return EnemyWolf; // koyu tonla ayrışır
             case EnemyType.ForestWitch: return null;     // ForestWitchBoss animatörle çizer
             case EnemyType.DragonWarrior: return null;   // DragonBoss kare sayfalarıyla çizer
+            case EnemyType.CastleGuardian:
+            case EnemyType.MineWarden:
+            case EnemyType.FrostLord:
+            case EnemyType.DarkKing: return EnemyTroll;  // renk ve aura RegionBoss'ta
             default: return EnemyWolf;
         }
     }

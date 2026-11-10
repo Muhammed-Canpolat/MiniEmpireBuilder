@@ -20,6 +20,7 @@ MonoBehaviour:
   enemyTypes: 00000000010000000200000003000000
   specialMechanic: 
   bossName: "Maden Gardiyan\u0131"
+  bossType: 8
   description: "Terk edilmi\u015F madendeki kaynaklar\u0131 d\xFC\u015Fman bask\u0131nlar\u0131ndan
     koru."
   levels:

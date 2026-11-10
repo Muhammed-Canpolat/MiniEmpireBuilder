@@ -63,11 +63,45 @@ public class TowerController : MonoBehaviour
         ringUntil = Time.time + RingAfterBuildSeconds;
     }
 
+    private float frozenUntil;
+    private SpriteRenderer[] tintTargets;
+    private Color[] tintOriginals;
+
+    public bool IsFrozen => Time.time < frozenUntil;
+
+    /// <summary>Buz Nefesi: kule süre boyunca ateş etmez, buz mavisine boyanır.</summary>
+    public void Freeze(float seconds)
+    {
+        if (IsDestroyed || seconds <= 0f) return;
+        if (!IsFrozen)
+        {
+            tintTargets = GetComponentsInChildren<SpriteRenderer>();
+            tintOriginals = new Color[tintTargets.Length];
+            for (int i = 0; i < tintTargets.Length; i++)
+            {
+                tintOriginals[i] = tintTargets[i].color;
+                tintTargets[i].color = tintOriginals[i] * new Color(0.6f, 0.85f, 1.25f, 1f);
+            }
+        }
+        frozenUntil = Mathf.Max(frozenUntil, Time.time + seconds);
+    }
+
+    private void Thaw()
+    {
+        if (tintTargets == null) return;
+        for (int i = 0; i < tintTargets.Length; i++)
+            if (tintTargets[i] != null) tintTargets[i].color = tintOriginals[i];
+        tintTargets = null;
+    }
+
     private void Update()
     {
         if (IsDestroyed) return;
         UpdateRing();
-        if (Time.time - lastAttackTime < attackCooldown) return;
+        if (IsFrozen) return;
+        if (tintTargets != null) Thaw();
+        // "Don" fırtınasında kuleler daha yavaş ateş eder.
+        if (Time.time - lastAttackTime < attackCooldown * BattleWeather.TowerCooldownMultiplier) return;
         EnemyController target = FindNearestEnemy();
         if (target == null) return;
         Attack(target);

@@ -46,6 +46,10 @@ public class EnemyController : MonoBehaviour
 
     // Özel davranışlar (Gölge Kurt atılması, Cadı ışınlanması) için
     public bool MovementLocked { get; set; }
+    /// <summary>Alınan hasar çarpanı (ör. Kale Muhafızı'nın Kalkan Duvarı 0.3).</summary>
+    public float DamageTakenMultiplier { get; set; } = 1f;
+    /// <summary>Asıl renk: vurulma parlaması bitince buna döner (üst üste darbede kırmızı kalmasın).</summary>
+    public Color BaseTint { get; set; } = Color.white;
     public bool Invulnerable { get; set; }
     // true iken FogOfWar alfa değerine dokunmaz (davranış kendi soluklaşmasını yönetir).
     public bool FogOverride { get; set; }
@@ -112,7 +116,8 @@ public class EnemyController : MonoBehaviour
                 spriteRenderer.sprite.name.StartsWith("enemy_");
             if (hasEnemyArt)
             {
-                float targetWidth = type == EnemyType.Troll ? 2.5f :
+                float targetWidth = EnemyTypeInfo.IsRegionBoss(type) ? 2.9f :
+                    type == EnemyType.Troll ? 2.5f :
                     type == EnemyType.ShadowWolf ? 1.6f :
                     type == EnemyType.Orc ? 1.85f :
                     type == EnemyType.Wolf ? 1.75f : 1.6f;
@@ -120,6 +125,8 @@ public class EnemyController : MonoBehaviour
                 transform.localScale = new Vector3(scale, scale, 1f);
                 if (type == EnemyType.ShadowWolf)
                     spriteRenderer.color = new Color(0.42f, 0.36f, 0.58f);
+                if (EnemyTypeInfo.IsRegionBoss(type))
+                    spriteRenderer.color = RegionBoss.Tint(type);
                 // Tek kareli görsel: yürüme, saldırı ve vurulma kodla canlandırılır.
                 if (GetComponent<EnemyMotion>() == null) gameObject.AddComponent<EnemyMotion>();
             }
@@ -169,6 +176,9 @@ public class EnemyController : MonoBehaviour
             gameObject.AddComponent<ForestWitchBoss>();
         if (type == EnemyType.DragonWarrior && GetComponent<DragonBoss>() == null)
             gameObject.AddComponent<DragonBoss>();
+        if (EnemyTypeInfo.IsRegionBoss(type) && GetComponent<RegionBoss>() == null)
+            gameObject.AddComponent<RegionBoss>();
+        if (spriteRenderer != null) BaseTint = spriteRenderer.color;
     }
 
     private const float ShadowAlpha = 0.38f;
@@ -396,11 +406,20 @@ public class EnemyController : MonoBehaviour
 
     // ==================== HASAR ALMA ====================
 
+    /// <summary>Can Emme gibi yetenekler için iyileşme (tavanı aşmaz).</summary>
+    public void Heal(float amount)
+    {
+        if (isDead || amount <= 0f) return;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        if (healthBar != null) healthBar.UpdateHealth(currentHealth);
+    }
+
     public void TakeDamage(float dmg)
     {
         if (isDead || Invulnerable) return;
 
         LastHitTime = Time.time;
+        dmg *= Mathf.Max(0f, DamageTakenMultiplier);
         currentHealth -= dmg;
         currentHealth = Mathf.Max(0, currentHealth);
 
@@ -427,11 +446,10 @@ public class EnemyController : MonoBehaviour
     {
         if (spriteRenderer != null)
         {
-            Color originalColor = spriteRenderer.color;
-            spriteRenderer.color = Color.red;
+            spriteRenderer.color = new Color(1f, 0.25f, 0.25f, spriteRenderer.color.a);
             yield return new WaitForSeconds(0.1f);
             if (spriteRenderer != null)
-                spriteRenderer.color = originalColor;
+                spriteRenderer.color = new Color(BaseTint.r, BaseTint.g, BaseTint.b, spriteRenderer.color.a);
         }
     }
 
