@@ -412,7 +412,11 @@ public class GameManager : MonoBehaviour
             UpdateBuildingSaveEntry(type, newLevel, data.isUnlocked);
         }
         RecomputeTypeLevel(type);
-        if (type == BuildingType.MainBase) CheckUnlockBuildings();
+        if (type == BuildingType.MainBase)
+        {
+            CheckUnlockBuildings();
+            GemRewards.ForMainBaseLevel(newLevel);
+        }
         OnBuildingUpgraded?.Invoke(type, newLevel);
         AudioManager.Instance?.PlaySfx("levelUp");
         Debug.Log($"[GameManager] {type} ({slotId}) Sev. {newLevel} tamamlandı.");
@@ -429,7 +433,27 @@ public class GameManager : MonoBehaviour
     public IReadOnlyList<BuilderTaskSave> BuilderTasks => PlayerData?.builderTasks ?? NoTasks;
     public int BuilderCount => Mathf.Clamp(PlayerData?.builderCount ?? 1, 1, Progression.MaxBuilders);
     public int BusyBuilderCount => BuilderTasks.Count;
-    public int FreeBuilderCount => Mathf.Max(0, BuilderCount - BusyBuilderCount);
+    public int FreeBuilderCount => Mathf.Max(0, WorkingBuilderCount - BusyBuilderCount);
+
+    /// <summary>
+    /// Çalışan inşaatçı sayısı: kalıcılar + süresi süren (ya da işi henüz bitmemiş) misafir inşaatçı.
+    /// Kiralama bedeli yalnız kalıcı sayıya (<see cref="BuilderCount"/>) bakar.
+    /// </summary>
+    public int WorkingBuilderCount
+    {
+        get
+        {
+            int count = BuilderCount;
+            if (count >= Progression.MaxBuilders) return count;
+            bool guestWorking = false;
+            foreach (var task in BuilderTasks)
+                if (task.builderIndex >= count) { guestWorking = true; break; }
+            return TempBuilderActive || guestWorking ? count + 1 : count;
+        }
+    }
+
+    public bool TempBuilderActive => PlayerData != null && PlayerData.tempBuilderUntilTicks > DateTime.UtcNow.Ticks;
+    public bool BuildPotionActive => PlayerData != null && PlayerData.buildPotionUntilTicks > DateTime.UtcNow.Ticks;
     public bool HasFreeBuilder => FreeBuilderCount > 0;
 
     /// <summary>Tüm inşaatçılar meşgul (yeni iş başlatılamaz).</summary>
@@ -478,7 +502,7 @@ public class GameManager : MonoBehaviour
 
     private int FirstFreeBuilderIndex()
     {
-        for (int i = 0; i < BuilderCount; i++)
+        for (int i = 0; i < WorkingBuilderCount; i++)
             if (TaskForBuilder(i) == null) return i;
         return -1;
     }
@@ -510,6 +534,9 @@ public class GameManager : MonoBehaviour
                 task.endTicks - TimeSpan.FromMinutes(PlayerData.pendingSpeedupMinutes).Ticks);
             PlayerData.pendingSpeedupMinutes = 0;
         }
+        // İnşaat İksiri sürüyorsa yeni iş de hızlı ilerler.
+        if (BuildPotionActive)
+            task.endTicks = now + GemEconomy.Boosted(task.endTicks - now, PlayerData.buildPotionUntilTicks - now);
         PlayerData.builderTasks.Add(task);
         LastStartedTask = task;
         SaveGame();
@@ -540,6 +567,73 @@ public class GameManager : MonoBehaviour
         longest.endTicks = Math.Max(now, longest.endTicks - TimeSpan.FromMinutes(minutes).Ticks);
         SaveGame();
         OnBuilderTaskStarted?.Invoke();
+        return true;
+    }
+
+    // ==================== ELMAS: İNŞAAT ====================
+
+    /// <summary>Bu işi şimdi bitirmenin elmas bedeli (1 dk altı 0).</summary>
+    public static int FinishNowCost(BuilderTaskSave task) => GemEconomy.FinishCost(SecondsRemaining(task));
+
+    /// <summary>Süren işi elmasla hemen bitirir (yükseltme, inşa, kaldırma).</summary>
+    public bool FinishTaskNow(BuilderTaskSave task)
+    {
+        if (PlayerData == null || task == null || !PlayerData.builderTasks.Contains(task)) return false;
+        int cost = FinishNowCost(task);
+        if (cost > 0 && !SpendGems(cost)) return false;
+        task.endTicks = DateTime.UtcNow.Ticks;
+        CheckBuilderTask();
+        return true;
+    }
+
+    /// <summary>İnşaat İksiri: 2 saat bütün inşaatçılar 4 kat hızlı. Sürerken yeniden alınamaz.</summary>
+    public bool ActivateBuildPotion()
+    {
+        if (PlayerData == null || BuildPotionActive) return false;
+        if (!SpendGems(GemEconomy.PotionCost)) return false;
+        long now = DateTime.UtcNow.Ticks;
+        long window = TimeSpan.FromHours(GemEconomy.PotionHours).Ticks;
+        PlayerData.buildPotionUntilTicks = now + window;
+        foreach (var task in PlayerData.builderTasks)
+            if (task.endTicks > now)
+                task.endTicks = now + GemEconomy.Boosted(task.endTicks - now, window);
+        SaveGame();
+        OnBuilderTaskStarted?.Invoke();
+        return true;
+    }
+
+    /// <summary>Misafir inşaatçı: 24 saat bir inşaatçı daha. 5 kalıcı inşaatçı varken alınamaz.</summary>
+    public bool CanRentTempBuilder => PlayerData != null && !TempBuilderActive && BuilderCount < Progression.MaxBuilders;
+
+    public bool RentTempBuilder()
+    {
+        if (!CanRentTempBuilder || !SpendGems(GemEconomy.TempBuilderCost)) return false;
+        PlayerData.tempBuilderUntilTicks = DateTime.UtcNow.Ticks + TimeSpan.FromHours(GemEconomy.TempBuilderHours).Ticks;
+        SaveGame();
+        OnBuilderHired?.Invoke(BuilderCount);
+        return true;
+    }
+
+    /// <summary>Elmasla 2x maden (4 saat; sürüyorsa üstüne eklenir).</summary>
+    public bool BuyMineBoost()
+    {
+        if (PlayerData == null || !SpendGems(GemEconomy.MineBoostCost)) return false;
+        ApplyOfflineGoldMineProduction(); // önceki üretim normal hızla yazılsın
+        long now = DateTime.UtcNow.Ticks;
+        PlayerData.mineBoostUntilTicks = Math.Max(now, PlayerData.mineBoostUntilTicks)
+            + TimeSpan.FromHours(GemEconomy.MineBoostHours).Ticks;
+        SaveGame();
+        return true;
+    }
+
+    /// <summary>Eksik altını elmasla tamamlar: <paramref name="needed"/> altına ulaşacak kadar ekler.</summary>
+    public bool TopUpGold(int needed)
+    {
+        if (PlayerData == null) return false;
+        int missing = needed - Gold;
+        if (missing <= 0) return true;
+        if (!SpendGems(GemEconomy.GoldTopUpCost(missing))) return false;
+        AddGold(missing);
         return true;
     }
 

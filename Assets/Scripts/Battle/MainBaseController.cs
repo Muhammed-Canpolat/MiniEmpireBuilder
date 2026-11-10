@@ -47,8 +47,20 @@ public class MainBaseController : MonoBehaviour
 
     private void OnDestroy() => BattleObstacles.Unregister(this);
 
+    private float invulnerableUntil;
+
+    /// <summary>"Savaşta devam et": yıkılan üs canın bir kısmıyla kalkar, kısa süre hasar almaz.</summary>
+    public void Revive(float healthFraction, float graceSeconds)
+    {
+        currentHealth = Mathf.Max(1f, maxHealth * Mathf.Clamp01(healthFraction));
+        invulnerableUntil = Time.time + graceSeconds;
+        if (healthBar != null) healthBar.UpdateHealth(currentHealth);
+        if (spriteRenderer != null) spriteRenderer.color = Color.white;
+    }
+
     public void TakeDamage(float damage)
     {
+        if (Time.time < invulnerableUntil) return;
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
 

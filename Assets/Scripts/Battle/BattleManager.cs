@@ -791,11 +791,55 @@ public class BattleManager : MonoBehaviour
         DefendedMine = structure;
     }
 
+    /// <summary>Bu savaşta elmasla "devam et" kullanıldı mı (savaş başına 1 kez).</summary>
+    public bool ContinueUsed { get; private set; }
+    private bool awaitingContinue;
+
     public void OnMainBaseDestroyed()
     {
-        if (!battleActive) return;
+        if (!battleActive || awaitingContinue) return;
         DefeatReason = "base";
+        if (!ContinueUsed && BattleSession.IsCampaign && GameManager.Instance != null)
+        {
+            OfferContinue();
+            return;
+        }
         BattleLost();
+    }
+
+    /// <summary>
+    /// Ana Üs yıkıldı: oyun durur, elmasla devam teklif edilir. Kabul edilirse üs %50 canla ve
+    /// 3 sn korumayla kalkar (can harcanmaz); reddedilirse yenilgi.
+    /// </summary>
+    private void OfferContinue()
+    {
+        awaitingContinue = true;
+        float previousScale = Time.timeScale > 0f ? Time.timeScale : 1f;
+        Time.timeScale = 0f;
+        AudioSettingsUI.BattleModalOpen = true;
+        int cost = GemEconomy.ContinueCost;
+        GemConfirm.Show("ANA ÜS YIKILDI",
+            $"Elmasla devam et: Ana Üs %{Mathf.RoundToInt(GemEconomy.ContinueBaseHealth * 100f)} canla ayağa kalkar, " +
+            "can kaybetmezsin. Her savaşta 1 kez.",
+            cost, "DEVAM ET", () =>
+            {
+                Time.timeScale = previousScale;
+                AudioSettingsUI.BattleModalOpen = false;
+                awaitingContinue = false;
+                if (!battleActive) return;
+                if (GameManager.Instance == null || !GameManager.Instance.SpendGems(cost)) { BattleLost(); return; }
+                ContinueUsed = true;
+                var baseController = mainBaseTransform != null ? mainBaseTransform.GetComponent<MainBaseController>() : null;
+                if (baseController != null) baseController.Revive(GemEconomy.ContinueBaseHealth, 3f);
+                AudioManager.Instance?.PlaySfx("levelUp");
+            },
+            () =>
+            {
+                Time.timeScale = previousScale;
+                AudioSettingsUI.BattleModalOpen = false;
+                awaitingContinue = false;
+                if (battleActive) BattleLost();
+            }, true);
     }
 
     // ==================== SAVAŞ SONU ====================
@@ -813,6 +857,8 @@ public class BattleManager : MonoBehaviour
             // Savaşçı yıldızı: hiç düşmeden ve canı %50'nin üstünde bitirmek.
             bool heroStar = heroHealth > 0.5f && (heroController == null || heroController.TimesDowned == 0);
             lastStars = 1 + (baseHealth > 0.5f ? 1 : 0) + (heroStar ? 1 : 0);
+            // Yeni yıldız ve ilk boss zaferi elmas getirir (kayıttan önce: eski yıldızla karşılaştırılır).
+            GemRewards.ForVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
             CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
         }
         int totalPayout = totalGoldEarned + GetVictoryBonus();

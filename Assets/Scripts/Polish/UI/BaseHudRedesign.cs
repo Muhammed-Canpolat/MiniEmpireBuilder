@@ -97,9 +97,8 @@ public static class BaseHudRedesign
                 new Vector2(0.96f, 0.95f), Vector2.zero, Vector2.zero, bodyBold: true);
             var counter = gemButton.gameObject.AddComponent<GemCounter>();
             counter.Bind(gemText);
-            gemButton.onClick.AddListener(() => Object.FindFirstObjectByType<BaseSceneSetup>()?.ShowHudToast(
-                counter.RegisterTestTap() ? "[TEST] +100 elmas"
-                    : "Elmas: giriş ödülleri ve mağazadan kazanılır; inşaatçı ve hızlandırmada kullanılır"));
+            // Elmas Dükkanı (Development APK'daki +100 test kısayolu dükkânın elmas hapında).
+            gemButton.onClick.AddListener(GemShopUI.Open);
         }
 
         // Eski "ANA ÜS · SEV. N" yazısı yerine arma.

@@ -254,6 +254,9 @@ public sealed class VictoryReferenceView : MonoBehaviour
             if (starReason != null)
                 starReason.text += $"\n<color=#C9B48A>Tamamlanmış aşama: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u</color>";
         }
+        // Yeni yıldız / ilk boss zaferi elması.
+        if (won && BattleSession.IsCampaign && GemRewards.LastVictoryGems > 0 && starReason != null)
+            starReason.text += $"\n<color=#8FD3FF>+{GemRewards.LastVictoryGems} elmas kazandın!</color>";
         values[3].text = "0";
         panel.localScale = Vector3.one * 0.8f;
         panel.DOScale(1, 0.25f).SetEase(Ease.OutBack);

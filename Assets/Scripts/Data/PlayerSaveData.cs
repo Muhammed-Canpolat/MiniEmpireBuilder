@@ -74,6 +74,14 @@ public class PlayerSaveData
     public long mineBoostUntilTicks;
     public int pendingSpeedupMinutes;
 
+    // Elmas güçlendirmeleri (GemEconomy): İnşaat İksiri ve geçici inşaatçı bitişi (UTC tick).
+    public long buildPotionUntilTicks;
+    public long tempBuilderUntilTicks;
+    // Elmas kazanma (GemRewards): reklamla elmas günü/sayısı, ödüllendirilmiş en yüksek Ana Üs seviyesi.
+    public int gemAdDay;
+    public int gemAdCount;
+    public int gemRewardedBaseLevel;
+
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
     /// </summary>

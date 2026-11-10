@@ -112,6 +112,24 @@ public sealed class DailyRewardsUI : MonoBehaviour
         resultText = Text(panel.transform, "Result", "", 13, ReferenceUiVisuals.Hex(0x2F7A3A), true,
             new Vector2(0, -400), new Vector2(0, -376));
 
+        // Tek gün kaçtıysa seri elmasla kurtarılabilir (almadan önce sorulur).
+        if (DailyRewards.CanSaveStreak)
+        {
+            var save = ReferenceUiVisuals.Button(panel.transform, "SaveStreak",
+                $"   SERİYİ KURTAR · {GemEconomy.StreakSaveCost}", false,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(-120, -400), new Vector2(120, -356), 15);
+            GemConfirm.AddGemIcon(save.transform);
+            int keep = GameManager.Instance.PlayerData.dailyStreak;
+            save.onClick.AddListener(() => GemConfirm.Show("SERİYİ KURTAR",
+                $"Dün giriş yapmadın. Seriyi korursan bugün {keep + 1}. günün ödülünü alırsın.",
+                GemEconomy.StreakSaveCost, "KURTAR", () =>
+                {
+                    if (!DailyRewards.SaveStreak()) return;
+                    AudioManager.Instance?.PlaySfx("levelUp");
+                    Open();
+                }));
+        }
+
         var claim = ReferenceUiVisuals.Button(panel.transform, "ClaimDaily",
             canClaim ? $"{today}. GÜNÜ AL" : $"YARIN: {(today % DailyRewards.Days) + 1}. GÜN", canClaim,
             new Vector2(0, 0), new Vector2(1, 0), new Vector2(22, 18), new Vector2(-22, 70), 18);

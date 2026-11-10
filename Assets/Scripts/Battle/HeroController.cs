@@ -545,6 +545,14 @@ public class HeroController : MonoBehaviour
     }
 
     /// <summary>Düşen savaşçı Ana Üs önündeki başlangıç noktasında tam canla kalkar.</summary>
+    /// <summary>Elmasla anında dirilme: geri sayım beklenmeden bir sonraki karede kalkar.</summary>
+    public bool RespawnNow()
+    {
+        if (!isDead) return false;
+        respawnAt = Time.time;
+        return true;
+    }
+
     private void Respawn()
     {
         var battle = BattleManager.Instance;

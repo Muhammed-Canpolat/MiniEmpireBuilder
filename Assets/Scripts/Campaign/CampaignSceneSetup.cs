@@ -787,7 +787,7 @@ public class CampaignSceneSetup : MonoBehaviour
         if (BattleCards.IsRoyal) return $"Kraliyet: hepsi açık, %{BattleCards.BonusPercent}";
         if (BattleCards.FreeCardAvailable) return "İlk savaşına 1 kart BEDAVA";
         if (BattleCards.Tokens > 0) return $"Kart jetonun: {BattleCards.Tokens}";
-        return "Reklam izle, bu savaş için aç";
+        return $"Reklam ya da {GemEconomy.BattleCardCost} elmasla aç";
     }
 
     private static string CardIcon(BattleCard card)
@@ -818,19 +818,25 @@ public class CampaignSceneSetup : MonoBehaviour
             new Vector2(0, 0.34f), new Vector2(1, 0.66f), new Vector2(34, 0), new Vector2(-4, 0), TextAlignmentOptions.Left);
         string state = active ? "AÇIK"
             : BattleCards.FreeCardAvailable ? "BEDAVA AL"
-            : BattleCards.Tokens > 0 ? "JETONLA AÇ" : "▶ REKLAM";
+            : BattleCards.Tokens > 0 ? "JETONLA AÇ" : $"▶ / {GemEconomy.BattleCardCost} ELMAS";
         Label(rect, "State", state, 10.5f, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8D5B0), false,
             Vector2.zero, new Vector2(1, 0.34f), new Vector2(34, 3), new Vector2(-4, 0), TextAlignmentOptions.Left);
         button.onClick.AddListener(() =>
         {
             if (BattleCards.IsUnlocked(card)) { ShowToast($"{BattleCards.Description(card)} kartı bu savaş için açık."); return; }
             if (BattleCards.TryUnlockWithoutAd(card)) { RenderLevelDetail(); return; }
-            RewardedAds.Show("battle_card", ok =>
-            {
-                if (!ok) return;
-                BattleCards.UnlockFromAd(card);
-                if (detailOpen) RenderLevelDetail();
-            });
+            // Elmasla hemen aç ya da reklam izle.
+            GemConfirm.Show("SAVAŞ KARTI",
+                $"{BattleCards.Description(card)} bu savaş için +%{BattleCards.BonusPercent}.",
+                GemEconomy.BattleCardCost, "AÇ", () =>
+                {
+                    if (BattleCards.UnlockWithGems(card) && detailOpen) RenderLevelDetail();
+                }, null, false, "▶ REKLAM İZLE", () => RewardedAds.Show("battle_card", ok =>
+                {
+                    if (!ok) return;
+                    BattleCards.UnlockFromAd(card);
+                    if (detailOpen) RenderLevelDetail();
+                }));
         });
     }
 
@@ -870,19 +876,30 @@ public class CampaignSceneSetup : MonoBehaviour
             ShowToast($"Canların dolu ({LivesSystem.MaxLives}). Yenilgi ve pes etme 1 can götürür.");
             return;
         }
-        if (!LivesSystem.CanWatchAdForLife)
+        // Canları elmasla doldur; günlük reklam hakkı varsa ikinci seçenek +1 can.
+        void AfterChange()
         {
-            ShowToast($"Sonraki can {LivesSystem.Format(LivesSystem.NextLifeIn)} sonra");
-            return;
-        }
-        RewardedAds.Show("extra_life", ok =>
-        {
-            if (!ok) return;
-            LivesSystem.RewardAdLife();
-            ShowToast($"+1 can! (bugün {LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} reklam hakkın kaldı)");
             if (livesLabel != null) livesLabel.text = LivesText();
             if (detailOpen) RenderLevelDetail();
-        });
+        }
+        bool adOption = LivesSystem.CanWatchAdForLife;
+        GemConfirm.Show("CAN",
+            $"Can {LivesSystem.Lives}/{LivesSystem.MaxLives} · sonraki can {LivesSystem.Format(LivesSystem.NextLifeIn)} sonra.\n" +
+            "Canları elmasla hemen doldurabilirsin.",
+            GemEconomy.RefillLivesCost, "DOLDUR", () =>
+            {
+                if (!LivesSystem.RefillWithGems()) return;
+                ShowToast("Canlar doldu!");
+                AfterChange();
+            }, null, false,
+            adOption ? $"▶ REKLAM: +1 CAN ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} hak)" : null,
+            () => RewardedAds.Show("extra_life", ok =>
+            {
+                if (!ok) return;
+                LivesSystem.RewardAdLife();
+                ShowToast($"+1 can! (bugün {LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} reklam hakkın kaldı)");
+                AfterChange();
+            }));
     }
 
     private void ShowToast(string message)

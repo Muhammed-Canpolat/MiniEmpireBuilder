@@ -28,8 +28,8 @@ public class BuilderSystem : MonoBehaviour
 
     public event Action OnStatusChanged;
 
-    // Görev bitiş anına göre bu oturumda bekleyen geri çağrılar.
-    private readonly Dictionary<long, Action> pendingCallbacks = new Dictionary<long, Action>();
+    // Bu oturumda bekleyen geri çağrılar; anahtar görevin kendisi (elmas/iksir bitiş anını değiştirebilir).
+    private readonly Dictionary<BuilderTaskSave, Action> pendingCallbacks = new Dictionary<BuilderTaskSave, Action>();
     private int lastBusyCount = -1;
 
     private void Awake()
@@ -73,7 +73,7 @@ public class BuilderSystem : MonoBehaviour
     private void Sync()
     {
         var gm = GameManager.Instance;
-        int count = gm != null ? gm.BuilderCount : 1;
+        int count = gm != null ? gm.WorkingBuilderCount : 1;
         if (Builders == null || Builders.Length != count)
         {
             var resized = new Builder[count];
@@ -115,9 +115,9 @@ public class BuilderSystem : MonoBehaviour
     private void HandleCompleted(BuilderTaskSave task)
     {
         Sync();
-        if (pendingCallbacks.TryGetValue(task.endTicks, out var callback))
+        if (pendingCallbacks.TryGetValue(task, out var callback))
         {
-            pendingCallbacks.Remove(task.endTicks);
+            pendingCallbacks.Remove(task);
             callback?.Invoke();
         }
         OnStatusChanged?.Invoke();
@@ -134,7 +134,7 @@ public class BuilderSystem : MonoBehaviour
     public bool HasAvailableBuilder() => GameManager.Instance == null || GameManager.Instance.HasFreeBuilder;
 
     public int FreeCount => GameManager.Instance != null ? GameManager.Instance.FreeBuilderCount : 1;
-    public int TotalCount => GameManager.Instance != null ? GameManager.Instance.BuilderCount : 1;
+    public int TotalCount => GameManager.Instance != null ? GameManager.Instance.WorkingBuilderCount : 1;
 
     /// <summary>Yeni yapı / kaldırma gibi işler için görev. Geri çağrı bu oturumda çalışır.</summary>
     public bool TryStartTask(string label, float duration, Vector3 targetPos, Action onComplete = null,
@@ -144,7 +144,7 @@ public class BuilderSystem : MonoBehaviour
         if (gm == null) { onComplete?.Invoke(); return true; }
         string kind = label == "Kaldırma" ? "remove" : "build";
         if (!gm.StartBuilderTask(kind, label, duration, targetPos, slotId)) return false;
-        if (onComplete != null) pendingCallbacks[gm.LastStartedTask.endTicks] = onComplete;
+        if (onComplete != null) pendingCallbacks[gm.LastStartedTask] = onComplete;
         Sync();
         OnStatusChanged?.Invoke();
         return true;

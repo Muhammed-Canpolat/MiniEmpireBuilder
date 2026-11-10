@@ -50,6 +50,7 @@ public class BuilderVisualController : MonoBehaviour
         if (GameManager.Instance != null) GameManager.Instance.OnBuilderHired -= HandleHired;
         foreach (var unit in units)
             if (unit.worker != null) unit.worker.DOKill();
+        if (guest?.worker != null) guest.worker.DOKill();
     }
 
     private void HandleHired(int total)
@@ -99,24 +100,7 @@ public class BuilderVisualController : MonoBehaviour
         BaseMapManager.Instance?.RegisterBuilderHut(hut, index);
         unit.zzz = CreateZzZ(hut.transform);
 
-        // İşçi: her inşaatçının kendi renkte işçisi (mavi, sarı, kırmızı, mor, siyah).
-        var worker = new GameObject("BuilderWorker_" + (index + 1));
-        worker.transform.position = hut.transform.position;
-        worker.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
-        unit.worker = worker.transform;
-        unit.workerRenderer = worker.AddComponent<SpriteRenderer>();
-        unit.workerRenderer.sprite = SpriteManager.Instance?.GetSprite("ui_builder_avatar")
-            ?? BaseMapManager.MakeCircleSprite(new Color(0.3f, 0.6f, 1f));
-        unit.workerRenderer.enabled = false;
-        var controllers = BaseVisualCatalog.Instance?.pawnControllers;
-        int colorIndex = index % PawnColors.Length;
-        if (controllers != null && colorIndex < controllers.Length && controllers[colorIndex] != null)
-        {
-            unit.animator = worker.AddComponent<Animator>();
-            unit.animator.runtimeAnimatorController = controllers[colorIndex];
-            unit.animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
-            unit.animator.Play("Pawn_Idle Hammer_" + unit.Color);
-        }
+        CreateWorker(unit, hut.transform.position);
         unit.sleeping = true;
         unit.zzz.SetActive(true);
         units.Add(unit);
@@ -126,6 +110,28 @@ public class BuilderVisualController : MonoBehaviour
             hut.transform.localScale = Vector3.zero;
             hut.transform.DOScale(new Vector3(scale, scale, 1f), 0.35f).SetEase(Ease.OutBack);
             BaseBuildingVisual.SpawnDust(hut.transform.position + Vector3.down * 0.5f, sr.sortingOrder + 1);
+        }
+    }
+
+    /// <summary>İşçi: her inşaatçının kendi renkte işçisi (mavi, sarı, kırmızı, mor, siyah).</summary>
+    private static void CreateWorker(Unit unit, Vector3 position)
+    {
+        var worker = new GameObject("BuilderWorker_" + (unit.index + 1));
+        worker.transform.position = position;
+        worker.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+        unit.worker = worker.transform;
+        unit.workerRenderer = worker.AddComponent<SpriteRenderer>();
+        unit.workerRenderer.sprite = SpriteManager.Instance?.GetSprite("ui_builder_avatar")
+            ?? BaseMapManager.MakeCircleSprite(new Color(0.3f, 0.6f, 1f));
+        unit.workerRenderer.enabled = false;
+        var controllers = BaseVisualCatalog.Instance?.pawnControllers;
+        int colorIndex = unit.index % PawnColors.Length;
+        if (controllers != null && colorIndex < controllers.Length && controllers[colorIndex] != null)
+        {
+            unit.animator = worker.AddComponent<Animator>();
+            unit.animator.runtimeAnimatorController = controllers[colorIndex];
+            unit.animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            unit.animator.Play("Pawn_Idle Hammer_" + unit.Color);
         }
     }
 
@@ -187,6 +193,58 @@ public class BuilderVisualController : MonoBehaviour
             if (busy) GoToWork(unit, target);
             else GoHome(unit);
         }
+        UpdateGuest(builders);
+    }
+
+    // ==================== MİSAFİR İNŞAATÇI (elmasla, süreli) ====================
+
+    private Unit guest;
+
+    private Vector3 GuestHome() => units.Count > 0 && units[0].hut != null
+        ? units[0].hut.transform.position + new Vector3(0.9f, -0.7f, 0f)
+        : BaseWorldLayout.Get("builder").center;
+
+    /// <summary>
+    /// Kulübesiz misafir işçi: iş varken birinci kulübenin yanından çıkıp işe yürür,
+    /// iş bitince geri dönüp kaybolur.
+    /// </summary>
+    private void UpdateGuest(BuilderSystem.Builder[] builders)
+    {
+        int index = units.Count;
+        bool busy = builders != null && index < builders.Length && !builders[index].isAvailable;
+        if (busy)
+        {
+            if (guest == null)
+            {
+                guest = new Unit { index = index, target = new Vector3(float.MaxValue, 0f, 0f) };
+                CreateWorker(guest, GuestHome());
+                guest.worker.name = "GuestBuilderWorker";
+            }
+            Vector3 target = builders[index].targetPosition != Vector3.zero ? builders[index].targetPosition : GuestHome();
+            if (guest.busy && (target - guest.target).sqrMagnitude < 0.01f) return;
+            guest.busy = true;
+            guest.target = target;
+            guest.workerRenderer.enabled = true;
+            guest.worker.DOKill();
+            guest.workerRenderer.flipX = target.x < guest.worker.position.x;
+            guest.animator?.Play("Pawn_Run Hammer_" + guest.Color);
+            var walker = guest;
+            guest.worker.DOMove(target, 2.5f).SetSpeedBased().OnComplete(() =>
+                walker.animator?.Play("Pawn_Interact Hammer_" + walker.Color));
+            guest.workerRenderer.sortingOrder = 101 - Mathf.RoundToInt(target.y * 2f);
+            return;
+        }
+        if (guest == null || !guest.busy) return;
+        guest.busy = false;
+        var leaving = guest;
+        Vector3 home = GuestHome();
+        leaving.worker.DOKill();
+        leaving.workerRenderer.flipX = home.x < leaving.worker.position.x;
+        leaving.animator?.Play("Pawn_Run Hammer_" + leaving.Color);
+        leaving.worker.DOMove(home, 2.5f).SetSpeedBased().OnComplete(() =>
+        {
+            if (leaving.workerRenderer != null) leaving.workerRenderer.enabled = false;
+        });
     }
 
     private void GoToWork(Unit unit, Vector3 target)

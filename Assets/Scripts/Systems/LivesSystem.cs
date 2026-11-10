@@ -99,6 +99,17 @@ public static class LivesSystem
         OnChanged?.Invoke();
     }
 
+    /// <summary>Elmasla canları doldurma: can eksikse ve sınırsız can sürmüyorsa.</summary>
+    public static bool CanRefillWithGems => Data != null && !Unlimited && Lives < MaxLives;
+
+    public static bool RefillWithGems()
+    {
+        var gm = GameManager.Instance;
+        if (!CanRefillWithGems || gm == null || !gm.SpendGems(GemEconomy.RefillLivesCost)) return false;
+        AddLives(MaxLives - Lives);
+        return true;
+    }
+
     public static int AdLivesToday
     {
         get

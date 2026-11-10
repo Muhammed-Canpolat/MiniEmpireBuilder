@@ -319,7 +319,6 @@ public class BaseWorldUI : MonoBehaviour
             buildingStatsText.text = GetBuildingStatsText(building);
 
         var task = gm.TaskForSlot(slotId);
-        bool thisUpgrading = task != null && task.kind == "upgrade";
         int cost = building.GetUpgradeCost();
         string duration = Progression.FormatDuration(Progression.UpgradeSecondsTo(building.level + 1));
         var block = gm.CanUpgrade(slotId, type);
@@ -328,10 +327,13 @@ public class BaseWorldUI : MonoBehaviour
         {
             if (!typeData.isUnlocked)
                 upgradeCostText.text = $"Ana Üs Sev. {typeData.GetRequiredMainBaseLevel()} gerekli";
-            else if (thisUpgrading)
-                upgradeCostText.text = $"YÜKSELTİLİYOR · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
-            else if (block == GameManager.UpgradeBlock.Upgrading)
-                upgradeCostText.text = $"İNŞA EDİLİYOR · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
+            else if (task != null)
+            {
+                // Süren iş: düğme "hemen bitir" olur (1 dk altı bedava).
+                int finish = GameManager.FinishNowCost(task);
+                string left = Progression.FormatDuration(GameManager.SecondsRemaining(task));
+                upgradeCostText.text = finish > 0 ? $"HEMEN BİTİR · {finish} ELMAS · {left}" : $"BEDAVA BİTİR · {left}";
+            }
             else if (building.level >= Progression.MaxLevel)
                 upgradeCostText.text = "EN YÜKSEK SEVİYE";
             else if (block == GameManager.UpgradeBlock.MaxLevel)
@@ -348,7 +350,9 @@ public class BaseWorldUI : MonoBehaviour
 
         if (upgradeButton != null)
         {
-            bool canUpgrade = block == GameManager.UpgradeBlock.None;
+            // Altın eksikse elmasla tamamlanabilir; süren iş elmasla bitirilebilir.
+            bool canUpgrade = block == GameManager.UpgradeBlock.None || block == GameManager.UpgradeBlock.NoGold
+                || (task != null && typeData.isUnlocked);
             upgradeButton.interactable = canUpgrade;
             var buttonImage = upgradeButton.GetComponent<Image>();
             if (buttonImage != null) buttonImage.color = canUpgrade ? Color.white : new Color(0.65f, 0.65f, 0.65f, 0.75f);
@@ -489,7 +493,26 @@ public class BaseWorldUI : MonoBehaviour
 
     private void OnUpgradeClicked()
     {
-        if (GameManager.Instance.StartUpgrade(selectedSlotId, selectedBuilding))
+        var gm = GameManager.Instance;
+        string slot = selectedSlotId;
+        var type = selectedBuilding;
+        var task = gm.TaskForSlot(slot);
+        if (task != null)
+        {
+            GemActions.OfferFinish(task, () => ShowBuildingInfo(type, slot));
+            return;
+        }
+        if (gm.CanUpgrade(slot, type) == GameManager.UpgradeBlock.NoGold)
+        {
+            int cost = Progression.UpgradeCost(type, gm.GetInstanceLevel(slot, type) + 1);
+            GemActions.OfferGoldTopUp(cost, "Bu yükseltme", () => gm.StartUpgrade(slot, type), () =>
+            {
+                AudioManager.Instance?.PlaySfx("buildingPlace");
+                ShowBuildingInfo(type, slot);
+            });
+            return;
+        }
+        if (gm.StartUpgrade(selectedSlotId, selectedBuilding))
         {
             AudioManager.Instance?.PlaySfx("buildingPlace");
             ShowBuildingInfo(selectedBuilding, selectedSlotId); // UI'ı güncelle

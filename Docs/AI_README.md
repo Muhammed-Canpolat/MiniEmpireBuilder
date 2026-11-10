@@ -123,6 +123,24 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
   eşzamansız sosyal (sunucu), ⑧ mağaza başvurusu.
 - **Henüz yapılmayan (karar bekleyen):** Ejder İstilası etkinliği (takvim/ödül), Bölge 4–5 kimliği
   ("Don" mekaniği, kendi bossları), Sonsuz Sefer modu, savaş kamerası sınırı, APK boyutu (Firebase).
+- **`3dc129d` ekran görüntüsü düzeltmeleri:** savaşta kahraman %30 büyük (`HeroLook.BattleScale`); renkli
+  kutularda `SolidPillSprite` (`PillSprite` koyu zemin taşır, rengi siyaha boğar); savaş pulları dalga
+  duyurusunu aşağı kaydırır.
+
+## 10 Kasım 2026: elmas kullanımı
+- Fiyatlar tek yerde: `Systems/GemEconomy.cs`. Kazanç: `Systems/GemRewards.cs` (yeni yıldız +1, ilk boss +10,
+  yeni Ana Üs seviyesi +5, reklam +2 × günde 3). Ortak onay penceresi `UI/GemConfirm.cs` (kendi tuvali,
+  elmas yetmezse Elmas Dükkanı açar), akışlar `UI/GemActions.cs`, dükkân `UI/GemShopUI.cs` (üst bar elmas hapı;
+  Development APK'da dükkânın elmas hapına 5 hızlı dokunuş = +100).
+- İnşaat: hemen bitir (`GameManager.FinishTaskNow`, 2,2×√dk, 1 dk altı bedava; bina paneli düğmesi ve
+  inşaatçı paneli satırları), İnşaat İksiri (`ActivateBuildPotion`, 2 sa 4x, `GemEconomy.Boosted`),
+  misafir inşaatçı (`RentTempBuilder`, 24 sa; `WorkingBuilderCount` = kalıcı + misafir, misafir elindeki işi
+  bitirir; görünüm `BuilderVisualController.UpdateGuest`), eksik altın (`TopUpGold`, 1 elmas = 40 altın).
+  `BuilderSystem` geri çağrıları artık görev nesnesine bağlı (bitiş anı elmasla değişebilir).
+- Savaş: Ana Üs yıkılınca devam (`BattleManager.OfferContinue`, 25, oyun durur, üs %50 + 3 sn koruma,
+  savaş başına 1), hemen kalk (`BattleObjectiveHud`, 3, onaysız), savaş kartı 5 elmas (reklam ikinci seçenek).
+- Diğer: canları doldur 15 (`LivesSystem.RefillWithGems`; sefer can fişi), maden 2x 4 sa 20 (`BuyMineBoost`),
+  seriyi kurtar 10 (`DailyRewards.SaveStreak`, yalnız tek gün kaçtıysa). Testler `GemEconomyTests`.
 
 ## Açık konular / sıradaki fikirler
 - Ses efektlerinin bağlanması (paket bekleniyor).

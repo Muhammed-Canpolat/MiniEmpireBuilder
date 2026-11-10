@@ -56,6 +56,19 @@ public static class DailyRewards
     public static bool StreakBroken => Data != null && !ClaimedToday && Data.dailyStreak > 0 && Data.dailyStreak < Days
         && Data.dailyLastClaimDay != Yesterday && Data.dailyLastClaimDay != 0;
 
+    /// <summary>Yalnız tek gün kaçtıysa seri elmasla kurtarılabilir (dünü alınmış sayar).</summary>
+    public static bool CanSaveStreak => StreakBroken && Data.dailyLastClaimDay == Stamp(TodayDate.AddDays(-2));
+
+    public static bool SaveStreak()
+    {
+        var gm = GameManager.Instance;
+        if (!CanSaveStreak || gm == null || !gm.SpendGems(GemEconomy.StreakSaveCost)) return false;
+        Data.dailyLastClaimDay = Yesterday;
+        gm.SaveGame();
+        OnChanged?.Invoke();
+        return true;
+    }
+
     public static DailyReward RewardFor(int day)
     {
         int level = GameManager.Instance != null ? Mathf.Max(1, GameManager.Instance.GetMainBaseLevel()) : 1;

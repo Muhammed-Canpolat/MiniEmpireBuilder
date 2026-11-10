@@ -15,7 +15,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
     private GameObject confirmation;
     private bool battleScene;
     private bool forfeitCommitted;
-    public static bool BattleModalOpen { get; private set; }
+    public static bool BattleModalOpen { get; internal set; }
     public bool IsBattleModalOpen => battleScene && panel != null && panel.activeSelf;
 
     private void Start()

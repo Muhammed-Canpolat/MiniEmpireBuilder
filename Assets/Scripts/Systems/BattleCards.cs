@@ -81,6 +81,16 @@ public static class BattleCards
     /// <summary>Ödüllü reklam izlendi: kart açılır.</summary>
     public static void UnlockFromAd(BattleCard card) => Set(card);
 
+    /// <summary>Reklamsız: kart elmasla açılır (<see cref="GemEconomy.BattleCardCost"/>).</summary>
+    public static bool UnlockWithGems(BattleCard card)
+    {
+        if (IsUnlocked(card)) return true;
+        var gm = GameManager.Instance;
+        if (gm == null || !gm.SpendGems(GemEconomy.BattleCardCost)) return false;
+        Set(card);
+        return true;
+    }
+
     private static void Set(BattleCard card)
     {
         unlocked[(int)card] = true;

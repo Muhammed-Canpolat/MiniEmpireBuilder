@@ -20,7 +20,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
 
     private void Start()
     {
-        var canvasObject = new GameObject("BattleObjectiveCanvas", typeof(Canvas), typeof(CanvasScaler));
+        var canvasObject = new GameObject("BattleObjectiveCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
         var canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -76,6 +76,35 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         respawnGroup.alpha = 0f;
         respawnText = ReferenceUiVisuals.Text(respawnBox.transform, "RespawnText", "", 17, ReferenceUiVisuals.Light,
             TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-10f, 0f), true);
+
+        // Elmasla hemen kalk (onaysız: küçük bedel, savaş akarken hızlı olmalı).
+        respawnButton = ReferenceUiVisuals.Button(respawnBox.transform, "RespawnNow", "", true,
+            new Vector2(0.2f, 0f), new Vector2(0.8f, 0f), new Vector2(0f, -50f), new Vector2(0f, -8f), 15);
+        GemConfirm.AddGemIcon(respawnButton.transform);
+        respawnLabel = respawnButton.GetComponentInChildren<TextMeshProUGUI>();
+        respawnButton.onClick.AddListener(RespawnNow);
+
+        // Yalnız düğme dokunuş alır; pullar ve bildirim alttaki oyunu engellemez.
+        foreach (var graphic in canvasObject.GetComponentsInChildren<Graphic>(true)) graphic.raycastTarget = false;
+        var buttonImage = respawnButton.GetComponent<Image>();
+        if (buttonImage != null) buttonImage.raycastTarget = true;
+        respawnGroup.blocksRaycasts = false;
+    }
+
+    private Button respawnButton;
+    private TextMeshProUGUI respawnLabel;
+
+    private void RespawnNow()
+    {
+        var gm = GameManager.Instance;
+        if (hero == null || !hero.IsDowned || gm == null) return;
+        if (!gm.SpendGems(GemEconomy.InstantRespawnCost))
+        {
+            GemShopUI.Open();
+            return;
+        }
+        hero.RespawnNow();
+        AudioManager.Instance?.PlaySfx("levelUp");
     }
 
     /// <summary>
@@ -140,7 +169,12 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         if (hero == null) hero = FindFirstObjectByType<HeroController>();
         bool downed = hero != null && hero.IsDowned && battle.IsBattleActive;
         respawnGroup.alpha = Mathf.MoveTowards(respawnGroup.alpha, downed ? 1f : 0f, Time.deltaTime * 4f);
+        respawnGroup.blocksRaycasts = downed;
         if (downed)
+        {
             respawnText.text = $"Savaşçı düştü · {Mathf.CeilToInt(hero.RespawnRemaining)} sn sonra üste döner";
+            bool enough = GameManager.Instance != null && GameManager.Instance.Gems >= GemEconomy.InstantRespawnCost;
+            respawnLabel.text = enough ? $"   HEMEN KALK · {GemEconomy.InstantRespawnCost}" : "   ELMAS YETMİYOR";
+        }
     }
 }

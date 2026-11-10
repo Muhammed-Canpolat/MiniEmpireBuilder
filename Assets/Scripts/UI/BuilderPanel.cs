@@ -13,6 +13,12 @@ public sealed class BuilderPanel : MonoBehaviour
 
     private readonly TextMeshProUGUI[] rowStatus = new TextMeshProUGUI[Progression.MaxBuilders];
     private readonly Image[] rowBackground = new Image[Progression.MaxBuilders];
+    private readonly TextMeshProUGUI[] rowName = new TextMeshProUGUI[Progression.MaxBuilders];
+    private readonly Button[] rowFinish = new Button[Progression.MaxBuilders];
+    private readonly TextMeshProUGUI[] rowFinishLabel = new TextMeshProUGUI[Progression.MaxBuilders];
+    private readonly BuilderTaskSave[] rowTask = new BuilderTaskSave[Progression.MaxBuilders];
+    private TextMeshProUGUI potionLabel;
+    private TextMeshProUGUI guestLabel;
     private TextMeshProUGUI summary;
     private TextMeshProUGUI hireLabel;
     private Button hireButton;
@@ -70,7 +76,7 @@ public sealed class BuilderPanel : MonoBehaviour
             new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-46f, -46f), new Vector2(-8f, -8f), 16);
         close.onClick.AddListener(Hide);
 
-        const float top = 0.79f, rowHeight = 0.095f;
+        const float top = 0.79f, rowHeight = 0.085f;
         for (int i = 0; i < Progression.MaxBuilders; i++)
         {
             float yMax = top - i * rowHeight;
@@ -79,13 +85,32 @@ public sealed class BuilderPanel : MonoBehaviour
             row.sprite = ReferenceUiVisuals.PillSprite();
             row.type = Image.Type.Sliced;
             rowBackground[i] = row;
-            ReferenceUiVisuals.Text(row.rectTransform, "Name", $"{i + 1}. İnşaatçı", 14, ReferenceUiVisuals.Light,
-                TextAlignmentOptions.Left, new Vector2(0f, 0f), new Vector2(0.42f, 1f),
+            rowName[i] = ReferenceUiVisuals.Text(row.rectTransform, "Name", $"{i + 1}. İnşaatçı", 14, ReferenceUiVisuals.Light,
+                TextAlignmentOptions.Left, new Vector2(0f, 0f), new Vector2(0.36f, 1f),
                 new Vector2(18f, 0f), Vector2.zero, bodyBold: true);
             rowStatus[i] = ReferenceUiVisuals.Text(row.rectTransform, "Status", "", 13, ReferenceUiVisuals.Muted,
-                TextAlignmentOptions.Right, new Vector2(0.40f, 0f), new Vector2(1f, 1f),
+                TextAlignmentOptions.Right, new Vector2(0.34f, 0f), new Vector2(1f, 1f),
                 Vector2.zero, new Vector2(-18f, 0f));
+            // Süren işi elmasla hemen bitir.
+            int index = i;
+            rowFinish[i] = ReferenceUiVisuals.Button(row.rectTransform, "Finish", "", true,
+                new Vector2(0.74f, 0.1f), new Vector2(0.98f, 0.9f), Vector2.zero, Vector2.zero, 12);
+            rowFinishLabel[i] = rowFinish[i].GetComponentInChildren<TextMeshProUGUI>();
+            rowFinish[i].onClick.AddListener(() => GemActions.OfferFinish(rowTask[index], Refresh));
+            rowFinish[i].gameObject.SetActive(false);
         }
+
+        // Elmas güçlendirmeleri: İnşaat İksiri ve misafir inşaatçı.
+        var potion = ReferenceUiVisuals.Button(cardRect, "PotionBtn", "", false,
+            new Vector2(0.05f, 0.255f), new Vector2(0.495f, 0.345f), Vector2.zero, Vector2.zero, 13);
+        potionLabel = potion.GetComponentInChildren<TextMeshProUGUI>();
+        potion.onClick.AddListener(() => GemActions.OfferPotion(Refresh));
+        GemConfirm.AddGemIcon(potion.transform);
+        var guestButton = ReferenceUiVisuals.Button(cardRect, "GuestBtn", "", false,
+            new Vector2(0.505f, 0.255f), new Vector2(0.95f, 0.345f), Vector2.zero, Vector2.zero, 13);
+        guestLabel = guestButton.GetComponentInChildren<TextMeshProUGUI>();
+        guestButton.onClick.AddListener(() => GemActions.OfferTempBuilder(Refresh));
+        GemConfirm.AddGemIcon(guestButton.transform);
 
         hireButton = ReferenceUiVisuals.Button(cardRect, "HireBtn", "", true,
             new Vector2(0.12f, 0.12f), new Vector2(0.88f, 0.23f), Vector2.zero, Vector2.zero, 15);
@@ -110,14 +135,33 @@ public sealed class BuilderPanel : MonoBehaviour
         var gm = GameManager.Instance;
         if (gm == null) return;
         int total = gm.BuilderCount;
-        summary.text = $"Boşta {gm.FreeBuilderCount} / {total}  ·  Elmas: {gm.Gems}";
+        int working = gm.WorkingBuilderCount;
+        summary.text = $"Boşta {gm.FreeBuilderCount} / {working}  ·  Elmas: {gm.Gems}";
+
+        potionLabel.text = gm.BuildPotionActive
+            ? $"   İKSİR · {GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks)}"
+            : $"   İKSİR {GemEconomy.PotionSpeed}x · {GemEconomy.PotionCost}";
+        guestLabel.text = gm.TempBuilderActive
+            ? $"   MİSAFİR · {GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks)}"
+            : $"   MİSAFİR {GemEconomy.TempBuilderHours}sa · {GemEconomy.TempBuilderCost}";
 
         for (int i = 0; i < Progression.MaxBuilders; i++)
         {
             var status = rowStatus[i];
-            if (i < total)
+            var task = i < working ? gm.TaskForBuilder(i) : null;
+            rowTask[i] = task;
+            rowFinish[i].gameObject.SetActive(task != null);
+            var statusRect = status.rectTransform;
+            statusRect.anchorMax = new Vector2(task != null ? 0.73f : 1f, 1f);
+            statusRect.offsetMax = new Vector2(task != null ? -4f : -18f, 0f);
+            if (task != null)
             {
-                var task = gm.TaskForBuilder(i);
+                int cost = GameManager.FinishNowCost(task);
+                rowFinishLabel[i].text = cost > 0 ? $"BİTİR {cost}" : "BİTİR";
+            }
+            rowName[i].text = i >= total && i < working ? "Misafir" : $"{i + 1}. İnşaatçı";
+            if (i < working)
+            {
                 status.text = task == null ? "<color=#9FD37E>Boşta</color>"
                     : $"{ShortLabel(task)} · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
                 rowBackground[i].color = Color.white;
