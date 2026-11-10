@@ -75,6 +75,8 @@ public class PlayerSaveData
     public int pendingSpeedupMinutes;
 
     // Elmas güçlendirmeleri (GemEconomy): İnşaat İksiri ve geçici inşaatçı bitişi (UTC tick).
+    // Son kayıt anı (UTC tick): kopyalar arasından en yenisini seçmek için.
+    public long lastSavedTicks;
     public long buildPotionUntilTicks;
     public long tempBuilderUntilTicks;
     // Elmas kazanma (GemRewards): reklamla elmas günü/sayısı, ödüllendirilmiş en yüksek Ana Üs seviyesi.
@@ -272,16 +274,114 @@ public class BuildingSaveEntry
 public static class SaveSystem
 {
     private const string SAVE_KEY = "MiniEmpireBuilder_SaveData";
+    // Bir önceki sağlam kayıt (asıl kayıt bozulursa buradan açılır).
+    private const string BACKUP_KEY = "MiniEmpireBuilder_SaveData_Backup";
+    // Hiçbir kopya açılamazsa, yeni oyun üstüne yazmadan önce bozuk kayıt burada saklanır (destek için).
+    private const string CORRUPT_KEY = "MiniEmpireBuilder_SaveData_Corrupt";
+    private const string FILE_NAME = "save.json";
+
+    /// <summary>Son yazılan/okunan sağlam JSON: bir sonraki kayıtta yedeğe geçer.</summary>
+    private static string lastGoodJson;
+
+    private static string FilePath => System.IO.Path.Combine(Application.persistentDataPath, FILE_NAME);
 
     /// <summary>
-    /// Oyuncu verisini kaydet
+    /// Oyuncu verisini kaydet. Üç kopya: PlayerPrefs asıl + bir önceki kaydın yedeği +
+    /// persistentDataPath'te dosya (önce geçici dosyaya yazılır, sonra yerine konur: yarım yazma kalmaz).
     /// </summary>
     public static void Save(PlayerSaveData data)
     {
-        string json = JsonUtility.ToJson(data, true);
+        if (data == null) return;
+        data.lastSavedTicks = DateTime.UtcNow.Ticks;
+        string json = JsonUtility.ToJson(data);
+        if (!string.IsNullOrEmpty(lastGoodJson) && lastGoodJson != json)
+            PlayerPrefs.SetString(BACKUP_KEY, lastGoodJson);
         PlayerPrefs.SetString(SAVE_KEY, json);
         PlayerPrefs.Save();
+        WriteFileAtomic(json);
+        lastGoodJson = json;
+#if UNITY_EDITOR
         Debug.Log("[SaveSystem] Oyun kaydedildi.");
+#endif
+    }
+
+    private static void WriteFileAtomic(string json)
+    {
+        try
+        {
+            string path = FilePath;
+            string temp = path + ".tmp";
+            System.IO.File.WriteAllText(temp, json);
+            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+            System.IO.File.Move(temp, path);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[SaveSystem] Kayıt dosyası yazılamadı: " + e.Message);
+        }
+    }
+
+    private static string ReadFile()
+    {
+        try { return System.IO.File.Exists(FilePath) ? System.IO.File.ReadAllText(FilePath) : null; }
+        catch { return null; }
+    }
+
+    /// <summary>JSON sağlam mı: tam (yarım kesilmemiş) ve çözülebiliyor. Sağlamsa kayıt anını verir.</summary>
+    public static bool TryParse(string json, out long savedTicks)
+    {
+        savedTicks = -1;
+        if (string.IsNullOrEmpty(json)) return false;
+        string trimmed = json.Trim();
+        if (!trimmed.StartsWith("{") || !trimmed.EndsWith("}")) return false;
+        try
+        {
+            var data = JsonUtility.FromJson<PlayerSaveData>(trimmed);
+            if (data == null || data.saveVersion < 0) return false;
+            savedTicks = data.lastSavedTicks;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Asıl kayıt, dosya ve yedekten sağlam olanların en yenisi. Hiçbiri sağlam değilse null
+    /// (bozuk asıl kayıt CORRUPT_KEY'e saklanır).
+    /// </summary>
+    public static string PickBestJson()
+    {
+        string[] candidates =
+        {
+            PlayerPrefs.HasKey(SAVE_KEY) ? PlayerPrefs.GetString(SAVE_KEY) : null,
+            ReadFile(),
+            PlayerPrefs.HasKey(BACKUP_KEY) ? PlayerPrefs.GetString(BACKUP_KEY) : null
+        };
+        string best = null;
+        long bestTicks = long.MinValue;
+        bool anyExisted = false;
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (string.IsNullOrEmpty(candidates[i])) continue;
+            anyExisted = true;
+            if (!TryParse(candidates[i], out long ticks)) continue;
+            if (best == null || ticks > bestTicks)
+            {
+                best = candidates[i];
+                bestTicks = ticks;
+            }
+        }
+        if (best == null && anyExisted)
+        {
+            Debug.LogError("[SaveSystem] Hiçbir kayıt kopyası açılamadı; bozuk kayıt saklandı.");
+            PlayerPrefs.SetString(CORRUPT_KEY, candidates[0] ?? candidates[1] ?? candidates[2]);
+            PlayerPrefs.Save();
+        }
+        else if (best != null && best != candidates[0])
+            Debug.LogWarning("[SaveSystem] Asıl kayıt bozuk ya da eski: yedekten açıldı.");
+        return best?.Trim();
     }
 
     /// <summary>
@@ -289,9 +389,10 @@ public static class SaveSystem
     /// </summary>
     public static PlayerSaveData Load()
     {
-        if (PlayerPrefs.HasKey(SAVE_KEY))
+        string json = PickBestJson();
+        if (json != null)
         {
-            string json = PlayerPrefs.GetString(SAVE_KEY);
+            lastGoodJson = json;
             PlayerSaveData data = JsonUtility.FromJson<PlayerSaveData>(json);
             if (data.campaignProgress == null)
                 data.campaignProgress = new List<CampaignLevelProgress>();
@@ -410,7 +511,7 @@ public static class SaveSystem
     /// </summary>
     public static bool HasSave()
     {
-        return PlayerPrefs.HasKey(SAVE_KEY);
+        return PlayerPrefs.HasKey(SAVE_KEY) || PlayerPrefs.HasKey(BACKUP_KEY) || System.IO.File.Exists(FilePath);
     }
 
     /// <summary>
@@ -419,6 +520,10 @@ public static class SaveSystem
     public static void DeleteSave()
     {
         PlayerPrefs.DeleteKey(SAVE_KEY);
+        PlayerPrefs.DeleteKey(BACKUP_KEY);
+        lastGoodJson = null;
+        try { if (System.IO.File.Exists(FilePath)) System.IO.File.Delete(FilePath); }
+        catch (Exception e) { Debug.LogWarning("[SaveSystem] Kayıt dosyası silinemedi: " + e.Message); }
         Debug.Log("[SaveSystem] Kayıt silindi.");
     }
 }

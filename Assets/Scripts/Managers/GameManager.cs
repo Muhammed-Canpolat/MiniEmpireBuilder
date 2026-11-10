@@ -637,6 +637,52 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // ==================== GELİŞTİRİCİ TEST MENÜSÜ (yalnız editör / Development APK) ====================
+
+    /// <summary>Ana Üs seviyesini doğrudan ayarlar (binalar açılır, kahraman tavanı değişir).</summary>
+    public void DevSetMainBaseLevel(int level)
+    {
+        if (PlayerData == null) return;
+        level = Mathf.Clamp(level, 1, Progression.MaxLevel);
+        foreach (var placed in PlayerData.placedBuildings)
+            if (placed != null && placed.buildingType == BuildingType.MainBase.ToString()) placed.level = level;
+        var entry = PlayerData.buildings.Find(e => e.buildingType == BuildingType.MainBase);
+        if (entry != null) entry.level = level;
+        if (Buildings.TryGetValue(BuildingType.MainBase, out var data)) data.level = level;
+        RecomputeTypeLevel(BuildingType.MainBase);
+        CheckUnlockBuildings();
+        SaveGame();
+        OnBuildingUpgraded?.Invoke(BuildingType.MainBase, level);
+    }
+
+    /// <summary>
+    /// Zamanı ileri alır: kayıttaki bütün süreler geçmişe kaydırılır (inşaat, can, maden, güçlendirmeler,
+    /// ağaç/kaya büyümesi). Gerçek saate dokunmaz.
+    /// </summary>
+    public void DevAdvanceTime(TimeSpan span)
+    {
+        if (PlayerData == null) return;
+        long t = span.Ticks;
+        long Shift(long value) => value > 0 ? value - t : value;
+        foreach (var task in PlayerData.builderTasks)
+        {
+            task.startTicks = Shift(task.startTicks);
+            task.endTicks = Shift(task.endTicks);
+        }
+        PlayerData.livesLastRegenTicks = Shift(PlayerData.livesLastRegenTicks);
+        PlayerData.goldMineLastCollectTime = Shift(PlayerData.goldMineLastCollectTime);
+        PlayerData.buildPotionUntilTicks = Shift(PlayerData.buildPotionUntilTicks);
+        PlayerData.tempBuilderUntilTicks = Shift(PlayerData.tempBuilderUntilTicks);
+        PlayerData.mineBoostUntilTicks = Shift(PlayerData.mineBoostUntilTicks);
+        PlayerData.unlimitedLivesUntilTicks = Shift(PlayerData.unlimitedLivesUntilTicks);
+        PlayerData.terrainLastGrowTicks = Shift(PlayerData.terrainLastGrowTicks);
+        ApplyOfflineGoldMineProduction();
+        CheckBuilderTask();
+        SaveGame();
+    }
+#endif
+
     private void Update() => CheckBuilderTask();
 
     private void CheckBuilderTask()
