@@ -44,6 +44,9 @@ public sealed class GemShopUI : MonoBehaviour
         open = root.AddComponent<GemShopUI>();
         open.Build(ReferenceUiVisuals.SafeArea(canvas.transform));
         open.Refresh();
+        FirstTimeTips.Show("gems", L.T(
+            "Elmasla inşaatları hemen bitirebilir, savaşta devam edebilir ya da güçlendirme alabilirsin. Seferde yeni yıldızlar elmas getirir.",
+            "Use gems to finish construction instantly, continue battles or buy boosts. New campaign stars earn gems."));
         AudioManager.Instance?.PlaySfx("click");
     }
 

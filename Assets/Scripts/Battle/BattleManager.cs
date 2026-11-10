@@ -661,6 +661,7 @@ public class BattleManager : MonoBehaviour
 
     public void OnEnemyKilled(int goldReward)
     {
+        DailyQuests.Report(QuestKind.KillEnemies);
         if (!battleActive) return;
 
         enemiesAlive--;
@@ -876,6 +877,9 @@ public class BattleManager : MonoBehaviour
             bool heroStar = heroHealth > 0.5f && (heroController == null || heroController.TimesDowned == 0);
             lastStars = 1 + (baseHealth > 0.5f ? 1 : 0) + (heroStar ? 1 : 0);
             // Yeni yıldız ve ilk boss zaferi elmas getirir (kayıttan önce: eski yıldızla karşılaştırılır).
+            int starsBefore = CampaignProgress.Stars(BattleSession.RegionId, BattleSession.LevelNumber);
+            DailyQuests.Report(QuestKind.WinCampaign);
+            DailyQuests.Report(QuestKind.EarnStars, Mathf.Max(0, lastStars - starsBefore));
             GemRewards.ForVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
             CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
         }

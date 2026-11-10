@@ -172,6 +172,9 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         respawnGroup.blocksRaycasts = downed;
         if (downed)
         {
+            FirstTimeTips.Show("respawn", L.T(
+                "Savaşçın düştü ama savaş sürüyor: birkaç saniye sonra Ana Üs'ün önünde kalkar. Yenilgi yalnız Ana Üs yıkılınca olur.",
+                "Your warrior fell but the battle goes on: they rise again at the Main Base in a few seconds. You only lose if the Main Base falls."));
             respawnText.text = $"Savaşçı düştü · {Mathf.CeilToInt(hero.RespawnRemaining)} sn sonra üste döner";
             bool enough = GameManager.Instance != null && GameManager.Instance.Gems >= GemEconomy.InstantRespawnCost;
             respawnLabel.text = enough ? $"   HEMEN KALK · {GemEconomy.InstantRespawnCost}" : "   ELMAS YETMİYOR";

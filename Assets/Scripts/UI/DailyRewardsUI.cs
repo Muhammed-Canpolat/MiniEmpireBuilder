@@ -37,6 +37,8 @@ public sealed class DailyRewardsUI : MonoBehaviour
         // İlk açılış rehberi bittiyse ve bugün alınmadıysa pencere kendiliğinden açılır.
         yield return new WaitForSeconds(1.2f);
         var data = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
+        // "Sen yokken" penceresi açıksa önce o kapanır.
+        while (AwayReportUI.IsOpen) yield return null;
         if (data != null && data.firstBaseGuideDone && DailyRewards.CanClaim) Open();
     }
 

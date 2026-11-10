@@ -35,7 +35,7 @@ public sealed class DevMenu : MonoBehaviour
         ReferenceUiVisuals.ConfigureCanvas(canvasObject.GetComponent<CanvasScaler>());
         safe = ReferenceUiVisuals.SafeArea(canvas.transform);
 
-        var anchor = new Vector2(0f, 0.62f);
+        var anchor = new Vector2(0f, 0.55f);
         var toggle = ReferenceUiVisuals.Button(safe, "DevToggle", "DEV", false, anchor, anchor,
             new Vector2(6, -14), new Vector2(50, 14), 11);
         toggle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.55f);

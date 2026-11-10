@@ -89,6 +89,12 @@ public class PlayerSaveData
     public int adMineDay;
     public int adChestDay;
     public int royalGemDay;
+    // Günlük görevler (DailyQuests): gün, seçilen 3 görev, ilerleme, alınanlar, bonus.
+    public int questDay;
+    public List<int> questKinds = new List<int>();
+    public List<int> questProgress = new List<int>();
+    public List<bool> questClaimed = new List<bool>();
+    public bool questBonusClaimed;
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur

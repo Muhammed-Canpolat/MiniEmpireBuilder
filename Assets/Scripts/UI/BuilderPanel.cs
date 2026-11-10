@@ -36,6 +36,9 @@ public sealed class BuilderPanel : MonoBehaviour
         open = root.gameObject.AddComponent<BuilderPanel>();
         open.Build(root);
         open.Refresh();
+        FirstTimeTips.Show("builders", L.T(
+            "Her inşaatçı aynı anda bir iş yapar. Süren işi elmasla ya da reklamla hızlandırabilir, İnşaat İksiri ile herkesi 4 kat hızlandırabilirsin.",
+            "Each builder does one job at a time. Speed up jobs with gems or ads, or use a Construction Potion to make everyone 4x faster."));
         AudioManager.Instance?.PlaySfx("click");
     }
 

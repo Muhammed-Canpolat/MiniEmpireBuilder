@@ -94,6 +94,9 @@ public class GameManager : MonoBehaviour
         {
             PlayerData.hero.ApplyLevelStats();
             RebuildBuildingData();
+            // "Sen yokken" özeti: kapalı geçen süre, o ana kadarki maden/can, bitecek işler.
+            if (PlayerData.lastSavedTicks > 0)
+                AwayReport.Begin(PlayerData, new TimeSpan(DateTime.UtcNow.Ticks - PlayerData.lastSavedTicks).TotalSeconds);
             // Oyun kapalıyken süresi dolan yükseltme hemen uygulanır.
             CheckBuilderTask();
             if (PlayerData.buildableSize <= 0)
@@ -185,6 +188,7 @@ public class GameManager : MonoBehaviour
         int toCollect = Mathf.Min(PlayerData.goldMineStoredGold, walletSpace);
         PlayerData.goldMineStoredGold -= toCollect;
         PlayerData.gold += toCollect;
+        if (toCollect > 0) DailyQuests.Report(QuestKind.CollectMine);
 
         OnGoldChanged?.Invoke(PlayerData.gold);
         OnGoldMineStoredChanged?.Invoke(PlayerData.goldMineStoredGold, GetGoldMineStorageCapacity());
@@ -243,6 +247,7 @@ public class GameManager : MonoBehaviour
         }
 
         PlayerData.gold -= amount;
+        DailyQuests.Report(QuestKind.SpendGold, amount);
         OnGoldChanged?.Invoke(PlayerData.gold);
         Debug.Log($"[GameManager] -{amount} altın harcandı. Kalan: {PlayerData.gold}");
         return true;
@@ -377,6 +382,7 @@ public class GameManager : MonoBehaviour
         Vector3 position = placed != null && placed.hasPosition ? new Vector3(placed.x, placed.y, 0f) : Vector3.zero;
         StartBuilderTask("upgrade", $"{BaseMapManager.GetBuildingDisplayName(type)} Sev. {level + 1}",
             Progression.UpgradeSecondsTo(level + 1), position, slotId, type.ToString());
+        DailyQuests.Report(QuestKind.StartUpgrade);
         return true;
     }
 
@@ -1008,14 +1014,22 @@ public class GameManager : MonoBehaviour
         {
             ApplyOfflineGoldMineProduction();
             SaveGame();
+            pausedAtTicks = DateTime.UtcNow.Ticks;
         }
         else if (FindFirstObjectByType<BaseWorldController>() != null)
         {
+            if (pausedAtTicks > 0)
+            {
+                AwayReport.Begin(PlayerData, new TimeSpan(DateTime.UtcNow.Ticks - pausedAtTicks).TotalSeconds);
+                pausedAtTicks = 0;
+            }
             // Üs açıkken geri dönüldü: arka planda geçen süre şimdi eklenir
             // (savaştaysa üsse dönüşte BaseWorldController.Start ekler).
             ApplyOfflineGoldMineProduction();
         }
     }
+
+    private long pausedAtTicks;
 
     private void OnApplicationQuit()
     {
