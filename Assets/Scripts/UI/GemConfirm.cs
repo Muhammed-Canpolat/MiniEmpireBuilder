@@ -74,8 +74,8 @@ public sealed class GemConfirm : MonoBehaviour
         var gm = GameManager.Instance;
         int gems = gm != null ? gm.Gems : 0;
         bool enough = cost <= gems;
-        string label = cost <= 0 ? $"{action} · BEDAVA"
-            : enough ? $"{action} · {cost}" : $"ELMAS YETMİYOR · {gems}/{cost}";
+        string label = cost <= 0 ? $"{action} · " + L.T("BEDAVA", "FREE")
+            : enough ? $"{action} · {cost}" : L.T("ELMAS YETMİYOR · ", "NOT ENOUGH GEMS · ") + $"{gems}/{cost}";
         var button = ReferenceUiVisuals.Button(panel.transform, "ConfirmButton", label, enough,
             new Vector2(0, 0), new Vector2(1, 0), new Vector2(22, 20), new Vector2(-22, 72), 17);
         if (cost > 0) AddGemIcon(button.transform);

@@ -509,7 +509,7 @@ public class BattleSceneSetup : MonoBehaviour
         TextMeshProUGUI waveText = CreateText(topBar.transform, "WaveText",
             new Vector2(0.35f, 0.55f), new Vector2(0.65f, 0.95f),
             Vector2.zero, Vector2.zero,
-            "Dalga 1/3", 28, TextAlignmentOptions.Center);
+            L.T("Dalga 1/3", "Wave 1/3"), 28, TextAlignmentOptions.Center);
         waveText.fontStyle = FontStyles.Bold;
 
         // Düşman sayısı — sağ üst
@@ -616,7 +616,7 @@ public class BattleSceneSetup : MonoBehaviour
         GameObject btnObj = CreateButton(endInner.transform, "VictoryReturnButton",
             new Vector2(0.15f, 0.06f), new Vector2(0.85f, 0.30f),
             Vector2.zero, Vector2.zero,
-            "Devam Et", new Color(0.15f, 0.65f, 0.25f));
+            L.T("Devam Et", "Continue"), new Color(0.15f, 0.65f, 0.25f));
 
         // ===== BattleUI bileşenini ekle ve referansları ata =====
         endPanel.AddComponent<VictoryReferenceView>().Initialize(

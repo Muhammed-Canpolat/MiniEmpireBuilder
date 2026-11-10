@@ -50,17 +50,17 @@ public static class GemActions
         if (gm == null) return;
         if (gm.BuildPotionActive)
         {
-            Toast($"İnşaat İksiri zaten etkin: {GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks)} kaldı");
+            Toast(L.T("İnşaat İksiri zaten etkin: ", "Construction Potion already active: ") + GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks));
             return;
         }
-        GemConfirm.Show("İNŞAAT İKSİRİ",
-            $"{GemEconomy.PotionHours} saat boyunca bütün inşaatçılar {GemEconomy.PotionSpeed} kat hızlı çalışır. " +
-            "Süren işler de hızlanır, oyun kapalıyken de işler.",
-            GemEconomy.PotionCost, "İÇ", () =>
+        GemConfirm.Show(L.T("İNŞAAT İKSİRİ", "CONSTRUCTION POTION"),
+            L.T($"{GemEconomy.PotionHours} saat boyunca bütün inşaatçılar {GemEconomy.PotionSpeed} kat hızlı çalışır. Süren işler de hızlanır, oyun kapalıyken de işler.",
+                $"For {GemEconomy.PotionHours} hours all builders work {GemEconomy.PotionSpeed}x faster. Running jobs speed up too, even while offline."),
+            GemEconomy.PotionCost, L.T("İÇ", "DRINK"), () =>
             {
                 if (!gm.ActivateBuildPotion()) return;
                 AudioManager.Instance?.PlaySfx("levelUp");
-                Toast($"İnşaat İksiri etkin: {GemEconomy.PotionHours} saat {GemEconomy.PotionSpeed} kat hız!");
+                Toast(L.T($"İnşaat İksiri etkin: {GemEconomy.PotionHours} saat {GemEconomy.PotionSpeed} kat hız!", $"Construction Potion active: {GemEconomy.PotionSpeed}x speed for {GemEconomy.PotionHours} hours!"));
                 after?.Invoke();
             });
     }
@@ -71,21 +71,21 @@ public static class GemActions
         if (gm == null) return;
         if (gm.TempBuilderActive)
         {
-            Toast($"Misafir inşaatçı zaten burada: {GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks)} kaldı");
+            Toast(L.T("Misafir inşaatçı zaten burada: ", "Guest builder already here: ") + GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks));
             return;
         }
         if (!gm.CanRentTempBuilder)
         {
-            Toast("Bütün inşaatçılar kiralandı: misafire gerek yok");
+            Toast(L.T("Bütün inşaatçılar kiralandı: misafire gerek yok", "All builders hired: no guest needed"));
             return;
         }
-        GemConfirm.Show("MİSAFİR İNŞAATÇI",
-            $"{GemEconomy.TempBuilderHours} saat boyunca bir inşaatçı daha. Süre biterken elindeki işi yine de bitirir.",
-            GemEconomy.TempBuilderCost, "KİRALA", () =>
+        GemConfirm.Show(L.T("MİSAFİR İNŞAATÇI", "GUEST BUILDER"),
+            L.T($"{GemEconomy.TempBuilderHours} saat boyunca bir inşaatçı daha. Süre biterken elindeki işi yine de bitirir.", $"One more builder for {GemEconomy.TempBuilderHours} hours. They still finish their current job when time runs out."),
+            GemEconomy.TempBuilderCost, L.T("KİRALA", "HIRE"), () =>
             {
                 if (!gm.RentTempBuilder()) return;
                 AudioManager.Instance?.PlaySfx("levelUp");
-                Toast($"Misafir inşaatçı geldi: {GemEconomy.TempBuilderHours} saat yanında");
+                Toast(L.T($"Misafir inşaatçı geldi: {GemEconomy.TempBuilderHours} saat yanında", $"Guest builder arrived for {GemEconomy.TempBuilderHours} hours"));
                 after?.Invoke();
             });
     }
@@ -98,9 +98,9 @@ public static class GemActions
         int missing = neededGold - gm.Gold;
         if (missing <= 0) { if (start()) after?.Invoke(); return; }
         int cost = GemEconomy.GoldTopUpCost(missing);
-        GemConfirm.Show("ALTIN EKSİK",
-            $"{what} için {missing} altın eksik.\nElmasla tamamlayıp hemen başlatalım mı?",
-            cost, "TAMAMLA", () =>
+        GemConfirm.Show(L.T("ALTIN EKSİK", "NOT ENOUGH GOLD"),
+            L.T($"{what} için {missing} altın eksik.\nElmasla tamamlayıp hemen başlatalım mı?", $"{what} needs {missing} more gold.\nTop up with gems and start now?"),
+            cost, L.T("TAMAMLA", "TOP UP"), () =>
             {
                 if (!gm.TopUpGold(neededGold)) return;
                 if (start()) after?.Invoke();

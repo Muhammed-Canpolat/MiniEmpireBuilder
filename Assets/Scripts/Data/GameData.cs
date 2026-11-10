@@ -365,13 +365,15 @@ public static class Progression
     public static string FormatDuration(double seconds)
     {
         long s = (long)System.Math.Ceiling(System.Math.Max(0d, seconds));
-        if (s < 60) return s + " sn";
+        // Birimler dile göre: sn/dk/sa/g ya da s/m/h/d.
+        string S = L.T(" sn", "s"), M = L.T(" dk", "m"), H = L.T(" sa", "h"), D = L.T(" g", "d");
+        if (s < 60) return s + S;
         long m = s / 60, sec = s % 60;
-        if (m < 60) return sec > 0 && m < 10 ? m + " dk " + sec + " sn" : m + " dk";
+        if (m < 60) return sec > 0 && m < 10 ? m + M + " " + sec + S : m + M;
         long h = m / 60, min = m % 60;
-        if (h < 24) return min > 0 ? h + " sa " + min + " dk" : h + " sa";
+        if (h < 24) return min > 0 ? h + H + " " + min + M : h + H;
         long d = h / 24, hr = h % 24;
-        return hr > 0 ? d + " g " + hr + " sa" : d + " g";
+        return hr > 0 ? d + D + " " + hr + H : d + D;
     }
 }
 

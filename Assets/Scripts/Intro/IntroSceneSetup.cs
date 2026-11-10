@@ -235,7 +235,7 @@ public class IntroSceneSetup : MonoBehaviour
                 ReferenceUiVisuals.ApplyButtonSkin(old.GetComponent<Button>(), hasSave);
                 AddDepthShadow(old.gameObject);
                 var label = old.GetComponentInChildren<TextMeshProUGUI>();
-                label.text = hasSave ? "DEVAM ET" : "YENİ OYUN";
+                label.text = hasSave ? L.T("DEVAM ET", "CONTINUE") : L.T("YENİ OYUN", "NEW GAME");
                 label.fontSize = hasSave ? 22 : 18;
                 label.fontSizeMax = label.fontSize;
                 label.color = hasSave ? ReferenceUiVisuals.Hex(0x2A1A08) : ReferenceUiVisuals.Light;
@@ -256,7 +256,7 @@ public class IntroSceneSetup : MonoBehaviour
                 ReferenceUiVisuals.ApplyButtonSkin(old.GetComponent<Button>(), false);
                 AddDepthShadow(old.gameObject);
                 var label = old.GetComponentInChildren<TextMeshProUGUI>();
-                label.text = "YENİ OYUN";
+                label.text = L.T("YENİ OYUN", "NEW GAME");
                 label.fontSize = label.fontSizeMax = 18;
                 label.color = ReferenceUiVisuals.Light;
                 var font = Resources.Load<Font>("Fonts/Cinzel-Bold");
@@ -674,7 +674,7 @@ public class IntroSceneSetup : MonoBehaviour
             ntrt.offsetMax = Vector2.zero;
 
             TextMeshProUGUI newTmp = newTxtObj.AddComponent<TextMeshProUGUI>();
-            newTmp.text             = "YENİ OYUN";
+            newTmp.text             = L.T("YENİ OYUN", "NEW GAME");
             newTmp.fontSize         = 28f;
             newTmp.alignment        = TextAlignmentOptions.Center;
             newTmp.color            = Gold;

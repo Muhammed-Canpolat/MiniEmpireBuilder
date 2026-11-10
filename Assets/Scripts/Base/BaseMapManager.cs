@@ -1495,7 +1495,7 @@ public class BaseMapManager : MonoBehaviour
         textRt.offsetMin = textRt.offsetMax = Vector2.zero;
 
         TextMeshProUGUI text = textGo.AddComponent<TextMeshProUGUI>();
-        text.text = "Maden";
+        text.text = L.T("Maden", "Mine");
         text.fontSize = 28f;
         text.fontStyle = FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
@@ -1567,7 +1567,7 @@ public class BaseMapManager : MonoBehaviour
         switch (type)
         {
             case BuildingType.MainBase: return L.T("Ana Üs", "Main Base");
-            case BuildingType.GoldMine: return "Maden";
+            case BuildingType.GoldMine: return L.T("Maden", "Mine");
             case BuildingType.ArcherTower: return L.T("Okçu", "Archer");
             case BuildingType.CannonTower: return L.T("Topçu", "Cannon");
             case BuildingType.Monastery: return L.T("Manastır", "Monastery");
@@ -1580,7 +1580,7 @@ public class BaseMapManager : MonoBehaviour
         if (GameManager.Instance?.Buildings == null) return "";
         if (!GameManager.Instance.Buildings.ContainsKey(type)) return "";
         var bd = GameManager.Instance.Buildings[type];
-        return bd.isUnlocked ? $"Sev. {bd.level}" : "Kilitli";
+        return bd.isUnlocked ? L.T("Sev. ", "Lv. ") + bd.level : L.T("Kilitli", "Locked");
     }
 
     public static Color GetBuildingColor(BuildingType type)

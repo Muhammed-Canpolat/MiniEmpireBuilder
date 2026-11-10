@@ -365,7 +365,7 @@ public class BaseSceneSetup : MonoBehaviour
         // --- Info Panels (Building + Hero) ---
         GameObject buildingInfoPanel = CreatePanel(canvasObj.transform, "BuildingInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
         TextMeshProUGUI bName = CreateText(buildingInfoPanel.transform, "Name", L.T("Bina Adı", "Building"), new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.95f), 45, TextAlignmentOptions.Center, Color.white);
-        TextMeshProUGUI bLvl = CreateText(buildingInfoPanel.transform, "Level", "Seviye 1", new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.8f), 35, TextAlignmentOptions.Center, Color.yellow);
+        TextMeshProUGUI bLvl = CreateText(buildingInfoPanel.transform, "Level", L.T("Seviye 1", "Level 1"), new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.8f), 35, TextAlignmentOptions.Center, Color.yellow);
         TextMeshProUGUI bStats = CreateText(buildingInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f), 28, TextAlignmentOptions.TopLeft, Color.white);
         Button bUpBtn = CreateButton(buildingInfoPanel.transform, "UpBtn", L.T("Yükselt", "Upgrade"), new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
         TextMeshProUGUI bCost = bUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
@@ -373,7 +373,7 @@ public class BaseSceneSetup : MonoBehaviour
 
         GameObject heroInfoPanel = CreatePanel(canvasObj.transform, "HeroInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
         TextMeshProUGUI hName = CreateText(heroInfoPanel.transform, "Name", "Kahraman", new Vector2(0.1f, 0.85f), new Vector2(0.84f, 0.96f), 37, TextAlignmentOptions.Center, Color.white);
-        TextMeshProUGUI hLvl = CreateText(heroInfoPanel.transform, "Level", "Seviye 1", new Vector2(0.1f, 0.60f), new Vector2(0.9f, 0.72f), 31, TextAlignmentOptions.Center, Color.yellow);
+        TextMeshProUGUI hLvl = CreateText(heroInfoPanel.transform, "Level", L.T("Seviye 1", "Level 1"), new Vector2(0.1f, 0.60f), new Vector2(0.9f, 0.72f), 31, TextAlignmentOptions.Center, Color.yellow);
         TextMeshProUGUI hStats = CreateText(heroInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.34f), new Vector2(0.9f, 0.60f), 25, TextAlignmentOptions.TopLeft, Color.white);
         Button hUpBtn = CreateButton(heroInfoPanel.transform, "UpBtn", L.T("Yükselt", "Upgrade"), new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
         TextMeshProUGUI hCost = hUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();

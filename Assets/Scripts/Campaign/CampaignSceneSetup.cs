@@ -445,7 +445,7 @@ public class CampaignSceneSetup : MonoBehaviour
         {
             Box(chip.transform, "Star", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, -8), new Vector2(26, 8),
                 ReferenceUiVisuals.Gold).sprite = GetStarSprite();
-            Label(chip.transform, "Status", complete ? $"{stars}/15 · TAMAM" : $"{stars}/15 · Seviye {CampaignProgress.FirstIncomplete(region)}",
+            Label(chip.transform, "Status", complete ? $"{stars}/15 · " + L.T("TAMAM", "DONE") : $"{stars}/15 · " + L.T("Seviye ", "Level ") + CampaignProgress.FirstIncomplete(region),
                 12, Ink, false, Vector2.zero, Vector2.one, new Vector2(28, 0), new Vector2(-8, 0));
         }
         else
@@ -487,7 +487,7 @@ public class CampaignSceneSetup : MonoBehaviour
         });
         var top = new Vector2(0.5f, 1f);
         ArtAt(tile, "Ribbon", "ui_ribbon_purple", top, new Vector2(0, -26), new Vector2(214, 56), false);
-        var name = LabelAt(tile, "EndlessName", "SONSUZ SEFER", top, new Vector2(0, -24), new Vector2(146, 24), 14,
+        var name = LabelAt(tile, "EndlessName", L.T("SONSUZ SEFER", "ENDLESS"), top, new Vector2(0, -24), new Vector2(146, 24), 14,
             ReferenceUiVisuals.Light, true);
         Shadowed(name);
         var chip = ArtImage(tile, "StatusChip", "ui_paper", top, top, new Vector2(-92, -80), new Vector2(92, -56), 16f);

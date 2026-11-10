@@ -139,7 +139,7 @@ public static class LivesSystem
     /// <summary>"12:34" ya da "1 sa 5 dk" biçiminde kısa süre.</summary>
     public static string Format(TimeSpan time)
     {
-        if (time.TotalHours >= 1) return $"{(int)time.TotalHours} sa {time.Minutes} dk";
+        if (time.TotalHours >= 1) return L.T($"{(int)time.TotalHours} sa {time.Minutes} dk", $"{(int)time.TotalHours}h {time.Minutes}m");
         return $"{time.Minutes:00}:{time.Seconds:00}";
     }
 }

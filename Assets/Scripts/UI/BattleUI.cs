@@ -92,7 +92,7 @@ public class BattleUI : MonoBehaviour
             float remaining = BattleManager.Instance.NextWaveAt - Time.time;
             bool show = BattleManager.Instance.IsBattleActive && remaining > 0f;
             nextWaveCountdown.gameObject.SetActive(show);
-            if (show) nextWaveCountdown.text = $"Sonraki dalga {Mathf.CeilToInt(remaining)}";
+            if (show) nextWaveCountdown.text = L.T("Sonraki dalga ", "Next wave ") + Mathf.CeilToInt(remaining);
         }
     }
 
@@ -177,7 +177,7 @@ public class BattleUI : MonoBehaviour
     {
         EnsureWaveSegments(total);
         if (waveText != null)
-            waveText.text = $"DALGA {current}/{total}";
+            waveText.text = L.T("DALGA ", "WAVE ") + $"{current}/{total}";
         if (waveProgressFill != null && total > 0)
             waveProgressFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01((float)current / total), 1f);
         if (waveSegments != null)

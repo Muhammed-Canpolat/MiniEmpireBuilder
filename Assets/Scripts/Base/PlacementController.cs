@@ -393,7 +393,7 @@ public class PlacementController : MonoBehaviour
         textRect.anchorMax = Vector2.one;
         textRect.offsetMin = textRect.offsetMax = Vector2.zero;
         var label = text.GetComponent<TextMeshProUGUI>();
-        label.text = "Geri al";
+        label.text = L.T("Geri al", "Undo");
         label.fontSize = 18f;
         label.alignment = TextAlignmentOptions.Center;
         label.color = ReferenceUiVisuals.Gold;

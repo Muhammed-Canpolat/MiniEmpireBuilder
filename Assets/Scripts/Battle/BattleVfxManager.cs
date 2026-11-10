@@ -173,7 +173,7 @@ public class BattleVfxManager : MonoBehaviour
         trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
         trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
         TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
-        tmp.text = $"DALGA {waveNumber}";
+        tmp.text = L.T("DALGA ", "WAVE ") + waveNumber;
         tmp.fontSize = 52f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;

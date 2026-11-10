@@ -211,7 +211,7 @@ public class BaseWorldUI : MonoBehaviour
         UpdateGoldDisplay(GameManager.Instance.Gold);
 
         if (battleLevelText != null)
-            battleLevelText.text = $"ANA ÜS · SEV. {GameManager.Instance.GetMainBaseLevel()}";
+            battleLevelText.text = L.T("ANA ÜS · SEV. ", "MAIN BASE · LV. ") + GameManager.Instance.GetMainBaseLevel();
 
         if (goldPerSecText != null)
         {
@@ -239,9 +239,9 @@ public class BaseWorldUI : MonoBehaviour
             levelFill.anchorMax = new Vector2(maxed || cost <= 0 ? 1f : Mathf.Clamp01((float)gold / cost), 1f);
             var caption = levelFill.parent.parent.Find("BaseLevelCaption")?.GetComponent<TMPro.TextMeshProUGUI>();
             if (caption != null)
-                caption.text = maxed ? "En yüksek seviye"
-                    : gold >= cost ? $"<color=#F0C24A>Sev. {mainBase.level + 1} yükseltmesine hazır!</color>"
-                    : $"Sev. {mainBase.level + 1} için {gold}/{cost} altın";
+                caption.text = maxed ? L.T("En yüksek seviye", "Max level")
+                    : gold >= cost ? L.T($"<color=#F0C24A>Sev. {mainBase.level + 1} yükseltmesine hazır!</color>", $"<color=#F0C24A>Ready to upgrade to Lv. {mainBase.level + 1}!</color>")
+                    : L.T($"Sev. {mainBase.level + 1} için {gold}/{cost} altın", $"Lv. {mainBase.level + 1}: {gold}/{cost} gold");
         }
         if (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
             ShowBuildingInfo(selectedBuilding, selectedSlotId);
@@ -272,7 +272,7 @@ public class BaseWorldUI : MonoBehaviour
             return;
         }
 
-        mineStoredText.text = $"Maden: {stored}/{capacity}";
+        mineStoredText.text = L.T("Maden: ", "Mine: ") + $"{stored}/{capacity}";
     }
 
     // ==================== BİNA PANELİ ====================
@@ -312,8 +312,8 @@ public class BaseWorldUI : MonoBehaviour
             buildingNameText.text = GetBuildingDisplayName(type);
 
         if (buildingLevelText != null)
-            buildingLevelText.text = !typeData.isUnlocked ? "KİLİTLİ"
-                : $"Seviye {building.level} / {Progression.MaxLevel}";
+            buildingLevelText.text = !typeData.isUnlocked ? L.T("KİLİTLİ", "LOCKED")
+                : L.T("Seviye ", "Level ") + $"{building.level} / {Progression.MaxLevel}";
 
         if (buildingStatsText != null)
             buildingStatsText.text = GetBuildingStatsText(building);
@@ -326,26 +326,26 @@ public class BaseWorldUI : MonoBehaviour
         if (upgradeCostText != null)
         {
             if (!typeData.isUnlocked)
-                upgradeCostText.text = $"Ana Üs Sev. {typeData.GetRequiredMainBaseLevel()} gerekli";
+                upgradeCostText.text = L.T($"Ana Üs Sev. {typeData.GetRequiredMainBaseLevel()} gerekli", $"Requires Main Base Lv. {typeData.GetRequiredMainBaseLevel()}");
             else if (task != null)
             {
                 // Süren iş: düğme "hemen bitir" olur (1 dk altı bedava).
                 int finish = GameManager.FinishNowCost(task);
                 string left = Progression.FormatDuration(GameManager.SecondsRemaining(task));
-                upgradeCostText.text = finish > 0 ? $"HEMEN BİTİR · {finish} ELMAS · {left}" : $"BEDAVA BİTİR · {left}";
+                upgradeCostText.text = finish > 0 ? L.T($"HEMEN BİTİR · {finish} ELMAS · {left}", $"FINISH NOW · {finish} GEMS · {left}") : L.T($"BEDAVA BİTİR · {left}", $"FINISH FREE · {left}");
             }
             else if (building.level >= Progression.MaxLevel)
-                upgradeCostText.text = "EN YÜKSEK SEVİYE";
+                upgradeCostText.text = L.T("EN YÜKSEK SEVİYE", "MAX LEVEL");
             else if (block == GameManager.UpgradeBlock.MaxLevel)
-                upgradeCostText.text = $"Önce Ana Üs Sev. {building.level + (type == BuildingType.GoldMine ? 0 : 1)}";
+                upgradeCostText.text = L.T("Önce Ana Üs Sev. ", "First Main Base Lv. ") + (building.level + (type == BuildingType.GoldMine ? 0 : 1));
             else if (block == GameManager.UpgradeBlock.BuilderBusy)
                 upgradeCostText.text = gm.BuilderCount > 1
-                    ? $"TÜM İNŞAATÇILAR MEŞGUL · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}"
-                    : $"İNŞAATÇI MEŞGUL · {Progression.FormatDuration(gm.BuilderSecondsRemaining)}";
+                    ? L.T("TÜM İNŞAATÇILAR MEŞGUL · ", "ALL BUILDERS BUSY · ") + Progression.FormatDuration(gm.BuilderSecondsRemaining)
+                    : L.T("İNŞAATÇI MEŞGUL · ", "BUILDER BUSY · ") + Progression.FormatDuration(gm.BuilderSecondsRemaining);
             else if (block == GameManager.UpgradeBlock.NoGold)
-                upgradeCostText.text = $"YÜKSELT · <color=#C2452D>{cost}</color> · {duration}";
+                upgradeCostText.text = L.T("YÜKSELT · ", "UPGRADE · ") + $"<color=#C2452D>{cost}</color> · {duration}";
             else
-                upgradeCostText.text = $"YÜKSELT · {cost} · {duration}";
+                upgradeCostText.text = L.T("YÜKSELT · ", "UPGRADE · ") + $"{cost} · {duration}";
         }
 
         if (upgradeButton != null)
@@ -416,8 +416,8 @@ public class BaseWorldUI : MonoBehaviour
         {
             int apprenticeLevel = GameManager.Instance.PlayerData.apprenticeLevel;
             int apprenticeCost = GameManager.Instance.GetApprenticeUpgradeCost();
-            if (heroNameText != null) heroNameText.text = "ÇIRAK";
-            if (heroLevelText != null) heroLevelText.text = $"Seviye {apprenticeLevel}";
+            if (heroNameText != null) heroNameText.text = L.T("ÇIRAK", "APPRENTICE");
+            if (heroLevelText != null) heroLevelText.text = L.T("Seviye ", "Level ") + apprenticeLevel;
             if (heroStatsText != null)
             {
                 var progression = ApprenticeProgressionData.Instance;
@@ -426,16 +426,16 @@ public class BaseWorldUI : MonoBehaviour
                     int next = Mathf.Min(GameManager.Instance.GetApprenticeMaxLevel(), apprenticeLevel + 1);
                     string Arrow(int from, int to) => next == apprenticeLevel ? from.ToString()
                         : $"{from} → {to} ▲";
-                    heroStatsText.text = $"Can {Arrow(progression.Health(hero.weaponType, apprenticeLevel), progression.Health(hero.weaponType, next))}\n" +
-                        $"Hasar {Arrow(progression.Damage(hero.weaponType, apprenticeLevel), progression.Damage(hero.weaponType, next))}\n" +
-                        $"Maden +%{progression.MineBonus(apprenticeLevel)}" +
+                    heroStatsText.text = L.T("Can ", "Health ") + $"{Arrow(progression.Health(hero.weaponType, apprenticeLevel), progression.Health(hero.weaponType, next))}\n" +
+                        L.T("Hasar ", "Damage ") + $"{Arrow(progression.Damage(hero.weaponType, apprenticeLevel), progression.Damage(hero.weaponType, next))}\n" +
+                        L.T($"Maden +%{progression.MineBonus(apprenticeLevel)}", $"Mine +{progression.MineBonus(apprenticeLevel)}%") +
                         (next == apprenticeLevel ? "" : $" → +%{progression.MineBonus(next)} ▲");
                 }
             }
             if (heroUpgradeCostText != null)
-                heroUpgradeCostText.text = apprenticeLevel >= Progression.MaxLevel ? "EN YÜKSEK SEVİYE"
+                heroUpgradeCostText.text = apprenticeLevel >= Progression.MaxLevel ? L.T("EN YÜKSEK SEVİYE", "MAX LEVEL")
                     : apprenticeLevel >= GameManager.Instance.GetApprenticeMaxLevel()
-                        ? "Ana Üs seviyesini yükselt!" : $"YÜKSELT · {apprenticeCost}";
+                        ? L.T("Ana Üs seviyesini yükselt!", "Upgrade your Main Base!") : L.T("YÜKSELT · ", "UPGRADE · ") + apprenticeCost;
             if (heroUpgradeButton != null)
                 heroUpgradeButton.interactable = apprenticeLevel < GameManager.Instance.GetApprenticeMaxLevel() &&
                     GameManager.Instance.Gold >= apprenticeCost;
@@ -443,10 +443,10 @@ public class BaseWorldUI : MonoBehaviour
         }
 
         if (heroNameText != null)
-            heroNameText.text = "Ana Savaşçı";
+            heroNameText.text = L.T("Ana Savaşçı", "Main Warrior");
 
         if (heroLevelText != null)
-            heroLevelText.text = $"Seviye {hero.level}";
+            heroLevelText.text = L.T("Seviye ", "Level ") + hero.level;
 
         if (heroStatsText != null)
         {
@@ -457,11 +457,11 @@ public class BaseWorldUI : MonoBehaviour
             bool more = next.level > hero.level;
             string Up(string now, string then) => more && now != then ? $"{now} → {then} ▲" : now;
             heroStatsText.text = $"XP: —\n" +
-                                 $"Can: {Up(hero.maxHealth.ToString("F0"), next.maxHealth.ToString("F0"))}\n" +
-                                 $"Hasar: {Up(hero.damage.ToString("F0"), next.damage.ToString("F0"))}\n" +
-                                 $"Kalkan: {Up("%" + Mathf.RoundToInt(hero.shield * 100f), "%" + Mathf.RoundToInt(next.shield * 100f))}\n" +
-                                 $"Menzil: {hero.attackRange:F1}\n" +
-                                 $"Saldırı Hızı: {hero.attackSpeed:F1}/sn";
+                                 L.T("Can: ", "Health: ") + $"{Up(hero.maxHealth.ToString("F0"), next.maxHealth.ToString("F0"))}\n" +
+                                 L.T("Hasar: ", "Damage: ") + $"{Up(hero.damage.ToString("F0"), next.damage.ToString("F0"))}\n" +
+                                 L.T("Kalkan: ", "Shield: ") + $"{Up("%" + Mathf.RoundToInt(hero.shield * 100f), "%" + Mathf.RoundToInt(next.shield * 100f))}\n" +
+                                 L.T("Menzil: ", "Range: ") + $"{hero.attackRange:F1}\n" +
+                                 L.T($"Saldırı Hızı: {hero.attackSpeed:F1}/sn", $"Attack Speed: {hero.attackSpeed:F1}/s");
         }
 
         int maxHeroLvl = GameManager.Instance.GetHeroMaxLevel();
@@ -469,11 +469,11 @@ public class BaseWorldUI : MonoBehaviour
         if (heroUpgradeCostText != null)
         {
             if (hero.level >= Progression.MaxLevel)
-                heroUpgradeCostText.text = "EN YÜKSEK SEVİYE";
+                heroUpgradeCostText.text = L.T("EN YÜKSEK SEVİYE", "MAX LEVEL");
             else if (hero.level >= maxHeroLvl)
-                heroUpgradeCostText.text = "Ana Üs seviyesini yükselt!";
+                heroUpgradeCostText.text = L.T("Ana Üs seviyesini yükselt!", "Upgrade your Main Base!");
             else
-                heroUpgradeCostText.text = $"YÜKSELT · {cost}";
+                heroUpgradeCostText.text = L.T("YÜKSELT · ", "UPGRADE · ") + cost;
         }
 
         if (heroUpgradeButton != null)
@@ -505,7 +505,7 @@ public class BaseWorldUI : MonoBehaviour
         if (gm.CanUpgrade(slot, type) == GameManager.UpgradeBlock.NoGold)
         {
             int cost = Progression.UpgradeCost(type, gm.GetInstanceLevel(slot, type) + 1);
-            GemActions.OfferGoldTopUp(cost, "Bu yükseltme", () => gm.StartUpgrade(slot, type), () =>
+            GemActions.OfferGoldTopUp(cost, L.T("Bu yükseltme", "This upgrade"), () => gm.StartUpgrade(slot, type), () =>
             {
                 AudioManager.Instance?.PlaySfx("buildingPlace");
                 ShowBuildingInfo(type, slot);
@@ -534,7 +534,7 @@ public class BaseWorldUI : MonoBehaviour
     private void CreateCharacterTabs()
     {
         if (heroInfoPanel == null) return;
-        string[] labels = { "KAHRAMAN", "ÇIRAK" };
+        string[] labels = { L.T("KAHRAMAN", "HERO"), L.T("ÇIRAK", "APPRENTICE") };
         for (int i = 0; i < 2; i++)
         {
             int selected = i;
@@ -627,11 +627,11 @@ public class BaseWorldUI : MonoBehaviour
     {
         switch (type)
         {
-            case BuildingType.MainBase: return "Ana Üs";
-            case BuildingType.ArcherTower: return "Okçu Kulesi";
-            case BuildingType.CannonTower: return "Topçu Kulesi";
-            case BuildingType.GoldMine: return "Altın Madeni";
-            case BuildingType.Monastery: return "Manastır";
+            case BuildingType.MainBase: return L.T("Ana Üs", "Main Base");
+            case BuildingType.ArcherTower: return L.T("Okçu Kulesi", "Archer Tower");
+            case BuildingType.CannonTower: return L.T("Topçu Kulesi", "Cannon Tower");
+            case BuildingType.GoldMine: return L.T("Altın Madeni", "Gold Mine");
+            case BuildingType.Monastery: return L.T("Manastır", "Monastery");
             default: return type.ToString();
         }
     }
@@ -646,35 +646,35 @@ public class BaseWorldUI : MonoBehaviour
             if (Progression.FirstUnlockLevel(type) == nextLevel) unlocked.Add(GetBuildingDisplayName(type));
             else if (Progression.SecondUnlockLevel(type) == nextLevel) unlocked.Add("2. " + GetBuildingDisplayName(type));
         }
-        if (BaseWorldLayout.NextLandLevel(currentLevel) == nextLevel) unlocked.Add("yeni arazi");
+        if (BaseWorldLayout.NextLandLevel(currentLevel) == nextLevel) unlocked.Add(L.T("yeni arazi", "new land"));
         foreach (var region in CampaignCatalog.Regions)
             if (region.requiredBaseLevel == nextLevel) unlocked.Add(L.Asset(region.displayName));
-        return unlocked.Count > 0 ? $"Sev. {nextLevel}: {string.Join(" + ", unlocked)}" : "";
+        return unlocked.Count > 0 ? L.T("Sev. ", "Lv. ") + $"{nextLevel}: {string.Join(" + ", unlocked)}" : "";
     }
 
     private string GetBuildingStatsText(BuildingData building)
     {
         if (!building.isUnlocked || building.level <= 0)
-            return "Henüz inşa edilmedi.";
+            return L.T("Henüz inşa edilmedi.", "Not built yet.");
 
         switch (building.buildingType)
         {
             case BuildingType.MainBase:
-                return $"Can: {building.maxHealth:F0}";
+                return L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}";
 
             case BuildingType.ArcherTower:
             case BuildingType.CannonTower:
-                return $"Can: {building.maxHealth:F0}\n" +
-                       $"Hasar: {building.damage:F0}\n" +
-                       $"Birim: {building.unitCount}\n" +
-                       $"Menzil: {building.attackRange:F1}";
+                return L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}\n" +
+                       L.T("Hasar: ", "Damage: ") + $"{building.damage:F0}\n" +
+                       L.T("Birim: ", "Units: ") + $"{building.unitCount}\n" +
+                       L.T("Menzil: ", "Range: ") + $"{building.attackRange:F1}";
 
             case BuildingType.GoldMine:
-                return $"Can: {building.maxHealth:F0}\n" +
-                       $"Üretim: {building.goldPerSecond:F1} altın/sn";
+                return L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}\n" +
+                       L.T($"Üretim: {building.goldPerSecond:F1} altın/sn", $"Production: {building.goldPerSecond:F1} gold/s");
 
             case BuildingType.Monastery:
-                return $"Can: {building.maxHealth:F0}\nİyileştirme: 3 sn'de %3\nMenzil: 4";
+                return L.T(L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}\nİyileştirme: 3 sn'de %3\nMenzil: 4", $"Health: {building.maxHealth:F0}\nHealing: 3% every 3 s\nRange: 4");
 
 
             default:

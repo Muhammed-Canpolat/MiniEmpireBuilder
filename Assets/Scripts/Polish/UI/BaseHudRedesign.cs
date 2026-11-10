@@ -141,7 +141,7 @@ public static class BaseHudRedesign
         var build = hud.Find("BuildBtn") as RectTransform;
         var battle = hud.Find("BattleBtn") as RectTransform;
         StackedButton(build, new Vector2(0.17f, 0f), DockButtonWidth, DockButtonHeight, 46f, false, L.T("İNŞA ET", "BUILD"));
-        StackedButton(battle, new Vector2(0.5f, 0f), CenterButtonWidth, CenterButtonHeight, 52f, true, "SEFER");
+        StackedButton(battle, new Vector2(0.5f, 0f), CenterButtonWidth, CenterButtonHeight, 52f, true, L.T("SEFER", "CAMPAIGN"));
 
         if (hud.Find("HeroBtn") == null)
         {
@@ -157,7 +157,7 @@ public static class BaseHudRedesign
             if (label != null) label.name = "Label";
             hero.onClick.AddListener(() => BaseWorldUI.Instance?.ShowHeroInfo());
             StackedButton((RectTransform)hero.transform, new Vector2(0.83f, 0f), DockButtonWidth,
-                DockButtonHeight, 46f, false, "KAHRAMAN");
+                DockButtonHeight, 46f, false, L.T("KAHRAMAN", "HERO"));
         }
     }
 

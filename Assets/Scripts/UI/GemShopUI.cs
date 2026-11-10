@@ -90,7 +90,7 @@ public sealed class GemShopUI : MonoBehaviour
         panel.transform.DOScale(1f, 0.22f).SetEase(Ease.OutBack).SetUpdate(true).SetLink(panel.gameObject);
         var p = panel.transform;
 
-        TopText(p, "Title", "ELMAS DÜKKANI", 16, 22, 22, Ink, true);
+        TopText(p, "Title", L.T("ELMAS DÜKKANI", "GEM SHOP"), 16, 22, 22, Ink, true);
         // Elmas sayısı (Development APK'da 5 hızlı dokunuş = +100 test elması).
         var gemPill = TopRect(p, "GemPill", 118, 50, 120, 30);
         var pillImage = gemPill.gameObject.AddComponent<Image>();
@@ -110,31 +110,31 @@ public sealed class GemShopUI : MonoBehaviour
 
         var gm = GameManager.Instance;
         float y = 92f;
-        TopText(p, "BoostsTitle", "GÜÇLENDİRMELER", 18, y, 16, Ink, true, TextAlignmentOptions.Left);
+        TopText(p, "BoostsTitle", L.T("GÜÇLENDİRMELER", "BOOSTS"), 18, y, 16, Ink, true, TextAlignmentOptions.Left);
         y += 22f;
-        AddRow(p, ref y, "ui_icon_hammer", "İnşaat İksiri",
+        AddRow(p, ref y, "ui_icon_hammer", L.T("İnşaat İksiri", "Construction Potion"),
             () => gm != null && gm.BuildPotionActive
-                ? $"Etkin · {GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks)}"
-                : $"{GemEconomy.PotionHours} sa bütün inşaatçılar {GemEconomy.PotionSpeed}x hızlı",
-            () => gm != null && gm.BuildPotionActive ? "ETKİN" : GemEconomy.PotionCost.ToString(),
+                ? L.T("Etkin · ", "Active · ") + GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks)
+                : L.T($"{GemEconomy.PotionHours} sa bütün inşaatçılar {GemEconomy.PotionSpeed}x hızlı", $"All builders {GemEconomy.PotionSpeed}x faster for {GemEconomy.PotionHours} h"),
+            () => gm != null && gm.BuildPotionActive ? L.T("ETKİN", "ACTIVE") : GemEconomy.PotionCost.ToString(),
             () => GemActions.OfferPotion(Refresh));
-        AddRow(p, ref y, "ui_hero_marker", "Misafir İnşaatçı",
+        AddRow(p, ref y, "ui_hero_marker", L.T("Misafir İnşaatçı", "Guest Builder"),
             () => gm != null && gm.TempBuilderActive
-                ? $"Burada · {GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks)}"
-                : gm != null && !gm.CanRentTempBuilder ? "5 inşaatçın var, gerek yok"
-                : $"{GemEconomy.TempBuilderHours} sa bir inşaatçı daha",
-            () => gm != null && gm.TempBuilderActive ? "ETKİN" : GemEconomy.TempBuilderCost.ToString(),
+                ? L.T("Burada · ", "Here · ") + GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks)
+                : gm != null && !gm.CanRentTempBuilder ? L.T("5 inşaatçın var, gerek yok", "You have 5 builders already")
+                : L.T($"{GemEconomy.TempBuilderHours} sa bir inşaatçı daha", $"One more builder for {GemEconomy.TempBuilderHours} h"),
+            () => gm != null && gm.TempBuilderActive ? L.T("ETKİN", "ACTIVE") : GemEconomy.TempBuilderCost.ToString(),
             () => GemActions.OfferTempBuilder(Refresh));
-        AddRow(p, ref y, "ui_icon_coin", "Maden 2x",
+        AddRow(p, ref y, "ui_icon_coin", L.T("Maden 2x", "Mine 2x"),
             () => gm != null && gm.MineBoostActive
-                ? $"Etkin · {GemEconomy.FormatRemaining(gm.PlayerData.mineBoostUntilTicks)} (+{GemEconomy.MineBoostHours} sa eklenir)"
-                : $"{GemEconomy.MineBoostHours} sa altın madeni 2 kat üretir",
+                ? L.T("Etkin · ", "Active · ") + GemEconomy.FormatRemaining(gm.PlayerData.mineBoostUntilTicks)
+                : L.T($"{GemEconomy.MineBoostHours} sa altın madeni 2 kat üretir", $"Gold mine produces 2x for {GemEconomy.MineBoostHours} h"),
             () => GemEconomy.MineBoostCost.ToString(),
             OfferMineBoost);
-        AddRow(p, ref y, "ui_icon_heart", "Canları Doldur",
-            () => LivesSystem.Unlimited ? "Sınırsız can sürüyor"
-                : $"Can {LivesSystem.Lives}/{LivesSystem.MaxLives} → {LivesSystem.MaxLives}/{LivesSystem.MaxLives}",
-            () => LivesSystem.CanRefillWithGems ? GemEconomy.RefillLivesCost.ToString() : "DOLU",
+        AddRow(p, ref y, "ui_icon_heart", L.T("Canları Doldur", "Refill Lives"),
+            () => LivesSystem.Unlimited ? L.T("Sınırsız can sürüyor", "Unlimited lives active")
+                : L.T("Can ", "Lives ") + $"{LivesSystem.Lives}/{LivesSystem.MaxLives} → {LivesSystem.MaxLives}/{LivesSystem.MaxLives}",
+            () => LivesSystem.CanRefillWithGems ? GemEconomy.RefillLivesCost.ToString() : L.T("DOLU", "FULL"),
             OfferRefillLives);
 
         y += 6f;
@@ -152,7 +152,7 @@ public sealed class GemShopUI : MonoBehaviour
             OpenChest, false);
 
         y += 6f;
-        TopText(p, "PacksTitle", "ELMAS PAKETLERİ", 18, y, 16, Ink, true, TextAlignmentOptions.Left);
+        TopText(p, "PacksTitle", L.T("ELMAS PAKETLERİ", "GEM PACKS"), 18, y, 16, Ink, true, TextAlignmentOptions.Left);
         y += 22f;
         string[] packs = { "80", "500", "1200" };
         for (int i = 0; i < packs.Length; i++)
@@ -164,7 +164,7 @@ public sealed class GemShopUI : MonoBehaviour
             image.color = ReferenceUiVisuals.Hex(0x5A4127);
             var button = tile.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            button.onClick.AddListener(() => GemActions.Toast("Elmas paketleri mağaza bağlantısıyla gelecek"));
+            button.onClick.AddListener(() => GemActions.Toast(L.T("Elmas paketleri mağaza bağlantısıyla gelecek", "Gem packs arrive with the store connection")));
             var icon = ReferenceUiVisuals.Image(tile, "Gem", new Vector2(0.06f, 0.3f), new Vector2(0.36f, 0.9f),
                 Vector2.zero, Vector2.zero, Color.white);
             icon.sprite = GemIcon.Sprite;
@@ -172,14 +172,14 @@ public sealed class GemShopUI : MonoBehaviour
             icon.raycastTarget = false;
             ReferenceUiVisuals.Text(tile, "Amount", packs[i], 16, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
                 new Vector2(0.36f, 0.3f), new Vector2(1f, 0.9f), Vector2.zero, new Vector2(-4, 0), true);
-            ReferenceUiVisuals.Text(tile, "Soon", "YAKINDA", 10, ReferenceUiVisuals.Muted, TextAlignmentOptions.Center,
+            ReferenceUiVisuals.Text(tile, "Soon", L.T("YAKINDA", "SOON"), 10, ReferenceUiVisuals.Muted, TextAlignmentOptions.Center,
                 Vector2.zero, new Vector2(1f, 0.32f), new Vector2(4, 4), new Vector2(-4, 0), false, true);
         }
         y += 72f;
 
         ReferenceUiVisuals.Text(p, "EarnInfo",
-            $"Elmas kazan: seferde yeni yıldız +{GemEconomy.GemsPerNewStar} · bölge bossu ilk kez +{GemEconomy.GemsPerFirstBossWin} · " +
-            $"yeni Ana Üs seviyesi +{GemEconomy.GemsPerMainBaseLevel} · giriş takviminin 7. günü 20",
+            L.T($"Elmas kazan: seferde yeni yıldız +{GemEconomy.GemsPerNewStar} · bölge bossu ilk kez +{GemEconomy.GemsPerFirstBossWin} · yeni Ana Üs seviyesi +{GemEconomy.GemsPerMainBaseLevel} · giriş takviminin 7. günü 20",
+                $"Earn gems: new campaign star +{GemEconomy.GemsPerNewStar} · first region boss win +{GemEconomy.GemsPerFirstBossWin} · new Main Base level +{GemEconomy.GemsPerMainBaseLevel} · day 7 of the login calendar 20"),
             11, InkMuted, TextAlignmentOptions.Center, new Vector2(0, 1), Vector2.one,
             new Vector2(18, -y - 40), new Vector2(-18, -y), false, true);
 
@@ -284,15 +284,15 @@ public sealed class GemShopUI : MonoBehaviour
     {
         if (!LivesSystem.CanRefillWithGems)
         {
-            GemActions.Toast(LivesSystem.Unlimited ? "Sınırsız can sürüyor" : "Canların zaten dolu");
+            GemActions.Toast(LivesSystem.Unlimited ? L.T("Sınırsız can sürüyor", "Unlimited lives active") : L.T("Canların zaten dolu", "Your lives are already full"));
             return;
         }
-        GemConfirm.Show("CANLARI DOLDUR", $"Canların {LivesSystem.MaxLives}/{LivesSystem.MaxLives} olur.",
-            GemEconomy.RefillLivesCost, "DOLDUR", () =>
+        GemConfirm.Show(L.T("CANLARI DOLDUR", "REFILL LIVES"), L.T($"Canların {LivesSystem.MaxLives}/{LivesSystem.MaxLives} olur.", $"Your lives become {LivesSystem.MaxLives}/{LivesSystem.MaxLives}."),
+            GemEconomy.RefillLivesCost, L.T("DOLDUR", "REFILL"), () =>
             {
                 if (!LivesSystem.RefillWithGems()) return;
                 AudioManager.Instance?.PlaySfx("levelUp");
-                GemActions.Toast("Canlar doldu!");
+                GemActions.Toast(L.T("Canlar doldu!", "Lives refilled!"));
                 Refresh();
             });
     }
@@ -301,13 +301,13 @@ public sealed class GemShopUI : MonoBehaviour
     {
         if (!GemRewards.CanWatchAdForGems)
         {
-            GemActions.Toast("Bugünkü reklam hakların bitti, yarın yine gel");
+            GemActions.Toast(L.T("Bugünkü reklam hakların bitti, yarın yine gel", "No ads left today, come back tomorrow"));
             return;
         }
         RewardedAds.Show("gems", ok =>
         {
             if (!ok || !GemRewards.RewardAdGems()) return;
-            GemActions.Toast($"+{GemEconomy.GemsPerAd} elmas!");
+            GemActions.Toast(L.T($"+{GemEconomy.GemsPerAd} elmas!", $"+{GemEconomy.GemsPerAd} gems!"));
             Refresh();
         });
     }
@@ -320,7 +320,7 @@ public sealed class GemShopUI : MonoBehaviour
         if (testTaps < 5) return;
         testTaps = 0;
         GameManager.Instance?.AddGems(100);
-        GemActions.Toast("[TEST] +100 elmas");
+        GemActions.Toast("[TEST] +100");
         Refresh();
 #endif
     }

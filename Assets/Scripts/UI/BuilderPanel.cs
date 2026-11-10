@@ -68,7 +68,7 @@ public sealed class BuilderPanel : MonoBehaviour
         card.raycastTarget = true;
         var cardRect = card.rectTransform;
 
-        ReferenceUiVisuals.Text(cardRect, "Title", "İNŞAATÇILAR", 22, ReferenceUiVisuals.Gold,
+        ReferenceUiVisuals.Text(cardRect, "Title", L.T("İNŞAATÇILAR", "BUILDERS"), 22, ReferenceUiVisuals.Gold,
             TextAlignmentOptions.Center, new Vector2(0f, 0.88f), new Vector2(1f, 0.98f),
             new Vector2(40f, 0f), new Vector2(-40f, 0f), title: true);
         summary = ReferenceUiVisuals.Text(cardRect, "Summary", "", 14, ReferenceUiVisuals.Muted,
@@ -88,7 +88,7 @@ public sealed class BuilderPanel : MonoBehaviour
             row.sprite = ReferenceUiVisuals.PillSprite();
             row.type = Image.Type.Sliced;
             rowBackground[i] = row;
-            rowName[i] = ReferenceUiVisuals.Text(row.rectTransform, "Name", $"{i + 1}. İnşaatçı", 14, ReferenceUiVisuals.Light,
+            rowName[i] = ReferenceUiVisuals.Text(row.rectTransform, "Name", L.T($"{i + 1}. İnşaatçı", $"Builder {i + 1}"), 14, ReferenceUiVisuals.Light,
                 TextAlignmentOptions.Left, new Vector2(0f, 0f), new Vector2(0.36f, 1f),
                 new Vector2(18f, 0f), Vector2.zero, bodyBold: true);
             rowStatus[i] = ReferenceUiVisuals.Text(row.rectTransform, "Status", "", 13, ReferenceUiVisuals.Muted,
@@ -120,7 +120,7 @@ public sealed class BuilderPanel : MonoBehaviour
         hireLabel = hireButton.GetComponentInChildren<TextMeshProUGUI>();
         hireButton.onClick.AddListener(OnHire);
         ReferenceUiVisuals.Text(cardRect, "Note",
-            "Kulübeyi basılı tutup sürükleyerek taşıyabilirsin", 12, ReferenceUiVisuals.Muted,
+            L.T("Kulübeyi basılı tutup sürükleyerek taşıyabilirsin", "Press and drag a hut to move it"), 12, ReferenceUiVisuals.Muted,
             TextAlignmentOptions.Center, new Vector2(0f, 0.02f), new Vector2(1f, 0.11f),
             new Vector2(16f, 0f), new Vector2(-16f, 0f));
     }
@@ -139,14 +139,14 @@ public sealed class BuilderPanel : MonoBehaviour
         if (gm == null) return;
         int total = gm.BuilderCount;
         int working = gm.WorkingBuilderCount;
-        summary.text = $"Boşta {gm.FreeBuilderCount} / {working}  ·  Elmas: {gm.Gems}";
+        summary.text = L.T($"Boşta {gm.FreeBuilderCount} / {working}  ·  Elmas: {gm.Gems}", $"Free {gm.FreeBuilderCount} / {working}  ·  Gems: {gm.Gems}");
 
         potionLabel.text = gm.BuildPotionActive
-            ? $"   İKSİR · {GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks)}"
-            : $"   İKSİR {GemEconomy.PotionSpeed}x · {GemEconomy.PotionCost}";
+            ? L.T("   İKSİR · ", "   POTION · ") + GemEconomy.FormatRemaining(gm.PlayerData.buildPotionUntilTicks)
+            : L.T($"   İKSİR {GemEconomy.PotionSpeed}x · {GemEconomy.PotionCost}", $"   POTION {GemEconomy.PotionSpeed}x · {GemEconomy.PotionCost}");
         guestLabel.text = gm.TempBuilderActive
-            ? $"   MİSAFİR · {GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks)}"
-            : $"   MİSAFİR {GemEconomy.TempBuilderHours}sa · {GemEconomy.TempBuilderCost}";
+            ? L.T("   MİSAFİR · ", "   GUEST · ") + GemEconomy.FormatRemaining(gm.PlayerData.tempBuilderUntilTicks)
+            : L.T($"   MİSAFİR {GemEconomy.TempBuilderHours}sa · {GemEconomy.TempBuilderCost}", $"   GUEST {GemEconomy.TempBuilderHours}h · {GemEconomy.TempBuilderCost}");
 
         for (int i = 0; i < Progression.MaxBuilders; i++)
         {
@@ -160,43 +160,43 @@ public sealed class BuilderPanel : MonoBehaviour
             if (task != null)
             {
                 int cost = GameManager.FinishNowCost(task);
-                rowFinishLabel[i].text = cost > 0 ? $"BİTİR {cost}" : "BİTİR";
+                rowFinishLabel[i].text = cost > 0 ? L.T("BİTİR ", "FINISH ") + cost : L.T("BİTİR", "FINISH");
             }
-            rowName[i].text = i >= total && i < working ? "Misafir" : $"{i + 1}. İnşaatçı";
+            rowName[i].text = i >= total && i < working ? L.T("Misafir", "Guest") : L.T($"{i + 1}. İnşaatçı", $"Builder {i + 1}");
             if (i < working)
             {
-                status.text = task == null ? "<color=#9FD37E>Boşta</color>"
+                status.text = task == null ? L.T("<color=#9FD37E>Boşta</color>", "<color=#9FD37E>Idle</color>")
                     : $"{ShortLabel(task)} · {Progression.FormatDuration(GameManager.SecondsRemaining(task))}";
                 rowBackground[i].color = Color.white;
             }
             else
             {
                 var cost = Progression.BuilderCost(i + 1);
-                string price = cost.gold > 0 ? $"{cost.gold} altın" : $"{cost.gems} elmas";
+                string price = cost.gold > 0 ? L.T($"{cost.gold} altın", $"{cost.gold} gold") : L.T($"{cost.gems} elmas", $"{cost.gems} gems");
                 status.text = i + 1 == 2
-                    ? $"Ana Üs Sev. {Progression.SecondBuilderMainBaseLevel} · {price}"
-                    : $"Kilitli · {price}";
+                    ? L.T("Ana Üs Sev. ", "Main Base Lv. ") + $"{Progression.SecondBuilderMainBaseLevel} · {price}"
+                    : L.T("Kilitli · ", "Locked · ") + price;
                 rowBackground[i].color = new Color(1f, 1f, 1f, 0.55f);
             }
         }
 
         var block = gm.CanHireBuilder();
         var next = gm.NextBuilderCost;
-        string nextPrice = next.gold > 0 ? $"{next.gold} ALTIN" : $"{next.gems} ELMAS";
+        string nextPrice = next.gold > 0 ? L.T($"{next.gold} ALTIN", $"{next.gold} GOLD") : L.T($"{next.gems} ELMAS", $"{next.gems} GEMS");
         switch (block)
         {
             case GameManager.HireBlock.MaxReached:
-                hireLabel.text = "TÜM İNŞAATÇILAR HAZIR";
+                hireLabel.text = L.T("TÜM İNŞAATÇILAR HAZIR", "ALL BUILDERS HIRED");
                 break;
             case GameManager.HireBlock.MainBaseLevel:
-                hireLabel.text = $"ANA ÜS SEV. {Progression.SecondBuilderMainBaseLevel} GEREKLİ";
+                hireLabel.text = L.T($"ANA ÜS SEV. {Progression.SecondBuilderMainBaseLevel} GEREKLİ", $"REQUIRES MAIN BASE LV. {Progression.SecondBuilderMainBaseLevel}");
                 break;
             case GameManager.HireBlock.NoGold:
             case GameManager.HireBlock.NoGems:
-                hireLabel.text = $"{total + 1}. İNŞAATÇI · <color=#8A2A1A>{nextPrice}</color>";
+                hireLabel.text = L.T($"{total + 1}. İNŞAATÇI", $"BUILDER {total + 1}") + $" · <color=#8A2A1A>{nextPrice}</color>";
                 break;
             default:
-                hireLabel.text = $"{total + 1}. İNŞAATÇI · {nextPrice}";
+                hireLabel.text = L.T($"{total + 1}. İNŞAATÇI", $"BUILDER {total + 1}") + $" · {nextPrice}";
                 break;
         }
         bool canPress = block == GameManager.HireBlock.None || block == GameManager.HireBlock.NoGold
@@ -208,8 +208,8 @@ public sealed class BuilderPanel : MonoBehaviour
 
     private static string ShortLabel(BuilderTaskSave task)
     {
-        if (task.kind == "remove") return "Temizlik";
-        return string.IsNullOrEmpty(task.label) ? "Çalışıyor" : task.label;
+        if (task.kind == "remove") return L.T("Temizlik", "Clearing");
+        return string.IsNullOrEmpty(task.label) ? L.T("Çalışıyor", "Working") : task.label;
     }
 
     private void OnHire()
@@ -220,16 +220,16 @@ public sealed class BuilderPanel : MonoBehaviour
         var setup = Object.FindFirstObjectByType<BaseSceneSetup>();
         if (block == GameManager.HireBlock.NoGold)
         {
-            setup?.ShowHudToast("Yeterli altın yok");
+            setup?.ShowHudToast(L.T("Yeterli altın yok", "Not enough gold"));
             return;
         }
         if (block == GameManager.HireBlock.NoGems)
         {
-            setup?.ShowHudToast("Yeterli elmas yok: giriş ödülleri ve mağazadan elmas kazanılır");
+            GemShopUI.Open();
             return;
         }
         if (!gm.HireBuilder()) return;
-        setup?.ShowHudToast($"{gm.BuilderCount}. inşaatçı geldi! Kulübesini basılı tutarak taşıyabilirsin");
+        setup?.ShowHudToast(L.T($"{gm.BuilderCount}. inşaatçı geldi! Kulübesini basılı tutarak taşıyabilirsin", $"Builder {gm.BuilderCount} arrived! Press and drag the hut to move it"));
         Refresh();
     }
 }

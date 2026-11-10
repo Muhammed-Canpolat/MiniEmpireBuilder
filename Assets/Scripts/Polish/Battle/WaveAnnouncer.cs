@@ -26,7 +26,7 @@ public class WaveAnnouncer : MonoBehaviour
         if (vignette != null)
             vignette.DOKill();
 
-        bannerText.text = $"DALGA {waveNumber} GELIYOR!";
+        bannerText.text = L.T($"DALGA {waveNumber} GELİYOR!", $"WAVE {waveNumber} INCOMING!");
         banner.anchoredPosition = hiddenTop;
 
         Sequence seq = DOTween.Sequence();
