@@ -108,6 +108,22 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
   top patlaması ve enkaz ateşi (`TinyFx`, katalogda tree/explosion/fireControllers).
 - Not: Yeni dosyaların `.meta`'ları Unity açılınca oluşur; sonraki commit'e eklenmeli.
 
+## 10 Kasım 2026: yol haritası adımları
+- **③ `4b1d50d` Can + savaş kartları:** `LivesSystem` (5 can, 30 dk, yenilgi/pes -1, reklamla günde 3 can,
+  sınırsız can süresi). `BattleCards` (+%10 hasar/can/kale; ilk savaş 1 bedava, jeton, Kraliyet %15,
+  `Competitive` bayrağı). `GameManager.TryStartCampaignBattle` can kontrolü + kartları savaşa geçirir.
+  `RewardedAds` tüm ödüllü reklamların tek girişi; **şimdilik 3 sn'lik deneme ekranı** (6. adımda SDK).
+- **④ `a6b0fd6` 7 günlük giriş takvimi:** `DailyRewards` + `DailyRewardsUI` (Ana Üs solunda düğme,
+  günde bir kez kendiliğinden açılır). Hızlandırma `GameManager.SpeedUpUpgrade` (yalnız "upgrade"
+  görevleri; yoksa `pendingSpeedupMinutes`), 2x maden `mineBoostUntilTicks`.
+- **⑦ `4379f41` Bölge 6 "Ejderin İni":** `region_06.asset` (Ana Üs 14), `EnemyType.DragonWarrior`,
+  `DragonBoss` (kare sayfaları `Resources/Dragon`, Uçan Tekme + Yer Sarsıntısı). Sonsuz Sefer son bölgeye bağlı.
+- **Kullanıcı yardımı bekleyenler:** ⑤ bulut kaydı (Firebase/Play Games hesabı) ve Play kapalı test,
+  ⑥ reklam SDK + satın alma (AdMob/ürün kimlikleri), Dragon Warrior lisansı (graphictoon.com),
+  eşzamansız sosyal (sunucu), ⑧ mağaza başvurusu.
+- **Henüz yapılmayan (karar bekleyen):** Ejder İstilası etkinliği (takvim/ödül), Bölge 4–5 kimliği
+  ("Don" mekaniği, kendi bossları), Sonsuz Sefer modu, savaş kamerası sınırı, APK boyutu (Firebase).
+
 ## Açık konular / sıradaki fikirler
 - Ses efektlerinin bağlanması (paket bekleniyor).
 - Denge: düşman rolleri menzilleri, yıkılma sıklığı, 15 seviyelik bedel/süreler oynanarak ayarlanacak.
