@@ -286,7 +286,7 @@ def save(img, name):
 # ======================= SEFER HARİTASI (bölge listesi) =======================
 MW, MH = 1560, 880  # -> 780x440
 CX = MW // 2  # patika karoların alt/üst kenarında ortadan geçer: karolar üst üste dizilince birleşir
-TILESET_OF = {1: 1, 2: 3, 3: 4, 4: 5, 5: 5}
+TILESET_OF = {1: 1, 2: 3, 3: 4, 4: 5, 5: 5, 6: 4}
 
 
 def mask_cells(mask, ox, oy):
@@ -326,6 +326,13 @@ def region_flavor(img, region, rnd, spots, avoid):
             rock(img, x, y + 20, rnd.randint(1, 4), 1.5)
         for x, y in take(5):
             tree(img, x, y + 40, 3, 0.85, rnd.randint(0, 5))
+    elif region == 6:
+        for x, y in take(4, 140):
+            lava(img, x, y, rnd.uniform(70, 120))
+        for x, y in take(9, 70):
+            rock(img, x, y + 20, rnd.randint(1, 4), 1.4)
+        for x, y in take(4, 80):
+            put(img, load(f"Pawn and Resources/Wood/Trees/Stump {rnd.randint(1, 4)}.png"), x, y + 24, 0.9)
     elif region == 5:
         for x, y in take(6, 80):
             put(img, load(f"Pawn and Resources/Wood/Trees/Stump {rnd.randint(1, 4)}.png"), x, y + 24, 0.9)
@@ -333,7 +340,21 @@ def region_flavor(img, region, rnd, spots, avoid):
             rock(img, x, y + 20, rnd.randint(1, 4), 1.3)
 
 
-REGION_TINT = {4: ((232, 244, 255), 0.40), 5: ((46, 18, 64), 0.55)}
+REGION_TINT = {4: ((232, 244, 255), 0.40), 5: ((46, 18, 64), 0.55), 6: ((92, 30, 14), 0.55)}
+
+
+def lava(img, cx, cy, size):
+    """Parlayan lav gölü: dışta sıcak ışık, koyu kenar, turuncu-sarı iç."""
+    glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse((cx - size * 1.3, cy - size * 0.75, cx + size * 1.3, cy + size * 0.75),
+                                 fill=(255, 120, 30, 120))
+    img.alpha_composite(glow.filter(ImageFilter.GaussianBlur(18)))
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    d.ellipse((cx - size, cy - size * 0.55, cx + size, cy + size * 0.55), fill=(58, 30, 24, 255))
+    d.ellipse((cx - size * 0.86, cy - size * 0.44, cx + size * 0.86, cy + size * 0.44), fill=(236, 92, 30, 255))
+    d.ellipse((cx - size * 0.55, cy - size * 0.26, cx + size * 0.5, cy + size * 0.22), fill=(255, 190, 70, 255))
+    img.alpha_composite(layer)
 
 
 def region_land(img, region, mask, ox, oy):
@@ -368,6 +389,7 @@ LANDMARKS = {
     3: [("Yellow", "House3", -470, 440, 0.85), ("Yellow", "Tower", 500, 690, 0.75)],
     4: [("Blue", "Tower", -480, 450, 0.8), ("Blue", "Barracks", 460, 700, 0.75)],
     5: [("Black", "Castle", 400, 480, 1.05), ("Black", "Tower", -500, 460, 0.85)],
+    6: [("Red", "Tower", 460, 440, 0.85), ("Black", "Barracks", -470, 690, 0.8)],
 }
 
 
@@ -436,8 +458,9 @@ HOUSES = {1: [("Red", "House1", 300, 1560), ("Red", "Tower", 1300, 1180)],
           2: [("Purple", "House2", 1280, 1600)],
           3: [("Yellow", "House3", 1260, 1560), ("Yellow", "Tower", 300, 1170)],
           4: [("Blue", "Tower", 300, 1200), ("Blue", "House1", 1280, 1620)],
-          5: [("Black", "Tower", 300, 1220), ("Black", "Tower", 1290, 1620)]}
-CASTLE_COLOR = {1: "Red", 2: "Purple", 3: "Yellow", 4: "Blue", 5: "Black"}
+          5: [("Black", "Tower", 300, 1220), ("Black", "Tower", 1290, 1620)],
+          6: [("Red", "Tower", 300, 1220), ("Black", "House3", 1280, 1620)]}
+CASTLE_COLOR = {1: "Red", 2: "Purple", 3: "Yellow", 4: "Blue", 5: "Black", 6: "Red"}
 
 
 def to_px(p):
@@ -601,7 +624,7 @@ def ui_parts():
 
 
 if __name__ == "__main__":
-    for r in range(1, 6):
+    for r in range(1, 7):
         map_region(r)
         road_region(r)
     map_endless()

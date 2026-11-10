@@ -51,6 +51,20 @@ public class ProgressionTests
     }
 
     [Test]
+    public void SixthRegionHasDragonBoss()
+    {
+        var region = Type("CampaignCatalog").GetMethod("Get").Invoke(null, new object[] { 6 });
+        Assert.NotNull(region, "Bölge 6 (Ejderin İni) katalogda");
+        Assert.AreEqual("DragonWarrior", region.GetType().GetField("bossType").GetValue(region).ToString());
+        Assert.AreEqual(14, region.GetType().GetField("requiredBaseLevel").GetValue(region));
+        var dragon = Enum.Parse(Type("EnemyType"), "DragonWarrior");
+        Assert.IsTrue((bool)Call(Type("EnemyTypeInfo"), "IsBoss", dragon));
+        Assert.AreEqual(5, Call(Type("CampaignCatalog"), "BattleSlotCount", 6));
+        // Kare sayfaları Resources/Dragon altında.
+        Assert.Greater(((Array)Call(Type("DragonBoss"), "Frames", "idle")).Length, 0);
+    }
+
+    [Test]
     public void TablesMatchDesign()
     {
         var progression = Type("Progression");

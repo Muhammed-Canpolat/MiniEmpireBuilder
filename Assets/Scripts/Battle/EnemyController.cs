@@ -167,6 +167,8 @@ public class EnemyController : MonoBehaviour
             gameObject.AddComponent<ShadowWolfBehaviour>();
         if (type == EnemyType.ForestWitch && GetComponent<ForestWitchBoss>() == null)
             gameObject.AddComponent<ForestWitchBoss>();
+        if (type == EnemyType.DragonWarrior && GetComponent<DragonBoss>() == null)
+            gameObject.AddComponent<DragonBoss>();
     }
 
     private const float ShadowAlpha = 0.38f;

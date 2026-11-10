@@ -300,6 +300,17 @@ public class CampaignSceneSetup : MonoBehaviour
 
     private const float MapHeader = 96f, MapFooter = 96f;
 
+    /// <summary>Son bölgenin numarası (Sonsuz Sefer bu bölgenin bossunu yenince açılır).</summary>
+    private static int LastRegionId
+    {
+        get
+        {
+            int last = 1;
+            foreach (var region in CampaignCatalog.Regions) last = Mathf.Max(last, region.id);
+            return last;
+        }
+    }
+
     /// <summary>Kahramanın durduğu bölge: bossu henüz yenilmemiş en yüksek açık bölge.</summary>
     private static int CurrentRegionId()
     {
@@ -338,7 +349,7 @@ public class CampaignSceneSetup : MonoBehaviour
         int current = CurrentRegionId();
         focusTileIndex = 0;
         mapTiles.Add(CreateEndlessTile());
-        for (int id = 5; id >= 1; id--)
+        for (int id = LastRegionId; id >= 1; id--)
         {
             var region = CampaignCatalog.Get(id);
             if (region == null) continue;
@@ -456,7 +467,7 @@ public class CampaignSceneSetup : MonoBehaviour
 
     private RectTransform CreateEndlessTile()
     {
-        bool unlocked = CampaignProgress.Stars(5, 5) > 0;
+        bool unlocked = CampaignProgress.Stars(LastRegionId, 5) > 0;
         var tileImage = ArtImage(mapContent, "EndlessCard", "map_endless", new Vector2(0, 1), Vector2.one,
             Vector2.zero, Vector2.zero);
         tileImage.raycastTarget = true;
@@ -466,14 +477,14 @@ public class CampaignSceneSetup : MonoBehaviour
         button.transition = Selectable.Transition.None;
         button.onClick.AddListener(() => ShowToast(unlocked
             ? "Sonsuz Sefer sonraki aşamada açılacak."
-            : "Bölge 5 bossunu yenerek açılır."));
+            : $"Bölge {LastRegionId} bossunu yenerek açılır."));
         var top = new Vector2(0.5f, 1f);
         ArtAt(tile, "Ribbon", "ui_ribbon_purple", top, new Vector2(0, -26), new Vector2(214, 56), false);
         var name = LabelAt(tile, "EndlessName", "SONSUZ SEFER", top, new Vector2(0, -24), new Vector2(146, 24), 14,
             ReferenceUiVisuals.Light, true);
         Shadowed(name);
         var chip = ArtImage(tile, "StatusChip", "ui_paper", top, top, new Vector2(-92, -80), new Vector2(92, -56), 16f);
-        Label(chip.transform, "EndlessDetail", unlocked ? "Sınırsız seviye, artan zorluk" : "Bölge 5 bossunu yen",
+        Label(chip.transform, "EndlessDetail", unlocked ? "Sınırsız seviye, artan zorluk" : $"Bölge {LastRegionId} bossunu yen",
             12, InkMuted, false, Vector2.zero, Vector2.one, new Vector2(8, 0), new Vector2(-8, 0));
         return tile;
     }

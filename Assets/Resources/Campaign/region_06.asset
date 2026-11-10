@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d9f82664931d524d8b3e96544fa0881, type: 3}
+  m_Name: region_06
+  m_EditorClassIdentifier: Assembly-CSharp::RegionData
+  id: 6
+  displayName: "Ejderin İni"
+  requiredBaseLevel: 14
+  colorTone: {r: 0.62, g: 0.27, b: 0.12, a: 1}
+  groundTile: {fileID: 21300000, guid: 8592c4d543adc074b93fb12e80515978, type: 3}
+  enemyTypes: 020000000400000001000000
+  specialMechanic:
+  bossName: "Ejder Savaş\xE7ısı"
+  bossType: 6
+  description: "Volkanın eteklerindeki ejder inine gir; Ejder Savaş\xE7ısı'nı ve ordusunu yen."
+  levels:
+  - number: 1
+    kind: 0
+    waveCount: 1
+    enemyCounts: 12000000
+    reward: 265
+    modifier:
+    description: "Dalgalar bitene kadar hayatta kal ve Ana \xDCs'\xFC koru."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs canı %50 \xFCzerinde kalsın"
+    - "Kahraman canı %50 \xFCzerinde kalsın"
+  - number: 2
+    kind: 1
+    waveCount: 2
+    enemyCounts: 100000000f000000
+    reward: 283
+    modifier:
+    description: "D\xFCşmanları Ana \xDCs'e ulaşmadan durdur."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs canı %50 \xFCzerinde kalsın"
+    - "Kahraman canı %50 \xFCzerinde kalsın"
+  - number: 3
+    kind: 2
+    waveCount: 2
+    enemyCounts: 1200000010000000
+    reward: 301
+    modifier:
+    description: "Madene y\xF6nelen d\xFCşman akınını p\xFCsk\xFCrt."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs canı %50 \xFCzerinde kalsın"
+    - "Kahraman canı %50 \xFCzerinde kalsın"
+  - number: 4
+    kind: 3
+    waveCount: 2
+    enemyCounts: 1300000011000000
+    reward: 319
+    modifier:
+    description: "S\xFCre dolmadan b\xFCt\xFCn d\xFCşmanları temizle."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs canı %50 \xFCzerinde kalsın"
+    - "Kahraman canı %50 \xFCzerinde kalsın"
+  - number: 5
+    kind: 4
+    waveCount: 3
+    enemyCounts: 12000000120000000a000000
+    reward: 337
+    modifier:
+    description: "Ejder Savaş\xE7ısı inden \xE7ıktı: onu ve korumalarını yen."
+    starRules:
+    - Zafer kazan
+    - "Ana \xDCs canı %50 \xFCzerinde kalsın"
+    - "Kahraman canı %50 \xFCzerinde kalsın"

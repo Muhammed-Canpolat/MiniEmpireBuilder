@@ -37,13 +37,14 @@ public enum EnemyType
     Troll,      // Trol — boss, çok yüksek can
     // Yeni türler hep sona eklenir: RegionData asset'leri enum'u sayı olarak saklar.
     ShadowWolf, // Gölge Kurt — sisin içinde görünmez, kahramana atılır
-    ForestWitch // Orman Cadısı — Bölge 2 boss'u
+    ForestWitch, // Orman Cadısı — Bölge 2 boss'u
+    DragonWarrior // Ejder Savaşçısı — Bölge 6 boss'u
 }
 
 public static class EnemyTypeInfo
 {
     public static bool IsBoss(EnemyType type) =>
-        type == EnemyType.Troll || type == EnemyType.ForestWitch;
+        type == EnemyType.Troll || type == EnemyType.ForestWitch || type == EnemyType.DragonWarrior;
 
     public static string DisplayName(EnemyType type)
     {
@@ -55,6 +56,7 @@ public static class EnemyTypeInfo
             case EnemyType.Troll: return "Muhafız";
             case EnemyType.ShadowWolf: return "Gölge Kurt";
             case EnemyType.ForestWitch: return "Orman Cadısı";
+            case EnemyType.DragonWarrior: return "Ejder Savaşçısı";
             default: return type.ToString();
         }
     }
@@ -425,6 +427,15 @@ public class EnemyStats
                 stats.attackRange = 1.2f;
                 stats.attackSpeed = 1.1f;
                 stats.goldDrop = 14;
+                break;
+
+            case EnemyType.DragonWarrior:
+                stats.health = 320f;
+                stats.damage = 14f;
+                stats.moveSpeed = 1.0f;
+                stats.attackRange = 1.8f;
+                stats.attackSpeed = 0.7f;
+                stats.goldDrop = 150;
                 break;
 
             case EnemyType.ForestWitch:
