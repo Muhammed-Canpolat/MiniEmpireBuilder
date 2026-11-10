@@ -9,6 +9,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
     private GameObject panel;
     private TextMeshProUGUI musicLabel;
     private TextMeshProUGUI effectsLabel;
+    private TextMeshProUGUI languageLabel;
     private Texture2D gearTexture;
     private Sprite gearSprite;
     private GameObject blocker;
@@ -68,19 +69,19 @@ public sealed class AudioSettingsUI : MonoBehaviour
         }
 
         panel = ReferenceUiVisuals.Image(safe, "AudioSettingsPanel",
-            new Vector2(0.1f, battleScene ? 0.29f : 0.36f),
-            new Vector2(0.9f, battleScene ? 0.71f : 0.65f), Vector2.zero, Vector2.zero,
+            new Vector2(0.1f, battleScene ? 0.29f : 0.31f),
+            new Vector2(0.9f, battleScene ? 0.71f : 0.69f), Vector2.zero, Vector2.zero,
             new Color(0.09f, 0.075f, 0.06f, 0.98f)).gameObject;
         panel.GetComponent<Image>().raycastTarget = true;
         var frame = panel.AddComponent<Outline>();
         frame.effectColor = ReferenceUiVisuals.Border;
         frame.effectDistance = new Vector2(3f, -3f);
-        ReferenceUiVisuals.Text(panel.transform, "Title", "AYARLAR", 21,
+        ReferenceUiVisuals.Text(panel.transform, "Title", L.T("AYARLAR", "SETTINGS"), 21,
             ReferenceUiVisuals.Gold, TextAlignmentOptions.Center,
-            new Vector2(0.08f, 0.76f), new Vector2(0.92f, 0.95f), Vector2.zero, Vector2.zero, true);
+            new Vector2(0.08f, battleScene ? 0.76f : 0.82f), new Vector2(0.92f, 0.96f), Vector2.zero, Vector2.zero, true);
         var music = ReferenceUiVisuals.Button(panel.transform, "MusicToggle", "", false,
-            new Vector2(0.12f, battleScene ? 0.55f : 0.52f),
-            new Vector2(0.88f, battleScene ? 0.69f : 0.7f), Vector2.zero, Vector2.zero, 17);
+            new Vector2(0.12f, battleScene ? 0.55f : 0.65f),
+            new Vector2(0.88f, battleScene ? 0.69f : 0.79f), Vector2.zero, Vector2.zero, 17);
         musicLabel = music.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
         music.onClick.AddListener(() =>
         {
@@ -90,8 +91,8 @@ public sealed class AudioSettingsUI : MonoBehaviour
             RefreshLabels();
         });
         var effects = ReferenceUiVisuals.Button(panel.transform, "EffectsToggle", "", false,
-            new Vector2(0.12f, battleScene ? 0.37f : 0.29f),
-            new Vector2(0.88f, battleScene ? 0.51f : 0.47f), Vector2.zero, Vector2.zero, 17);
+            new Vector2(0.12f, battleScene ? 0.37f : 0.48f),
+            new Vector2(0.88f, battleScene ? 0.51f : 0.62f), Vector2.zero, Vector2.zero, 17);
         effectsLabel = effects.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
         effects.onClick.AddListener(() =>
         {
@@ -100,10 +101,23 @@ public sealed class AudioSettingsUI : MonoBehaviour
             audio.SetSfxEnabled(!audio.SfxEnabled);
             RefreshLabels();
         });
+        // Dil: savaş dışında tek dokunuşla Türkçe ⇄ İngilizce; arayüz kodla kurulduğu için sahne yeniden yüklenir.
+        if (!battleScene)
+        {
+            var language = ReferenceUiVisuals.Button(panel.transform, "LanguageToggle", "", false,
+                new Vector2(0.12f, 0.31f), new Vector2(0.88f, 0.45f), Vector2.zero, Vector2.zero, 17);
+            languageLabel = language.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
+            language.onClick.AddListener(() =>
+            {
+                L.Set(L.English ? GameLanguage.Turkish : GameLanguage.English);
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            });
+        }
         var close = ReferenceUiVisuals.Button(panel.transform, "CloseAudioSettings",
-            battleScene ? "DEVAM ET" : "KAPAT", true,
+            battleScene ? L.T("DEVAM ET", "RESUME") : L.T("KAPAT", "CLOSE"), true,
             new Vector2(battleScene ? 0.12f : 0.28f, battleScene ? 0.20f : 0.07f),
-            new Vector2(battleScene ? 0.88f : 0.72f, battleScene ? 0.34f : 0.23f),
+            new Vector2(battleScene ? 0.88f : 0.72f, battleScene ? 0.34f : 0.24f),
             Vector2.zero, Vector2.zero, 15);
         close.onClick.AddListener(Close);
         if (battleScene) CreateForfeitControls();
@@ -112,7 +126,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
 
     private void CreateForfeitControls()
     {
-        var surrender = ReferenceUiVisuals.Button(panel.transform, "ForfeitButton", "PES ET", false,
+        var surrender = ReferenceUiVisuals.Button(panel.transform, "ForfeitButton", L.T("PES ET", "SURRENDER"), false,
             new Vector2(0.12f, 0.04f), new Vector2(0.88f, 0.17f),
             Vector2.zero, Vector2.zero, 17);
         AddRedFill(surrender);
@@ -121,17 +135,18 @@ public sealed class AudioSettingsUI : MonoBehaviour
         confirmation = ReferenceUiVisuals.Image(panel.transform, "ForfeitConfirm",
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
             ReferenceUiVisuals.Panel).gameObject;
-        ReferenceUiVisuals.Text(confirmation.transform, "ConfirmTitle", "PES ET", 21,
+        ReferenceUiVisuals.Text(confirmation.transform, "ConfirmTitle", L.T("PES ET", "SURRENDER"), 21,
             ReferenceUiVisuals.Hex(0xC2452D), TextAlignmentOptions.Center,
             new Vector2(0.08f, 0.73f), new Vector2(0.92f, 0.91f), Vector2.zero, Vector2.zero, true);
         ReferenceUiVisuals.Text(confirmation.transform, "ConfirmDescription",
-            "Pes etmek istediğine emin misin? Bu savaşın ilerlemesi kaybolur.", 17,
+            L.T("Pes etmek istediğine emin misin? Bu savaşın ilerlemesi kaybolur.",
+                "Are you sure you want to surrender? This battle's progress will be lost."), 17,
             ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
             new Vector2(0.09f, 0.35f), new Vector2(0.91f, 0.68f), Vector2.zero, Vector2.zero);
-        var cancel = ReferenceUiVisuals.Button(confirmation.transform, "CancelForfeit", "VAZGEÇ", false,
+        var cancel = ReferenceUiVisuals.Button(confirmation.transform, "CancelForfeit", L.T("VAZGEÇ", "CANCEL"), false,
             new Vector2(0.07f, 0.09f), new Vector2(0.48f, 0.26f), Vector2.zero, Vector2.zero, 15);
         cancel.onClick.AddListener(() => confirmation.SetActive(false));
-        var confirm = ReferenceUiVisuals.Button(confirmation.transform, "ConfirmForfeit", "PES ET", false,
+        var confirm = ReferenceUiVisuals.Button(confirmation.transform, "ConfirmForfeit", L.T("PES ET", "SURRENDER"), false,
             new Vector2(0.52f, 0.09f), new Vector2(0.93f, 0.26f), Vector2.zero, Vector2.zero, 15);
         AddRedFill(confirm);
         confirm.onClick.AddListener(ConfirmForfeit);
@@ -179,10 +194,12 @@ public sealed class AudioSettingsUI : MonoBehaviour
     private void RefreshLabels()
     {
         var audio = AudioManager.Instance;
-        if (musicLabel != null) musicLabel.text = "MÜZİK  " +
-            (audio == null || audio.MusicEnabled ? "AÇIK" : "KAPALI");
-        if (effectsLabel != null) effectsLabel.text = "EFEKTLER  " +
-            (audio == null || audio.SfxEnabled ? "AÇIK" : "KAPALI");
+        string on = L.T("AÇIK", "ON"), off = L.T("KAPALI", "OFF");
+        if (musicLabel != null) musicLabel.text = L.T("MÜZİK  ", "MUSIC  ") +
+            (audio == null || audio.MusicEnabled ? on : off);
+        if (effectsLabel != null) effectsLabel.text = L.T("EFEKTLER  ", "EFFECTS  ") +
+            (audio == null || audio.SfxEnabled ? on : off);
+        if (languageLabel != null) languageLabel.text = L.T("DİL  TÜRKÇE", "LANGUAGE  ENGLISH");
     }
 
     private Sprite CreateGearSprite()
