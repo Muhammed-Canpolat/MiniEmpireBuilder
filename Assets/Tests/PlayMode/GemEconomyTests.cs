@@ -113,6 +113,38 @@ public class GemEconomyTests
     }
 
     [UnityTest]
+    public IEnumerator AdRewardsAndRoyalPerks()
+    {
+        yield return Setup();
+
+        // İnşaatta reklamla −30 dk: günde 3 hak.
+        var task = StartTask(3 * 3600);
+        for (int i = 0; i < 3; i++) Assert.IsTrue((bool)Call("AdRewards", "RewardSpeedup", task));
+        Assert.That(Remaining(task), Is.InRange(3 * 3600 - 90 * 60 - 5d, 3 * 3600 - 90 * 60 + 1d));
+        Assert.IsFalse((bool)Call("AdRewards", "RewardSpeedup", task), "4. reklam hakkı yok");
+
+        // Madende 2 sa 2x: günde 1.
+        Assert.IsTrue((bool)Call("AdRewards", "RewardMineBoost"));
+        Assert.IsTrue((bool)Prop("MineBoostActive"));
+        Assert.IsFalse((bool)Call("AdRewards", "RewardMineBoost"));
+
+        // Günlük sandık: günde 1; düşük zar altın verir.
+        int gold = (int)Prop("Gold");
+        Assert.NotNull(Call("AdRewards", "OpenChest", 0.1f));
+        Assert.Greater((int)Prop("Gold"), gold);
+        Assert.IsNull(Call("AdRewards", "OpenChest", 0.1f), "sandık günde bir");
+
+        // Kraliyet: sınırsız can ve günde bir kez +10 elmas.
+        Assert.IsFalse((bool)Static("LivesSystem", "Unlimited"));
+        SetField("royalUntilTicks", DateTime.UtcNow.AddDays(1).Ticks);
+        Assert.IsTrue((bool)Static("LivesSystem", "Unlimited"));
+        int gems = Gems;
+        Assert.IsTrue((bool)Call("GemRewards", "ClaimRoyalDaily"));
+        Assert.IsFalse((bool)Call("GemRewards", "ClaimRoyalDaily"));
+        Assert.AreEqual(gems + 10, Gems);
+    }
+
+    [UnityTest]
     public IEnumerator GoldTopUpLivesStreakAndRewards()
     {
         yield return Setup();

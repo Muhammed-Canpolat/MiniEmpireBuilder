@@ -18,10 +18,11 @@ public static class LivesSystem
     private static long Period => TimeSpan.FromMinutes(RegenMinutes).Ticks;
     private static int Today => int.Parse(DateTime.Now.ToString("yyyyMMdd"));
 
-    public static bool Unlimited => Data != null && Data.unlimitedLivesUntilTicks > Now;
+    /// <summary>Sınırsız can: süreli paket/takvim ödülü ya da Kraliyet Üyeliği.</summary>
+    public static bool Unlimited => Data != null && (Data.unlimitedLivesUntilTicks > Now || Data.royalUntilTicks > Now);
 
     public static TimeSpan UnlimitedRemaining => Unlimited
-        ? TimeSpan.FromTicks(Data.unlimitedLivesUntilTicks - Now) : TimeSpan.Zero;
+        ? TimeSpan.FromTicks(Math.Max(Data.unlimitedLivesUntilTicks, Data.royalUntilTicks) - Now) : TimeSpan.Zero;
 
     public static int Lives
     {

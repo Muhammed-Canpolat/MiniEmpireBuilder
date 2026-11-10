@@ -46,9 +46,9 @@ public static class RewardedAds
             var blocker = ReferenceUiVisuals.Image(canvas.transform, "AdBlocker", Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero, new Color(0.03f, 0.02f, 0.02f, 0.94f));
             blocker.raycastTarget = true;
-            ReferenceUiVisuals.Text(canvas.transform, "AdTitle", "REKLAM", 26, ReferenceUiVisuals.Gold,
+            ReferenceUiVisuals.Text(canvas.transform, "AdTitle", L.T("REKLAM", "AD"), 26, ReferenceUiVisuals.Gold,
                 TextAlignmentOptions.Center, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.62f), Vector2.zero, Vector2.zero, true);
-            ReferenceUiVisuals.Text(canvas.transform, "AdNote", "Deneme reklamı (gerçek reklam henüz bağlı değil)", 13,
+            ReferenceUiVisuals.Text(canvas.transform, "AdNote", L.T("Deneme reklamı (gerçek reklam henüz bağlı değil)", "Test ad (real ads not connected yet)"), 13,
                 ReferenceUiVisuals.Muted, TextAlignmentOptions.Center, new Vector2(0.1f, 0.5f), new Vector2(0.9f, 0.55f),
                 Vector2.zero, Vector2.zero);
             var counter = ReferenceUiVisuals.Text(canvas.transform, "AdCounter", "", 20, ReferenceUiVisuals.Light,
@@ -56,7 +56,8 @@ public static class RewardedAds
             float end = Time.unscaledTime + SimulatedSeconds;
             while (Time.unscaledTime < end)
             {
-                counter.text = $"Ödül {Mathf.CeilToInt(end - Time.unscaledTime)} sn sonra";
+                int left = Mathf.CeilToInt(end - Time.unscaledTime);
+                counter.text = L.T($"Ödül {left} sn sonra", $"Reward in {left} s");
                 yield return null;
             }
             Debug.Log($"[RewardedAds] Deneme reklamı tamamlandı: {placement}");

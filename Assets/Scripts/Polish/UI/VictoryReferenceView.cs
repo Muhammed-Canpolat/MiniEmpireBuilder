@@ -112,12 +112,38 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 new Vector2(-118, 66), new Vector2(118, 118), 17);
             retryButton.onClick.AddListener(() =>
             {
+                // Zaferde önce "2x ödül" reklamı sunulur; izlenince düğme tekrar oynamaya döner.
+                if (doubleAmount > 0) { WatchDoubleReward(); return; }
                 // Tekrar deneme de can ister; kartlar tek savaşlıktır (bölge ekranında yeniden açılır).
                 if (GameManager.Instance.TryStartCampaignBattle()) return;
                 var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (label != null) label.text = $"CAN YOK · {LivesSystem.Format(LivesSystem.NextLifeIn)}";
             });
         }
+    }
+
+    private int doubleAmount;
+    private int shownTotal;
+
+    /// <summary>Ödüllü reklam: savaşta kazanılan altın bir kez daha verilir (savaş başına 1).</summary>
+    private void WatchDoubleReward()
+    {
+        int amount = doubleAmount;
+        RewardedAds.Show("victory_double", ok =>
+        {
+            if (!ok || doubleAmount <= 0) return;
+            doubleAmount = 0;
+            GameManager.Instance?.AddGold(amount);
+            GameManager.Instance?.SaveGame();
+            AudioManager.Instance?.PlaySfx("levelUp");
+            int from = shownTotal;
+            DOTween.To(() => from, value => { from = value; values[3].text = from.ToString(); }, shownTotal + amount, 0.6f)
+                .SetEase(Ease.OutQuad);
+            shownTotal += amount;
+            var label = retryButton != null ? retryButton.GetComponentInChildren<TextMeshProUGUI>() : null;
+            if (label != null) label.text = L.T("TEKRAR OYNA", "PLAY AGAIN");
+            if (retryButton != null) ReferenceUiVisuals.ApplyButtonSkin(retryButton, false);
+        });
     }
 
     /// <summary>
@@ -258,6 +284,15 @@ public sealed class VictoryReferenceView : MonoBehaviour
         if (won && BattleSession.IsCampaign && GemRewards.LastVictoryGems > 0 && starReason != null)
             starReason.text += $"\n<color=#8FD3FF>+{GemRewards.LastVictoryGems} elmas kazandın!</color>";
         values[3].text = "0";
+        shownTotal = transfer;
+        // Zafer: "Tekrar oyna" düğmesi önce "▶ 2X ÖDÜL" olur.
+        doubleAmount = won && BattleSession.IsCampaign && retryButton != null ? Mathf.Max(0, transfer) : 0;
+        if (doubleAmount > 0)
+        {
+            var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null) label.text = L.T($"▶ 2X ÖDÜL  +{doubleAmount}", $"▶ 2X REWARD  +{doubleAmount}");
+            ReferenceUiVisuals.ApplyButtonSkin(retryButton, true);
+        }
         panel.localScale = Vector3.one * 0.8f;
         panel.DOScale(1, 0.25f).SetEase(Ease.OutBack);
         for (int i = 0; i < rows.Length; i++)

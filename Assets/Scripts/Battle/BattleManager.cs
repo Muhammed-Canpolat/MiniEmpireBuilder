@@ -818,28 +818,46 @@ public class BattleManager : MonoBehaviour
         Time.timeScale = 0f;
         AudioSettingsUI.BattleModalOpen = true;
         int cost = GemEconomy.ContinueCost;
-        GemConfirm.Show("ANA ÜS YIKILDI",
-            $"Elmasla devam et: Ana Üs %{Mathf.RoundToInt(GemEconomy.ContinueBaseHealth * 100f)} canla ayağa kalkar, " +
-            "can kaybetmezsin. Her savaşta 1 kez.",
-            cost, "DEVAM ET", () =>
+        int percent = Mathf.RoundToInt(GemEconomy.ContinueBaseHealth * 100f);
+
+        void Resume()
+        {
+            Time.timeScale = previousScale;
+            AudioSettingsUI.BattleModalOpen = false;
+            awaitingContinue = false;
+        }
+        void Revive()
+        {
+            ContinueUsed = true;
+            var baseController = mainBaseTransform != null ? mainBaseTransform.GetComponent<MainBaseController>() : null;
+            if (baseController != null) baseController.Revive(GemEconomy.ContinueBaseHealth, 3f);
+            AudioManager.Instance?.PlaySfx("levelUp");
+        }
+
+        GemConfirm.Show(L.T("ANA ÜS YIKILDI", "MAIN BASE DESTROYED"),
+            L.T($"Devam et: Ana Üs %{percent} canla ayağa kalkar, can kaybetmezsin. Her savaşta 1 kez.",
+                $"Continue: your Main Base rises with {percent}% health and you keep your life. Once per battle."),
+            cost, L.T("DEVAM ET", "CONTINUE"), () =>
             {
-                Time.timeScale = previousScale;
-                AudioSettingsUI.BattleModalOpen = false;
-                awaitingContinue = false;
+                Resume();
                 if (!battleActive) return;
                 if (GameManager.Instance == null || !GameManager.Instance.SpendGems(cost)) { BattleLost(); return; }
-                ContinueUsed = true;
-                var baseController = mainBaseTransform != null ? mainBaseTransform.GetComponent<MainBaseController>() : null;
-                if (baseController != null) baseController.Revive(GemEconomy.ContinueBaseHealth, 3f);
-                AudioManager.Instance?.PlaySfx("levelUp");
+                Revive();
             },
             () =>
             {
-                Time.timeScale = previousScale;
-                AudioSettingsUI.BattleModalOpen = false;
-                awaitingContinue = false;
+                Resume();
                 if (battleActive) BattleLost();
-            }, true);
+            }, true,
+            L.T("▶ REKLAM İZLE, DEVAM ET", "▶ WATCH AD TO CONTINUE"),
+            // Reklam oyun dururken oynar (gerçek zamanla sayar); bitince savaş sürer.
+            () => RewardedAds.Show("battle_continue", ok =>
+            {
+                Resume();
+                if (!battleActive) return;
+                if (ok) Revive();
+                else BattleLost();
+            }));
     }
 
     // ==================== SAVAŞ SONU ====================

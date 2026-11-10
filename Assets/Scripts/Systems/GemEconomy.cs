@@ -35,6 +35,17 @@ public static class GemEconomy
     public const int MineBoostHours = 4;
     public const int StreakSaveCost = 10;
 
+    // ==================== ÖDÜLLÜ REKLAM (AdRewards) ====================
+    public const int AdSpeedupMinutes = 30;   // inşaatta −30 dk
+    public const int DailySpeedupAds = 3;
+    public const int AdMineBoostHours = 2;    // madende 2 sa 2x, günde 1
+    public const int DailyMineAds = 1;
+    public const int DailyChestAds = 1;       // dükkânda günlük sandık
+
+    // ==================== KRALİYET ÜYELİĞİ ====================
+    public const int RoyalDailyGems = 10;
+    public const float RoyalMineBonus = 0.2f; // +%20 maden; sınırsız can ve %15 kartlar ayrıca
+
     // ==================== KAZANÇ ====================
     public const int GemsPerNewStar = 1;
     public const int GemsPerFirstBossWin = 10;

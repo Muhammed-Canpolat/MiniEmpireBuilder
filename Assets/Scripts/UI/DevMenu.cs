@@ -81,6 +81,8 @@ public sealed class DevMenu : MonoBehaviour
             ("CANLAR = 0", () => { if (gm != null) { gm.PlayerData.lives = 0; gm.PlayerData.livesLastRegenTicks = DateTime.UtcNow.Ticks; gm.PlayerData.unlimitedLivesUntilTicks = 0; gm.SaveGame(); } }, true),
             ("CANLARI DOLDUR", () => LivesSystem.AddLives(LivesSystem.MaxLives), true),
             (battle ? "DÜŞMANLARI ÖLDÜR" : "SAHNEYİ YENİLE", battle ? (Action)KillEnemies : () => { }, !battle),
+            ("KRALİYET AÇ/KAPAT", () => { if (gm != null) { gm.PlayerData.royalUntilTicks = BattleCards.IsRoyal ? 0 : DateTime.UtcNow.AddDays(1).Ticks; gm.PlayerData.royalGemDay = 0; gm.SaveGame(); } }, true),
+            ("REKLAM HAKLARINI SIFIRLA", () => { if (gm != null) { var d = gm.PlayerData; d.adSpeedupDay = d.adMineDay = d.adChestDay = d.gemAdDay = d.adLivesDay = 0; gm.SaveGame(); } }, false),
             ("TAKVİMİ SIFIRLA", () => { if (gm != null) { gm.PlayerData.dailyStreak = 0; gm.PlayerData.dailyLastClaimDay = 0; DailyRewards.TodayOverride = null; gm.SaveGame(); } }, true),
         };
 

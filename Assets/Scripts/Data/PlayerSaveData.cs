@@ -83,6 +83,12 @@ public class PlayerSaveData
     public int gemAdDay;
     public int gemAdCount;
     public int gemRewardedBaseLevel;
+    // Ödüllü reklam günlük hakları (AdRewards; gün = yyyyMMdd) ve Kraliyet günlük elması.
+    public int adSpeedupDay;
+    public int adSpeedupCount;
+    public int adMineDay;
+    public int adChestDay;
+    public int royalGemDay;
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur

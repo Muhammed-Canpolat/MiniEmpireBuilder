@@ -20,16 +20,28 @@ public static class GemActions
         var gm = GameManager.Instance;
         if (gm == null || task == null) return;
         int cost = GameManager.FinishNowCost(task);
-        string what = task.kind == "remove" ? "Temizlik" : string.IsNullOrEmpty(task.label) ? "İnşaat" : task.label;
-        GemConfirm.Show("HEMEN BİTİR",
-            $"{what}\nKalan süre: {Progression.FormatDuration(GameManager.SecondsRemaining(task))}",
-            cost, "BİTİR", () =>
+        string what = task.kind == "remove" ? L.T("Temizlik", "Clearing")
+            : string.IsNullOrEmpty(task.label) ? L.T("İnşaat", "Construction") : task.label;
+        // Bedava seçenek: reklamla −30 dk (günde 3; yalnız 1 dk'dan uzun işlerde).
+        bool adOption = cost > 0 && AdRewards.SpeedupAdsLeft > 0;
+        GemConfirm.Show(L.T("HEMEN BİTİR", "FINISH NOW"),
+            $"{what}\n{L.T("Kalan süre", "Time left")}: {Progression.FormatDuration(GameManager.SecondsRemaining(task))}",
+            cost, L.T("BİTİR", "FINISH"), () =>
             {
-                if (!gm.FinishTaskNow(task)) { Toast("Bitirilemedi: elmas yetmiyor"); return; }
+                if (!gm.FinishTaskNow(task)) { Toast(L.T("Bitirilemedi: elmas yetmiyor", "Not enough gems")); return; }
                 AudioManager.Instance?.PlaySfx("levelUp");
-                Toast(cost > 0 ? $"Bitti! −{cost} elmas" : "Bitti!");
+                Toast(cost > 0 ? L.T($"Bitti! −{cost} elmas", $"Done! −{cost} gems") : L.T("Bitti!", "Done!"));
                 after?.Invoke();
-            });
+            }, null, false,
+            adOption ? L.T($"▶ REKLAM: −{GemEconomy.AdSpeedupMinutes} DK ({AdRewards.SpeedupAdsLeft} hak)",
+                $"▶ AD: −{GemEconomy.AdSpeedupMinutes} MIN ({AdRewards.SpeedupAdsLeft} left)") : null,
+            () => RewardedAds.Show("builder_speedup", ok =>
+            {
+                if (!ok || !AdRewards.RewardSpeedup(task)) return;
+                Toast(L.T($"İnşaat {GemEconomy.AdSpeedupMinutes} dk kısaldı!",
+                    $"Construction {GemEconomy.AdSpeedupMinutes} min faster!"));
+                after?.Invoke();
+            }));
     }
 
     public static void OfferPotion(Action after = null)

@@ -46,6 +46,18 @@ public static class GemRewards
         OnGemsEarned?.Invoke(GemEconomy.GemsPerMainBaseLevel, "mainbase");
     }
 
+    /// <summary>Kraliyet Üyeliği: günde bir kez +10 elmas. Verildiyse true.</summary>
+    public static bool ClaimRoyalDaily()
+    {
+        var data = Data;
+        var gm = GameManager.Instance;
+        if (data == null || gm == null || !BattleCards.IsRoyal || data.royalGemDay == Today) return false;
+        data.royalGemDay = Today;
+        gm.AddGems(GemEconomy.RoyalDailyGems);
+        OnGemsEarned?.Invoke(GemEconomy.RoyalDailyGems, "royal");
+        return true;
+    }
+
     public static int AdGemsToday
     {
         get

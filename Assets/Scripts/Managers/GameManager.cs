@@ -618,11 +618,29 @@ public class GameManager : MonoBehaviour
     public bool BuyMineBoost()
     {
         if (PlayerData == null || !SpendGems(GemEconomy.MineBoostCost)) return false;
-        ApplyOfflineGoldMineProduction(); // önceki üretim normal hızla yazılsın
+        AddMineBoost(TimeSpan.FromHours(GemEconomy.MineBoostHours));
+        return true;
+    }
+
+    /// <summary>2x maden süresi ekler (sürüyorsa üstüne). Önceki üretim normal hızla yazılır.</summary>
+    public void AddMineBoost(TimeSpan duration)
+    {
+        if (PlayerData == null || duration <= TimeSpan.Zero) return;
+        ApplyOfflineGoldMineProduction();
         long now = DateTime.UtcNow.Ticks;
-        PlayerData.mineBoostUntilTicks = Math.Max(now, PlayerData.mineBoostUntilTicks)
-            + TimeSpan.FromHours(GemEconomy.MineBoostHours).Ticks;
+        PlayerData.mineBoostUntilTicks = Math.Max(now, PlayerData.mineBoostUntilTicks) + duration.Ticks;
         SaveGame();
+    }
+
+    /// <summary>Süren işi verilen dakika kısaltır (her tür iş; geri çağrılar görev nesnesine bağlı).</summary>
+    public bool SpeedUpTask(BuilderTaskSave task, int minutes)
+    {
+        if (PlayerData == null || task == null || minutes <= 0 || !PlayerData.builderTasks.Contains(task)) return false;
+        long now = DateTime.UtcNow.Ticks;
+        task.endTicks = Math.Max(now, task.endTicks - TimeSpan.FromMinutes(minutes).Ticks);
+        CheckBuilderTask();
+        SaveGame();
+        OnBuilderTaskStarted?.Invoke();
         return true;
     }
 
@@ -970,6 +988,7 @@ public class GameManager : MonoBehaviour
     public float GetGoldPerSecond(bool includeBoost)
     {
         float boost = includeBoost && MineBoostActive ? 2f : 1f;
+        if (BattleCards.IsRoyal) boost *= 1f + GemEconomy.RoyalMineBonus; // Kraliyet: +%20 maden
         if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked)
         {
             int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;

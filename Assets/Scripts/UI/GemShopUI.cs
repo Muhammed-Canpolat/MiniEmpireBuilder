@@ -78,7 +78,7 @@ public sealed class GemShopUI : MonoBehaviour
         dimButton.onClick.AddListener(Close);
 
         var center = new Vector2(0.5f, 0.5f);
-        var panel = ReferenceUiVisuals.Image(safe, "Panel", center, center, new Vector2(-178, -318), new Vector2(178, 318),
+        var panel = ReferenceUiVisuals.Image(safe, "Panel", center, center, new Vector2(-178, -346), new Vector2(178, 346),
             Color.white);
         panel.sprite = CampaignSceneSetup.Art("ui_paper", 22f);
         panel.type = Image.Type.Sliced;
@@ -135,12 +135,18 @@ public sealed class GemShopUI : MonoBehaviour
             OfferRefillLives);
 
         y += 6f;
-        TopText(p, "FreeTitle", "BEDAVA ELMAS", 18, y, 16, Ink, true, TextAlignmentOptions.Left);
+        TopText(p, "FreeTitle", L.T("BEDAVA", "FREE"), 18, y, 16, Ink, true, TextAlignmentOptions.Left);
         y += 22f;
-        AddRow(p, ref y, "gem", "Reklam İzle",
-            () => $"+{GemEconomy.GemsPerAd} elmas · bugün {GemRewards.AdGemsToday}/{GemEconomy.DailyGemAds}",
-            () => GemRewards.CanWatchAdForGems ? "İZLE" : "YARIN",
+        AddRow(p, ref y, "gem", L.T("Reklam İzle", "Watch Ad"),
+            () => L.T($"+{GemEconomy.GemsPerAd} elmas · bugün {GemRewards.AdGemsToday}/{GemEconomy.DailyGemAds}",
+                $"+{GemEconomy.GemsPerAd} gems · today {GemRewards.AdGemsToday}/{GemEconomy.DailyGemAds}"),
+            () => GemRewards.CanWatchAdForGems ? L.T("İZLE", "WATCH") : L.T("YARIN", "TOMORROW"),
             WatchAdForGems, false);
+        AddRow(p, ref y, "ui_scroll", L.T("Günlük Sandık", "Daily Chest"),
+            () => AdRewards.ChestAvailable ? L.T("Reklam izle: altın, elmas ya da kart jetonu", "Watch an ad: gold, gems or a card token")
+                : L.T("Bugün açıldı, yarın yine gel", "Opened today, come back tomorrow"),
+            () => AdRewards.ChestAvailable ? L.T("AÇ", "OPEN") : L.T("YARIN", "TOMORROW"),
+            OpenChest, false);
 
         y += 6f;
         TopText(p, "PacksTitle", "ELMAS PAKETLERİ", 18, y, 16, Ink, true, TextAlignmentOptions.Left);
@@ -232,15 +238,43 @@ public sealed class GemShopUI : MonoBehaviour
     {
         var gm = GameManager.Instance;
         if (gm == null) return;
-        GemConfirm.Show("MADEN 2X",
-            $"Altın madeni {GemEconomy.MineBoostHours} saat boyunca 2 kat üretir. Sürüyorsa süreye eklenir; oyun kapalıyken de işler.",
-            GemEconomy.MineBoostCost, "AL", () =>
+        // Bedava seçenek: günde bir reklamla 2 saat.
+        bool adOption = AdRewards.MineAdAvailable;
+        GemConfirm.Show(L.T("MADEN 2X", "MINE 2X"),
+            L.T($"Altın madeni {GemEconomy.MineBoostHours} saat boyunca 2 kat üretir. Sürüyorsa süreye eklenir; oyun kapalıyken de işler.",
+                $"The gold mine produces 2x for {GemEconomy.MineBoostHours} hours. Stacks if active; works while offline."),
+            GemEconomy.MineBoostCost, L.T("AL", "BUY"), () =>
             {
                 if (!gm.BuyMineBoost()) return;
                 AudioManager.Instance?.PlaySfx("levelUp");
-                GemActions.Toast($"Maden 2x: {GemEconomy.FormatRemaining(gm.PlayerData.mineBoostUntilTicks)}");
+                GemActions.Toast(L.T("Maden 2x: ", "Mine 2x: ") + GemEconomy.FormatRemaining(gm.PlayerData.mineBoostUntilTicks));
                 Refresh();
-            });
+            }, null, false,
+            adOption ? L.T($"▶ REKLAM: {GemEconomy.AdMineBoostHours} SA BEDAVA", $"▶ AD: {GemEconomy.AdMineBoostHours} H FREE") : null,
+            () => RewardedAds.Show("mine_boost", ok =>
+            {
+                if (!ok || !AdRewards.RewardMineBoost()) return;
+                GemActions.Toast(L.T("Maden 2x: ", "Mine 2x: ") + GemEconomy.FormatRemaining(gm.PlayerData.mineBoostUntilTicks));
+                Refresh();
+            }));
+    }
+
+    private void OpenChest()
+    {
+        if (!AdRewards.ChestAvailable)
+        {
+            GemActions.Toast(L.T("Sandık bugün açıldı, yarın yine gel", "Chest already opened today"));
+            return;
+        }
+        RewardedAds.Show("daily_chest", ok =>
+        {
+            if (!ok) return;
+            string reward = AdRewards.OpenChest();
+            if (reward == null) return;
+            AudioManager.Instance?.PlaySfx("levelUp");
+            GemActions.Toast(L.T("Sandıktan: ", "Chest: ") + reward);
+            Refresh();
+        });
     }
 
     private void OfferRefillLives()

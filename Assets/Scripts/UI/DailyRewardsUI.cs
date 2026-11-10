@@ -30,6 +30,9 @@ public sealed class DailyRewardsUI : MonoBehaviour
         CreateSideButton();
         DailyRewards.OnChanged += RefreshDot;
         RefreshDot();
+        if (GemRewards.ClaimRoyalDaily())
+            GemActions.Toast(L.T($"Kraliyet Üyeliği: +{GemEconomy.RoyalDailyGems} elmas",
+                $"Royal Membership: +{GemEconomy.RoyalDailyGems} gems"));
 
         // İlk açılış rehberi bittiyse ve bugün alınmadıysa pencere kendiliğinden açılır.
         yield return new WaitForSeconds(1.2f);
