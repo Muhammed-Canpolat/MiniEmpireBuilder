@@ -674,7 +674,9 @@ public class BaseWorldUI : MonoBehaviour
                        L.T($"Üretim: {building.goldPerSecond:F1} altın/sn", $"Production: {building.goldPerSecond:F1} gold/s");
 
             case BuildingType.Monastery:
-                return L.T(L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}\nİyileştirme: 3 sn'de %3\nMenzil: 4", $"Health: {building.maxHealth:F0}\nHealing: 3% every 3 s\nRange: 4");
+                int healPct = Mathf.RoundToInt(Progression.MonasteryHealFraction(building.level) * 100f);
+                return L.T($"Can: {building.maxHealth:F0}\nİyileştirme: 3 sn'de %{healPct}\nMenzil: 4",
+                    $"Health: {building.maxHealth:F0}\nHealing: {healPct}% every 3 s\nRange: 4");
 
 
             default:

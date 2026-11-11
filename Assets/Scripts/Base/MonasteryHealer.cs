@@ -2,13 +2,13 @@ using UnityEngine;
 
 /// <summary>
 /// Savaştaki Manastır: 4 birim içindeki kahramanı, Ana Üs'ü ve kuleleri üç saniyede bir
-/// azami canlarının %3'ü kadar iyileştirir. Yıkılınca durur. Düşman davranışını değiştirmez.
+/// azami canlarının %(2 + seviye)'si kadar iyileştirir (Progression.MonasteryHealFraction). Yıkılınca durur. Düşman davranışını değiştirmez.
 /// </summary>
 public sealed class MonasteryHealer : MonoBehaviour
 {
     private const float Range = 4f;
     private const float Interval = 3f;
-    private const float HealFraction = 0.03f;
+    private float HealFraction => Progression.MonasteryHealFraction(Level);
     private float nextHeal;
     private BattleStructure structure;
     // Savaşta kurulduğu binanın seviyesi; ayarlanmazsa türün seviyesi kullanılır.

@@ -290,6 +290,8 @@ public static class Progression
         type == BuildingType.CannonTower
             ? 18f * (1f + 0.15f * (Mathf.Max(1, level) - 1))
             : 8f + 2f * (Mathf.Max(1, level) - 1);
+    /// <summary>Manastır iyileştirmesi (3 sn'de bir, azami canın oranı): 1. sev %3, her seviye +%1 (kullanıcı kararı).</summary>
+    public static float MonasteryHealFraction(int level) => 0.03f + 0.01f * (Mathf.Max(1, level) - 1);
     /// <summary>Kule birim sayısı: Okçu 1 + sev/5, Topçu 1 + sev/6.</summary>
     public static int TowerUnits(BuildingType type, int level) =>
         1 + Mathf.Max(1, level) / (type == BuildingType.CannonTower ? 6 : 5);
