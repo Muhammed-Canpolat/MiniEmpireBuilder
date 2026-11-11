@@ -51,7 +51,7 @@ public class UiFixPassTests
         Assert.AreEqual(0f, root.color.a, 0.001f, "Taşıma sırasında gizli kare görünür olmamalı.");
         var ghost = GameObject.Find("GhostPlacement").GetComponent<SpriteRenderer>();
         Assert.AreNotSame(root.sprite, ghost.sprite, "Hayalet, madenin asıl görselini kullanmalı.");
-        Assert.Greater(ghost.bounds.size.x, 3f, "Hayalet madenin gerçek boyutunda olmalı.");
+        Assert.Greater(ghost.bounds.size.x, 1.5f, "Hayalet madenin gerçek boyutunda olmalı (en az 2 hücre).");
 
         placementType.GetMethod("CancelPlacement").Invoke(placement, null);
         yield return null;

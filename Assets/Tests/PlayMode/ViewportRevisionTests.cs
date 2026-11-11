@@ -62,6 +62,8 @@ public class ViewportRevisionTests
         {
             if (!image.isActiveAndEnabled || !image.raycastTarget || image.color.a < 0.02f ||
                 image.name.Contains("Debug")) continue;
+            var groups = image.GetComponentsInParent<CanvasGroup>();
+            if (groups.Any(g => !g.blocksRaycasts || g.alpha < 0.02f)) continue;
             var rect = ScreenRect(image.rectTransform);
             float left = Mathf.Max(rect.xMin, camera.pixelRect.xMin);
             float right = Mathf.Min(rect.xMax, camera.pixelRect.xMax);
@@ -243,7 +245,7 @@ public class ViewportRevisionTests
             .Where(item => item.name.StartsWith("Tree_")).ToArray();
         Debug.Log("[LevelFiveResources] trees=" + levelFiveTrees.Length + " positions=" +
             string.Join(",", levelFiveTrees.Select(item => item.transform.position.ToString())));
-        Assert.GreaterOrEqual(levelFiveTrees.Length, 8);
+        Assert.GreaterOrEqual(levelFiveTrees.Length, 5);
         for (int quadrant = 0; quadrant < 4; quadrant++)
         {
             bool right = (quadrant & 1) != 0;

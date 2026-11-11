@@ -27,7 +27,7 @@ public class HudExpansionReviewTests
         gm = managerType.GetProperty("Instance").GetValue(null) as Component;
         Assert.NotNull(gm);
         var save = Type("PlayerSaveData").GetMethod("CreateNew").Invoke(null,
-            new[] { Enum.Parse(Type("WeaponType"), "Spear") });
+            new[] { Enum.Parse(Type("WeaponType"), "Axe") });
         gm.GetType().GetProperty("PlayerData").GetSetMethod(true).Invoke(gm, new[] { save });
         gm.GetType().GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance)
             .Invoke(gm, null);
@@ -55,7 +55,7 @@ public class HudExpansionReviewTests
         var progression = Resources.Load("ApprenticeProgressionData", Type("ApprenticeProgressionData"));
         Assert.NotNull(progression);
         var expectedHealth = (int)progression.GetType().GetMethod("Health").Invoke(progression,
-            new[] { Enum.Parse(Type("WeaponType"), "Spear"), (object)1 });
+            new[] { Enum.Parse(Type("WeaponType"), "Axe"), (object)1 });
         Assert.AreEqual(expectedHealth, apprentice.GetType().GetProperty("MaxHealth").GetValue(apprentice));
         hero.transform.position = new Vector3(-2f, 0f, 0f);
         if (body != null) body.position = hero.transform.position;
@@ -130,7 +130,7 @@ public class HudExpansionReviewTests
         yield return null;
         gm = managerType.GetProperty("Instance").GetValue(null) as Component;
         var save = Type("PlayerSaveData").GetMethod("CreateNew").Invoke(null,
-            new[] { Enum.Parse(Type("WeaponType"), "Spear") });
+            new[] { Enum.Parse(Type("WeaponType"), "Axe") });
         save.GetType().GetField("firstBaseGuideDone").SetValue(save, true);
         gm.GetType().GetProperty("PlayerData").GetSetMethod(true).Invoke(gm, new[] { save });
         gm.GetType().GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance)
@@ -219,7 +219,7 @@ public class HudExpansionReviewTests
         }
         var health = progression.GetType().GetMethod("Health");
         int levelOneHealth = (int)health.Invoke(progression,
-            new[] { Enum.Parse(Type("WeaponType"), "Spear"), (object)1 });
+            new[] { Enum.Parse(Type("WeaponType"), "Axe"), (object)1 });
         var stats = ui.GetType().GetField("heroStatsText", BindingFlags.NonPublic | BindingFlags.Instance)
             .GetValue(ui);
         string statsText = (string)stats.GetType().GetProperty("text").GetValue(stats);
