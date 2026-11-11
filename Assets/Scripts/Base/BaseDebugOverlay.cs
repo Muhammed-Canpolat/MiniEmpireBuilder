@@ -101,15 +101,15 @@ public class BaseDebugOverlay : MonoBehaviour
                 fenceCells.Add(new Vector2Int(Mathf.FloorToInt(piece.position.x),
                     Mathf.FloorToInt(piece.position.y)));
         fenceGaps = 0;
-        for (int x = 1; x <= 20; x++)
+        for (int x = 0; x <= 21; x++)
         {
             FenceCell(x, 1, fenceCells);
             FenceCell(x, 36, fenceCells);
         }
         for (int y = 2; y <= 35; y++)
         {
-            FenceCell(1, y, fenceCells);
-            FenceCell(20, y, fenceCells);
+            FenceCell(0, y, fenceCells);
+            FenceCell(21, y, fenceCells);
         }
 
         RectInt buildable = BaseMapManager.Instance.BuildableRect;
