@@ -25,7 +25,7 @@ Dal: **`gece-gelistirme`** (`ui/dark-fantasy-hud`'dan açıldı). **Push edilmed
 ## Öncesi / sonrası
 | Ölçüm | Önce | Sonra |
 |---|---|---|
-| PlayMode testleri | 50 testte 42 geçti | 59 testte 58 geçti (kalan: Topçu köşe gölgesi, gerçek görsel sorun) |
+| PlayMode testleri | 50 testte 42 geçti | 65 testte 64 geçti (bot hariç; kalan: Topçu köşe gölgesi, gerçek görsel sorun) |
 | Yenilgi zamanı | Bütün yenilgiler **ilk dalgada ~40 sn**, şansa bağlı (rastgele kenar) | İlk dalgada şansa bağlı yenilgi yok; yenilgiler boss dalgasında |
 | Aynı profilin iki koşusu | Bölge 1, 2, 3, 6'da kazan/kaybet sonucu tersine dönüyordu | Tohumlu ölçüm tutarlı |
 | İyi oyuncu (bot) | — | 36/36 zafer |
