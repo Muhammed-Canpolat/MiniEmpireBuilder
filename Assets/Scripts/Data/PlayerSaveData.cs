@@ -106,6 +106,8 @@ public class PlayerSaveData
     // Sonsuz Sefer en iyi kat; Ejder İstilası ilk zafer ödülünün alındığı hafta (yıl × 100 + hafta).
     public int endlessBestFloor;
     public int invasionRewardWeek;
+    // v6: Martı Adası (Docs/design/island_base.md). Eski kayıtta null gelir; yüklemede oluşturulur.
+    public IslandSaveData island = new IslandSaveData();
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
@@ -188,11 +190,32 @@ public class PlayerSaveData
         data.terrainResourcesSeeded = false;
         data.terrainResources = new List<TerrainResourceSave>();
         data.terrainLastGrowTicks = 0;
+        data.island = new IslandSaveData();
 
         return data;
     }
 
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
+}
+
+/// <summary>
+/// Martı Adası kaydı. MVP'de kullanılanlar: duyuru, en yüksek Akın, Et/Odun cüzdanı, öğretici adımı, oto-ateş tercihi.
+/// Kale/Okçu seviyeleri Faz 2'de (ada yükseltmeleri) gerçek anlam kazanır; şimdiden kayıtta durur.
+/// </summary>
+[Serializable]
+public class IslandSaveData
+{
+    public bool announced;          // "Ufukta bir ada!" afişi gösterildi
+    public int keepLevel = 1;       // Kıyı Kalesi (etkin seviye: Progression.Island.EffectiveKeepLevel)
+    public int archerLevel = 1;     // Okçu Kaptan
+    public int meat;                // Et (Faz 2'de harcanır)
+    public int wood;                // Odun (Faz 2'de harcanır)
+    public int highestAkin;         // kazanılan en yüksek Akın
+    public int lastAkin = 1;        // son seçilen Akın
+    public int tutorialStep;        // 0 başlamadı · 1 ATEŞ · 2 atış yeri · 3 ödül · 4 bitti
+    public bool autoFire;           // oto-ateş tercihi
+    public long nextRaidTicks;      // Faz 3: sonraki baskın (UTC tick)
+    public string lastReport = "";  // Faz 3: "Sen yokken" tek satırı
 }
 
 /// <summary>İnşaatçı kulübesinin konumu (index = inşaatçı sırası). Konum yoksa varsayılan yere konur.</summary>
@@ -550,6 +573,19 @@ public static class SaveSystem
                 data.builderTask = new BuilderTaskSave();
                 data.builderCount = 1;
                 data.saveVersion = 5;
+                Save(data);
+            }
+            // v6: ada kaydı (eski kayıtta JsonUtility alanı oluşturmaz/null bırakabilir).
+            if (data.island == null) data.island = new IslandSaveData();
+            data.island.keepLevel = Mathf.Max(1, data.island.keepLevel);
+            data.island.archerLevel = Mathf.Max(1, data.island.archerLevel);
+            data.island.lastAkin = Mathf.Max(1, data.island.lastAkin);
+            data.island.meat = Mathf.Max(0, data.island.meat);
+            data.island.wood = Mathf.Max(0, data.island.wood);
+            data.island.highestAkin = Mathf.Max(0, data.island.highestAkin);
+            if (data.saveVersion < 6)
+            {
+                data.saveVersion = 6;
                 Save(data);
             }
             MigrateTimings(data);

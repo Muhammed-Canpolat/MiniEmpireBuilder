@@ -42,7 +42,11 @@ public enum EnemyType
     CastleGuardian, // Kale Muhafızı — Bölge 1 boss'u (Kalkan Duvarı, Hücum)
     MineWarden,     // Maden Gardiyanı — Bölge 3 boss'u (Kaya Yağmuru)
     FrostLord,      // Buz Hükümdarı — Bölge 4 boss'u (Buz Nefesi)
-    DarkKing        // Karanlık Kral — Bölge 5 boss'u (Gölge Çağrısı, Can Emme)
+    DarkKing,       // Karanlık Kral — Bölge 5 boss'u (Gölge Çağrısı, Can Emme)
+    // Martı Adası (Docs/design/island_base.md §4): Kızıl Korsanlar.
+    Deckhand,       // Tayfa — hızlı, sürü
+    Raider,         // Akıncı — kaleye yürür
+    ShoreArcher     // Kıyı Okçusu — durup atış yerini / kaleyi vurur
 }
 
 public static class EnemyTypeInfo
@@ -70,6 +74,9 @@ public static class EnemyTypeInfo
             case EnemyType.MineWarden: return L.T("Maden Gardiyanı", "Mine Warden");
             case EnemyType.FrostLord: return L.T("Buz Hükümdarı", "Frost Lord");
             case EnemyType.DarkKing: return L.T("Karanlık Kral", "Dark King");
+            case EnemyType.Deckhand: return L.T("Tayfa", "Deckhand");
+            case EnemyType.Raider: return L.T("Akıncı", "Raider");
+            case EnemyType.ShoreArcher: return L.T("Kıyı Okçusu", "Shore Archer");
             default: return type.ToString();
         }
     }
@@ -333,6 +340,83 @@ public static class Progression
         public const float LavaImpactFraction = 0.08f;           // yapı/kahraman/yer düşmanı azami canı
         public const float BurnSeconds = 5f, BurnFractionPerSecond = 0.04f, BurnTick = 0.5f;
         public const float HeroBombOffset = 1.5f;
+    }
+
+    // ---- Martı Adası (Docs/design/island_base.md §8): ada sayıları yalnız burada ----
+    public static class Island
+    {
+        public const int UnlockMainBaseLevel = 5;
+        /// <summary>Oto-ateş: Kıyı Kalesi seviyesi bu değere ulaşınca açılır (DevSettings açıkken test için hep açık).</summary>
+        public const int AutoFireUnlockKeepLevel = 5;
+        public const float AutoFireRateMult = 0.75f;          // elle en hızlı atışın 0,75'i
+        /// <summary>MVP: ada yükseltmesi henüz yok; Kale ve Okçu seviyesi Ana Üs seviyesini izler (Faz 2'de kalkar).</summary>
+        public const bool KeepFollowsMainBase = true;
+
+        // Kale / Okçu
+        public static float CastleHp(int k) => 300f + 80f * (Mathf.Max(1, k) - 1);
+        public static float ArcherDamage(int l) => 12f * (1f + 0.15f * (Mathf.Max(1, l) - 1));
+        public static float ArcherHp(int l) => 150f * (1f + 0.15f * (Mathf.Max(1, l) - 1));
+        public const float FireCooldown = 0.5f;
+        public const int TapBuffer = 1;
+        public const float CritChance = 0.10f, CritMult = 2f;
+        public const float ChargeStart = 0.35f, ChargeFull = 1.2f, ChargedMult = 2.5f, ChargedHullMult = 1.5f;
+        public const int ChargedPierce = 3;
+        public const float ArcherRange = 7f, HighGroundRangeBonus = 1.5f, ArrowSpeed = 14f;
+        public const float ArcherRunSpeed = 4f, MinPostSwitch = 0.6f, ArcherRespawn = 8f;
+        public const float CastleDangerRadius = 3f;
+
+        // Tekne / iniş
+        public const float WetSeconds = 1.5f, WetDamageTaken = 1.25f, DisembarkInterval = 0.4f;
+        public const float BoatStagger = 2.5f, WaveBreak = 8f, BoatSinkSeconds = 0.8f;
+        public enum BoatKind { Rowboat, Longboat, Barge }
+        public static float BoatBaseHp(BoatKind k) => k == BoatKind.Barge ? 300f : k == BoatKind.Longboat ? 150f : 60f;
+        public static int BoatCrew(BoatKind k) => k == BoatKind.Barge ? 6 : k == BoatKind.Longboat ? 4 : 2;
+        public static float BoatSpeed(BoatKind k) => k == BoatKind.Barge ? 0.6f : k == BoatKind.Longboat ? 0.8f : 1.0f;
+        /// <summary>Kalkanlı Mavna: tek tık okları bu çarpanla işler (dolu atış kalkanı yok sayar).</summary>
+        public const float BargeTapTaken = 0.6f;
+        public const int LongboatFromAkin = 5, BargeFromAkin = 15;
+        public const float TutorialBoatSpeedMult = 0.6f;
+        /// <summary>Boss Akın'ında son dalgaya eklenen Kızıl Kaptan: etkin can çarpanı ve hasar çarpanı.</summary>
+        public const float BossHpMult = 5f, BossDamageMult = 1.5f, BossScale = 1.5f;
+        /// <summary>Düşman can çarpanı (EnemyStats.ScaleToLevel ile aynı eğri).</summary>
+        public static float EnemyHealthMult(int level) => 1f + (Mathf.Max(1, level) - 1) * 0.085f;
+        /// <summary>Tekne canı, tayfa toplam canının bu oranı (tasarım ≈%70).</summary>
+        public const float BoatHpCrewRatio = 0.7f;
+
+        // Akın merdiveni (§5)
+        public static int AkinBattleLevel(int n) => 1 + Mathf.RoundToInt(0.8f * Mathf.Max(1, n));
+        public static int AkinWaves(int n) => n <= 2 ? 1 : n <= 9 ? 2 : n <= 24 ? 3 : 4;
+        public static int AkinBoats(int n) => Mathf.Min(1 + Mathf.CeilToInt(Mathf.Max(1, n) / 3f), 7);
+        /// <summary>Kumsal açılışı (A, B, C, D sırasıyla): A 1, B 4, C 9, D 15.</summary>
+        public static readonly int[] AkinBeachUnlock = { 1, 4, 9, 15 };
+        public static int AkinRequiredCastle(int n) => Mathf.CeilToInt(Mathf.Max(1, n) / 3f);
+        public const int BossEvery = 10;
+        public static bool IsBossAkin(int n) => n > 0 && n % BossEvery == 0;
+        public static int AkinMeat(int n) => 25 + 8 * n;
+        public static int AkinWood(int n) => 25 + 8 * n;
+        public static int AkinGold(int n) => 20 + 5 * n;
+        public const int GemsEvery = 5, GemsEveryAmount = 3, BossGems = 5;
+        public static int AkinGems(int n) => (n % GemsEvery == 0 ? GemsEveryAmount : 0) + (IsBossAkin(n) ? BossGems : 0);
+        public const float ReplayRewardRate = 0.3f;
+        /// <summary>Ada Ana Üs ilerlemesine bağlı: en yüksek Akın = 3 × Kıyı Kalesi.</summary>
+        public static int MaxAkin(int keepLevel) => 3 * Mathf.Max(1, keepLevel);
+
+        // Atış yerleri (§2): açılış Kıyı Kalesi seviyesi (P1, P2, P3, P4, P5)
+        public static readonly int[] PostUnlock = { 1, 4, 1, 2, 5 };
+        public static int BeachesOpen(int n)
+        {
+            int open = 0;
+            for (int i = 0; i < AkinBeachUnlock.Length; i++) if (n >= AkinBeachUnlock[i]) open++;
+            return Mathf.Max(1, open);
+        }
+        /// <summary>Etkin Kıyı Kalesi seviyesi: kayıtlı seviye ile (MVP'de) Ana Üs seviyesinin büyüğü.</summary>
+        public static int EffectiveKeepLevel(int savedKeep, int mainBaseLevel) =>
+            Mathf.Clamp(KeepFollowsMainBase ? Mathf.Max(savedKeep, mainBaseLevel) : savedKeep, 1, MaxLevel);
+        public static int EffectiveArcherLevel(int savedArcher, int keepLevel) =>
+            Mathf.Clamp(KeepFollowsMainBase ? keepLevel : Mathf.Min(savedArcher, keepLevel), 1, MaxLevel);
+        /// <summary>Başlatılabilir mi: sıralı (en çok en yüksek + 1) ve Kıyı Kalesi kapısı.</summary>
+        public static bool CanStartAkin(int n, int keepLevel, int highestAkin) =>
+            n >= 1 && n <= highestAkin + 1 && keepLevel >= AkinRequiredCastle(n);
     }
 
     // ---- Karşı düşmanlar ve Boss Kalkanı (round2 C) ----
@@ -600,6 +684,20 @@ public class EnemyStats
                 stats.goldDrop = 150;
                 break;
 
+            // Martı Adası: Kızıl Korsanlar (island_base.md §4)
+            case EnemyType.Deckhand:
+                stats.health = 26f; stats.damage = 4f; stats.moveSpeed = 2.2f;
+                stats.attackRange = 1.2f; stats.attackSpeed = 1.2f; stats.goldDrop = 6;
+                break;
+            case EnemyType.Raider:
+                stats.health = 55f; stats.damage = 8f; stats.moveSpeed = 1.3f;
+                stats.attackRange = 1.4f; stats.attackSpeed = 0.9f; stats.goldDrop = 14;
+                break;
+            case EnemyType.ShoreArcher:
+                stats.health = 30f; stats.damage = 6f; stats.moveSpeed = 1.4f;
+                stats.attackRange = 5f; stats.attackSpeed = 0.8f; stats.goldDrop = 14;
+                break;
+
             case EnemyType.ForestWitch:
                 stats.health = 240f;
                 stats.damage = 10f;
@@ -639,7 +737,7 @@ public class EnemySpawnInfo
 }
 
 /// <summary>Hasarın kaynağı (karşı düşmanların hasar çarpanları ve telemetri için).</summary>
-public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env }
+public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env, IslandArcher }
 
 /// <summary>Mevcut gövdeler üzerinde karşı düşman çeşitleri (round2 C).</summary>
 public enum EnemyVariant { None, Armored, Flying, Saboteur }

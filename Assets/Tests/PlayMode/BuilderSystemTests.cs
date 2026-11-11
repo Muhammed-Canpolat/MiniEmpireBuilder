@@ -44,7 +44,7 @@ public class BuilderSystemTests
 
         var save = Type("PlayerSaveData").GetMethod("CreateNew").Invoke(null,
             new[] { Enum.Parse(Type("WeaponType"), "Axe") });
-        Assert.AreEqual(5, save.GetType().GetField("saveVersion").GetValue(save));
+        Assert.AreEqual(6, save.GetType().GetField("saveVersion").GetValue(save));
         Assert.AreEqual(1, save.GetType().GetField("builderCount").GetValue(save));
         Assert.AreEqual(0, save.GetType().GetField("gems").GetValue(save));
 
