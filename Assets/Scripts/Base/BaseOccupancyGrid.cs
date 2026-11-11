@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Üs haritasının tek doluluk (occupancy) sorgusu. Bina, inşaatçı kulübesi, dekor ve kahraman
 /// kampı tek bir hücre ızgarasında çakışma denetimine girer; bina ve dekor yerleştirmesi aynı
-/// kuralı kullanır. Ağaç/kayalar yerleştirmeyi engellemez (temizlenebilir arazi öğesi).
+/// kuralı kullanır. Kilitli araziden kalan doğa nesneleri (NatureObstacle) engeldir; ağaç/kaya kaynakları (PlacedMapObject) değildir.
 /// </summary>
 public static class BaseOccupancyGrid
 {
@@ -65,6 +65,8 @@ public static class BaseOccupancyGrid
                 other.gameObject.transform.position))) return false;
         }
 
+        if (NatureObstacle.AnyIn(cells)) return false;
+
         var decor = includeDecor ? DecorPlacementController.Instance : null;
         if (decor != null)
             foreach (var item in decor.Placed)
@@ -107,6 +109,7 @@ public static class BaseOccupancyGrid
                 if (item == null || item.Data == null) continue;
                 Add(new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
             }
+        foreach (var cell in NatureObstacle.ByCell.Keys) blocked.Add(cell);
         if (ignoreCells != null)
             foreach (var r in ignoreCells)
                 for (int y = r.yMin; y < r.yMax; y++)

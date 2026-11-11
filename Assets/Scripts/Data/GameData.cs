@@ -305,6 +305,10 @@ public static class Progression
     public static float SpawnInterval(int region) => Mathf.Max(0.9f, 1.25f - 0.07f * (Mathf.Max(1, region) - 1));
     public const int LevelsPerColorTier = 3;
 
+    /// <summary>Ana Üs'te kalan doğa nesnesini kaldırma bedeli (altın): çalı 5, kütük 8, kaya 10, ağaç 15.</summary>
+    public static int NatureRemoveCost(NatureKind kind) =>
+        kind == NatureKind.Bush ? 5 : kind == NatureKind.Stump ? 8 : kind == NatureKind.Rock ? 10 : 15;
+
     // ---- Bölge kimliği (round2 E): Bölge 4 Don, 5 Lanetli Türbeler, 6 Yanardağ ----
     public static class RegionMechanics
     {

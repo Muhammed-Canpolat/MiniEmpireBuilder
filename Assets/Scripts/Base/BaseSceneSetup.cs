@@ -677,15 +677,20 @@ public class BaseSceneSetup : MonoBehaviour
         Sprite tree = System.Array.Find(DecorPlacementController.All, item => item.id == "tree")?.sprite;
         Sprite[] sprites = { tree, Resources.Load<Sprite>("BaseDecor/bush"),
             Resources.Load<Sprite>("BaseDecor/rock"), Resources.Load<Sprite>("BaseDecor/stump") };
-        var clean = BaseWorldLayout.CleanAtLevel(GameManager.Instance != null
-            ? GameManager.Instance.GetMainBaseLevel() : 1);
+        int currentLevel = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
+        var saveData = GameManager.Instance?.PlayerData;
+        // Doğa genişlemeyle silinmez: dizilim, ilk spawn anındaki (taban) temiz alana göre sabittir.
+        // Eski kayıtlarda taban = mevcut seviye; zaten temizlenmiş alan temiz kalır.
+        if (saveData != null && saveData.natureBaselineLevel <= 0) saveData.natureBaselineLevel = currentLevel;
+        var baseline = BaseWorldLayout.CleanAtLevel(saveData != null ? saveData.natureBaselineLevel : currentLevel);
+        var clean = BaseWorldLayout.CleanAtLevel(currentLevel);
         var random = new System.Random(76143);
         var centers = new System.Collections.Generic.List<Vector2>();
         for (int i = 0; i < 18; i++)
             centers.Add(new Vector2(random.Next(2, 20), random.Next(2, 36)));
         foreach (Vector2Int cell in EnumerateInteriorCells())
         {
-            if (clean.Contains(cell)) continue;
+            if (baseline.Contains(cell)) continue;
             float nearest = 20f;
             foreach (var center in centers)
                 nearest = Mathf.Min(nearest, Vector2.Distance(center, cell));
@@ -693,8 +698,13 @@ public class BaseSceneSetup : MonoBehaviour
             float density = Mathf.Lerp(0.05f, 0.62f, Mathf.Clamp01((3.6f - nearest) / 3.2f));
             if (cell.y < 4 || cell.y >= 34) density = Mathf.Max(density, 0.42f);
             if (random.NextDouble() > density) continue;
-            Sprite sprite = sprites[random.Next(sprites.Length)];
+            int spriteIndex = random.Next(sprites.Length);
+            Sprite sprite = sprites[spriteIndex];
             if (sprite == null) continue;
+            var kind = spriteIndex == 0 ? NatureKind.Tree : spriteIndex == 1 ? NatureKind.Bush
+                : spriteIndex == 2 ? NatureKind.Rock : NatureKind.Stump;
+            bool removed = saveData?.removedNatureIds != null
+                && saveData.removedNatureIds.Contains(NatureObstacle.MakeId(kind, cell));
             var go = new GameObject("LockedObstacle_" + cell.x + "_" + cell.y);
             go.transform.position = new Vector3(cell.x + 0.5f + (float)(random.NextDouble() - 0.5) * 0.4f,
                 cell.y + 0.5f + (float)(random.NextDouble() - 0.5) * 0.4f, 0f);
@@ -704,6 +714,12 @@ public class BaseSceneSetup : MonoBehaviour
             float size = (0.65f + (float)random.NextDouble() * 0.65f)
                 / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
             go.transform.localScale = Vector3.one * size;
+            if (removed) { Destroy(go); continue; }
+            var box = go.AddComponent<BoxCollider2D>();
+            box.size = Vector2.one * (0.9f / size);
+            var nature = go.AddComponent<NatureObstacle>();
+            nature.kind = kind;
+            nature.cell = cell;
             _lockedDecor[cell] = go;
         }
         RefreshLockedShade(clean);
@@ -760,7 +776,7 @@ public class BaseSceneSetup : MonoBehaviour
     {
         var clean = BaseWorldLayout.CleanAtLevel(level);
         RefreshLockedShade(clean);
-        StartCoroutine(AnimateLandClearing(clean));
+        // Doğa nesneleri genişlemede silinmez: yerleştirmeyi engeller, altın karşılığı kaldırılır (NatureObstacle).
         if (_naturalBoundaryRoot != null)
         {
             Destroy(_naturalBoundaryRoot);
@@ -1145,6 +1161,12 @@ public class BaseSceneSetup : MonoBehaviour
                 DecorPlacementController.Instance?.ShowActions(touchedDecor);
                 return;
             }
+            var touchedNature = hit.collider.GetComponent<NatureObstacle>();
+            if (touchedNature != null)
+            {
+                ShowNaturePrompt(touchedNature);
+                return;
+            }
             var touchedHut = hit.collider.GetComponent<BuilderHut>();
             if (touchedHut != null)
             {
@@ -1319,6 +1341,67 @@ public class BaseSceneSetup : MonoBehaviour
         rt.anchoredPosition = new Vector2(x, y);
         ((RectTransform)pointer.transform).anchoredPosition = new Vector2(Mathf.Clamp(localPos.x - x, -90f, 90f), -5.5f);
 
+        rt.localScale = Vector3.one * 0.7f;
+        rt.DOScale(1f, 0.18f).SetEase(Ease.OutBack);
+    }
+
+    /// <summary>Doğa nesnesi kartı: "Kaldır (X altın)" ve vazgeç; altın yetmezse düğme kapalı.</summary>
+    private void ShowNaturePrompt(NatureObstacle nature)
+    {
+        if (nature == null) return;
+        HideRemovePrompt();
+        _removeTarget = null;
+        var canvasRect = _mainCanvas.GetComponent<RectTransform>();
+        _removePrompt = new GameObject("RemovePrompt", typeof(RectTransform), typeof(Image));
+        _removePrompt.transform.SetParent(_mainCanvas.transform, false);
+        var rt = (RectTransform)_removePrompt.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = new Vector2(240f, 104f);
+        var card = _removePrompt.GetComponent<Image>();
+        card.sprite = ReferenceUiVisuals.ToastSprite();
+        card.type = Image.Type.Sliced;
+        card.color = Color.white;
+        var outline = _removePrompt.AddComponent<Outline>();
+        outline.effectColor = new Color(0.94f, 0.76f, 0.29f, 0.7f);
+        outline.effectDistance = new Vector2(1.5f, -1.5f);
+
+        int cost = nature.RemoveCost;
+        bool canAfford = GameManager.Instance != null && GameManager.Instance.PlayerData != null
+            && GameManager.Instance.PlayerData.gold >= cost;
+        ReferenceUiVisuals.Text(rt, "Title", UiStrings.Upper(nature.DisplayName), 16, ReferenceUiVisuals.Gold,
+            TextAlignmentOptions.Center, new Vector2(0f, 0.70f), new Vector2(1f, 0.95f),
+            new Vector2(10f, 0f), new Vector2(-10f, 0f), title: true);
+        ReferenceUiVisuals.Text(rt, "Info", canAfford
+                ? L.T("Yer açmak için kaldır", "Clear it to free the land")
+                : L.T("<color=#E07A5F>Yeterli altın yok</color>", "<color=#E07A5F>Not enough gold</color>"), 12,
+            ReferenceUiVisuals.Muted, TextAlignmentOptions.Center, new Vector2(0f, 0.50f), new Vector2(1f, 0.70f),
+            new Vector2(10f, 0f), new Vector2(-10f, 0f), bodyBold: true);
+        var remove = ReferenceUiVisuals.Button(rt, "RemoveConfirm", L.T($"KALDIR ({cost} altın)", $"REMOVE ({cost} gold)"),
+            true, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-114f, 10f), new Vector2(-4f, 48f), 12);
+        remove.GetComponent<Image>().color = new Color(1f, 0.62f, 0.55f);
+        remove.interactable = canAfford;
+        remove.onClick.AddListener(() =>
+        {
+            if (nature != null) nature.TryRemove();
+            HideRemovePrompt();
+        });
+        var cancel = ReferenceUiVisuals.Button(rt, "RemoveCancel", L.T("VAZGEÇ", "CANCEL"), false,
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(4f, 10f), new Vector2(114f, 48f), 14);
+        cancel.onClick.AddListener(HideRemovePrompt);
+
+        var pointer = ReferenceUiVisuals.Image(rt, "Pointer", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            new Vector2(-9f, -12f), new Vector2(9f, 1f), ReferenceUiVisuals.Background);
+        pointer.sprite = PointerSprite();
+        pointer.transform.SetAsFirstSibling();
+
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(nature.transform.position + Vector3.up * 0.9f);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPos, null, out Vector2 localPos);
+        float halfW = rt.sizeDelta.x * 0.5f + 8f;
+        float x = Mathf.Clamp(localPos.x, canvasRect.rect.xMin + halfW, canvasRect.rect.xMax - halfW);
+        float y = Mathf.Clamp(localPos.y + 12f, canvasRect.rect.yMin + 110f, canvasRect.rect.yMax - rt.sizeDelta.y - 90f);
+        rt.anchoredPosition = new Vector2(x, y);
+        ((RectTransform)pointer.transform).anchoredPosition = new Vector2(Mathf.Clamp(localPos.x - x, -90f, 90f), -5.5f);
         rt.localScale = Vector3.one * 0.7f;
         rt.DOScale(1f, 0.18f).SetEase(Ease.OutBack);
     }

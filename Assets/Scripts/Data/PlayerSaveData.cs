@@ -36,6 +36,10 @@ public class PlayerSaveData
     // İnşa edilebilir alanın kayıtlı genişliği; görünüm yüksekliği buna göre hesaplanır.
     public int buildableSize = 17;
     public List<string> removedFenceIds = new List<string>();
+    // Kilitli araziden kalan doğa nesneleri (kimlik: tür_x_y). natureBaselineLevel: doğa ilk spawn edildiğinde
+    // açık olan Ana Üs seviyesi (0 = henüz yok; eski kayıtlarda o seviyedeki temiz alan temiz kalır).
+    public List<string> removedNatureIds = new List<string>();
+    public int natureBaselineLevel;
 
 
     // Eski (v3) inşaatçı durumu: yalnız geçiş için okunur.
@@ -179,6 +183,8 @@ public class PlayerSaveData
         data.gems = 0;
         data.buildableSize = 17;
         data.removedFenceIds = new List<string>();
+        data.removedNatureIds = new List<string>();
+        data.natureBaselineLevel = 0;
         data.terrainResourcesSeeded = false;
         data.terrainResources = new List<TerrainResourceSave>();
         data.terrainLastGrowTicks = 0;
@@ -531,6 +537,7 @@ public static class SaveSystem
             if (data.builderTasks == null) data.builderTasks = new List<BuilderTaskSave>();
             if (data.builderHuts == null) data.builderHuts = new List<BuilderHutSave>();
             if (data.terrainResources == null) data.terrainResources = new List<TerrainResourceSave>();
+            if (data.removedNatureIds == null) data.removedNatureIds = new List<string>();
             if (data.saveVersion < 5)
             {
                 // Tek görev listeye taşınır; 1 inşaatçı ve 0 elmasla devam edilir.
