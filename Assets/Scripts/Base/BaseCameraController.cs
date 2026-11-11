@@ -160,6 +160,9 @@ public sealed class BaseCameraController : MonoBehaviour
         float halfHeight = size;
         float halfWidth = size * cam.aspect;
         HudPaddingWorld(size, out float padL, out float padR, out float padT, out float padB);
+        // Tam uzak görünümde (açılış) arazi her zaman ortalı: yan HUD payı yalnız yakınlaştırınca kaydırma sağlar.
+        // (Aksi hâlde bir odaklama/sürükleme kamerayı padL kadar sola itip araziyi sağa kaymış gösteriyordu.)
+        if (size >= full * 0.98f) padL = padR = 0f;
         Vector3 p = cam.transform.position;
         // Görüş kenarı dünya sınırının HUD payı kadar ötesine gidebilir: her hücre HUD'un altından çıkarılabilir.
         p.x = ClampAxis(p.x, halfWidth, -padL, BaseWorldLayout.Width + padR, BaseWorldLayout.Width * 0.5f);
