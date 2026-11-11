@@ -1,70 +1,100 @@
-# Sabah raporu — 11 Kasım 2026 gece çalışması
+# Rapor — Round 2 (11 Kasım 2026)
 
-Dal: **`gece-gelistirme`** (`ui/dark-fantasy-hud`'dan açıldı). **Push edilmedi.** Geri dönüş noktası: `a8cc598`.
+Dal: **`gece-gelistirme`** — push edilmedi. Bu turun commit'leri `22db715` → `8e72057` (aşağıda).
+Test paketi: **87 testten 86'sı geçiyor** (kalan: bilinen Topçu köşe gölgesi). Yeni testler: GridPlacement, CounterEnemy,
+RegionMechanics, TimingConfig, GameClock, BattleBalance — hepsi geçti. Ölçümler bot ile, **normal ekonomi** (elmas 0).
 
-## ⚠️ Push etmeden önce
-- `d6e648e` commit'i yanlışlıkla **`Assets/Dragon Warrior Files/`** (3,1 MB, lisansı netleşmemiş) ve
-  `ground_mine_rocks.png.meta` değişikliğini içeriyor. `483cd1d` bunları takipten çıkardı (diskte duruyorlar), ama
-  geçmişte kaldılar. Push'tan önce iki commit'i birleştirmek önerilir:
-  `git rebase -i a8cc598` → `483cd1d` satırını `fixup` yap (ya da GitHub Desktop/IDE ile "squash").
-- Aynı şey `7853033` için de geçerli (`ground_mine_rocks.png.meta` girdi, hemen sonraki commit geri aldı; net fark sıfır).
+> ⚠️ Push öncesi (önceki turdan): `d6e648e`+`483cd1d` ve `7853033`+`00afea4` çiftleri birleştirilmeli
+> (`git rebase -i a8cc598`, ikinci commit'leri `fixup`). Bu turda korunan dosyalara dokunulmadı.
 
-## Ne yapıldı (commit'ler)
-| Commit | İş |
+## A. Günlük görevler — korundu, genişletildi (`cffb20d`)
+Yeni türler: **savaşta 3 yapı kur**, **üssüne dekor yerleştir**, **kahramanınla 15 düşman yen** (son vuruş kahraman/Çırak).
+Enum sonuna eklendi: eski kayıtlar bozulmaz.
+
+## B. İnşa ve yerleştirme (`ed0ed14`) — en yüksek öncelik
+| İstek | Durum |
 |---|---|
-| `a8cc598` | Unity'nin ürettiği .meta dosyaları + bildirim paketinin kilit kaydı |
-| `38531c3` | Firebase sonrası gradle şablonlarında Android Resolver blokları temizlendi (hedef yalnız ARM64) |
-| `0084e5a`, `91f40a9` | **PlaytestBot**: savaşları kendisi oynayan otomatik oyuncu, JSON telemetri, kamera görüntüsü; CLAUDE.md, PROGRESS.md, 6 ajan |
-| `b203b41` | **Güvenlik:** `GameClock`: telefon saati geri alınınca günlük ödüller yeniden alınamaz; elmas taşma sınırı |
-| `0571445` | AUDIT.md (puanlı denetim), ROADMAP.md, denge tasarım notu |
-| `dd5b349` | **Denge v1:** dalga başına 1–2 taraf + **3 sn kırmızı ok uyarısı**, başlangıç altını, ilk dalga sınırı, Bölge 6 dalga sırası, Ana Üs canı +100 |
-| `ce9c343` | 8 eski testten 7'si güncel tasarıma uyduruldu |
-| `aee4db4` | **His:** kule atışında geri tepme + topçu kıvılcımı; Ana Üs darbe sarsıntısı/toz, %30 altında duman, yıkılışta toz + kamera sarsıntısı. **Bölge 4–6 kimliği:** buz/kızıl/volkanik zemin örtüsü, kar/kül/kıvılcım partikülleri |
-| `d6e648e` | Boss aşamalarına ek düşman, kule hasar artışı düşürüldü, bot "sıradan oyuncu" profili |
-| `483cd1d` | Yanlış eklenen dosyalar takipten çıkarıldı |
+| Doluluk ızgarası, çakışma imkânsız | ✅ `BaseOccupancyGrid` (bina, kulübe, maden, dekor, kamp tek kontrol) |
+| Eski kayıtta üst üste binen yapı | ✅ Yüklemede en yakın boş yere taşınır; sığmayan dekor iade |
+| Yarı saydam hayalet, ızgaraya oturur, yeşil/kırmızı | ✅ Bina + dekor |
+| Yerleştirirken kamera kaydırma/zoom, kenarda kayma | ✅ `BaseCameraController` (tek parmak kaydır, iki parmak/teker zoom, hayalet kenara gelince kayar) |
+| Onay / iptal, taşıma aynı sistem | ✅ YERLEŞTİR/İPTAL; geçersizse düğmede sebep (yer dolu / altın yok / inşaatçı yok) |
+| Bina + dekor tek sistem | ✅ Ortak doluluk + ortak sürükleme (`GhostPointerDrag`) |
+| PlayMode kabul testi | ✅ `GridPlacementTests`: çakışma reddi, serbest yerleşim, taşıma, kayıt/yükleme, bozuk kayıt onarımı |
 
-## Öncesi / sonrası
-| Ölçüm | Önce | Sonra |
+Kök neden de bulundu: binalar sabit yuvalara konuyordu; taşınan binanın yuvası "boş" göründüğü için üstüne yeni bina kurulabiliyordu.
+**Cihazda bakılmadı:** dokunmatik sürükleme/pinch, kamera sınırları. HUD yeniden hizalanınca zoom sıfırlanıyor (zararsız, görünür).
+
+## C. Savaş dengesi (`c1925de`, `2a47371`, `8e72057`)
+- **Kök neden:** kule gücü seviyenin karesiyle (hasar × birim sayısı), kahraman doğrusal büyüyordu (12. seviyede 1 okçu ≈ 7 kahraman).
+- **Kule eğrisi** kahramanla aynı eğimde; savaş içi kule bedeli bölgeyle artar (Bölge 6: 100/150/120).
+- **Karşı düşmanlar:** Zırhlı (okçudan ×0,35), Uçan (topçu vuramaz), Sabotajcı (kuleye koşar, 1 sn fitil, kulenin %30'u patlar,
+  kahraman tek vuruşta öldürür). İlk dalgada ve Bölge 1'de yok; ilk görünüşte "YENİ DÜŞMAN" afişi.
+- **Boss kalkanı:** yalnız kahraman kırar; kalkan varken kule hasarı ×0,25–0,5; kırılınca 6 sn ×1,5. Yenilgide ipucu.
+
+**Baskın strateji testi** (her bölgenin boss aşaması, 3 tohum):
+| Strateji | Önce (kule eğrisi değişmeden) | Sonra |
 |---|---|---|
-| PlayMode testleri | 50 testte 42 geçti | 65 testte 64 geçti (bot hariç; kalan: Topçu köşe gölgesi, gerçek görsel sorun) |
-| Yenilgi zamanı | Bütün yenilgiler **ilk dalgada ~40 sn**, şansa bağlı (rastgele kenar) | İlk dalgada şansa bağlı yenilgi yok; yenilgiler boss dalgasında |
-| Aynı profilin iki koşusu | Bölge 1, 2, 3, 6'da kazan/kaybet sonucu tersine dönüyordu | Tohumlu ölçüm tutarlı |
-| İyi oyuncu (bot) | — | 36/36 zafer |
-| Sıradan oyuncu (bot) | — | Aşama 1: 18/18 (üs ~%80 canla); **boss: 11/18 = %61** (hedef %55–75 ✔) |
-| Saat hilesi | Saat ileri/geri alınarak günlük ödüller sınırsız | Geri almak işe yaramaz |
-| Bot hata logu | 0 | 0 |
+| İyi oyuncu (kule + kahraman) | 36/36, kahraman payı düşük | aşama 1: 18/18, **boss 15/18 (%83)** |
+| Sıradan oyuncu | boss 11/18 | aşama 1: 18/18, **boss 5/18 (%28)** |
+| Yalnız kule (kahraman kıpırdamaz) | ölçülmedi; kullanıcı: "1–2 kuleyle geçiliyor" | **0/18** |
+| Yalnız kahraman (yapı yok) | — | **0/18** |
+| Kahraman hasar payı (iyi oyuncu) | — | %35–92 (hedef R3+ %30–50) |
 
-Görüntüler: `Docs/playtest/*.png` (Bölge 1, 3, 4, 5, 6 boss savaşları). Not: batchmode kamera görüntüsü **arayüzü
-(HUD, uyarı okları) içermez**.
+Bölge hedefleri ve metrik tanımları: `Docs/design/round2.md` (C-metrics). Ortalama oyuncu iki profil arasında (~%55, hedef %60–75).
 
-## Oyunda görülmedi, cihazda kontrol et
-- **Dalga uyarı okları** (`BattleVfxManager.ShowSpawnWarning`): ekran kenarında yanıp sönen kırmızı oklar; konum/boyut.
-- Kule geri tepmesi ve Ana Üs sarsıntısı tabletin üzerinde fazla mı, az mı?
-- Bölge 4 kar partikülleri + kar fırtınası birlikte fazla kalabalık olabilir.
-- Başlangıç altınının (60+15×(bölge−1)) savaş HUD'unda "kazanılan altın" gibi görünmesi kafa karıştırırsa etiket değişebilir.
+## D. Başlangıç parası (`c1925de`)
+Varsayılan **0**. **Ana Üs seviyesiyle** açılır: 7 → 25, 10 → 50, 13 → 75 altın. Satın alınamaz; kart/Kraliyet/elmas etkilemez.
+Gerekçe (game-designer): yükseltmeyi ödüllendirir, üç küçük adım (5. bölge sonrası tek sıçrama yalnız Bölge 6'ya yarardı),
+hiçbir zaman tam bir kule ödemez. İlk dalga sınırı 6+bölge (altınsız ilk dalga kahramanla tutulabilsin).
 
-## Bilinen sorunlar
-- `BaseShadowRevisionTests`: Topçu kulesi köşe gölgesi eşikten biraz koyu (0,176 < 0,18); eşik değiştirilmedi.
-- Testler arasında sahne değişince binlerce DOTween "yok edilmiş hedef" uyarısı (hata değil; tween'lere `SetLink` eklenmeli).
-- Bir koşuda 2. dalgada bir zombi uzun süre hiçbir şeye saldırmadan bekledi; tekrarlanamadı. Bot artık 60 sn
-  ilerleme olmazsa düşman dökümü alıyor (`stallDump`).
-- Tam test koşusu `UIReviewScreenshots/CurrentReview` görüntülerini yeniden yazıyor (gece her seferinde geri alındı).
+## E. Bölge kimlikleri (`aee4db4` görsel, `35f1e17` mekanik, `7d90875` sanat)
+| Bölge | Mekanik | Uyan düşman |
+|---|---|---|
+| 4 Buz | Kar fırtınası 1–2 kuleyi 5 sn dondurur; kahraman 1 sn yanında durursa çözer | Uçan + Zırhlı |
+| 5 Karanlık | Lanetli Tapınaklar: 18 sn'de bir yakın kulelerin menzili ×0,6; yalnız kahraman yıkar (+30 altın) | Sabotajcı |
+| 6 Ejder | Volkan: 24 sn'de bir lav bombaları, yanan zemin yer düşmanlarını ve kahramanı yakar (düşmanı ateşe çekmek taktik) | Uçan (lavdan etkilenmez) |
+Görüntü: `Docs/playtest/round2_r5_shrine.png`, `round2_r6_eruption.png`. `ART_NEEDS.md`: bölge başına karo listesi (64×64, 64 PPU),
+dekorlar, mekanik görselleri ve itch.io/Asset Store arama kelimeleri.
+
+## F. Geliştirici ayarları (`22db715`)
+`Systems/DevSettings.cs`: tek ana anahtar + **sınırsız elmas**, 5-dokunuş kısayolu, hata ayıklama katmanı. Sabit `Available`
+`#if UNITY_EDITOR || DEVELOPMENT_BUILD` ile; yayında derleme anında `false`. DEV menüsünde AÇ/KAPA. Bot her zaman 0 elmasla.
+
+**Ekonomi ilerleme hızı** (`Tools/economy_sim.py`, sürekli oynayan sıradan oyuncu, 20 tohum):
+| | 1 saat | 3 saat |
+|---|---|---|
+| Önce (eski süreler, 30 dk can) | Ana Üs 4, Bölge 3'e takılı (Ana Üs 6 gerekir, 6. seviye 3 sa) | Ana Üs 5 |
+| Sonra (yeni süreler, 20 dk can) | **Ana Üs 6**, Bölge 3 sonu | **Ana Üs 8–9**, Bölge 4–5 |
+
+## H. Zamanlayıcılar (`6dc9569`)
+- Süreler `Resources/Config/TimingConfig.asset`'ten (Inspector'dan değiştirilebilir). Tablo: `BALANCE.md`.
+  2→15 toplam **268,5 sa → 37,1 sa**; ilk 7 seviye ≤ 15 dk. Elmasla bitir formülü aynı, bedeller kendiliğinden düştü (858 → 293).
+- Devam eden yükseltmeler: kayıt yüklenince kalan süre yeni/eski oranıyla kısalır (`SaveSystem.MigrateTimings`, test edildi).
+- Can: **30 → 20 dk** (config); sayaç `GameClock` ile (saat geri alınınca geri gitmez); ipucu metni config'ten.
+
+## G. Yeni oyuncu ilk 30 dk (`7bc6c15`)
+qa-playtester incelemesinden düzeltilenler: madene ilk dokunuş boştu (40 altınla başlıyor); Ana Üs 1–2'de yenilgide "üsse dön,
+yükselt" önerisi ve ÜSSE DÖN öne çıkar; günlük ödül penceresi ilk gün kendiliğinden açılmaz; "Yeni Oyun" kayıt varken iki dokunuşla;
+yeni oyunda ipuçları sıfırlanır; can ipucundaki "30 dk".
+**Açık kalan:** ilk savaştan sonra rehber yok (Ana Üs'ü yükseltmeye yönlendiren 2. adım), üs HUD'unda etiketsiz "1/1" fişi,
+günlük ödül penceresinin üstünde bina sprite'ları görünmesi (cihazda doğrula).
 
 ## Senin karar vermen gerekenler
-1. **Ödüllü reklam taslağı** (`RewardedAds`, 3 sn sahte ekran) sürüm derlemesinde de ödül veriyor. SDK gelene kadar
-   sürümde kapatalım mı? (Kapalı test oyuncuları reklam ödüllerini alamaz.)
-2. **Kayıt imzası (HMAC):** düz JSON kayıt düzenlenebiliyor. Bulut kaydıyla birlikte mi tasarlansın, şimdi mi?
-3. **Zorluk hedefi:** sıradan oyuncu boss'ları %61 geçiyor. Daha zor mu, daha kolay mı istersin?
-   (Tek ayar: `Progression.BossStageExtraEnemies`.)
-4. Push öncesi `d6e648e` + `483cd1d` birleştirme (yukarıda).
+1. **Kahramansız zafer** şu an hiç yok (yalnız kule 0/18). "Mümkün ama zor" için: Bölge 1–2'de kalkan çarpanı yükseltilebilir
+   ya da Ana Üs 7+ başlangıç altını artırılabilir. Hangisi?
+2. **Sıradan oyuncu boss'ta %28.** Orta zorluk için biraz düşük olabilir; tek ayar `Progression.BossStageExtraEnemies` /
+   `Counters`. Cihazda oynayıp karar ver.
+3. Elmasla hızlandırma talebi ~%66 düşecek (süreler kısaldı): inşaatçı 3–5 ve İnşaat İksiri fiyatları gözden geçirilsin mi?
+4. Önceki turdan: reklam taslağı sürümde ödül veriyor; kayıt imzası (HMAC).
 
-## Senden beklenen sanat / ses
-`ART_NEEDS.md`: düşman kare animasyonları (192×192, 64 PPU), 4 bölge bossu gövdesi, kule atış kareleri, Ana Üs hasar
-evreleri, Bölge 4–6 zemin karoları ve dekorları. Ses efektleri (tıklama, vuruş, altın, zafer/yenilgi, dalga borusu).
+## Cihazda bakılması gerekenler
+Yerleştirme (sürükle/pinch/kenar kayması), dalga ve sabotajcı uyarı okları, boss kalkan baloncuğu, uçan düşman yüksekliği,
+donan kule halkası, tapınak/volkan görselleri, yenilgi ekranı ipuçları. (Batchmode görüntüleri arayüzü göstermez.)
 
 ## Sonraki oturum için ilk 5 iş
-1. Cihazda dalga uyarı oklarını ve yeni efektleri kontrol et (ekran görüntüsüyle geri bildirim).
-2. Düşman ölümünde HUD'a uçan altın (J3) + kritik vuruş renkleri.
-3. Bölge bossları için farklı aura/giriş efekti (C3; sanat gelene kadar).
-4. Yeni savaş yapısı tasarımı (Barikat/Tuzak; game-designer notu ile).
-5. DOTween `SetLink` temizliği ve Topçu köşe gölgesi.
+1. Cihaz geri bildirimiyle yerleştirme ve yeni mekaniklerin cilası.
+2. İlk savaş sonrası rehber adımı (Ana Üs'ü yükselt → Okçu açılır).
+3. Karar 1–2'ye göre denge ince ayarı (bot: `-testFilter PlaytestBotTests`).
+4. Topçu köşe gölgesi + DOTween `SetLink` temizliği.
+5. Sanat gelince: bölge karoları ve karşı düşman/boss gövdeleri (`ART_NEEDS.md`).

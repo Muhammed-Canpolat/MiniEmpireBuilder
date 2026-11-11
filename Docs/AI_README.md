@@ -21,7 +21,8 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 
 ## İlerleme sistemi (15 seviye)
 - Tek kaynak: `Progression` (`Assets/Scripts/Data/GameData.cs`): tavan 15, renk her 3 seviyede bir
-  (mavi/sarı/kırmızı/mor/siyah), yükseltme süreleri (15 sn, 1 dk, 30 dk, 1/3/6/12/18/24 sa, 30–48 sa), bedeller.
+  (mavi/sarı/kırmızı/mor/siyah), bedeller. Yükseltme süreleri ve can yenilenmesi `Resources/Config/TimingConfig.asset`
+  (10 sn, 1/3/6/10/15/30 dk, 1/2/3/4/6/8/12 sa; can 20 dk) — BALANCE.md.
 - Açılma: Okçu 2 (2. bina 5), Topçu 4 (8), Manastır 6 (10); her türden en fazla 2. Maden 1 adet.
 - **Her binanın kendi seviyesi** var (`PlacedBuildingData.level`); sahnede `BuildingInstance` bileşeni.
   `GameManager.Buildings[type].level` = o türün en yüksek bina seviyesi.
@@ -179,3 +180,12 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - Savaşta kamera yuvaları ekran kenarında kesebiliyor (kamera sınırı önerildi).
 - APK ~118 MB: `Resources` içindeki büyük görseller ve kullanılmayan Firebase incelenebilir.
 - Ayrıntılı geçmiş: `git log` ve `UIReviewScreenshots/*/README.md`, `*_PASS.md`.
+
+## 11 Kasım 2026: round 2 (gece-gelistirme)
+- Ortak ızgara yerleşimi `Base/BaseOccupancyGrid.cs`, `PlacementController` (serbest ızgara, YERLEŞTİR/İPTAL),
+  `Base/BaseCameraController.cs` (kaydırma/yakınlaştırma, kenar kaydırma), yüklemede çakışma onarımı.
+- Karşı düşmanlar (`EnemyVariant`, `DamageSource`, `Progression.Counters/CounterMix`), boss kalkanı (yalnız kahraman kırar).
+- Bölge mekanikleri: `BattleWeather` (donan kuleler), `ShadowShrines.cs`, `VolcanicEruptions.cs` (`Progression.RegionMechanics`).
+- Başlangıç altını Ana Üs 7/10/13'te 25/50/75; kule eğrisi `Progression.TowerDamage/TowerUnits`.
+- `Systems/DevSettings.cs` (test kolaylıkları tek anahtar), `Tools/economy_sim.py`, bot profilleri (good/casual/towerOnly/heroOnly).
+- Tasarım: `Docs/design/round2.md`; rapor: `MORNING_REPORT.md`.

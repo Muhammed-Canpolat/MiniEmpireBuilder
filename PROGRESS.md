@@ -44,3 +44,12 @@
 
 ## Sıradakiler
 MORNING_REPORT.md "Sonraki oturum için ilk 5 iş".
+
+## Round 2 (11 Kasım 2026) — kullanıcı bulguları A–H
+Commit'ler: 22db715 (F DevSettings), 6dc9569 (H süreler), c1925de (C kule eğrisi + D başlangıç altını), 25886df (ekonomi sim),
+ed0ed14 (B ızgara yerleşim), 2a47371 (C karşı düşman + kalkan), 7d90875 (E sanat), 35f1e17 (E mekanik), 7bc6c15 (G ilk oturum),
+cffb20d (A görevler), 8e72057 (denge yumuşatma + bot profilleri).
+Kararlar: başlangıç altını Ana Üs seviyesine bağlı (round2.md D); lav boss'lara işlemez (yüzde hasar boss'u eritiyordu);
+sabotajcı fitili 1,0 sn ve R3+ kalkan çarpanı 0,25 (sıradan oyuncu boss'u hiç geçemiyordu); süre geçişi oransal.
+Ajanlar: explorer (yerleşim haritası), game-designer (round2.md), 3× gameplay-engineer (B, C, E), qa-playtester (ilk 30 dk).
+Dersler: commit'te asla `git add Assets` / `-a` kullanma (korunan dosyalar giriyor); sed satır numarasıyla düzenleme yapma.
