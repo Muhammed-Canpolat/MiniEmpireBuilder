@@ -68,6 +68,10 @@ public sealed class DevMenu : MonoBehaviour
         bool battle = BattleManager.Instance != null;
         var actions = new (string label, Action action, bool reload)[]
         {
+            (L.T("TEST KOLAYLIKLARI: ", "DEV TOOLS: ") + (DevSettings.Enabled ? L.T("AÇIK", "ON") : L.T("KAPALI", "OFF")),
+                () => DevSettings.Enabled = !DevSettings.Enabled, true),
+            (L.T("SINIRSIZ ELMAS: ", "UNLIMITED GEMS: ") + (DevSettings.UnlimitedGems ? L.T("AÇIK", "ON") : L.T("KAPALI", "OFF")),
+                () => DevSettings.UnlimitedGems = !DevSettings.UnlimitedGems, true),
             ("+1000 ALTIN", () => gm?.AddGold(1000), false),
             ("+100 ELMAS", () => gm?.AddGems(100), false),
             ("ALTIN = 0", () => { if (gm != null) { gm.PlayerData.gold = 0; gm.SaveGame(); } }, true),
@@ -95,11 +99,14 @@ public sealed class DevMenu : MonoBehaviour
             int col = i % columns, row = i / columns;
             float top = 0.86f - row * rowHeight;
             var entry = actions[i];
+            int index = i;
             var button = ReferenceUiVisuals.Button(p, "Dev_" + i, entry.label, false,
                 new Vector2(col * 0.5f, top - rowHeight), new Vector2((col + 1) * 0.5f, top),
                 new Vector2(8, 4), new Vector2(-8, -4), 13);
             button.onClick.AddListener(() =>
             {
+                // Ana anahtar kapalıyken yalnız ilk düğme (anahtarın kendisi) çalışır.
+                if (index > 0 && !DevSettings.Enabled) { GemActions.Toast(L.T("Test kolaylıkları kapalı", "Dev tools are off")); return; }
                 try { entry.action?.Invoke(); }
                 catch (Exception e) { Debug.LogException(e); }
                 Refresh();

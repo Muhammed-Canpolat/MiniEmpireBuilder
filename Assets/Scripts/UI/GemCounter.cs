@@ -31,6 +31,7 @@ public sealed class GemCounter : MonoBehaviour
     public bool RegisterTestTap()
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!DevSettings.GemTapShortcut) return false;
         tapCount = Time.unscaledTime - lastTap < 0.4f ? tapCount + 1 : 1;
         lastTap = Time.unscaledTime;
         if (tapCount < 5) return false;

@@ -315,6 +315,7 @@ public sealed class GemShopUI : MonoBehaviour
     private void TestTap()
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!DevSettings.GemTapShortcut) return;
         testTaps = Time.unscaledTime - lastTestTap < 0.4f ? testTaps + 1 : 1;
         lastTestTap = Time.unscaledTime;
         if (testTaps < 5) return;

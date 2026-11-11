@@ -74,7 +74,7 @@ public class BaseSceneSetup : MonoBehaviour
         });
         SetupCamera();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        gameObject.AddComponent<BaseDebugOverlay>();
+        if (DevSettings.DebugOverlay) gameObject.AddComponent<BaseDebugOverlay>();
 #endif
         StartCoroutine(LogBaseWidthAfterSpawn());
 

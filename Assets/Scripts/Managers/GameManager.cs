@@ -255,7 +255,7 @@ public class GameManager : MonoBehaviour
 
     // ==================== ELMAS ====================
 
-    public int Gems => PlayerData?.gems ?? 0;
+    public int Gems => DevSettings.UnlimitedGems ? GemEconomy.MaxGems : PlayerData?.gems ?? 0;
 
     public void AddGems(int amount, bool saveAfter = true)
     {
@@ -268,7 +268,10 @@ public class GameManager : MonoBehaviour
 
     public bool SpendGems(int amount)
     {
-        if (PlayerData == null || amount <= 0 || PlayerData.gems < amount) return false;
+        if (PlayerData == null || amount <= 0) return false;
+        // Test: sınırsız elmas (yalnız editör/Development, DevSettings).
+        if (DevSettings.UnlimitedGems) { OnGemsChanged?.Invoke(PlayerData.gems); return true; }
+        if (PlayerData.gems < amount) return false;
         PlayerData.gems -= amount;
         OnGemsChanged?.Invoke(PlayerData.gems);
         SaveGame();
