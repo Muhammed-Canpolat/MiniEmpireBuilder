@@ -277,7 +277,7 @@ public class BaseMapManager : MonoBehaviour
         ClearFenceObjects();
         _buildableFenceRoot = new GameObject("BuildableFence");
 
-        const float left = 1.5f, right = 20.5f, bottom = 1.5f, top = 36.5f;
+        const float left = 0.5f, right = 21.5f, bottom = 1.5f, top = 36.5f;
         Sprite beams = FenceBeamSprite();
         Sprite pillar = BaseCustomArt.Get("fence_stone_pillar") ?? LoadFullFenceSprite("fence_wood_corner");
         Sprite lantern = BaseCustomArt.Get("fence_lantern");
@@ -313,7 +313,7 @@ public class BaseMapManager : MonoBehaviour
         }
 
         // Görünmez çarpışma: her sınır hücresine bir parça (tanı katmanı da bunları sayar).
-        for (int x = 1; x <= 20; x++)
+        for (int x = 0; x <= 21; x++)
         {
             FenceBlocker(new Vector3(x + 0.5f, bottom, 0f));
             FenceBlocker(new Vector3(x + 0.5f, top, 0f));

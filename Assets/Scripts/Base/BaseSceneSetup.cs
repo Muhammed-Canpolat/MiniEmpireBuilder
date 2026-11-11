@@ -587,9 +587,9 @@ public class BaseSceneSetup : MonoBehaviour
                 Sprite sprite = i % 5 == 0 ? rock : i % 3 == 0 ? bush : tree;
                 if (sprite == null) sprite = tree != null ? tree : rock != null ? rock : bush;
                 if (sprite == null) continue;
-                float x = side == 0 ? 0.2f + (float)random.NextDouble() * 0.3f
-                    : side == 1 ? 21.5f + (float)random.NextDouble() * 0.3f
-                    : 2.1f + (float)random.NextDouble() * 17.8f;
+                float x = side == 0 ? -0.3f + (float)random.NextDouble() * 0.3f
+                    : side == 1 ? 22.0f + (float)random.NextDouble() * 0.3f
+                    : 1.1f + (float)random.NextDouble() * 19.8f;
                 float y = side < 2 ? 0.5f + (i + 0.3f +
                     (float)random.NextDouble() * 0.4f) / count * 37f
                     : side == 2 ? 0.15f + (float)random.NextDouble() * 0.25f
@@ -607,9 +607,9 @@ public class BaseSceneSetup : MonoBehaviour
                 // Keep the full sprite bounds outside the fence; edge trees may crop at the screen.
                 Vector3 position = go.transform.position;
                 if (side == 0) position.x = Mathf.Min(position.x,
-                    1.0f - renderer.bounds.extents.x);
+                    0.0f - renderer.bounds.extents.x);
                 else if (side == 1) position.x = Mathf.Max(position.x,
-                    21.0f + renderer.bounds.extents.x);
+                    22.0f + renderer.bounds.extents.x);
                 else if (side == 2) position.y = Mathf.Min(position.y,
                     1.0f - renderer.bounds.extents.y);
                 else position.y = Mathf.Max(position.y,
@@ -659,8 +659,8 @@ public class BaseSceneSetup : MonoBehaviour
         for (int attempt = 0; attempt < 500 && created < count; attempt++)
         {
             int quadrant = created % 4;
-            float minX = quadrant % 2 == 0 ? 2.7f : width * 0.5f;
-            float maxX = quadrant % 2 == 0 ? width * 0.5f : width - 2.7f;
+            float minX = quadrant % 2 == 0 ? 1.7f : width * 0.5f;
+            float maxX = quadrant % 2 == 0 ? width * 0.5f : width - 1.7f;
             float minY = quadrant < 2 ? 2.7f : height * 0.5f;
             float maxY = quadrant < 2 ? height * 0.5f : height - 2.7f;
             Vector3 position = new Vector3(Random.Range(minX, maxX),
@@ -687,7 +687,7 @@ public class BaseSceneSetup : MonoBehaviour
         var random = new System.Random(76143);
         var centers = new System.Collections.Generic.List<Vector2>();
         for (int i = 0; i < 18; i++)
-            centers.Add(new Vector2(random.Next(2, 20), random.Next(2, 36)));
+            centers.Add(new Vector2(random.Next(BaseWorldLayout.Buildable.xMin, BaseWorldLayout.Buildable.xMax), random.Next(2, 36)));
         foreach (Vector2Int cell in EnumerateInteriorCells())
         {
             if (baseline.Contains(cell)) continue;
@@ -737,12 +737,12 @@ public class BaseSceneSetup : MonoBehaviour
             if (end <= start) return;
             var go = new GameObject(name);
             go.transform.SetParent(_lockedShadeRoot.transform, false);
-            go.transform.position = new Vector3(11f, (start + end) * 0.5f, 0f);
+            go.transform.position = new Vector3(BaseWorldLayout.Buildable.center.x, (start + end) * 0.5f, 0f);
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = square;
             sr.color = new Color(0f, 0f, 0f, 0.25f);
             sr.sortingOrder = 4;
-            go.transform.localScale = new Vector3(18f / square.bounds.size.x,
+            go.transform.localScale = new Vector3(BaseWorldLayout.Buildable.width / square.bounds.size.x,
                 (end - start) / square.bounds.size.y, 1f);
         }
         Band("SouthClosed", BaseWorldLayout.Buildable.yMin, clean.yMin);
@@ -758,8 +758,8 @@ public class BaseSceneSetup : MonoBehaviour
         _lockedFogSprite = fogSprite;
         var fog = new GameObject("NorthernBoundaryFog");
         fog.transform.SetParent(_lockedShadeRoot.transform, false);
-        fog.transform.position = new Vector3(11f, clean.yMax, 0f);
-        fog.transform.localScale = new Vector3(18f, 1.2f, 1f);
+        fog.transform.position = new Vector3(BaseWorldLayout.Buildable.center.x, clean.yMax, 0f);
+        fog.transform.localScale = new Vector3(BaseWorldLayout.Buildable.width, 1.2f, 1f);
         var fogRenderer = fog.AddComponent<SpriteRenderer>();
         fogRenderer.sprite = fogSprite;
         fogRenderer.sortingOrder = 6;

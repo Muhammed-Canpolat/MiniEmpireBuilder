@@ -151,9 +151,9 @@ public class HudExpansionReviewTests
         // Arazi renk kademesiyle genişler: 1–3 aynı, 13'te tamamen açık.
         var third = (RectInt)atLevel.Invoke(null, new object[] { 3 });
         var full = (RectInt)atLevel.Invoke(null, new object[] { 13 });
-        Assert.AreEqual(new RectInt(2, 12, 18, 14), first);
+        Assert.AreEqual(new RectInt(1, 12, 20, 14), first);
         Assert.AreEqual(first, third);
-        Assert.AreEqual(new RectInt(2, 2, 18, 34), full);
+        Assert.AreEqual(new RectInt(1, 2, 20, 34), full);
         Capture("land-item-03.png");
 
         var menu = Object.FindFirstObjectByType(Type("BuildMenuController"));

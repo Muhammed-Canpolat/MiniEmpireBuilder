@@ -98,6 +98,7 @@ public class BasePresentationTests
         var occupied = new HashSet<Vector2Int>();
         var layout = RuntimeType("BaseWorldLayout");
         var bounds = (RectInt)StaticField(layout, "Buildable");
+        int originX = (int)StaticField(layout, "SlotOriginX");
         foreach (var slot in (Array)StaticField(layout, "Slots"))
         {
             var footprint = (Vector2Int)Field(slot, "footprint");
@@ -106,7 +107,7 @@ public class BasePresentationTests
             for (int y = 0; y < footprint.y; y++)
             for (int x = 0; x < footprint.x; x++)
             {
-                var cell = new Vector2Int(bounds.xMin + topLeft.x + x,
+                var cell = new Vector2Int(originX + topLeft.x + x,
                     bounds.yMax - 1 - topLeft.y - y);
                 Assert.IsTrue(bounds.Contains(cell), id + " outside interior " + cell);
                 Assert.IsTrue(occupied.Add(cell), id + " overlaps at " + cell);

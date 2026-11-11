@@ -5,15 +5,18 @@ public static class BaseWorldLayout
 {
     public const int Width = 22;
     public const int Height = 38;
-    public static readonly RectInt Buildable = new RectInt(2, 2, 18, 34);
-    public static readonly RectInt InitialClean = new RectInt(2, 12, 18, 14);
+    // Çit dış hücrelerde (x=0 ve x=21): oynanabilir en geniş şerit. Eski düzen 2..19 idi (18 geniş).
+    public static readonly RectInt Buildable = new RectInt(1, 2, 20, 34);
+    public static readonly RectInt InitialClean = new RectInt(1, 12, 20, 14);
+    /// <summary>Slot koordinatlarının sabit x başlangıcı (eski Buildable.xMin): alan genişleyince slotlar kaymaz.</summary>
+    public static readonly int SlotOriginX = 2;
 
     /// <summary>Arazi renk kademesiyle birlikte genişler: Ana Üs 4, 7, 10 ve 13'te.</summary>
     public static RectInt CleanAtLevel(int level)
     {
         int expansions = Progression.ColorTier(level);
         if (expansions >= 4) return Buildable;
-        return new RectInt(2, 12 - expansions * 2, 18, 14 + expansions * 4);
+        return new RectInt(Buildable.xMin, 12 - expansions * 2, Buildable.width, 14 + expansions * 4);
     }
 
     /// <summary>Bir sonraki arazi genişlemesinin olacağı Ana Üs seviyesi (yoksa 0).</summary>
@@ -30,7 +33,7 @@ public static class BaseWorldLayout
         public Vector2Int topLeft;
         public Vector2Int footprint;
         public Vector2 center => new Vector2(
-            Buildable.xMin + topLeft.x + footprint.x * 0.5f,
+            SlotOriginX + topLeft.x + footprint.x * 0.5f,
             Buildable.yMax - topLeft.y - footprint.y * 0.5f);
         public Slot(string id, BuildingType? type, int x, int y, int w, int h)
         {
