@@ -14,6 +14,7 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
     private IEnumerator Start()
     {
         yield return null;
+        RegionMechanicsStats.Reset();
         RegionData region = BattleSession.Region;
         if (!BattleSession.IsCampaign || region == null || region.id == 1) yield break;
         var ground = GameObject.Find("BattleGround")?.GetComponent<SpriteRenderer>();
@@ -27,6 +28,12 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
             gameObject.AddComponent<FogOfWar>();
         if (region.specialMechanic == "Don" && GetComponent<BattleWeather>() == null)
             gameObject.AddComponent<BattleWeather>();
+        // Bölge 5 türbeleri ve Bölge 6 patlamaları yalnız sefer aşamalarında (Sonsuz/İstila değil).
+        if (!BattleSession.IsSpecial)
+        {
+            if (region.id == 5 && GetComponent<ShadowShrines>() == null) gameObject.AddComponent<ShadowShrines>();
+            if (region.id == 6 && GetComponent<VolcanicEruptions>() == null) gameObject.AddComponent<VolcanicEruptions>();
+        }
         if (region.id == 3) { AddMineScatter(); yield break; }
         if (region.id >= 4) { AddRegionDressing(region.id); yield break; }
         if (region.id != 2) yield break;

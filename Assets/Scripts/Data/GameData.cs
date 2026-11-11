@@ -300,6 +300,32 @@ public static class Progression
     public static float SpawnInterval(int region) => Mathf.Max(0.9f, 1.25f - 0.07f * (Mathf.Max(1, region) - 1));
     public const int LevelsPerColorTier = 3;
 
+    // ---- Bölge kimliği (round2 E): Bölge 4 Don, 5 Lanetli Türbeler, 6 Yanardağ ----
+    public static class RegionMechanics
+    {
+        // Bölge 4: fırtına kuleleri dondurur; kahraman yanında durarak çözer.
+        public const float StormTowerCooldown = 1.25f;          // eskiden 1.4
+        public const float FreezeSeconds = 5f;
+        public const float ThawRadius = 1.6f, ThawSeconds = 1f;
+        public static int FreezeCount(int stage) => stage >= 3 ? 2 : 1;
+
+        // Bölge 5: Lanetli Türbeler (yalnız kahraman hasar verir).
+        public static int ShrineCount(int stage) => stage <= 1 ? 1 : 2;
+        public const float ShrineBaseHp = 120f;                  // x düşman can çarpanı
+        public const float ShrineInterval = 18f, ShrineWarnSeconds = 2f, ShrineDarkSeconds = 6f;
+        public const float ShrineFirstDelay = 10f;
+        public const float ShrineRadius = 4.5f, ShrineRangeMultiplier = 0.6f;
+        public const int ShrineGold = 30;
+
+        // Bölge 6: Yanardağ patlamaları.
+        public const float EruptionInterval = 24f, EruptionFirstDelay = 14f, EruptionTelegraphSeconds = 1.2f;
+        public const int EruptionMaxTowerBombs = 3;              // + 1 bomba kahramanın yakınına
+        public const float LavaRadius = 1.1f;
+        public const float LavaImpactFraction = 0.08f;           // yapı/kahraman/yer düşmanı azami canı
+        public const float BurnSeconds = 5f, BurnFractionPerSecond = 0.04f, BurnTick = 0.5f;
+        public const float HeroBombOffset = 1.5f;
+    }
+
     // ---- Karşı düşmanlar ve Boss Kalkanı (round2 C) ----
     public static class Counters
     {

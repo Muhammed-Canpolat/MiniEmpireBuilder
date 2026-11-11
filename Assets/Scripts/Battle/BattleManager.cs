@@ -728,6 +728,14 @@ public class BattleManager : MonoBehaviour
         OnGoldEarnedChanged?.Invoke(totalGoldEarned);
     }
 
+    /// <summary>Düşman öldürmeden kazanılan savaş altını (ör. Lanetli Türbe ödülü); düşman sayacına dokunmaz.</summary>
+    public void AddBattleGold(int amount)
+    {
+        if (!battleActive || amount <= 0) return;
+        totalGoldEarned += amount;
+        OnGoldEarnedChanged?.Invoke(totalGoldEarned);
+    }
+
     public bool TryBuildFromSlot(BattleBuildSlot slot, BuildingType type, Vector3 position, int cost)
     {
         if (!CanBuildFromSlot(type, cost))

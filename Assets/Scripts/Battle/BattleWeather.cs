@@ -13,7 +13,7 @@ public sealed class BattleWeather : MonoBehaviour
     public const float Interval = 22f;
     public const float WarningSeconds = 2f;
     public const float StormSeconds = 6f;
-    public const float StormTowerCooldown = 1.4f;   // kule bekleme süresi ×1.4 (= %40 yavaş)
+    public const float StormTowerCooldown = Progression.RegionMechanics.StormTowerCooldown; // ×1.25
     public const float StormHeroSpeed = 0.75f;
 
     public static bool StormActive { get; private set; }
@@ -36,6 +36,7 @@ public sealed class BattleWeather : MonoBehaviour
                 banner.text = L.T("KAR FIRTINASI GELİYOR!", "BLIZZARD INCOMING!");
                 yield return Fade(0f, 0.25f, WarningSeconds);
                 StormActive = true;
+                FreezeTowers(ref firstStorm);
                 banner.text = L.T("FIRTINA: kuleler ve savaşçı yavaş", "BLIZZARD: towers and warrior slowed");
                 yield return Fade(0.25f, 0.6f, 0.5f);
                 yield return new WaitForSeconds(StormSeconds - 0.5f);
@@ -44,6 +45,35 @@ public sealed class BattleWeather : MonoBehaviour
             }
             yield return new WaitForSeconds(Interval - WarningSeconds - StormSeconds);
         }
+    }
+
+    private bool firstStorm = true;
+
+    /// <summary>Her fırtına 1 (aşama 1–2) / 2 (aşama 3–5) ayakta kuleyi dondurur (round2 E).</summary>
+    private static void FreezeTowers(ref bool first)
+    {
+        FreezeRandomTowers(Progression.RegionMechanics.FreezeCount(BattleSession.LevelNumber));
+        if (first && BattleVfxManager.Instance != null)
+            BattleVfxManager.Instance.ShowNoticeBanner(L.T("Kar fırtınası kuleleri donduruyor! Kahramanla yanlarında dur.",
+                "The blizzard freezes towers! Stand next to them with your hero."));
+        first = false;
+    }
+
+    /// <summary>Rastgele ayakta <paramref name="count"/> kuleyi dondurur; dondurulan sayısını döndürür.</summary>
+    public static int FreezeRandomTowers(int count)
+    {
+        var towers = new System.Collections.Generic.List<TowerController>();
+        foreach (var tower in FindObjectsByType<TowerController>(FindObjectsSortMode.None))
+            if (!tower.IsDestroyed && !tower.IsFrozen) towers.Add(tower);
+        int frozen = 0;
+        while (frozen < count && towers.Count > 0)
+        {
+            int pick = Random.Range(0, towers.Count);
+            towers[pick].Freeze(Progression.RegionMechanics.FreezeSeconds);
+            towers.RemoveAt(pick);
+            frozen++;
+        }
+        return frozen;
     }
 
     private void OnDestroy() => StormActive = false;

@@ -87,8 +87,36 @@ public class TowerController : MonoBehaviour
         frozenUntil = Mathf.Max(frozenUntil, Time.time + seconds);
     }
 
+    private float thawProgress;
+    private GameObject thawRing;
+
+    /// <summary>Kahraman yarıçap içinde ThawSeconds boyunca durursa kule çözülür (Bölge 4, round2 E).</summary>
+    private void UpdateThaw()
+    {
+        if (hero == null) hero = FindFirstObjectByType<HeroController>();
+        Vector2 origin = structure != null ? structure.BasePoint : (Vector2)transform.position;
+        bool near = hero != null && !hero.IsDowned
+            && Vector2.Distance(hero.transform.position, origin) <= Progression.RegionMechanics.ThawRadius;
+        if (thawRing == null)
+            thawRing = BattleWorldMarkers.DashedCircle(transform, Progression.RegionMechanics.ThawRadius,
+                new Color(0.55f, 0.85f, 1f, 0.8f), 24);
+        thawRing.transform.position = new Vector3(origin.x, origin.y, 0.05f);
+        thawProgress = near ? thawProgress + Time.deltaTime : Mathf.Max(0f, thawProgress - Time.deltaTime);
+        float progress = Mathf.Clamp01(thawProgress / Progression.RegionMechanics.ThawSeconds);
+        // Çözülme nabzı: halka kahraman yaklaştıkça kuleye doğru büzülür.
+        thawRing.transform.localScale = Vector3.one * (Mathf.Lerp(1f, 0.35f, progress)
+            / Mathf.Max(0.001f, Mathf.Abs(transform.lossyScale.x)));
+        if (progress < 1f) return;
+        frozenUntil = 0f;
+        RegionMechanicsStats.Thaws++;
+        Thaw();
+        if (BattleVfxManager.Instance != null) BattleVfxManager.Instance.SpawnSpark(transform.position + Vector3.up * 0.6f);
+    }
+
     private void Thaw()
     {
+        thawProgress = 0f;
+        if (thawRing != null) { Destroy(thawRing); thawRing = null; }
         if (tintTargets == null) return;
         for (int i = 0; i < tintTargets.Length; i++)
             if (tintTargets[i] != null) tintTargets[i].color = tintOriginals[i];
@@ -99,7 +127,7 @@ public class TowerController : MonoBehaviour
     {
         if (IsDestroyed) return;
         UpdateRing();
-        if (IsFrozen) return;
+        if (IsFrozen) { UpdateThaw(); return; }
         if (tintTargets != null) Thaw();
         // "Don" fırtınasında kuleler daha yavaş ateş eder.
         if (Time.time - lastAttackTime < attackCooldown * BattleWeather.TowerCooldownMultiplier) return;
@@ -125,8 +153,9 @@ public class TowerController : MonoBehaviour
     private EnemyController FindNearestEnemy()
     {
         EnemyController nearest = null;
-        float nearestDist = attackRange;
         Vector2 origin = structure != null ? structure.BasePoint : (Vector2)transform.position;
+        // Lanetli Türbe karanlığı (Bölge 5) menzili geçici daraltır.
+        float nearestDist = attackRange * CursedShrine.RangeMultiplierAt(origin);
         foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
         {
             if (enemy.IsDead || !CanTarget(towerType, enemy) || !FogOfWar.IsVisible(enemy.transform.position)) continue;

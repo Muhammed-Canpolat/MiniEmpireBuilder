@@ -220,10 +220,23 @@ public class HeroController : MonoBehaviour
     // SALDIRI
     // ══════════════════════════════════════════════════════════════
 
+    /// <summary>Menzilde düşman yokken Lanetli Türbe'ye vurur (Bölge 5; yalnız kahraman türbeyi kırar).</summary>
+    private void TryAttackShrine()
+    {
+        if (Time.time - lastAttackTime < attackCooldown) return;
+        var shrine = CursedShrine.NearestInReach(transform.position, attackRange);
+        if (shrine == null) return;
+        lastAttackTime = Time.time;
+        if (spriteRenderer != null)
+            spriteRenderer.flipX = shrine.transform.position.x < transform.position.x;
+        shrine.TakeDamage(attackDamage, DamageSource.Hero);
+        if (BattleVfxManager.Instance != null) BattleVfxManager.Instance.SpawnSpark(shrine.transform.position + Vector3.up * 0.6f);
+    }
+
     private void HandleAutoAttack()
     {
         EnemyController target = FindNearestEnemyInRange();
-        if (target == null) return;
+        if (target == null) { TryAttackShrine(); return; }
         if (Time.time - lastAttackTime < attackCooldown) return;
 
         lastAttackTime = Time.time;
