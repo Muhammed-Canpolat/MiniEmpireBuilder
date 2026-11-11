@@ -1,0 +1,65 @@
+using System;
+using UnityEngine;
+
+/// <summary>
+/// Martı Adası görselleri (Tiny Swords). Tiny Swords <c>Resources</c> altında olmadığı için editörde
+/// "Tools/Island/Build Island Catalog" menüsü bu varlığı <c>Resources/IslandVisualCatalog.asset</c> olarak üretir.
+/// Varlık yoksa (<see cref="Instance"/> null) ada kodla çizilen yedek görsellerle (renkli hücreler, daireler,
+/// <see cref="IslandArt"/>) yine çalışır.
+/// </summary>
+[CreateAssetMenu(menuName = "Mini Empire/Island Visual Catalog")]
+public class IslandVisualCatalog : ScriptableObject
+{
+    public const int TilesetColumns = 9, TilesetRows = 6;
+
+    [Tooltip("Tilemap_color1: 9 sütun × 6 satır = 54 yuva (satır 0 üstte); boş yuva null")]
+    public Sprite[] tileset = new Sprite[TilesetColumns * TilesetRows];
+    public Sprite[] foam;
+    public Sprite[] clouds;
+    public Sprite[] splash;
+
+    [Header("Mavi Okçu")]
+    public Sprite[] archerIdle, archerRun, archerShoot;
+    [Header("Kızıl Korsanlar")]
+    public Sprite[] deckhandIdle, deckhandRun, deckhandAttack;   // Kırmızı Pawn bıçak
+    public Sprite[] raiderIdle, raiderRun, raiderAttack;         // Kırmızı Warrior
+    public Sprite[] shoreArcherIdle, shoreArcherRun, shoreArcherShoot; // Kırmızı Archer
+
+    [Header("Yapılar ve simgeler")]
+    public Sprite castle;
+    public Sprite tower;
+    public Sprite meatIcon, woodIcon;
+    public Sprite[] sheepIdle;
+
+    private static IslandVisualCatalog instance;
+    private static bool loaded;
+
+    /// <summary>Katalog (yoksa null; çağıranlar yedek görsele düşer).</summary>
+    public static IslandVisualCatalog Instance
+    {
+        get
+        {
+            if (!loaded) { instance = Resources.Load<IslandVisualCatalog>("IslandVisualCatalog"); loaded = true; }
+            return instance;
+        }
+    }
+
+    /// <summary>Testler için: kataloğu yok say / yeniden yükle.</summary>
+    public static void ResetForTests() { instance = null; loaded = false; }
+
+    public Sprite Tile(int column, int row)
+    {
+        if (tileset == null || column < 0 || column >= TilesetColumns || row < 0 || row >= TilesetRows) return null;
+        int index = row * TilesetColumns + column;
+        return index < tileset.Length ? tileset[index] : null;
+    }
+
+    public static bool Has(Sprite[] frames) => frames != null && frames.Length > 0 && frames[0] != null;
+}
+
+/// <summary>Bir birimin kare kümesi (boşta / koşu / saldırı).</summary>
+public sealed class IslandUnitFrames
+{
+    public Sprite[] idle, run, attack;
+    public bool HasArt => IslandVisualCatalog.Has(idle) || IslandVisualCatalog.Has(run);
+}

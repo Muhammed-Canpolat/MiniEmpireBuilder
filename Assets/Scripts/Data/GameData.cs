@@ -376,12 +376,10 @@ public static class Progression
         public const float BargeTapTaken = 0.6f;
         public const int LongboatFromAkin = 5, BargeFromAkin = 15;
         public const float TutorialBoatSpeedMult = 0.6f;
-        /// <summary>Boss Akın'ında son dalgaya eklenen Kızıl Kaptan: etkin can çarpanı ve hasar çarpanı.</summary>
-        public const float BossHpMult = 5f, BossDamageMult = 1.5f, BossScale = 1.5f;
+        /// <summary>Boss Akın'ında son dalgadaki Kızıl Kaptan: etkin can çarpanı ve boyut.</summary>
+        public const float BossHpMult = 5f, BossScale = 1.5f;
         /// <summary>Düşman can çarpanı (EnemyStats.ScaleToLevel ile aynı eğri).</summary>
         public static float EnemyHealthMult(int level) => 1f + (Mathf.Max(1, level) - 1) * 0.085f;
-        /// <summary>Tekne canı, tayfa toplam canının bu oranı (tasarım ≈%70).</summary>
-        public const float BoatHpCrewRatio = 0.7f;
 
         // Akın merdiveni (§5)
         public static int AkinBattleLevel(int n) => 1 + Mathf.RoundToInt(0.8f * Mathf.Max(1, n));
