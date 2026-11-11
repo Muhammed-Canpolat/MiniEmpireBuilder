@@ -10,6 +10,11 @@ using TMPro;
 /// </summary>
 public class BuilderVisualController : MonoBehaviour
 {
+    /// <summary>İşçi ölçeği (Tiny Swords pawn). Önceki 0.5'in ~1.7 katı: yürürken de rahat seçilir.</summary>
+    private const float WorkerScale = 0.85f;
+    private const float WalkSpeed = 2.5f;
+    private const float HammerSeconds = 3.2f;
+
     private static readonly string[] PawnColors = { "Blue", "Yellow", "Red", "Purple", "Black" };
 
     private sealed class Unit
@@ -22,6 +27,7 @@ public class BuilderVisualController : MonoBehaviour
         public GameObject zzz;
         public bool busy;
         public bool sleeping;
+        public Coroutine routine;
         public Vector3 target;
         public string Color => PawnColors[index % PawnColors.Length];
     }
@@ -118,7 +124,7 @@ public class BuilderVisualController : MonoBehaviour
     {
         var worker = new GameObject("BuilderWorker_" + (unit.index + 1));
         worker.transform.position = position;
-        worker.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+        worker.transform.localScale = new Vector3(WorkerScale, WorkerScale, 1f);
         unit.worker = worker.transform;
         unit.workerRenderer = worker.AddComponent<SpriteRenderer>();
         unit.workerRenderer.sprite = SpriteManager.Instance?.GetSprite("ui_builder_avatar")
@@ -224,45 +230,26 @@ public class BuilderVisualController : MonoBehaviour
             if (guest.busy && (target - guest.target).sqrMagnitude < 0.01f) return;
             guest.busy = true;
             guest.target = target;
-            guest.workerRenderer.enabled = true;
-            guest.worker.DOKill();
-            guest.workerRenderer.flipX = target.x < guest.worker.position.x;
-            guest.animator?.Play("Pawn_Run Hammer_" + guest.Color);
-            var walker = guest;
-            guest.worker.DOMove(target, 2.5f).SetSpeedBased().OnComplete(() =>
-                walker.animator?.Play("Pawn_Interact Hammer_" + walker.Color));
-            guest.workerRenderer.sortingOrder = 101 - Mathf.RoundToInt(target.y * 2f);
+            StartWork(guest, target);
             return;
         }
         if (guest == null || !guest.busy) return;
         guest.busy = false;
-        var leaving = guest;
-        Vector3 home = GuestHome();
-        leaving.worker.DOKill();
-        leaving.workerRenderer.flipX = home.x < leaving.worker.position.x;
-        leaving.animator?.Play("Pawn_Run Hammer_" + leaving.Color);
-        leaving.worker.DOMove(home, 2.5f).SetSpeedBased().OnComplete(() =>
-        {
-            if (leaving.workerRenderer != null) leaving.workerRenderer.enabled = false;
-        });
+        StartHome(guest, GuestHome());
     }
 
     private void GoToWork(Unit unit, Vector3 target)
     {
         unit.sleeping = false;
         unit.zzz.SetActive(false);
-        unit.workerRenderer.enabled = true;
-        unit.worker.DOKill();
-        unit.workerRenderer.flipX = target.x < unit.worker.position.x;
-        unit.animator?.Play("Pawn_Run Hammer_" + unit.Color);
-        unit.worker.DOMove(target, 2.5f).SetSpeedBased().OnComplete(() =>
-            unit.animator?.Play("Pawn_Interact Hammer_" + unit.Color));
-        unit.workerRenderer.sortingOrder = 101 - Mathf.RoundToInt(target.y * 2f);
+        StartWork(unit, target);
     }
 
     private void GoHome(Unit unit)
     {
         Vector3 home = unit.hut.transform.position;
+        if (unit.routine != null) StopCoroutine(unit.routine);
+        unit.routine = null;
         unit.worker.DOKill();
         if (!unit.workerRenderer.enabled)
         {
@@ -272,13 +259,130 @@ public class BuilderVisualController : MonoBehaviour
             unit.zzz.SetActive(true);
             return;
         }
-        unit.workerRenderer.flipX = home.x < unit.worker.position.x;
-        unit.animator?.Play("Pawn_Run Hammer_" + unit.Color);
-        unit.worker.DOMove(home, 2.5f).SetSpeedBased().OnComplete(() =>
+        StartHome(unit, home);
+    }
+
+    // ==================== YÜRÜYÜŞ VE ÇALIŞMA ====================
+
+    private static RectInt HutCells(Unit unit) => unit.hut != null
+        ? BaseOccupancyGrid.CellsFor((Vector2)BuilderHut.FootprintSize, unit.hut.transform.position)
+        : new RectInt(0, 0, 0, 0);
+
+    /// <summary>Hedef konumdaki bina/yapının hücre dikdörtgeni (bulunamazsa 1x1).</summary>
+    private static RectInt TargetCells(Vector3 target)
+    {
+        var map = BaseMapManager.Instance;
+        if (map != null)
+            foreach (var obj in map.MapObjects)
+            {
+                if (obj?.gameObject == null || obj.isBeingRemoved) continue;
+                if (obj.objectType != MapObjectType.Building && obj.objectType != MapObjectType.BuilderHut) continue;
+                if (((Vector2)obj.gameObject.transform.position - (Vector2)target).sqrMagnitude > 0.04f) continue;
+                return BaseOccupancyGrid.CellsFor((Vector2)BaseMapManager.FootprintOf(obj), target);
+            }
+        return new RectInt(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 1, 1);
+    }
+
+    private void StartWork(Unit unit, Vector3 target)
+    {
+        if (unit.routine != null) StopCoroutine(unit.routine);
+        unit.worker.DOKill();
+        unit.workerRenderer.enabled = true;
+        unit.routine = StartCoroutine(WorkRoutine(unit, target));
+    }
+
+    private void StartHome(Unit unit, Vector3 home)
+    {
+        if (unit.routine != null) StopCoroutine(unit.routine);
+        unit.worker.DOKill();
+        unit.routine = StartCoroutine(HomeRoutine(unit, home));
+    }
+
+    private IEnumerator HomeRoutine(Unit unit, Vector3 home)
+    {
+        bool hasHut = unit.hut != null;
+        RectInt? goal = hasHut ? HutCells(unit) : (RectInt?)null;
+        yield return Walk(unit, home, goal, new RectInt[0]);
+        if (unit.workerRenderer != null) unit.workerRenderer.enabled = false;
+        if (unit.zzz != null && hasHut) unit.zzz.SetActive(true);
+        unit.sleeping = true;
+        unit.routine = null;
+    }
+
+    /// <summary>Hedef yapının çevresinde 3-4 noktada durup çekiç sallar; iş bitene kadar döner.</summary>
+    private IEnumerator WorkRoutine(Unit unit, Vector3 target)
+    {
+        RectInt site = TargetCells(target);
+        RectInt[] startIgnore = unit.hut != null ? new[] { HutCells(unit) } : new RectInt[0];
+        bool first = true;
+        while (true)
         {
-            unit.workerRenderer.enabled = false;
-            unit.zzz.SetActive(true);
-            unit.sleeping = true;
-        });
+            var points = WorkPoints(site);
+            if (points.Count == 0)
+            {
+                yield return Walk(unit, target, site, first ? startIgnore : new RectInt[0]);
+                Face(unit, target);
+                unit.animator?.Play("Pawn_Interact Hammer_" + unit.Color);
+                yield break;
+            }
+            foreach (var point in points)
+            {
+                yield return Walk(unit, point, null, first ? startIgnore : new RectInt[0]);
+                first = false;
+                Face(unit, target);
+                unit.animator?.Play("Pawn_Interact Hammer_" + unit.Color);
+                BaseBuildingVisual.SpawnDust(unit.worker.position + new Vector3(Mathf.Sign(target.x - unit.worker.position.x + 0.001f) * 0.35f, 0.1f, 0f),
+                    unit.workerRenderer.sortingOrder + 1);
+                yield return new WaitForSeconds(HammerSeconds);
+            }
+        }
+    }
+
+    /// <summary>Yapı çevresindeki serbest durak noktaları: alt, sağ, üst, sol (boş olanlar).</summary>
+    private static List<Vector3> WorkPoints(RectInt site)
+    {
+        var blocked = BaseOccupancyGrid.BlockedCells();
+        var area = BaseWorldLayout.Buildable;
+        var candidates = new[]
+        {
+            new Vector2Int(site.xMin + site.width / 2, site.yMin - 1),
+            new Vector2Int(site.xMax, site.yMin + site.height / 2),
+            new Vector2Int(site.xMin + site.width / 2, site.yMax),
+            new Vector2Int(site.xMin - 1, site.yMin + site.height / 2)
+        };
+        var result = new List<Vector3>();
+        foreach (var c in candidates)
+            if (area.Contains(c) && !blocked.Contains(c))
+                result.Add(new Vector3(c.x + 0.5f, c.y + 0.5f, 0f));
+        return result;
+    }
+
+    private static void Face(Unit unit, Vector3 toward)
+    {
+        if (unit.workerRenderer != null && Mathf.Abs(toward.x - unit.worker.position.x) > 0.05f)
+            unit.workerRenderer.flipX = toward.x < unit.worker.position.x;
+    }
+
+    /// <summary>Dolu hücrelerin etrafından dolanarak yürür; yol yoksa düz çizgi.</summary>
+    private IEnumerator Walk(Unit unit, Vector3 dest, RectInt? goalFootprint, RectInt[] ignore)
+    {
+        Vector3 start = unit.worker.position;
+        var path = BuilderPathfinder.FindPath(start, dest, goalFootprint, ignore);
+        if (path == null)
+            path = new List<Vector3> { start, dest };
+        else if (goalFootprint.HasValue)
+            path.Add(dest); // son adım: kulübeye / yapıya doğru
+        unit.animator?.Play("Pawn_Run Hammer_" + unit.Color);
+        for (int i = 1; i < path.Count; i++)
+        {
+            Vector3 next = path[i];
+            Face(unit, next);
+            while ((unit.worker.position - next).sqrMagnitude > 0.0004f)
+            {
+                unit.worker.position = Vector3.MoveTowards(unit.worker.position, next, WalkSpeed * Time.deltaTime);
+                unit.workerRenderer.sortingOrder = 101 - Mathf.RoundToInt(unit.worker.position.y * 2f);
+                yield return null;
+            }
+        }
     }
 }

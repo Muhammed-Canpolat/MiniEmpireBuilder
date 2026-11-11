@@ -77,6 +77,43 @@ public static class BaseOccupancyGrid
         return true;
     }
 
+    /// <summary>
+    /// Yürünemez hücreler: bina, inşaatçı kulübesi, dekor ve kahraman kampı. İnşaatçı yol bulma kullanır;
+    /// <paramref name="ignoreCells"/> içindeki dikdörtgenler (başlangıç/hedef yapısı) yok sayılır.
+    /// </summary>
+    public static HashSet<Vector2Int> BlockedCells(params RectInt[] ignoreCells)
+    {
+        var blocked = new HashSet<Vector2Int>();
+        void Add(RectInt r)
+        {
+            for (int y = r.yMin; y < r.yMax; y++)
+            for (int x = r.xMin; x < r.xMax; x++) blocked.Add(new Vector2Int(x, y));
+        }
+        var map = BaseMapManager.Instance;
+        if (map == null) return blocked;
+        var campObject = FindCamp();
+        if (campObject != null) Add(CellsFor(new Vector2(2f, 2f), campObject.transform.position));
+        foreach (var other in map.MapObjects)
+        {
+            if (other == null || other.gameObject == null || other.isBeingRemoved) continue;
+            bool building = other.objectType == MapObjectType.Building && other.buildingType.HasValue;
+            if (!building && other.objectType != MapObjectType.BuilderHut) continue;
+            Add(CellsFor((Vector2)BaseMapManager.FootprintOf(other), other.gameObject.transform.position));
+        }
+        var decor = DecorPlacementController.Instance;
+        if (decor != null)
+            foreach (var item in decor.Placed)
+            {
+                if (item == null || item.Data == null) continue;
+                Add(new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
+            }
+        if (ignoreCells != null)
+            foreach (var r in ignoreCells)
+                for (int y = r.yMin; y < r.yMax; y++)
+                for (int x = r.xMin; x < r.xMax; x++) blocked.Remove(new Vector2Int(x, y));
+        return blocked;
+    }
+
     private static GameObject FindCamp()
     {
         if (camp != null) return camp;
