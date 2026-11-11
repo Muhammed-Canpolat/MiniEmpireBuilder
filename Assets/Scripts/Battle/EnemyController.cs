@@ -223,6 +223,16 @@ public class EnemyController : MonoBehaviour
 
     // Özel davranışlar (Gölge Kurt atılması, Cadı ışınlanması) için
     public bool MovementLocked { get; set; }
+
+    // ---- Martı Adası (Docs/design/island_base.md §3): rota kuyruğu. route == null iken hiçbir şey değişmez. ----
+    private Vector2[] route;
+    private int routeIndex;
+    /// <summary>Düşman ölünce (ödül/istatistik için). Yalnız ada modu dinler.</summary>
+    public event System.Action<EnemyController> Died;
+    public int GoldValue => goldReward;
+    /// <summary>Sabit ara noktalar: düşman sırayla bu noktalara yürür, kale menzile girince durur.</summary>
+    public void SetRoute(Vector2[] points) { route = points; routeIndex = 0; }
+    public bool HasRoute => route != null;
     /// <summary>Alınan hasar çarpanı (ör. Kale Muhafızı'nın Kalkan Duvarı 0.3).</summary>
     public float DamageTakenMultiplier { get; set; } = 1f;
     /// <summary>Asıl renk: vurulma parlaması bitince buna döner (üst üste darbede kırmızı kalmasın).</summary>
@@ -503,6 +513,11 @@ public class EnemyController : MonoBehaviour
     private bool TargetStillValid()
     {
         if (currentTarget == null) return false;
+        if (route != null)
+        {
+            var islandArcher = currentTarget.GetComponent<IslandArcher>();
+            if (islandArcher != null) return islandArcher.IsAlive;
+        }
         var structure = currentTarget.GetComponent<BattleStructure>();
         if (structure != null) return !structure.IsDestroyed;
         var heroTarget = currentTarget.GetComponent<HeroController>();
@@ -521,6 +536,7 @@ public class EnemyController : MonoBehaviour
         }
         nextRetarget = Time.time + RetargetInterval * UnityEngine.Random.Range(0.8f, 1.2f);
         Vector2 position = transform.position;
+        if (route != null) { FindIslandTarget(position); return; }
         if (IsSaboteur)
         {
             // Bombacı: kışkırtmayı yok sayar; kuleyi (her mesafeden) ya da kule yoksa Ana Üs'ü hedefler.
@@ -583,6 +599,24 @@ public class EnemyController : MonoBehaviour
             SetTarget(mainBaseTransform, mainBaseTransform.position, BaseRadius);
     }
 
+    /// <summary>Ada: Kıyı Okçusu menzildeki okçuyu vurur; diğerleri kaleye yürür.</summary>
+    private void FindIslandTarget(Vector2 position)
+    {
+        var archer = IslandArcher.Instance;
+        if (enemyType == EnemyType.ShoreArcher && archer != null && archer.IsAlive &&
+            Vector2.Distance(position, archer.Position) <= attackRange + 0.5f)
+        {
+            SetTarget(archer.transform, archer.Position, 0.3f);
+            return;
+        }
+        if (mainBaseTransform != null)
+        {
+            var castle = mainBaseTransform.GetComponent<BattleStructure>();
+            SetTarget(mainBaseTransform, castle != null ? castle.BasePoint : (Vector2)mainBaseTransform.position,
+                IslandLayout.CastleRadius);
+        }
+    }
+
     /// <summary>"Madeni koru" aşamasında bu düşmanın asıl hedefi olan maden (yoksa null: Ana Üs).</summary>
     public BattleStructure RaidTarget { get; set; }
 
@@ -623,7 +657,13 @@ public class EnemyController : MonoBehaviour
     {
         if (currentTarget == null) return;
         if (DistanceToTarget <= attackRange) return;
-        Vector3 direction = ((Vector3)targetPoint - transform.position);
+        Vector3 aim = targetPoint;
+        if (route != null && currentTarget == mainBaseTransform)
+        {
+            while (routeIndex < route.Length && Vector2.Distance(transform.position, route[routeIndex]) < 0.25f) routeIndex++;
+            if (routeIndex < route.Length) aim = route[routeIndex];
+        }
+        Vector3 direction = (aim - transform.position);
         direction.z = 0f;
         direction.Normalize();
         transform.position += direction * moveSpeed * Time.deltaTime;
@@ -646,6 +686,12 @@ public class EnemyController : MonoBehaviour
     private void AttackTarget()
     {
         if (currentTarget == null) return;
+        if (route != null)
+        {
+            if (attackRange > 2.5f) IslandFx.EnemyShot(transform.position, targetPoint);
+            var islandArcher = currentTarget.GetComponent<IslandArcher>();
+            if (islandArcher != null) { islandArcher.TakeDamage(damage); return; }
+        }
         var baseCtrl = currentTarget.GetComponent<MainBaseController>();
         if (baseCtrl != null) { baseCtrl.TakeDamage(damage); return; }
         var structure = currentTarget.GetComponent<BattleStructure>();
@@ -747,6 +793,8 @@ public class EnemyController : MonoBehaviour
         // Günlük görev: son vuruş kahraman ya da Çırak'tan geldiyse "kahramanla yen".
         if (lastDamageSource == DamageSource.Hero || lastDamageSource == DamageSource.Apprentice)
             DailyQuests.Report(QuestKind.HeroKills);
+
+        Died?.Invoke(this);
 
         // BattleManager'a bildir
         BattleManager battleManager = FindFirstObjectByType<BattleManager>();
