@@ -170,7 +170,8 @@ public sealed class BaseCameraController : MonoBehaviour
     private static float ClampAxis(float center, float half, float low, float high, float fallback)
     {
         float min = low + half, max = high - half;
-        if (min > max) return (min + max) * 0.5f;
+        // Pay yalnızca kaydırma aralığını genişletir; varsayılan/ortalı görünüm harita ortasıdır.
+        if (min > max) return fallback;
         return Mathf.Clamp(center, min, max);
     }
 
