@@ -39,7 +39,11 @@ public sealed class DailyRewardsUI : MonoBehaviour
         var data = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
         // "Sen yokken" penceresi açıksa önce o kapanır.
         while (AwayReportUI.IsOpen) yield return null;
-        if (data != null && data.firstBaseGuideDone && DailyRewards.CanClaim) Open();
+        if (data == null || !data.firstBaseGuideDone || !DailyRewards.CanClaim) yield break;
+        // İlk gün pencere kendiliğinden açılmaz (yeni oyuncunun ilk savaş dönüşünü kapatmasın): yalnız bildirim.
+        if (data.dailyLastClaimDay == 0)
+            GemActions.Toast(L.T("Günlük ödülün hazır: soldaki takvime dokun.", "Your daily reward is ready: tap the calendar on the left."));
+        else Open();
     }
 
     private void OnDestroy() => DailyRewards.OnChanged -= RefreshDot;

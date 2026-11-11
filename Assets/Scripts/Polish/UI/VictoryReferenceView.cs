@@ -270,17 +270,23 @@ public sealed class VictoryReferenceView : MonoBehaviour
                     string lives = LivesSystem.Unlimited ? L.T("Sınırsız can: can kaybı yok", "Unlimited lives: no life lost")
                         : L.T($"−1 can · kalan {LivesSystem.Lives}/{LivesSystem.MaxLives}", $"−1 life · {LivesSystem.Lives}/{LivesSystem.MaxLives} left");
                     starReason.gameObject.SetActive(true);
+                    string advice = EarlyDefeat
+                        ? "\n<color=#F2D68A>" + L.T("Üsse dön: Ana Üs'ü yükselt (2. seviyede Okçu Kulesi açılır) ve kahramanını güçlendir.",
+                            "Head back to base: upgrade the Main Base (Archer Tower unlocks at Lv. 2) and level up your hero.") + "</color>"
+                        : "";
                     starReason.text = (reason.Length > 0 ? $"<color=#E07A5F>{reason}</color>\n" : "") +
-                        $"<color=#C9B48A>{lives}</color>";
+                        $"<color=#C9B48A>{lives}</color>" + advice;
                 }
             }
+            // Erken yenilgide asıl yol üsse dönüp güçlenmek: geri dönüş düğmesi öne çıkar, tekrar dene ikincil.
+            bool returnPrimary = won || EarlyDefeat;
             if (returnButton != null)
             {
-                ReferenceUiVisuals.ApplyButtonSkin(returnButton, won);
+                ReferenceUiVisuals.ApplyButtonSkin(returnButton, returnPrimary);
                 var label = returnButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (label != null) label.color = won ? ReferenceUiVisuals.Hex(0x2A1A08) : ReferenceUiVisuals.Light;
+                if (label != null) label.color = returnPrimary ? ReferenceUiVisuals.Hex(0x2A1A08) : ReferenceUiVisuals.Light;
             }
-            if (retryButton != null) ReferenceUiVisuals.ApplyButtonSkin(retryButton, !won);
+            if (retryButton != null) ReferenceUiVisuals.ApplyButtonSkin(retryButton, !returnPrimary);
         }
         if (rows.Length > 1) rows[1].gameObject.SetActive(won);
         values[0].text = enemyGold.ToString();
@@ -326,4 +332,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
         DOTween.To(() => shown, value => { shown = value; values[3].text = shown.ToString(); }, transfer, 0.5f)
             .SetDelay(1.45f).SetEase(Ease.OutQuad);
     }
+
+    /// <summary>Yeni oyuncunun yenilgisi (Ana Üs 1–2): üsse dönüp yükseltmek tekrar denemekten daha iyi yol.</summary>
+    private static bool EarlyDefeat => GameManager.Instance != null && GameManager.Instance.GetMainBaseLevel() <= 2;
 }

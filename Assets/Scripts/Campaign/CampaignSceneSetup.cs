@@ -325,8 +325,8 @@ public class CampaignSceneSetup : MonoBehaviour
     private void ShowMap()
     {
         FirstTimeTips.Show("lives", L.T(
-            "Seferde 5 canın var: yenilgi 1 can götürür, her 30 dakikada 1 can dolar. Can fişine dokunarak doldurabilirsin.",
-            "You have 5 lives in the campaign: a defeat costs 1, and 1 refills every 30 minutes. Tap the lives chip to refill."));
+            $"Seferde {LivesSystem.MaxLives} canın var: yenilgi 1 can götürür, her {LivesSystem.RegenMinutes} dakikada 1 can dolar. Can fişine dokunarak doldurabilirsin.",
+            $"You have {LivesSystem.MaxLives} lives in the campaign: a defeat costs 1, and 1 refills every {LivesSystem.RegenMinutes} minutes. Tap the lives chip to refill."));
         selectedRegion = null;
         regionRoot.gameObject.SetActive(false);
         mapRoot.gameObject.SetActive(true);

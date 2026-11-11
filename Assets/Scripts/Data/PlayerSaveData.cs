@@ -111,6 +111,8 @@ public class PlayerSaveData
         PlayerSaveData data = new PlayerSaveData();
         data.saveVersion = CurrentVersion;
         data.timingVersion = TimingConfig.Instance.version;
+        // İlk görüşte madende biraz altın: rehberin "madene dokun" adımı boşa çıkmasın.
+        data.goldMineStoredGold = 40;
 
         // Ana Savaşçı
         data.hero = new HeroData();

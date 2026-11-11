@@ -809,11 +809,21 @@ public class IntroSceneSetup : MonoBehaviour
         GameManager.Instance.LoadBaseWorld();
     }
 
+    private float newGameArmedAt = -10f;
+
     private void OnNewGameClicked()
     {
         // Tek kahraman (Warrior): silah seçimi yok, doğrudan yeni oyun başlar.
         Debug.Log("[Intro] Yeni Oyun → Savaşçı ile başla");
         if (weaponSelectionLocked) return;
+        // Kayıt varken tek dokunuş kaydı silmesin: 3 sn içinde ikinci dokunuş onaylar.
+        if (SaveSystem.HasSave() && Time.unscaledTime - newGameArmedAt > 3f)
+        {
+            newGameArmedAt = Time.unscaledTime;
+            GemActions.Toast(L.T("Yeni oyun mevcut kaydı siler. Onaylamak için tekrar dokun.",
+                "A new game erases your current save. Tap again to confirm."));
+            return;
+        }
         weaponSelectionLocked = true;
         if (playBtnCG != null)
         {
@@ -1134,6 +1144,9 @@ public class IntroSceneSetup : MonoBehaviour
     {
         yield return new WaitForSeconds(0.6f);
         SaveSystem.DeleteSave();
+        // Yeni oyunda ilk görüş ipuçları yeniden gösterilir.
+        FirstTimeTips.Reset("builders", "cards", "gems", "lives", "quests", "respawn");
+        PlayerPrefs.DeleteKey("MiniEmpire_MoveHintSeen");
         GameManager.Instance.StartNewGame(weapon);
     }
 
