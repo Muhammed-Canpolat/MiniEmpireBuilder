@@ -8,13 +8,14 @@ using System;
 public static class LivesSystem
 {
     public const int MaxLives = 5;
-    public const int RegenMinutes = 30;
+    /// <summary>Bir canın yenilenme süresi (dakika): TimingConfig.livesRegenMinutes (varsayılan 20).</summary>
+    public static int RegenMinutes => Math.Max(1, TimingConfig.Instance.livesRegenMinutes);
     public const int DailyAdLives = 3;
 
     public static event Action OnChanged;
 
     private static PlayerSaveData Data => GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
-    private static long Now => DateTime.UtcNow.Ticks;
+    private static long Now => GameClock.UtcNow.Ticks;
     private static long Period => TimeSpan.FromMinutes(RegenMinutes).Ticks;
     private static int Today => GameClock.TodayId;
 

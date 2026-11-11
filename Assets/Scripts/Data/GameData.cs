@@ -302,25 +302,7 @@ public static class Progression
         return (0, (builderNumber - 2) * 100);
     }
 
-    // Hedef seviyeye göre (index = hedef seviye). 1→2: 15 sn, 2→3: 1 dk, 3→4: 30 dk ...
-    private static readonly int[] UpgradeSeconds =
-    {
-        0, 0,
-        15,            // → 2
-        60,            // → 3
-        30 * 60,       // → 4
-        1 * 3600,      // → 5
-        3 * 3600,      // → 6
-        6 * 3600,      // → 7
-        12 * 3600,     // → 8
-        18 * 3600,     // → 9
-        24 * 3600,     // → 10
-        30 * 3600,     // → 11
-        36 * 3600,     // → 12
-        42 * 3600,     // → 13
-        48 * 3600,     // → 14
-        48 * 3600      // → 15
-    };
+    // Yükseltme süreleri artık Resources/Config/TimingConfig.asset içinde (TimingConfig).
 
     // Ana Üs bedeli (index = hedef seviye); diğer yapılar bunun oranıyla ölçeklenir.
     private static readonly int[] MainBaseCosts =
@@ -330,8 +312,7 @@ public static class Progression
 
     public static int ColorTier(int level) => Mathf.Clamp((level - 1) / LevelsPerColorTier, 0, 4);
 
-    public static int UpgradeSecondsTo(int targetLevel) =>
-        UpgradeSeconds[Mathf.Clamp(targetLevel, 0, UpgradeSeconds.Length - 1)];
+    public static int UpgradeSecondsTo(int targetLevel) => TimingConfig.Instance.UpgradeSecondsTo(targetLevel);
 
     public static int UpgradeCost(BuildingType type, int targetLevel)
     {

@@ -69,11 +69,14 @@ public class ProgressionTests
     {
         var progression = Type("Progression");
         Assert.AreEqual(15, progression.GetField("MaxLevel").GetValue(null));
-        Assert.AreEqual(15, Call(progression, "UpgradeSecondsTo", 2));
+        // Süreler TimingConfig'ten (round2 H): erken seviyeler hızlı, 15. seviye 12 saat.
+        Assert.AreEqual(10, Call(progression, "UpgradeSecondsTo", 2));
         Assert.AreEqual(60, Call(progression, "UpgradeSecondsTo", 3));
-        Assert.AreEqual(30 * 60, Call(progression, "UpgradeSecondsTo", 4));
-        Assert.AreEqual(3600, Call(progression, "UpgradeSecondsTo", 5));
-        Assert.AreEqual(24 * 3600, Call(progression, "UpgradeSecondsTo", 10));
+        Assert.AreEqual(3 * 60, Call(progression, "UpgradeSecondsTo", 4));
+        Assert.AreEqual(6 * 60, Call(progression, "UpgradeSecondsTo", 5));
+        Assert.AreEqual(2 * 3600, Call(progression, "UpgradeSecondsTo", 10));
+        Assert.AreEqual(12 * 3600, Call(progression, "UpgradeSecondsTo", 15));
+        Assert.AreEqual(20, Type("LivesSystem").GetProperty("RegenMinutes").GetValue(null));
 
         foreach (var name in new[] { "MainBase", "ArcherTower", "CannonTower", "Monastery", "GoldMine" })
             for (int level = 3; level <= 15; level++)

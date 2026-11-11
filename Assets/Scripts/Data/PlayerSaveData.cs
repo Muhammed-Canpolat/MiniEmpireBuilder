@@ -77,6 +77,8 @@ public class PlayerSaveData
     // Elmas güçlendirmeleri (GemEconomy): İnşaat İksiri ve geçici inşaatçı bitişi (UTC tick).
     // Son kayıt anı (UTC tick): kopyalar arasından en yenisini seçmek için.
     public long lastSavedTicks;
+    // Bekleme süresi tablosunun sürümü (TimingConfig.version); değişince devam eden yükseltmeler oranlanır.
+    public int timingVersion;
     // Oyunun gördüğü en ileri saat (UTC tick): saat geri alınınca günlük sınırlar yenilenmesin (GameClock).
     public long clockHighWaterTicks;
     public long buildPotionUntilTicks;
@@ -108,6 +110,7 @@ public class PlayerSaveData
     {
         PlayerSaveData data = new PlayerSaveData();
         data.saveVersion = CurrentVersion;
+        data.timingVersion = TimingConfig.Instance.version;
 
         // Ana Savaşçı
         data.hero = new HeroData();
@@ -290,6 +293,38 @@ public class BuildingSaveEntry
 /// </summary>
 public static class SaveSystem
 {
+    /// <summary>
+    /// Süre tablosu değiştiyse (TimingConfig.version) devam eden yükseltmelerin kalan süresi yeni/eski oranıyla
+    /// ölçeklenir: yarısı geçmiş 6 saatlik iş, yeni tabloda 1 saatse 30 dk kalır. Yeni kayıt doğrudan güncel sürümle başlar.
+    /// </summary>
+    public static void MigrateTimings(PlayerSaveData data)
+    {
+        var config = TimingConfig.Instance;
+        if (data == null || data.timingVersion >= config.version) return;
+        long now = System.DateTime.UtcNow.Ticks;
+        if (data.timingVersion < 2 && data.builderTasks != null)
+            foreach (var task in data.builderTasks)
+            {
+                if (task == null || !task.IsActive || task.endTicks <= now || task.kind != "upgrade") continue;
+                int target = TargetLevelOf(data, task);
+                int oldSeconds = TimingConfig.LegacyUpgradeSecondsV1[Mathf.Clamp(target, 0, TimingConfig.LegacyUpgradeSecondsV1.Length - 1)];
+                int newSeconds = config.UpgradeSecondsTo(target);
+                if (oldSeconds <= 0 || newSeconds >= oldSeconds) continue;
+                double ratio = newSeconds / (double)oldSeconds;
+                task.endTicks = now + (long)((task.endTicks - now) * ratio);
+                task.startTicks = task.endTicks - System.TimeSpan.FromSeconds(newSeconds).Ticks;
+            }
+        data.timingVersion = config.version;
+    }
+
+    private static int TargetLevelOf(PlayerSaveData data, BuilderTaskSave task)
+    {
+        if (data.placedBuildings != null)
+            foreach (var placed in data.placedBuildings)
+                if (placed != null && placed.slotId == task.slotId) return placed.level + 1;
+        return 2;
+    }
+
     private const string SAVE_KEY = "MiniEmpireBuilder_SaveData";
     // Bir önceki sağlam kayıt (asıl kayıt bozulursa buradan açılır).
     private const string BACKUP_KEY = "MiniEmpireBuilder_SaveData_Backup";
@@ -508,6 +543,7 @@ public static class SaveSystem
                 data.saveVersion = 5;
                 Save(data);
             }
+            MigrateTimings(data);
             // Tek kahraman: Okçu/Mızrakçı seçmiş eski oyuncular da Warrior olur.
             if (data.hero == null) data.hero = new HeroData();
             data.hero.weaponType = WeaponType.Axe;
