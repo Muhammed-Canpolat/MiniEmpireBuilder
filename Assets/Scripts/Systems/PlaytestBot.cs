@@ -21,6 +21,7 @@ public static class PlaytestBot
     [Serializable]
     public class Telemetry
     {
+        public string profile = "good";
         public int seed, region, level, battleLevel, mainBaseLevel, heroLevel, towerLevel;
         public string result = "timeout";      // win / lose / timeout
         public string defeatReason = "";
@@ -40,6 +41,7 @@ public static class PlaytestBot
         public List<string> goldCurve = new List<string>(); // "t:altın" her 10 sn
         public List<string> screenshots = new List<string>();
         public List<string> errors = new List<string>();
+        public List<string> stallDump = new List<string>(); // kilitlenmede canlı düşmanlar
     }
 
     public static string OutputDir =>
@@ -82,11 +84,13 @@ public static class PlaytestBot
 
     /// <summary>Bir aşamayı oynar. maxSeconds oyun zamanıdır; timeScale ile hızlandırılır.</summary>
     public static IEnumerator PlayBattle(int region, int level, float timeScale = 4f, float maxSeconds = 420f,
-        bool capture = true, int seed = 0)
+        bool capture = true, int seed = 0, bool casual = false)
     {
         int baseLevel = ExpectedBaseLevel(region, level);
         if (seed != 0) UnityEngine.Random.InitState(seed);
-        var t = new Telemetry { seed = seed, region = region, level = level, mainBaseLevel = baseLevel, heroLevel = baseLevel,
+        Casual = casual;
+        casualPickAt = 0f; casualTarget = null;
+        var t = new Telemetry { profile = casual ? "casual" : "good", seed = seed, region = region, level = level, mainBaseLevel = baseLevel, heroLevel = baseLevel,
             towerLevel = Mathf.Max(1, baseLevel - 1) };
         Last = t;
         Application.logMessageReceived += OnLog;
@@ -124,6 +128,8 @@ public static class PlaytestBot
         Vector3 home = mainBase.transform.position + new Vector3(0f, -1.6f, 0f);
         float start = Time.time, nextBuild = 0f, nextCurve = 0f, nextScan = 0f;
         bool midShot = false;
+        int lastKilled = 0; float lastBaseDmg = 0f, lastProgress = 0f;
+        retreatSince = -1f;
         Time.timeScale = timeScale;
         lastHeroPos = hero.transform.position;
         stuckFor = 0f; sidestepUntil = 0f;
@@ -175,6 +181,21 @@ public static class PlaytestBot
             DriveHero(hero, home, mainBase.transform.position, t, battle.WaveEdges);
             if (now >= nextBuild) { nextBuild = now + 1f; TryBuildAll(battle); }
             if (now >= nextCurve) { nextCurve = now + 10f; t.goldCurve.Add($"{now:0}:{battle.GoldEarned}"); }
+            // Kilitlenme: düşman var ama 60 sn boyunca ne ölen var ne üs hasar alıyor.
+            int alive = spawnTime.Count;
+            int killedNow = stats.Values.Sum(v => v.killed);
+            if (killedNow != lastKilled || t.baseDamageTaken != lastBaseDmg || alive == 0)
+            { lastKilled = killedNow; lastBaseDmg = t.baseDamageTaken; lastProgress = now; }
+            else if (now - lastProgress > 60f)
+            {
+                t.result = "stall";
+                foreach (var e in UnityEngine.Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+                    if (!e.IsDead)
+                        t.stallDump.Add($"{e.Type} pos={(Vector2)e.transform.position} role={e.EnemyRole} target={(e.CurrentTarget != null ? e.CurrentTarget.name : "null")} " +
+                            $"attackPoint={e.AttackPoint} dist={Vector2.Distance(e.transform.position, e.AttackPoint):0.00} hero={(Vector2)hero.transform.position}");
+                if (capture) t.screenshots.Add(Capture($"r{region}_l{level}_s{seed}_stall"));
+                break;
+            }
             if (capture && !midShot && battle.CurrentWave >= 2 && spawnTime.Count >= 4)
             {
                 midShot = true;
@@ -216,11 +237,18 @@ public static class PlaytestBot
         Application.logMessageReceived -= OnLog;
         currentTelemetry = null;
         Directory.CreateDirectory(OutputDir);
-        File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}_s{t.seed}.json"), JsonUtility.ToJson(t, true));
+        File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}_s{t.seed}{(t.profile == "casual" ? "_casual" : "")}.json"), JsonUtility.ToJson(t, true));
     }
 
     private static Vector3 lastHeroPos;
-    private static float stuckFor, sidestepUntil;
+    private static float stuckFor, sidestepUntil, retreatSince = -1f;
+    /// <summary>
+    /// Sıradan oyuncu profili: uyarı oklarını kullanmaz, kahramana en yakın düşmana gider, hedefini saniyede bir
+    /// günceller, en fazla 1 Okçu kulesi kurar. Orta zorluk iki profil arasında olmalı.
+    /// </summary>
+    private static bool Casual;
+    private static float casualPickAt;
+    private static EnemyController casualTarget;
     private static float sidestepSign = 1f;
 
     /// <summary>
@@ -237,7 +265,7 @@ public static class PlaytestBot
 
         // Düşman yokken duyurulan tarafa doğru (üsten 3 birim) konumlan: oyuncu uyarı oklarını kullanır.
         Vector3 target = home;
-        if (edges != null && edges.Length > 0)
+        if (!Casual && edges != null && edges.Length > 0)
         {
             int e = edges[0];
             Vector3 side = e == 0 ? Vector3.up : e == 1 ? Vector3.right : e == 2 ? Vector3.down : Vector3.left;
@@ -245,7 +273,31 @@ public static class PlaytestBot
         }
         // Geri çekilmek yalnız iyileştiren Manastır varsa anlamlı; yoksa savaşmaya devam (düşerse 8 sn'de kalkar).
         bool canHeal = BattleStructure.All.Any(st => st != null && !st.IsDestroyed && st.Type == BuildingType.Monastery);
-        if (canHeal && hero.HealthPercent < 0.35f) target = home;
+        // En fazla 6 sn çekil (Manastır menzili dışındaysa iyileşmeden beklemesin).
+        bool retreating = false;
+        if (canHeal && hero.HealthPercent < 0.35f)
+        {
+            if (retreatSince < 0f) retreatSince = Time.time;
+            retreating = Time.time - retreatSince < 6f;
+        }
+        else retreatSince = -1f;
+        if (retreating) target = home;
+        else if (Casual)
+        {
+            if (Time.time >= casualPickAt || casualTarget == null || casualTarget.IsDead)
+            {
+                casualPickAt = Time.time + 1f;
+                casualTarget = null;
+                float bestDistance = float.MaxValue;
+                foreach (var e in UnityEngine.Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+                {
+                    if (e.IsDead) continue;
+                    float d = Vector2.Distance(e.transform.position, pos);
+                    if (d < bestDistance) { bestDistance = d; casualTarget = e; }
+                }
+            }
+            if (casualTarget != null && !casualTarget.IsDead) target = casualTarget.transform.position;
+        }
         else
         {
             EnemyController best = null;
@@ -267,9 +319,14 @@ public static class PlaytestBot
             float u = Mathf.Clamp01(Vector2.Dot(c - a, b - a) / (b - a).sqrMagnitude);
             if (Vector2.Distance(a + (b - a) * u, c) < 2.4f && u > 0.05f && u < 0.95f)
             {
-                Vector2 perp = new Vector2(-toTarget.y, toTarget.x).normalized;
-                if (Vector2.Dot(perp, a - c) < 0f) perp = -perp;
-                target = (Vector3)(c + perp * 3.8f);
+                // Üssün çevresinde hedefin tarafına doğru 70° ilerleyen ara nokta (aynı noktada kilitlenmez).
+                Vector2 fromBase = (a - c).sqrMagnitude > 0.01f ? (a - c).normalized : Vector2.down;
+                float sign = Mathf.Sign(fromBase.x * (b - c).y - fromBase.y * (b - c).x);
+                if (sign == 0f) sign = 1f;
+                float rad = 70f * Mathf.Deg2Rad * sign;
+                Vector2 around = new Vector2(fromBase.x * Mathf.Cos(rad) - fromBase.y * Mathf.Sin(rad),
+                    fromBase.x * Mathf.Sin(rad) + fromBase.y * Mathf.Cos(rad));
+                target = (Vector3)(c + around * 3.8f);
             }
         }
         Vector2 delta = target - pos;
@@ -294,6 +351,17 @@ public static class PlaytestBot
     private static void TryBuildAll(BattleManager battle)
     {
         bool hasMonastery = BattleStructure.All.Any(s => s != null && !s.IsDestroyed && s.Type == BuildingType.Monastery);
+        if (Casual)
+        {
+            if (BattleStructure.All.Any(s => s != null && !s.IsDestroyed && s.Type != BuildingType.MainBase)) return;
+            foreach (var slot in UnityEngine.Object.FindObjectsByType<BattleBuildSlot>(FindObjectsSortMode.None))
+            {
+                if (slot.IsBuilt || !battle.CanBuildFromSlot(BuildingType.ArcherTower, slot.CostFor(BuildingType.ArcherTower))) continue;
+                TryBuildMethod?.Invoke(slot, new object[] { BuildingType.ArcherTower });
+                if (slot.IsBuilt) return;
+            }
+            return;
+        }
         foreach (var slot in UnityEngine.Object.FindObjectsByType<BattleBuildSlot>(FindObjectsSortMode.None))
         {
             if (slot.IsBuilt) continue;

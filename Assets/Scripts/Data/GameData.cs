@@ -189,7 +189,8 @@ public class BuildingData
             case BuildingType.ArcherTower:
                 maxHealth = 80f + (level - 1) * 30f;
                 currentHealth = maxHealth;
-                damage = 8f + (level - 1) * 3f;
+                // Hasar × birim sayısı karesel büyür: seviye başına +3 geç bölgelerde düşmanları anında eritiyordu (bot ölçümü).
+                damage = 8f + (level - 1) * 2f;
                 unitCount = 1 + (level / 3);          // her 3 seviyede +1 birim
                 attackRange = 6f;
                 attackSpeed = 1.5f;
@@ -198,7 +199,7 @@ public class BuildingData
             case BuildingType.CannonTower:
                 maxHealth = 120f + (level - 1) * 40f;
                 currentHealth = maxHealth;
-                damage = 20f + (level - 1) * 8f;      // Okçudan fazla hasar
+                damage = 20f + (level - 1) * 5f;      // Okçudan fazla hasar (eskiden +8: geç bölgeler fazla kolaydı)
                 unitCount = 1 + (level / 4);           // her 4 seviyede +1 birim
                 attackRange = 5f;
                 attackSpeed = 0.5f;                    // Yavaş ama güçlü
@@ -279,6 +280,8 @@ public static class Progression
     public static int Wave1Cap(int region) => 8 + Mathf.Max(1, region);
     /// <summary>Bir dalganın kaç taraftan geldiği: Bölge 1–2 tek taraf, sonrası iki taraf.</summary>
     public static int WaveSpawnSides(int region) => region <= 2 ? 1 : 2;
+    /// <summary>Boss aşamasında her dalgaya eklenen düşman (bot ölçümü: boss aşamaları fazla kolaydı).</summary>
+    public static int BossStageExtraEnemies(int region) => region <= 1 ? 1 : 3; // Bölge 1 öğretici: hafif
     /// <summary>Dalga içinde iki düşman arası saniye.</summary>
     public static float SpawnInterval(int region) => Mathf.Max(0.9f, 1.25f - 0.07f * (Mathf.Max(1, region) - 1));
     public const int LevelsPerColorTier = 3;

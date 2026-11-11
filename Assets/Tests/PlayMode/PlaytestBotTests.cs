@@ -54,12 +54,21 @@ public class PlaytestBotTests
         }
     }
 
-    private static IEnumerator Play(int region, int level, int seed, bool capture)
+    private static IEnumerator PlayCasual(int region)
+    {
+        for (int seed = 1; seed <= Seeds; seed++)
+        {
+            yield return Play(region, 1, seed, false, true);
+            yield return Play(region, 5, seed, false, true);
+        }
+    }
+
+    private static IEnumerator Play(int region, int level, int seed, bool capture, bool casual = false)
     {
         Screen.SetResolution(390, 844, false);
         var bot = Type("PlaytestBot");
         var routine = (IEnumerator)bot.GetMethod("PlayBattle")
-            .Invoke(null, new object[] { region, level, 4f, 420f, capture, seed * 7919 + region * 31 + level });
+            .Invoke(null, new object[] { region, level, 4f, 600f, capture, seed * 7919 + region * 31 + level, casual });
         yield return routine;
         var last = bot.GetProperty("Last").GetValue(null);
         string result = (string)last.GetType().GetField("result").GetValue(last);
@@ -73,4 +82,12 @@ public class PlaytestBotTests
     [UnityTest, Timeout(1800000)] public IEnumerator Region4() { yield return PlayAll(4); }
     [UnityTest, Timeout(1800000)] public IEnumerator Region5() { yield return PlayAll(5); }
     [UnityTest, Timeout(1800000)] public IEnumerator Region6() { yield return PlayAll(6); }
+
+    // Sıradan oyuncu profili (ayrı çalıştırılır: -testFilter PlaytestBotTests.Casual)
+    [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion1() { yield return PlayCasual(1); }
+    [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion2() { yield return PlayCasual(2); }
+    [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion3() { yield return PlayCasual(3); }
+    [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion4() { yield return PlayCasual(4); }
+    [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion5() { yield return PlayCasual(5); }
+    [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion6() { yield return PlayCasual(6); }
 }

@@ -1003,6 +1003,7 @@ public class BattleManager : MonoBehaviour
                 timeBetweenSpawns = Progression.SpawnInterval(region.id) };
             int count = campaignLevel.enemyCounts != null && i < campaignLevel.enemyCounts.Length
                 ? campaignLevel.enemyCounts[i] : 7;
+            if (campaignLevel.kind == CampaignLevelKind.Boss) count += Progression.BossStageExtraEnemies(region.id);
             if (i == 0) count = Mathf.Min(count, Progression.Wave1Cap(region.id));
             EnemyType type = region.enemyTypes != null && region.enemyTypes.Length > 0
                 ? region.enemyTypes[Mathf.Min(i, region.enemyTypes.Length - 1)] : EnemyType.Wolf;

@@ -67,15 +67,18 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
             patch.transform.SetParent(transform, false);
             patch.transform.position = new Vector3((float)random.NextDouble() * 30f - 15f,
                 (float)random.NextDouble() * 30f - 15f, 0.9f);
-            float w = 0.6f + (float)random.NextDouble() * (id == 4 ? 2.2f : 1.2f);
-            patch.transform.localScale = new Vector3(w, w * (0.35f + (float)random.NextDouble() * 0.3f), 1f);
-            patch.transform.rotation = Quaternion.Euler(0f, 0f, (float)random.NextDouble() * 40f - 20f);
+            // Kar: küçük, yassı lekeler; lav: uzun ince çatlak; kızıl bölge: koyu lekeler.
+            float w = id == 4 ? 0.5f + (float)random.NextDouble() * 1.1f : id == 6 ? 0.9f + (float)random.NextDouble() * 1.4f
+                : 0.6f + (float)random.NextDouble() * 1.2f;
+            float h = id == 6 ? 0.06f + (float)random.NextDouble() * 0.06f : w * (0.3f + (float)random.NextDouble() * 0.25f);
+            patch.transform.localScale = new Vector3(w, h, 1f);
+            patch.transform.rotation = Quaternion.Euler(0f, 0f, id == 6 ? (float)random.NextDouble() * 180f : (float)random.NextDouble() * 40f - 20f);
             var renderer = patch.AddComponent<SpriteRenderer>();
             renderer.sprite = circle;
             renderer.sortingOrder = -98;
-            renderer.color = id == 4 ? new Color(1f, 1f, 1f, 0.55f)
+            renderer.color = id == 4 ? new Color(1f, 1f, 1f, 0.32f)
                 : id == 5 ? new Color(0.12f, 0.02f, 0.03f, 0.45f)
-                : new Color(1f, 0.45f, 0.1f, 0.5f);
+                : new Color(1f, 0.5f, 0.12f, 0.75f);
             // Lav çatlakları yavaşça nabız gibi parlar.
             if (id == 6)
                 renderer.DOFade(0.2f, 1.2f + (float)random.NextDouble()).SetLoops(-1, LoopType.Yoyo)
