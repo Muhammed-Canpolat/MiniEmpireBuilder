@@ -89,3 +89,6 @@ UIReviewScreenshots/**/*.txt
 
 # Unity test runner temp scenes
 Assets/InitTestScene*.unity*
+
+# Otomatik oyuncu çıktıları (seçilmiş görüntüler Docs/playtest/ altına kopyalanır)
+PlaytestOutput/

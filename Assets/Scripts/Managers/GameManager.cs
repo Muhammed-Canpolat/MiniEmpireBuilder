@@ -680,6 +680,15 @@ public class GameManager : MonoBehaviour
         OnBuildingUpgraded?.Invoke(BuildingType.MainBase, level);
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    /// <summary>Otomatik oyuncu (PlaytestBot) için: kaydı diske yazmadan oyuncu verisini değiştirir.</summary>
+    public void DevSetPlayerData(PlayerSaveData data)
+    {
+        PlayerData = data;
+        RebuildBuildingData();
+    }
+#endif
+
     /// <summary>
     /// Zamanı ileri alır: kayıttaki bütün süreler geçmişe kaydırılır (inşaat, can, maden, güçlendirmeler,
     /// ağaç/kaya büyümesi). Gerçek saate dokunmaz.
