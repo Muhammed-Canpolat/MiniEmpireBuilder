@@ -480,7 +480,7 @@ public class BaseSceneSetup : MonoBehaviour
         var root = new GameObject("WorldRoot");
         var grid = root.AddComponent<Grid>();
         grid.cellSize = Vector3.one;
-        root.AddComponent<BaseGroundPaths>();
+        // Kahverengi toprak yollar kaldırıldı: BaseGroundPaths bilerek eklenmiyor (Instance null; çağrılar '?.' ile güvenli).
         var ground = new GameObject("BaseGroundTilemap");
         ground.transform.SetParent(root.transform, false);
         var tilemap = ground.AddComponent<Tilemap>();
