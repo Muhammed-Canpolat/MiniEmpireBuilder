@@ -14,10 +14,14 @@ public class BattleBalanceTests
     [Test]
     public void BalanceCurvesMatchDesignNote()
     {
-        Assert.AreEqual(60, Call("BattleStartGold", 1));
-        Assert.AreEqual(135, Call("BattleStartGold", 6));
-        Assert.AreEqual(9, Call("Wave1Cap", 1));
-        Assert.AreEqual(14, Call("Wave1Cap", 6));
+        // Başlangıç altını Ana Üs seviyesiyle açılır (round2 D).
+        Assert.AreEqual(0, Call("BattleStartGold", 1));
+        Assert.AreEqual(0, Call("BattleStartGold", 6));
+        Assert.AreEqual(25, Call("BattleStartGold", 7));
+        Assert.AreEqual(50, Call("BattleStartGold", 10));
+        Assert.AreEqual(75, Call("BattleStartGold", 15));
+        Assert.AreEqual(7, Call("Wave1Cap", 1));
+        Assert.AreEqual(12, Call("Wave1Cap", 6));
         Assert.AreEqual(1, Call("WaveSpawnSides", 2));
         Assert.AreEqual(2, Call("WaveSpawnSides", 3));
         Assert.AreEqual(1.25f, (float)Call("SpawnInterval", 1), 0.001f);

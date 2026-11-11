@@ -189,18 +189,17 @@ public class BuildingData
             case BuildingType.ArcherTower:
                 maxHealth = 80f + (level - 1) * 30f;
                 currentHealth = maxHealth;
-                // Hasar × birim sayısı karesel büyür: seviye başına +3 geç bölgelerde düşmanları anında eritiyordu (bot ölçümü).
-                damage = 8f + (level - 1) * 2f;
-                unitCount = 1 + (level / 3);          // her 3 seviyede +1 birim
+                damage = Progression.TowerDamage(BuildingType.ArcherTower, level);
+                unitCount = Progression.TowerUnits(BuildingType.ArcherTower, level);
                 attackRange = 6f;
-                attackSpeed = 1.5f;
+                attackSpeed = 1.25f;
                 break;
 
             case BuildingType.CannonTower:
                 maxHealth = 120f + (level - 1) * 40f;
                 currentHealth = maxHealth;
-                damage = 20f + (level - 1) * 5f;      // Okçudan fazla hasar (eskiden +8: geç bölgeler fazla kolaydı)
-                unitCount = 1 + (level / 4);           // her 4 seviyede +1 birim
+                damage = Progression.TowerDamage(BuildingType.CannonTower, level);
+                unitCount = Progression.TowerUnits(BuildingType.CannonTower, level);
                 attackRange = 5f;
                 attackSpeed = 0.5f;                    // Yavaş ama güçlü
                 break;
@@ -274,10 +273,25 @@ public static class Progression
     public const int MaxLevel = 15;
 
     // ---- Savaş dengesi (Docs/design/balance_v1.md) ----
-    /// <summary>Sefer savaşına başlarken eldeki savaş altını: ilk dalgada da bir kule kurulabilsin. Zafer ödülünden düşülür.</summary>
-    public static int BattleStartGold(int region) => 60 + 15 * (Mathf.Max(1, region) - 1);
-    /// <summary>İlk dalganın en fazla düşman sayısı (yığılma ile erken, açıklanamayan yenilgiyi önler).</summary>
-    public static int Wave1Cap(int region) => 8 + Mathf.Max(1, region);
+    /// <summary>
+    /// Savaş başı altını (round2 D): varsayılan yok; Ana Üs seviyesiyle açılır (7: 25, 10: 50, 13: 75).
+    /// Hiçbir zaman satılmaz; kart/Kraliyet/elmas etkilemez. Zafer ödülünden düşülür.
+    /// Ana Üs seçildi: yükseltmeyi ödüllendirir, üç küçük adım (tek geç sıçrama yerine), asla tam bir kule ödemez.
+    /// </summary>
+    public static int BattleStartGold(int mainBaseLevel) =>
+        mainBaseLevel >= 13 ? 75 : mainBaseLevel >= 10 ? 50 : mainBaseLevel >= 7 ? 25 : 0;
+    /// <summary>İlk dalganın en fazla düşman sayısı (başlangıç altını yokken ilk dalga kahramanla tutulabilsin).</summary>
+    public static int Wave1Cap(int region) => 6 + Mathf.Max(1, region);
+
+    // ---- Kuleler (round2 A): kahraman kadar doğrusal büyür, birim sayısı yavaş artar ----
+    /// <summary>Birim başına kule hasarı: Okçu 7, Topçu 18 taban; seviye başına +%15 (kahramanla aynı eğim).</summary>
+    public static float TowerDamage(BuildingType type, int level) =>
+        (type == BuildingType.CannonTower ? 18f : 7f) * (1f + 0.15f * (Mathf.Max(1, level) - 1));
+    /// <summary>Kule birim sayısı: Okçu 1 + sev/5, Topçu 1 + sev/6.</summary>
+    public static int TowerUnits(BuildingType type, int level) =>
+        1 + Mathf.Max(1, level) / (type == BuildingType.CannonTower ? 6 : 5);
+    /// <summary>Savaş içi yapı bedeli bölgeyle artar: taban × (1 + 0,2 × (bölge − 1)).</summary>
+    public static float BattleBuildCostScale(int region) => 1f + 0.2f * (Mathf.Max(1, region) - 1);
     /// <summary>Bir dalganın kaç taraftan geldiği: Bölge 1–2 tek taraf, sonrası iki taraf.</summary>
     public static int WaveSpawnSides(int region) => region <= 2 ? 1 : 2;
     /// <summary>Boss aşamasında her dalgaya eklenen düşman (bot ölçümü: boss aşamaları fazla kolaydı).</summary>

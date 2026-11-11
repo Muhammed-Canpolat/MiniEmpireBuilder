@@ -114,7 +114,7 @@ public class BattleManager : MonoBehaviour
         Debug.Log($"[BattleManager] Level {battleLevel} başlıyor! {currentLevel.waves.Count} dalga");
         if (BattleSession.IsCampaign)
         {
-            startGold = Progression.BattleStartGold(BattleSession.RegionId);
+            startGold = Progression.BattleStartGold(GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1);
             totalGoldEarned = startGold;
         }
 
@@ -758,13 +758,17 @@ public class BattleManager : MonoBehaviour
 
     public int GetBuildCost(BuildingType type)
     {
+        int baseCost;
         switch (type)
         {
-            case BuildingType.ArcherTower: return archerBattleBuildCost;
-            case BuildingType.CannonTower: return cannonBattleBuildCost;
-            case BuildingType.Monastery: return monasteryBattleBuildCost;
+            case BuildingType.ArcherTower: baseCost = archerBattleBuildCost; break;
+            case BuildingType.CannonTower: baseCost = cannonBattleBuildCost; break;
+            case BuildingType.Monastery: baseCost = monasteryBattleBuildCost; break;
             default: return 0;
         }
+        // Geç bölgede düşmanlar daha çok altın bırakır: kule bedeli de bölgeyle artar (round2 A).
+        int region = BattleSession.IsCampaign ? BattleSession.RegionId : 1;
+        return Mathf.RoundToInt(baseCost * Progression.BattleBuildCostScale(region) / 5f) * 5;
     }
 
     /// <summary>
