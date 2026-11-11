@@ -284,9 +284,12 @@ public static class Progression
     public static int Wave1Cap(int region) => 6 + Mathf.Max(1, region);
 
     // ---- Kuleler (round2 A): kahraman kadar doğrusal büyür, birim sayısı yavaş artar ----
-    /// <summary>Birim başına kule hasarı: Okçu 7, Topçu 18 taban; seviye başına +%15 (kahramanla aynı eğim).</summary>
+    /// <summary>Birim başına kule hasarı. Okçu: 8 + 2 × (sev − 1) (kullanıcı kararı, round 3: kahramansız zafer biraz daha
+    /// mümkün olsun). Topçu: 18 taban, seviye başına +%15 (kahramanla aynı eğim).</summary>
     public static float TowerDamage(BuildingType type, int level) =>
-        (type == BuildingType.CannonTower ? 18f : 7f) * (1f + 0.15f * (Mathf.Max(1, level) - 1));
+        type == BuildingType.CannonTower
+            ? 18f * (1f + 0.15f * (Mathf.Max(1, level) - 1))
+            : 8f + 2f * (Mathf.Max(1, level) - 1);
     /// <summary>Kule birim sayısı: Okçu 1 + sev/5, Topçu 1 + sev/6.</summary>
     public static int TowerUnits(BuildingType type, int level) =>
         1 + Mathf.Max(1, level) / (type == BuildingType.CannonTower ? 6 : 5);
