@@ -172,7 +172,7 @@ public static class PlaytestBot
             if (mainBase.CurrentHealth < lastBaseHp) t.baseDamageTaken += lastBaseHp - mainBase.CurrentHealth;
             lastBaseHp = mainBase.CurrentHealth;
 
-            DriveHero(hero, home, t);
+            DriveHero(hero, home, mainBase.transform.position, t, battle.WaveEdges);
             if (now >= nextBuild) { nextBuild = now + 1f; TryBuildAll(battle); }
             if (now >= nextCurve) { nextCurve = now + 10f; t.goldCurve.Add($"{now:0}:{battle.GoldEarned}"); }
             if (capture && !midShot && battle.CurrentWave >= 2 && spawnTime.Count >= 4)
@@ -227,7 +227,7 @@ public static class PlaytestBot
     /// Basit oyuncu: canı %35 altındaysa üsse çekil; değilse üsse en yakın tehdide koş.
     /// İlerleyemezse (yapıya takıldıysa) 0,7 sn yana kayar.
     /// </summary>
-    private static void DriveHero(HeroController hero, Vector3 home, Telemetry t)
+    private static void DriveHero(HeroController hero, Vector3 home, Vector3 baseCenter, Telemetry t, int[] edges)
     {
         if (hero == null || hero.IsDowned) { if (hero != null) hero.SetMoveInput(Vector2.zero); return; }
         Vector3 pos = hero.transform.position;
@@ -235,8 +235,18 @@ public static class PlaytestBot
         t.heroDistance += step;
         lastHeroPos = pos;
 
+        // Düşman yokken duyurulan tarafa doğru (üsten 3 birim) konumlan: oyuncu uyarı oklarını kullanır.
         Vector3 target = home;
-        if (hero.HealthPercent >= 0.35f)
+        if (edges != null && edges.Length > 0)
+        {
+            int e = edges[0];
+            Vector3 side = e == 0 ? Vector3.up : e == 1 ? Vector3.right : e == 2 ? Vector3.down : Vector3.left;
+            target = home + new Vector3(0f, 1.6f, 0f) + side * 3.2f;
+        }
+        // Geri çekilmek yalnız iyileştiren Manastır varsa anlamlı; yoksa savaşmaya devam (düşerse 8 sn'de kalkar).
+        bool canHeal = BattleStructure.All.Any(st => st != null && !st.IsDestroyed && st.Type == BuildingType.Monastery);
+        if (canHeal && hero.HealthPercent < 0.35f) target = home;
+        else
         {
             EnemyController best = null;
             float bestScore = float.MaxValue;
@@ -248,6 +258,19 @@ public static class PlaytestBot
                 if (score < bestScore) { bestScore = score; best = e; }
             }
             if (best != null) target = best.transform.position;
+        }
+        // Hedefe düz yol Ana Üs'ün içinden geçiyorsa önce üssün yanından dolaş (oyuncu da böyle yürür).
+        Vector2 toTarget = target - pos;
+        if (toTarget.sqrMagnitude > 0.01f)
+        {
+            Vector2 a = pos, b = target, c = baseCenter;
+            float u = Mathf.Clamp01(Vector2.Dot(c - a, b - a) / (b - a).sqrMagnitude);
+            if (Vector2.Distance(a + (b - a) * u, c) < 2.4f && u > 0.05f && u < 0.95f)
+            {
+                Vector2 perp = new Vector2(-toTarget.y, toTarget.x).normalized;
+                if (Vector2.Dot(perp, a - c) < 0f) perp = -perp;
+                target = (Vector3)(c + perp * 3.8f);
+            }
         }
         Vector2 delta = target - pos;
         if (delta.magnitude < 0.9f) { hero.SetMoveInput(Vector2.zero); stuckFor = 0f; return; }

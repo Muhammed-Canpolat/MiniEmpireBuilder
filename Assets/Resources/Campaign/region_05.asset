@@ -37,7 +37,7 @@ MonoBehaviour:
   - number: 2
     kind: 1
     waveCount: 2
-    enemyCounts: 0f0000000d000000
+    enemyCounts: 0f0000000f000000
     reward: 193
     modifier: 
     description: "D\xFC\u015Fmanlar\u0131 Ana \xDCs'e ula\u015Fmadan durdur."
@@ -48,7 +48,7 @@ MonoBehaviour:
   - number: 3
     kind: 2
     waveCount: 2
-    enemyCounts: 100000000e000000
+    enemyCounts: 1000000010000000
     reward: 211
     modifier: 
     description: "Madene y\xF6nelen d\xFC\u015Fman ak\u0131n\u0131n\u0131 p\xFCsk\xFCrt."
@@ -59,7 +59,7 @@ MonoBehaviour:
   - number: 4
     kind: 3
     waveCount: 2
-    enemyCounts: 110000000f000000
+    enemyCounts: 1100000011000000
     reward: 229
     modifier: 
     description: "S\xFCre dolmadan b\xFCt\xFCn d\xFC\u015Fmanlar\u0131 temizle."
@@ -70,7 +70,7 @@ MonoBehaviour:
   - number: 5
     kind: 4
     waveCount: 3
-    enemyCounts: 100000001000000009000000
+    enemyCounts: 10000000120000000b000000
     reward: 247
     modifier: 
     description: "B\xF6lgenin bossunu ve korumalar\u0131n\u0131 yen."

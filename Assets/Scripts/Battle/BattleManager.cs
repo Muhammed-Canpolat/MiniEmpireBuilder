@@ -31,6 +31,8 @@ public class BattleManager : MonoBehaviour
     public int BattleGoldNet => Mathf.Max(0, totalGoldEarned - startGold);
     // Bu dalganın geldiği kenarlar (0 üst, 1 sağ, 2 alt, 3 sol); boşsa her düşman rastgele kenardan.
     private int[] waveEdges;
+    /// <summary>Bu dalganın duyurulan kenarları (0 üst, 1 sağ, 2 alt, 3 sol).</summary>
+    public int[] WaveEdges => waveEdges;
     public int GoldEarned => totalGoldEarned;
     private bool battleActive = false;
     private bool battleWon = false;

@@ -1,4 +1,5 @@
 using UnityEngine;
+using DG.Tweening;
 
 /// <summary>
 /// Okçu/Topçu kulesi saldırısı. Can ve yıkılma <see cref="BattleStructure"/>'da.
@@ -151,6 +152,18 @@ public class TowerController : MonoBehaviour
         });
         var garrison = GetComponent<BattleGarrison>();
         if (garrison != null) garrison.Fire();
+        PlayFireFeedback(cannon);
+    }
+
+    /// <summary>Atış hissi: yapı kısa bir ezilip esner; topçuda namlu kıvılcımı.</summary>
+    private void PlayFireFeedback(bool cannon)
+    {
+        if (structure != null && structure.IsDestroyed) return;
+        transform.DOComplete();
+        transform.DOPunchScale(cannon ? new Vector3(0.08f, -0.1f, 0f) : new Vector3(0.03f, -0.05f, 0f),
+            cannon ? 0.22f : 0.15f, 6, 0.6f);
+        if (cannon && BattleVfxManager.Instance != null)
+            BattleVfxManager.Instance.SpawnSpark(transform.position + Vector3.up * 0.9f);
     }
 
     /// <summary>Geriye uyum: hasar yapıya iletilir.</summary>

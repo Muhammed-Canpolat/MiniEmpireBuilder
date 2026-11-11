@@ -1,4 +1,5 @@
 using UnityEngine;
+using DG.Tweening;
 
 /// <summary>
 /// Savaş sahnesindeki Ana Üs
@@ -72,11 +73,36 @@ public class MainBaseController : MonoBehaviour
         {
             StartCoroutine(DamageFlash());
         }
+        PlayHitFeedback();
 
         if (currentHealth <= 0)
         {
             OnDestroyed();
         }
+    }
+
+    private float nextHitFeedback, nextSmoke;
+
+    /// <summary>Darbe hissi: küçük sarsıntı + toz (en fazla 0,25 sn'de bir); canı %30 altındaysa duman.</summary>
+    private void PlayHitFeedback()
+    {
+        var vfx = BattleVfxManager.Instance;
+        if (Time.time >= nextHitFeedback)
+        {
+            nextHitFeedback = Time.time + 0.25f;
+            transform.DOComplete();
+            transform.DOShakePosition(0.15f, new Vector3(0.07f, 0.04f, 0f), 18, 90f);
+            if (vfx != null) vfx.SpawnSmallDust(transform.position + new Vector3(Random.Range(-1.2f, 1.2f), -0.6f, 0f));
+        }
+    }
+
+    private void Update()
+    {
+        // Ağır hasarlı üsten düzenli duman yükselir: tehlike uzaktan okunur.
+        if (IsDestroyed || maxHealth <= 0f || currentHealth / maxHealth > 0.3f || Time.time < nextSmoke) return;
+        nextSmoke = Time.time + 0.45f;
+        var vfx = BattleVfxManager.Instance;
+        if (vfx != null) vfx.SpawnSmallDust(transform.position + new Vector3(Random.Range(-1f, 1f), Random.Range(0.4f, 1.4f), 0f));
     }
 
     private System.Collections.IEnumerator DamageFlash()
@@ -92,6 +118,12 @@ public class MainBaseController : MonoBehaviour
     private void OnDestroyed()
     {
         Debug.Log("[MainBase] Ana Üs yıkıldı!");
+        // Yıkılış: büyük toz bulutu ve güçlü sarsıntı (yenilgi ani değil, okunur olsun).
+        var vfx = BattleVfxManager.Instance;
+        if (vfx != null)
+            for (int i = 0; i < 6; i++)
+                vfx.SpawnSmallDust(transform.position + new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(-0.6f, 1.2f), 0f));
+        if (Camera.main != null) Camera.main.transform.DOShakePosition(0.45f, 0.35f, 14, 90f);
 
         BattleManager battleManager = FindFirstObjectByType<BattleManager>();
         if (battleManager != null)

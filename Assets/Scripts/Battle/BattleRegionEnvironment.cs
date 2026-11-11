@@ -28,12 +28,60 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
         if (region.specialMechanic == "Don" && GetComponent<BattleWeather>() == null)
             gameObject.AddComponent<BattleWeather>();
         if (region.id == 3) { AddMineScatter(); yield break; }
+        if (region.id >= 4) { AddRegionDressing(region.id); yield break; }
         if (region.id != 2) yield break;
         hero = FindFirstObjectByType<HeroController>()?.transform;
         AddForestWash();
         AddForestFloor();
         AddEdgeShadows();
         AddFog();
+    }
+
+    // ==================== BÖLGE 4–6 KİMLİĞİ (kodla; sanat gelene kadar) ====================
+
+    /// <summary>
+    /// Bölge 4 (buz): soğuk örtü, kar lekeleri, yağan kar. Bölge 5 (Karanlık Kral): koyu kızıl örtü,
+    /// lekeler, düşen kül. Bölge 6 (Ejder İni): volkanik örtü, parlayan lav çatlakları, yükselen kıvılcım.
+    /// Örtüler zemin detayını kapatmayacak kadar hafif; partiküller küçük ve yarı saydam (okunurluk).
+    /// </summary>
+    private void AddRegionDressing(int id)
+    {
+        Color wash = id == 4 ? new Color(0.82f, 0.9f, 1f, 0.32f)
+            : id == 5 ? new Color(0.28f, 0.04f, 0.08f, 0.3f)
+            : new Color(0.38f, 0.12f, 0.03f, 0.3f);
+        var washObject = new GameObject("RegionGroundWash");
+        washObject.transform.SetParent(transform, false);
+        washObject.transform.position = new Vector3(0f, 0f, 0.95f);
+        var washRenderer = washObject.AddComponent<SpriteRenderer>();
+        washRenderer.sprite = BaseMapManager.MakeSquareSprite(Color.white);
+        washRenderer.color = wash;
+        washRenderer.sortingOrder = -99;
+        washObject.transform.localScale = new Vector3(60f, 60f, 1f);
+
+        var circle = BaseMapManager.MakeCircleSprite(Color.white);
+        var random = new System.Random(4000 + id);
+        int patches = id == 4 ? 40 : 28;
+        for (int i = 0; i < patches; i++)
+        {
+            var patch = new GameObject("RegionGroundPatch");
+            patch.transform.SetParent(transform, false);
+            patch.transform.position = new Vector3((float)random.NextDouble() * 30f - 15f,
+                (float)random.NextDouble() * 30f - 15f, 0.9f);
+            float w = 0.6f + (float)random.NextDouble() * (id == 4 ? 2.2f : 1.2f);
+            patch.transform.localScale = new Vector3(w, w * (0.35f + (float)random.NextDouble() * 0.3f), 1f);
+            patch.transform.rotation = Quaternion.Euler(0f, 0f, (float)random.NextDouble() * 40f - 20f);
+            var renderer = patch.AddComponent<SpriteRenderer>();
+            renderer.sprite = circle;
+            renderer.sortingOrder = -98;
+            renderer.color = id == 4 ? new Color(1f, 1f, 1f, 0.55f)
+                : id == 5 ? new Color(0.12f, 0.02f, 0.03f, 0.45f)
+                : new Color(1f, 0.45f, 0.1f, 0.5f);
+            // Lav çatlakları yavaşça nabız gibi parlar.
+            if (id == 6)
+                renderer.DOFade(0.2f, 1.2f + (float)random.NextDouble()).SetLoops(-1, LoopType.Yoyo)
+                    .SetDelay((float)random.NextDouble()).SetLink(patch);
+        }
+        gameObject.AddComponent<RegionAmbientParticles>().Setup(id);
     }
 
     private void AddForestWash()
