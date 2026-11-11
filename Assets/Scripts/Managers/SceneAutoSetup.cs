@@ -42,7 +42,9 @@ public static class SceneAutoSetup
                 break;
 
             case "BattleScene":
-                EnsureComponent<BattleSceneSetup>("BattleSetup");
+                // Martı Adası: BattleScene ev sahibi sahne; ada oturumunda savaş kurulumu yerine ada kurulur.
+                if (IslandSession.Active) EnsureComponent<IslandSceneSetup>("IslandSetup");
+                else EnsureComponent<BattleSceneSetup>("BattleSetup");
                 EnsureComponent<ScenePolishInstaller>("PolishInstaller");
                 EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 break;
@@ -56,6 +58,7 @@ public static class SceneAutoSetup
                 if (Object.FindFirstObjectByType<IntroSceneSetup>() == null &&
                     Object.FindFirstObjectByType<BaseSceneSetup>() == null &&
                     Object.FindFirstObjectByType<BattleSceneSetup>() == null &&
+                    Object.FindFirstObjectByType<IslandSceneSetup>() == null &&
                     Object.FindFirstObjectByType<CampaignSceneSetup>() == null)
                 {
                     Debug.Log($"[SceneAutoSetup] Bilinmeyen sahne: {sceneName}, IntroSetup ekleniyor...");

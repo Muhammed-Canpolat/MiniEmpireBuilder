@@ -20,7 +20,7 @@ public sealed class BattleCosmeticObserver : MonoBehaviour
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "BattleScene")
+        if (scene.name == "BattleScene" && !IslandSession.Active)
         {
             new GameObject("BattleCosmeticObserver").AddComponent<BattleCosmeticObserver>();
             new GameObject("BattleApprentice").AddComponent<BattleApprentice>();

@@ -876,6 +876,7 @@ public class GameManager : MonoBehaviour
 
     public void StartBattle()
     {
+        IslandSession.Clear(); // sefer savaşı ada modunda yüklenmesin
         IsInBattle = true;
         StartCoroutine(FadeAndLoadScene("BattleScene"));
         Debug.Log($"[GameManager] Savaş başlıyor! Level {PlayerData.currentBattleLevel}");
@@ -924,10 +925,22 @@ public class GameManager : MonoBehaviour
 
     // ==================== SAHNE GEÇİŞLERİ ====================
 
+    /// <summary>Martı Adası'na yelken aç (BattleScene ada modunda yüklenir). Ana Üs 5 gerekir.</summary>
+    public bool LoadIsland()
+    {
+        if (PlayerData == null || !IslandSession.Unlocked(GetMainBaseLevel())) return false;
+        IsInBattle = false;
+        BattleSession.Clear();
+        IslandSession.Begin();
+        StartCoroutine(FadeAndLoadScene("BattleScene"));
+        return true;
+    }
+
     public void LoadBaseWorld()
     {
         IsInBattle = false;
         BattleSession.Clear();
+        IslandSession.Clear();
         StartCoroutine(FadeAndLoadScene("BaseScene"));
         Debug.Log("[GameManager] Üs dünyasına geçiliyor...");
     }
@@ -936,6 +949,7 @@ public class GameManager : MonoBehaviour
     {
         IsInBattle = false;
         BattleSession.Clear();
+        IslandSession.Clear();
         StartCoroutine(FadeAndLoadScene("CampaignScene"));
     }
 

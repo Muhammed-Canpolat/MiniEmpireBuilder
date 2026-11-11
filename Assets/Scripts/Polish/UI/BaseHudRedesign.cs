@@ -159,6 +159,9 @@ public static class BaseHudRedesign
             StackedButton((RectTransform)hero.transform, new Vector2(0.83f, 0f), DockButtonWidth,
                 DockButtonHeight, 46f, false, L.T("KAHRAMAN", "HERO"));
         }
+
+        // Martı Adası (island_base.md §1): SEFER'in yanında ADA düğmesi (Ana Üs 5'ten önce kilitli görünür).
+        IslandBaseButton.Attach(hud);
     }
 
     /// <summary>Simge üstte, yazı altta; orta düğme daha büyük ve dock'tan hafif taşar.</summary>

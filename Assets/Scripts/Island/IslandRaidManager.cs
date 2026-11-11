@@ -21,6 +21,8 @@ public sealed class IslandRaidManager : MonoBehaviour
     public IslandSession.Reward LastReward { get; private set; }
     public string DefeatReason { get; private set; } = "";
     public float Elapsed { get; private set; }
+    /// <summary>Bu zafer öğreticiyi bitirdi (HUD "Ağıl" ipucunu gösterir).</summary>
+    public bool TutorialFinishedThisRun { get; private set; }
     public BattleStructure Castle => castle;
     public IslandArcher Archer => archer;
     public float CastleHealthPercent => castle != null ? castle.HealthPercent : 0f;
@@ -72,6 +74,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         spawnedBoats = finishedBoats = 0;
         bossBoat = null; bossSpawned = false;
         DefeatReason = "";
+        TutorialFinishedThisRun = false;
         IslandStats.Reset();
         tutorialRun = Akin == 1 && IslandSession.Save != null && IslandSession.Save.tutorialStep < 3;
         if (tutorialRun && IslandSession.Save.tutorialStep == 0) SetTutorial(1);
@@ -234,7 +237,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     {
         Phase = State.Won;
         LastReward = IslandSession.GrantVictory(Akin);
-        if (tutorialRun) SetTutorial(4);
+        if (tutorialRun) { SetTutorial(4); TutorialFinishedThisRun = true; }
         StateChanged?.Invoke(Phase);
     }
 
