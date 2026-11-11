@@ -26,6 +26,12 @@ public sealed class DecorPlacementController : MonoBehaviour
     private Button confirmButton;
     private GameObject actionPanel;
     private static Sprite square;
+    private readonly GhostPointerDrag drag = new GhostPointerDrag();
+
+    /// <summary>İşaretçinin altındaki hücre (sol-alt), harita sınırları içinde.</summary>
+    private static Vector2Int CellUnderPointer(Vector3 world, Vector2Int footprint) => new Vector2Int(
+        Mathf.Clamp(Mathf.FloorToInt(world.x - footprint.x * 0.5f), 0, BaseWorldLayout.Width - footprint.x),
+        Mathf.Clamp(Mathf.FloorToInt(world.y - footprint.y * 0.5f), 0, BaseWorldLayout.Height - footprint.y));
 
     public static DecorData[] All => Resources.LoadAll<DecorData>("Decor");
     public IReadOnlyList<DecorInstance> Placed => placed;
@@ -116,24 +122,45 @@ public sealed class DecorPlacementController : MonoBehaviour
     public bool CanPlace(DecorData data, Vector2Int cell, DecorInstance except = null)
     {
         if (data == null || BaseMapManager.Instance == null) return false;
-        var clean = BaseMapManager.Instance.BuildableRect;
-        for (int y = cell.y; y < cell.y + data.footprint.y; y++)
-        for (int x = cell.x; x < cell.x + data.footprint.x; x++)
+        return BaseOccupancyGrid.IsFree(new RectInt(cell.x, cell.y, data.footprint.x, data.footprint.y),
+            null, except);
+    }
+
+    /// <summary>
+    /// Yükleme sonrası onarım: dekor, bina/kulübe/kamp ya da önce yerleşmiş dekorla çakışıyorsa
+    /// en yakın boş yere taşınır; sığmazsa bedeli iade edilip kaldırılır. Değişen dekor sayısını döndürür.
+    /// </summary>
+    public int RepairLayout()
+    {
+        if (selected != null) return 0;
+        var all = new List<DecorInstance>(placed);
+        placed.Clear();
+        int changed = 0;
+        int refund = 0;
+        foreach (var item in all)
         {
-            var point = new Vector2Int(x, y);
-            if (!clean.Contains(point)) return false;
-            foreach (var building in UnityEngine.Object.FindObjectsByType<BuildingIdentifier>(FindObjectsSortMode.None))
+            if (item == null) continue;
+            if (CanPlace(item.Data, item.Cell)) { placed.Add(item); continue; }
+            changed++;
+            if (TryFindNearestFree(item.Data, item.Cell, 8, out var cell))
             {
-                var size = BaseWorldLayout.Footprint(building.buildingType);
-                var center = building.transform.position;
-                if (new Rect(center.x - size.x * 0.5f, center.y - size.y * 0.5f,
-                    size.x, size.y).Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
+                item.SetCell(cell);
+                placed.Add(item);
             }
-            if (BuilderHut.IsInsideAny(new Vector2(x + 0.5f, y + 0.5f))) return false;
-            foreach (var item in placed)
-                if (item != null && item != except && item.Occupies(point)) return false;
+            else
+            {
+                refund += item.Data.cost;
+                Destroy(item.gameObject);
+            }
         }
-        return true;
+        if (changed == 0) return 0;
+        if (refund > 0 && GameManager.Instance != null)
+        {
+            GameManager.Instance.AddGold(refund);
+            GoldPopupManager.ShowGoldChange(refund);
+        }
+        Save();
+        return changed;
     }
 
     public void BeginPlacement(DecorData data)
@@ -142,6 +169,11 @@ public sealed class DecorPlacementController : MonoBehaviour
         Cancel();
         selected = data;
         BaseWorldUI.Instance?.ToggleBottomButtons(false);
+        // Başlangıç: kamera merkezine en yakın boş hücre (hayalet ekranda görünür başlar).
+        Vector3 view = Camera.main != null ? Camera.main.transform.position : new Vector3(11f, 19f);
+        var start = CellUnderPointer(view, data.footprint);
+        currentCell = TryFindNearestFree(data, start, 20, out var free) ? free : start;
+        drag.Reset();
         CreateGhost();
         CreateConfirmBar();
     }
@@ -157,6 +189,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         moveOrigin = item.Cell;
         item.gameObject.SetActive(false);
         currentCell = item.Cell;
+        drag.BeginHeld();
         CreateGhost();
         CreateMoveGrid();
         HideActions();
@@ -164,6 +197,7 @@ public sealed class DecorPlacementController : MonoBehaviour
 
     public void Cancel()
     {
+        drag.Reset();
         if (moving != null) moving.gameObject.SetActive(true);
         moving = null;
         moveArmed = false;
@@ -181,18 +215,9 @@ public sealed class DecorPlacementController : MonoBehaviour
     private void Update()
     {
         if (selected == null || ghost == null || Camera.main == null) return;
-        Vector2 screen = Touchscreen.current != null &&
-            Touchscreen.current.primaryTouch.press.isPressed
-            ? Touchscreen.current.primaryTouch.position.ReadValue()
-            : Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-        if (screen != Vector2.zero && (confirmBar == null ||
-            !RectTransformUtility.RectangleContainsScreenPoint(
-                confirmBar.GetComponent<RectTransform>(), screen)))
-        {
-            Vector3 world = Camera.main.ScreenToWorldPoint(screen);
-            currentCell = new Vector2Int(Mathf.FloorToInt(world.x - selected.footprint.x * 0.5f),
-                Mathf.FloorToInt(world.y - selected.footprint.y * 0.5f));
-        }
+        if (drag.Poll(Camera.main, world => new Rect(currentCell.x - 1f, currentCell.y - 1f,
+                selected.footprint.x + 2f, selected.footprint.y + 2f).Contains(world), out Vector3 pointer))
+            currentCell = CellUnderPointer(pointer, selected.footprint);
         valid = CanPlace(selected, currentCell, moving) &&
             (moving != null || GameManager.Instance?.Gold >= selected.cost);
         var center = new Vector3(currentCell.x + selected.footprint.x * 0.5f,
@@ -420,7 +445,7 @@ public sealed class DecorPlacementController : MonoBehaviour
     }
 
     /// <summary>Ortak düğme görünümü (kabartmalı kenar, oyunun başlık fontu).</summary>
-    private static Button MakeButton(Transform parent, string label, Vector2 offset,
+    public static Button MakeButton(Transform parent, string label, Vector2 offset,
         UnityEngine.Events.UnityAction action, bool gold = false, float width = 90f)
     {
         var button = ReferenceUiVisuals.Button(parent, label, label, gold,

@@ -85,6 +85,11 @@ public class BaseMapManager : MonoBehaviour
     private RectInt _buildableRect;
     public Vector2 BuildableCenter => _buildableRect.center;
     public RectInt BuildableRect => _buildableRect;
+    public IReadOnlyList<PlacedMapObject> MapObjects => _mapObjects;
+
+    // Yükleme onarımı sırasında yalnızca "yerleşmiş" nesneler engel sayılır (bkz. RepairLayout).
+    private bool _repairing;
+    private HashSet<PlacedMapObject> _repairSettled;
 
 
     // ==================== AĞAÇ / KAYA BÜYÜMESİ ====================
@@ -578,16 +583,23 @@ public class BaseMapManager : MonoBehaviour
     private PlacedMapObject SpawnBuildingInternal(BuildingType type, Vector3 pos, string id,
         bool savedPosition, int savedLevel)
     {
-        BaseWorldLayout.Slot slot;
-        if (string.IsNullOrEmpty(id) || !BaseWorldLayout.TryGet(id, out slot)
-            || slot.buildingType != type || IsSlotOccupied(id))
+        // Bina serbest ızgarada durur; kimlik (slotId) bina örneğinin benzersiz anahtarıdır.
+        // Eski kayıtlardaki sabit slot kimlikleri korunur, yoksa yeni benzersiz kimlik üretilir.
+        if (string.IsNullOrEmpty(id) || IsSlotOccupied(id)) id = NewBuildingId(type);
+        if (!CanSpawnAt(type, pos))
         {
-            if (!TryGetAvailableSlot(type, pos, null, out slot)) return null;
+            Vector2 candidate;
+            if (BaseWorldLayout.TryGet(id, out var legacy) && legacy.buildingType == type
+                && CanSpawnAt(type, legacy.center)) pos = legacy.center;
+            else if (TryFindFreeSlotCenter(type, pos, out candidate)) pos = candidate;
+            else
+            {
+                Vector3 nearest = NearestValidBuildingPosition(type, pos);
+                if (CanSpawnAt(type, nearest)) pos = nearest;
+                // Kayıtlı bina ve Ana Üs asla kaybolmaz; yeni bina ise geçerli yer yoksa kurulmaz.
+                else if (!savedPosition && type != BuildingType.MainBase) return null;
+            }
         }
-        id = slot.id;
-        if (!savedPosition) pos = slot.center;
-        else if (type != BuildingType.MainBase && !CanPlaceBuildingAt(type, pos))
-            pos = NearestValidBuildingPosition(type, pos);
 
         GameObject go = new GameObject($"Building_{type}_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0f);
@@ -699,7 +711,7 @@ public class BaseMapManager : MonoBehaviour
             {
                 if (garrisonVisual != null) garrisonVisual.Initialize(type, sr.sortingOrder);
             });
-        CreateBuildingShadow(go.transform, slot.footprint, targetScale, sr.sortingOrder - 1);
+        CreateBuildingShadow(go.transform, BaseWorldLayout.Footprint(type), targetScale, sr.sortingOrder - 1);
 
         // Dünya etiketi
         CreateReadableLabel(go.transform, type == BuildingType.MainBase
@@ -1067,44 +1079,54 @@ public class BaseMapManager : MonoBehaviour
     }
 
     public bool CanPlaceFootprintAt(Vector2 size, Vector2 center, PlacedMapObject moving = null)
+        => BaseOccupancyGrid.IsFree(BaseOccupancyGrid.CellsFor(size, center), moving, null,
+            true, !_repairing, _repairSettled);
+
+    /// <summary>Ana Üs dahil, bu türden bir yapı o merkeze konabilir mi (yerleşim kuralı).</summary>
+    private bool CanSpawnAt(BuildingType type, Vector2 center)
+        => CanPlaceFootprintAt((Vector2)BaseWorldLayout.Footprint(type), center);
+
+    /// <summary>Üretilen benzersiz bina kimliği, örn. "archertower_3fa91c".</summary>
+    private static string NewBuildingId(BuildingType type)
+        => type.ToString().ToLowerInvariant() + "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+
+    /// <summary>
+    /// Önerilen başlangıç yeri: önce eski düzenin boş (geçerli) slotu, yoksa verilen noktaya en yakın
+    /// boş hücre. Yer yoksa false.
+    /// </summary>
+    public bool TryGetDefaultPlacementCenter(Vector2Int size, Vector2 near, out Vector2 center,
+        BuildingType? type = null)
     {
-        int left = Mathf.RoundToInt(center.x - size.x * 0.5f);
-        int bottom = Mathf.RoundToInt(center.y - size.y * 0.5f);
-        var footprint = new RectInt(left, bottom, Mathf.RoundToInt(size.x), Mathf.RoundToInt(size.y));
-        if (
-            (footprint.xMin < BaseWorldLayout.Buildable.xMin + 1 ||
-             footprint.xMax > BaseWorldLayout.Buildable.xMax - 1 ||
-             footprint.yMin < BaseWorldLayout.Buildable.yMin + 1 ||
-             footprint.yMax > BaseWorldLayout.Buildable.yMax - 1)) return false;
-        for (int y = footprint.yMin; y < footprint.yMax; y++)
-        for (int x = footprint.xMin; x < footprint.xMax; x++)
+        foreach (var slot in BaseWorldLayout.Slots)
         {
-            if (!_buildableRect.Contains(new Vector2Int(x, y))) return false;
-            var camp = GameObject.Find("HeroCamp");
-            if (camp != null && new Rect(camp.transform.position.x - 1f,
-                camp.transform.position.y - 1f, 2f, 2f)
-                .Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
-            foreach (var other in _mapObjects)
-            {
-                if (other == moving || other.gameObject == null || other.isBeingRemoved) continue;
-                bool building = other.objectType == MapObjectType.Building && other.buildingType.HasValue;
-                if (!building && other.objectType != MapObjectType.BuilderHut) continue;
-                Vector2 otherSize = FootprintOf(other);
-                var otherRect = new Rect(other.gameObject.transform.position.x - otherSize.x * 0.5f,
-                    other.gameObject.transform.position.y - otherSize.y * 0.5f, otherSize.x, otherSize.y);
-                if (otherRect.Contains(new Vector2(x + 0.5f, y + 0.5f))) return false;
-            }
-            var decor = DecorPlacementController.Instance;
-            if (decor != null)
-                foreach (var item in decor.Placed)
-                    if (item != null && item.Occupies(new Vector2Int(x, y))) return false;
+            if (slot.footprint != size || slot.buildingType != type
+                || !CanPlaceFootprintAt((Vector2)size, slot.center)) continue;
+            center = slot.center;
+            return true;
         }
-        return true;
+        Vector3 spot = NearestFreeSpot(size, near);
+        center = spot;
+        return CanPlaceFootprintAt((Vector2)size, center);
+    }
+
+    private bool TryFindFreeSlotCenter(BuildingType type, Vector2 near, out Vector2 center)
+    {
+        center = default;
+        float best = float.PositiveInfinity;
+        foreach (var slot in BaseWorldLayout.ForBuilding(type))
+        {
+            if (!CanSpawnAt(type, slot.center)) continue;
+            float distance = (slot.center - near).sqrMagnitude;
+            if (distance >= best) continue;
+            best = distance;
+            center = slot.center;
+        }
+        return best < float.PositiveInfinity;
     }
 
     private Vector3 NearestValidBuildingPosition(BuildingType type, Vector3 saved)
     {
-        Vector2 footprint = BaseWorldLayout.Footprint(type);
+        Vector2Int footprint = BaseWorldLayout.Footprint(type);
         Vector3 best = saved;
         float bestDistance = float.MaxValue;
         for (int y = BaseWorldLayout.Buildable.yMin + 1;
@@ -1115,11 +1137,65 @@ public class BaseMapManager : MonoBehaviour
             var candidate = new Vector3(x + footprint.x * 0.5f,
                 y + footprint.y * 0.5f, saved.z);
             float distance = (candidate - saved).sqrMagnitude;
-            if (distance >= bestDistance || !CanPlaceBuildingAt(type, candidate)) continue;
+            if (distance >= bestDistance || !CanSpawnAt(type, candidate)) continue;
             best = candidate;
             bestDistance = distance;
         }
         return best;
+    }
+
+    /// <summary>
+    /// Yükleme sonrası onarım: bina/kulübe başka bir nesneyle çakışıyor ya da açık arazinin dışındaysa
+    /// en yakın boş geçerli yere taşınır (yerleşme sırası: Ana Üs, sonra liste sırası). Ardından dekor
+    /// da aynı ızgaraya göre onarılır; sığmayan dekorun bedeli iade edilir. Taşınan nesne sayısını döndürür.
+    /// </summary>
+    public int RepairLayout()
+    {
+        var movable = new List<PlacedMapObject>();
+        foreach (var obj in _mapObjects)
+        {
+            if (obj.gameObject == null || obj.isBeingRemoved) continue;
+            if ((obj.objectType == MapObjectType.Building && obj.buildingType.HasValue)
+                || obj.objectType == MapObjectType.BuilderHut) movable.Add(obj);
+        }
+        movable = movable.OrderBy(o => o.buildingType == BuildingType.MainBase ? 0 : 1).ToList();
+
+        int moved = 0;
+        _repairing = true;
+        _repairSettled = new HashSet<PlacedMapObject>();
+        try
+        {
+            foreach (var obj in movable)
+            {
+                Vector2Int size = FootprintOf(obj);
+                Vector3 position = obj.gameObject.transform.position;
+                if (!CanPlaceFootprintAt((Vector2)size, position, obj) && obj.buildingType != BuildingType.MainBase)
+                {
+                    Vector3 spot = NearestFreeSpot(size, position, obj);
+                    if (CanPlaceFootprintAt((Vector2)size, spot, obj))
+                    {
+                        obj.gameObject.transform.position = new Vector3(spot.x, spot.y, position.z);
+                        obj.gameObject.GetComponent<BuilderHut>()?.OnMoved();
+                        moved++;
+                    }
+                }
+                _repairSettled.Add(obj);
+            }
+        }
+        finally
+        {
+            _repairing = false;
+            _repairSettled = null;
+        }
+        if (moved > 0)
+        {
+            BaseGroundPaths.Instance?.Refresh();
+            HeroMovementController.Instance?.RefreshWalkable();
+            SaveAll();
+        }
+        if (DecorPlacementController.Instance != null)
+            moved += DecorPlacementController.Instance.RepairLayout();
+        return moved;
     }
 
     public bool MoveObjectTo(PlacedMapObject obj, Vector3 newPos)
@@ -1189,7 +1265,9 @@ public class BaseMapManager : MonoBehaviour
     {
         if (GameManager.Instance?.PlayerData?.placedBuildings == null) return;
         var saved = GameManager.Instance.PlayerData.placedBuildings;
-        foreach (var data in saved)
+        // Ana Üs önce yerleşir; diğerleri çakışırsa en yakın boş geçerli yere kayar (bkz. SpawnBuildingInternal).
+        foreach (var data in saved.Where(d => d != null)
+                     .OrderBy(d => d.buildingType == nameof(BuildingType.MainBase) ? 0 : 1).ToList())
         {
             if (Enum.TryParse<BuildingType>(data.buildingType, out BuildingType type))
                 SpawnSavedBuilding(type, data.hasPosition ? new Vector2(data.x, data.y)

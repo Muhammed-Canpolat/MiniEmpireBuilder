@@ -77,6 +77,7 @@ public class BaseSceneSetup : MonoBehaviour
         if (DevSettings.DebugOverlay) gameObject.AddComponent<BaseDebugOverlay>();
 #endif
         StartCoroutine(LogBaseWidthAfterSpawn());
+        StartCoroutine(RepairLayoutAfterLoad());
 
         // Input Manager (Long press + tap)
         LongPressHandler.Instance.OnLongPress += HandleLongPress;
@@ -103,10 +104,12 @@ public class BaseSceneSetup : MonoBehaviour
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
             _wasPointerOverUIOnPress = IsPointerOverBlockingUI();
+            _pressScreenPosition = Mouse.current.position.ReadValue();
         }
         else if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
         {
             _wasPointerOverUIOnPress = IsPointerOverBlockingUI();
+            _pressScreenPosition = Touchscreen.current.primaryTouch.position.ReadValue();
         }
 
         HandleInput();
@@ -957,6 +960,8 @@ public class BaseSceneSetup : MonoBehaviour
         if (follow != null) follow.enabled = false;
         var panZoom = camera.GetComponent<CameraController>();
         if (panZoom != null) panZoom.enabled = false;
+        // Üs kamerası: tek parmak kaydırma, sıkıştırarak yakınlaştırma (harita sınırlarına kenetli).
+        if (camera.GetComponent<BaseCameraController>() == null) camera.gameObject.AddComponent<BaseCameraController>();
     }
 
     public void RefreshCameraFraming()
@@ -971,6 +976,16 @@ public class BaseSceneSetup : MonoBehaviour
         camera.transform.position = new Vector3(11f, 19f, -10f);
         var bars = FindFirstObjectByType<WorldViewportBars>();
         if (bars != null) bars.UpdateLayout();
+    }
+
+    /// <summary>
+    /// Bina, kulübe ve dekor yüklendikten (birkaç kare sonra) çakışan/açık arazi dışındaki nesneleri
+    /// en yakın boş geçerli yere taşır; sığmayan dekorun bedelini iade eder.
+    /// </summary>
+    private System.Collections.IEnumerator RepairLayoutAfterLoad()
+    {
+        for (int frame = 0; frame < 4; frame++) yield return null;
+        if (BaseMapManager.Instance != null) BaseMapManager.Instance.RepairLayout();
     }
 
     private System.Collections.IEnumerator LogBaseWidthAfterSpawn()
@@ -1016,6 +1031,11 @@ public class BaseSceneSetup : MonoBehaviour
     }
 
     private bool _wasPointerOverUIOnPress = false;
+    private Vector2 _pressScreenPosition;
+
+    /// <summary>Basıldığı yerden 10 pikselden fazla kaydıysa (kamera kaydırma/sürükleme) bu dokunuş tap sayılmaz.</summary>
+    private bool DraggedSincePress(Vector2 releasePosition)
+        => (releasePosition - _pressScreenPosition).sqrMagnitude > BaseCameraController.TapSlopPixels * BaseCameraController.TapSlopPixels;
 
     private bool IsPointerOverBlockingUI()
     {
@@ -1047,9 +1067,11 @@ public class BaseSceneSetup : MonoBehaviour
     {
         if (DecorPlacementController.Instance != null && DecorPlacementController.Instance.IsPlacing)
             return;
+        if (PlacementController.Instance != null && PlacementController.Instance.IsPlacing)
+            return; // yerleştirme sırasında dokunuşlar hayaleti/kamerayı yönetir, bina seçmez
         if (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
         {
-            if (_wasPointerOverUIOnPress) return;
+            if (_wasPointerOverUIOnPress || DraggedSincePress(Mouse.current.position.ReadValue())) return;
             if (IsPointerOverBlockingUI()) return;
 
             if (LongPressHandler.Instance.WasFiredThisPress) return; // Uzun basma işlemi gerçekleşmişse tap'i yoksay
@@ -1060,7 +1082,7 @@ public class BaseSceneSetup : MonoBehaviour
         }
         else if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasReleasedThisFrame)
         {
-            if (_wasPointerOverUIOnPress) return;
+            if (_wasPointerOverUIOnPress || DraggedSincePress(Touchscreen.current.primaryTouch.position.ReadValue())) return;
             if (IsPointerOverBlockingUI()) return;
 
             if (LongPressHandler.Instance.WasFiredThisPress) return;
