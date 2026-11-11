@@ -33,7 +33,14 @@
   her seferinde yeni bir 7+ gün sıçraması ister, takvim serisini ve zamanlayıcıları bozar → caydırıcı).
 - Ana Üs canı (+100 taban) ve Bölge 4–5 sıkılaştırması önce ölçülüp sonra karar verilecek (designer: önce 1–4).
 
+- `ce9c343` 7 eski test güncellendi; `aee4db4` his + Bölge 4–6 kimliği; `d6e648e` boss ekleri, kule hasar artışı düşük,
+  bot sıradan oyuncu profili; `483cd1d` yanlış eklenen Dragon Warrior dosyaları takipten çıkarıldı.
+- Son ölçüm: iyi oyuncu 36/36; sıradan oyuncu S1 18/18, boss 11/18 (%61).
+
+## Kararlar (gece sonu)
+- Botun ilk sürümü kötü oynuyordu (takılma, uyarıyı yok sayma, iyileşmeden bekleme); her biri düzeltildi ve
+  "iyi" + "sıradan" iki profil ölçüldü. Orta zorluk = iyi oyuncu rahat, sıradan oyuncu boss'ta %55–75.
+- Ana Üs canı +100 yerine yalnız boss ekleriyle oynanabilirdi; Bölge 1 öğretici olduğu için ikisi birlikte tutuldu.
+
 ## Sıradakiler
-1. Tohumlu bot (3 tohum × S1/S5 × 6 bölge) ile denge v1 ölçümü → hedef tablo balance_v1.md
-2. T1 kalan 6 eski test
-3. J1/J2 kule atış ve Ana Üs hasar hissi; C1/C2 bölge zemin/partikül
+MORNING_REPORT.md "Sonraki oturum için ilk 5 iş".

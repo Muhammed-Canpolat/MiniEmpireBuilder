@@ -26,7 +26,7 @@ Efor: S (<1 sa), M (yarım gün), L (1+ gün). Öncelik: P0 kırık/güvenlik �
 |---|---|---|---|---|---|
 | S1 | Günlük sınırlar yerel saate bağlı: saat ileri/geri alınarak reklam hakkı, günlük sandık, takvim, İstila ödülü tekrar toplanıyor | Elmas enflasyonu, ileride satış ekonomisi çöker | `GameClock` en ileri saat | S | ✅ b203b41 |
 | S2 | `AddGems` taşma | Oynanmış kayıtta eksi elmas | Üst sınır 999999 | S | ✅ b203b41 |
-| T1 | 8 PlayMode testi kalıyor (eski beklentiler: ağaç sayısı, Çırak canı, gölge eşiği, hayalet maden boyu, belirsiz yansıma, beklenmeyen log) | Gerçek gerilemeler gürültüde kaybolur | Testleri güncel tasarıma uydur | M | 2/8 ✅ |
+| T1 | 8 PlayMode testi kalıyor (eski beklentiler: ağaç sayısı, Çırak canı, gölge eşiği, hayalet maden boyu, belirsiz yansıma, beklenmeyen log) | Gerçek gerilemeler gürültüde kaybolur | Testleri güncel tasarıma uydur | M | 7/8 ✅ (kalan: Topçu köşe gölgesi) |
 
 ### P1 — denge ve his
 | # | Sorun | Etki | Çözüm | Efor |
@@ -56,7 +56,10 @@ Efor: S (<1 sa), M (yarım gün), L (1+ gün). Öncelik: P0 kırık/güvenlik �
 | A1 | HD düşman çizimleri ile piksel kahraman stil çatışması | Sanat: ART_NEEDS.md #1 | — |
 | A2 | `enemy_direction_arrow` 341 PPU aykırı | PPU 100'e çek (görsel test gerekir) | S |
 
-## Telemetri özeti (beklenen oyuncu, 2 koşu)
+## Durum (gece sonu)
+B1–B4 ✅ dd5b349, J1–J2 ✅ aee4db4, C1–C2 ✅ aee4db4 (kodla), denge son ayarı d6e648e.
+
+## Telemetri özeti (ilk ölçüm) (beklenen oyuncu, 2 koşu)
 Kazanılan/oynanan: Bölge 1: 3/4, 2: 3/4, 3: 3/4, 4: 4/4, 5: 4/4, 6: 2/4. Bütün yenilgiler **ilk dalgada, ~40 sn içinde**,
 düşmanlar kahramanın olmadığı taraftan üsse yığılınca. Ortalama ölüm süresi (doğuştan ölüme): kurt 13–19 sn,
 zombi 24–32 sn, ork 19–27 sn. Hata logu: 0.
