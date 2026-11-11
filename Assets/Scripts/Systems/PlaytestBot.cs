@@ -21,7 +21,7 @@ public static class PlaytestBot
     [Serializable]
     public class Telemetry
     {
-        public int region, level, battleLevel, mainBaseLevel, heroLevel, towerLevel;
+        public int seed, region, level, battleLevel, mainBaseLevel, heroLevel, towerLevel;
         public string result = "timeout";      // win / lose / timeout
         public string defeatReason = "";
         public float durationSec;
@@ -82,10 +82,11 @@ public static class PlaytestBot
 
     /// <summary>Bir aşamayı oynar. maxSeconds oyun zamanıdır; timeScale ile hızlandırılır.</summary>
     public static IEnumerator PlayBattle(int region, int level, float timeScale = 4f, float maxSeconds = 420f,
-        bool capture = true)
+        bool capture = true, int seed = 0)
     {
         int baseLevel = ExpectedBaseLevel(region, level);
-        var t = new Telemetry { region = region, level = level, mainBaseLevel = baseLevel, heroLevel = baseLevel,
+        if (seed != 0) UnityEngine.Random.InitState(seed);
+        var t = new Telemetry { seed = seed, region = region, level = level, mainBaseLevel = baseLevel, heroLevel = baseLevel,
             towerLevel = Mathf.Max(1, baseLevel - 1) };
         Last = t;
         Application.logMessageReceived += OnLog;
@@ -126,7 +127,7 @@ public static class PlaytestBot
         Time.timeScale = timeScale;
         lastHeroPos = hero.transform.position;
         stuckFor = 0f; sidestepUntil = 0f;
-        if (capture) t.screenshots.Add(Capture($"r{region}_l{level}_start"));
+        if (capture) t.screenshots.Add(Capture($"r{region}_l{level}_s{seed}_start"));
 
         while (!ended && Time.time - start < maxSeconds)
         {
@@ -177,7 +178,7 @@ public static class PlaytestBot
             if (capture && !midShot && battle.CurrentWave >= 2 && spawnTime.Count >= 4)
             {
                 midShot = true;
-                t.screenshots.Add(Capture($"r{region}_l{level}_fight"));
+                t.screenshots.Add(Capture($"r{region}_l{level}_s{seed}_fight"));
             }
             yield return null;
         }
@@ -197,7 +198,7 @@ public static class PlaytestBot
             t.enemiesSpawned += pair.Value.spawned;
             t.enemiesKilled += pair.Value.killed;
         }
-        if (capture) t.screenshots.Add(Capture($"r{region}_l{level}_end_{t.result}"));
+        if (capture) t.screenshots.Add(Capture($"r{region}_l{level}_s{seed}_end_{t.result}"));
         Time.timeScale = 1f;
         Finish(t);
     }
@@ -215,7 +216,7 @@ public static class PlaytestBot
         Application.logMessageReceived -= OnLog;
         currentTelemetry = null;
         Directory.CreateDirectory(OutputDir);
-        File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}.json"), JsonUtility.ToJson(t, true));
+        File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}_s{t.seed}.json"), JsonUtility.ToJson(t, true));
     }
 
     private static Vector3 lastHeroPos;

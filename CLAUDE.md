@@ -25,4 +25,6 @@ Detaylı mimari, kararlar ve tuzaklar: **`Docs/AI_README.md`** (önce onu oku). 
 - PlayMode testleri (editör **kapalıyken**):
   `"D:/Unity/6000.3.9f1/Editor/Unity.exe" -batchmode -projectPath "D:/UnityProjects/MiniEmpireBuilder" -runTests -testPlatform PlayMode -testResults PlaytestOutput/results.xml -logFile PlaytestOutput/unity.log`
   Tek test grubu: `-testFilter PlaytestBotTests`. Log'u tümüyle okuma: `grep -E "error|Exception|Failed"`.
+- **Dikkat:** tam test koşusu `UIReviewScreenshots/CurrentReview/*.png` üzerine yazar; commit'ten önce
+  `git checkout -- UIReviewScreenshots` ile geri al (yeni görüntüleri istersen ayrı commit'le).
 - Bot/telemetri çıktısı: `PlaytestOutput/` (git dışı); seçilmiş görüntüler `Docs/playtest/`.

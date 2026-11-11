@@ -43,23 +43,34 @@ public class PlaytestBotTests
         else if (File.Exists(SaveFile)) File.Delete(SaveFile);
     }
 
-    private static IEnumerator Play(int region, int level)
+    private const int Seeds = 3;
+
+    private static IEnumerator PlayAll(int region)
+    {
+        for (int seed = 1; seed <= Seeds; seed++)
+        {
+            yield return Play(region, 1, seed, seed == 1);
+            yield return Play(region, 5, seed, seed == 1);
+        }
+    }
+
+    private static IEnumerator Play(int region, int level, int seed, bool capture)
     {
         Screen.SetResolution(390, 844, false);
         var bot = Type("PlaytestBot");
         var routine = (IEnumerator)bot.GetMethod("PlayBattle")
-            .Invoke(null, new object[] { region, level, 4f, 420f, true });
+            .Invoke(null, new object[] { region, level, 4f, 420f, capture, seed * 7919 + region * 31 + level });
         yield return routine;
         var last = bot.GetProperty("Last").GetValue(null);
         string result = (string)last.GetType().GetField("result").GetValue(last);
-        Debug.Log($"[PlaytestBot] Bölge {region} Aşama {level}: {result}");
+        Debug.Log($"[PlaytestBot] Bölge {region} Aşama {level} tohum {seed}: {result}");
         Assert.AreNotEqual("setup_failed", result, "Savaş sahnesi kurulamadı");
     }
 
-    [UnityTest, Timeout(600000)] public IEnumerator Region1() { yield return Play(1, 1); yield return Play(1, 5); }
-    [UnityTest, Timeout(600000)] public IEnumerator Region2() { yield return Play(2, 1); yield return Play(2, 5); }
-    [UnityTest, Timeout(600000)] public IEnumerator Region3() { yield return Play(3, 1); yield return Play(3, 5); }
-    [UnityTest, Timeout(600000)] public IEnumerator Region4() { yield return Play(4, 1); yield return Play(4, 5); }
-    [UnityTest, Timeout(600000)] public IEnumerator Region5() { yield return Play(5, 1); yield return Play(5, 5); }
-    [UnityTest, Timeout(600000)] public IEnumerator Region6() { yield return Play(6, 1); yield return Play(6, 5); }
+    [UnityTest, Timeout(1800000)] public IEnumerator Region1() { yield return PlayAll(1); }
+    [UnityTest, Timeout(1800000)] public IEnumerator Region2() { yield return PlayAll(2); }
+    [UnityTest, Timeout(1800000)] public IEnumerator Region3() { yield return PlayAll(3); }
+    [UnityTest, Timeout(1800000)] public IEnumerator Region4() { yield return PlayAll(4); }
+    [UnityTest, Timeout(1800000)] public IEnumerator Region5() { yield return PlayAll(5); }
+    [UnityTest, Timeout(1800000)] public IEnumerator Region6() { yield return PlayAll(6); }
 }

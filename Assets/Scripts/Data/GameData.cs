@@ -182,7 +182,7 @@ public class BuildingData
         switch (buildingType)
         {
             case BuildingType.MainBase:
-                maxHealth = 200f + (level - 1) * 100f;
+                maxHealth = 300f + (level - 1) * 100f; // balance_v1: ilk bölgeler affedici olsun
                 currentHealth = maxHealth;
                 break;
 
@@ -271,6 +271,16 @@ public class BuildingData
 public static class Progression
 {
     public const int MaxLevel = 15;
+
+    // ---- Savaş dengesi (Docs/design/balance_v1.md) ----
+    /// <summary>Sefer savaşına başlarken eldeki savaş altını: ilk dalgada da bir kule kurulabilsin. Zafer ödülünden düşülür.</summary>
+    public static int BattleStartGold(int region) => 60 + 15 * (Mathf.Max(1, region) - 1);
+    /// <summary>İlk dalganın en fazla düşman sayısı (yığılma ile erken, açıklanamayan yenilgiyi önler).</summary>
+    public static int Wave1Cap(int region) => 8 + Mathf.Max(1, region);
+    /// <summary>Bir dalganın kaç taraftan geldiği: Bölge 1–2 tek taraf, sonrası iki taraf.</summary>
+    public static int WaveSpawnSides(int region) => region <= 2 ? 1 : 2;
+    /// <summary>Dalga içinde iki düşman arası saniye.</summary>
+    public static float SpawnInterval(int region) => Mathf.Max(0.9f, 1.25f - 0.07f * (Mathf.Max(1, region) - 1));
     public const int LevelsPerColorTier = 3;
 
     // ==================== İNŞAATÇILAR ====================

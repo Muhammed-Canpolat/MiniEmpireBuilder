@@ -197,6 +197,49 @@ public class BattleVfxManager : MonoBehaviour
     }
 
     // ══════════════════════════════════════════════════════════════
+    // DALGA YÖN UYARISI
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Dalga gelmeden önce düşmanların geleceği ekran kenarlarında yanıp sönen kırmızı oklar
+    /// (0 üst, 1 sağ, 2 alt, 3 sol). Oyuncu kahramanı ve kuleleri o yöne göre hazırlar.
+    /// </summary>
+    public void ShowSpawnWarning(int[] edges, float seconds)
+    {
+        if (edges == null || edges.Length == 0) return;
+        var sprite = Resources.Load<Sprite>("Battle/enemy_direction_arrow");
+        var canvasObj = new GameObject("SpawnWarning");
+        var cv = canvasObj.AddComponent<Canvas>();
+        cv.renderMode = RenderMode.ScreenSpaceOverlay;
+        cv.sortingOrder = 190;
+        var cs = canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
+        cs.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        cs.referenceResolution = new Vector2(1080, 1920);
+        cs.matchWidthOrHeight = 1f;
+        foreach (int edge in edges)
+        {
+            // Kenarın ortası ve dışa bakan yön (ok düşmanın geleceği yönü gösterir).
+            Vector2 anchor = edge == 0 ? new Vector2(0.5f, 0.86f) : edge == 1 ? new Vector2(0.9f, 0.5f)
+                : edge == 2 ? new Vector2(0.5f, 0.2f) : new Vector2(0.1f, 0.5f);
+            float angle = edge == 0 ? 90f : edge == 1 ? 0f : edge == 2 ? -90f : 180f;
+            var arrow = new GameObject("WarnArrow" + edge);
+            arrow.transform.SetParent(canvasObj.transform, false);
+            var rt = arrow.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = anchor;
+            rt.sizeDelta = new Vector2(150f, 150f);
+            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            var img = arrow.AddComponent<UnityEngine.UI.Image>();
+            img.sprite = sprite;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            img.color = new Color(1f, 0.25f, 0.2f, 0.95f);
+            img.DOFade(0.25f, 0.35f).SetLoops(-1, LoopType.Yoyo).SetLink(arrow);
+            arrow.transform.DOScale(1.15f, 0.35f).SetLoops(-1, LoopType.Yoyo).SetLink(arrow);
+        }
+        Destroy(canvasObj, seconds);
+    }
+
+    // ══════════════════════════════════════════════════════════════
     // SCREEN SHAKE
     // ══════════════════════════════════════════════════════════════
 

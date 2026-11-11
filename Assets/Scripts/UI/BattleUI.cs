@@ -264,8 +264,8 @@ public class BattleUI : MonoBehaviour
             {
                 if (won)
                 {
-                    int total = bm.TotalGoldEarned + bm.VictoryBonus;
-                    rewardText.text = L.T($"Kazanılan Altın: {total} (Savaş: {bm.TotalGoldEarned} + Ödül: {bm.VictoryBonus})", $"Gold Earned: {total} (Battle: {bm.TotalGoldEarned} + Reward: {bm.VictoryBonus})");
+                    int total = bm.BattleGoldNet + bm.VictoryBonus;
+                    rewardText.text = L.T($"Kazanılan Altın: {total} (Savaş: {bm.BattleGoldNet} + Ödül: {bm.VictoryBonus})", $"Gold Earned: {total} (Battle: {bm.BattleGoldNet} + Reward: {bm.VictoryBonus})");
                 }
                 else
                 {

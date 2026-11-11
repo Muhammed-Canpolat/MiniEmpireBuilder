@@ -25,6 +25,12 @@ public class BattleManager : MonoBehaviour
     private int currentWaveIndex = 0;
     private int enemiesAlive = 0;
     private int totalGoldEarned = 0;
+    // Savaşa başlarken verilen altın (Progression.BattleStartGold); zafer ödülüne sayılmaz.
+    private int startGold;
+    /// <summary>Savaşta gerçekten kazanılan (başlangıç altını hariç) eldeki altın.</summary>
+    public int BattleGoldNet => Mathf.Max(0, totalGoldEarned - startGold);
+    // Bu dalganın geldiği kenarlar (0 üst, 1 sağ, 2 alt, 3 sol); boşsa her düşman rastgele kenardan.
+    private int[] waveEdges;
     public int GoldEarned => totalGoldEarned;
     private bool battleActive = false;
     private bool battleWon = false;
@@ -104,6 +110,11 @@ public class BattleManager : MonoBehaviour
         else currentLevel = LevelData.GenerateLevel(battleLevel);
 
         Debug.Log($"[BattleManager] Level {battleLevel} başlıyor! {currentLevel.waves.Count} dalga");
+        if (BattleSession.IsCampaign)
+        {
+            startGold = Progression.BattleStartGold(BattleSession.RegionId);
+            totalGoldEarned = startGold;
+        }
 
         // Sahneyi oluştur (eğer otomatik kurulum istiyorsak)
         SetupBattleScene();
@@ -545,6 +556,9 @@ public class BattleManager : MonoBehaviour
             int incomingCount = 0;
             foreach (var enemy in wave.enemies) incomingCount += enemy.count;
             OnWaveIncoming?.Invoke(incomingCount);
+            // Dalganın geleceği taraflar seçilir ve 3 sn önceden oklarla gösterilir.
+            waveEdges = PickWaveEdges(Progression.WaveSpawnSides(BattleSession.IsCampaign ? BattleSession.RegionId : 1));
+            if (BattleVfxManager.Instance != null) BattleVfxManager.Instance.ShowSpawnWarning(waveEdges, 3f);
 
             // Ekranda DALGA X banner'ını göster
             if (BattleVfxManager.Instance != null)
@@ -609,21 +623,24 @@ public class BattleManager : MonoBehaviour
             float halfW = setup.worldWidth / 2f;
             float halfH = setup.worldHeight / 2f;
 
-            // Rastgele bir kenar seç (0: üst, 1: sağ, 2: alt, 3: sol)
-            int edge = Random.Range(0, 4);
+            // Kenar (0: üst, 1: sağ, 2: alt, 3: sol): dalganın duyurulan taraflarından biri,
+            // kenarın ortasına yakın (±%30) — oyuncu uyarıya göre kahramanı ve kuleleri konumlayabilsin.
+            bool grouped = waveEdges != null && waveEdges.Length > 0;
+            int edge = grouped ? waveEdges[Random.Range(0, waveEdges.Length)] : Random.Range(0, 4);
+            float spread = grouped ? 0.3f : 1f;
             switch (edge)
             {
                 case 0: // Üst
-                    spawnPos = new Vector3(Random.Range(-halfW, halfW), halfH + 2f, 0);
+                    spawnPos = new Vector3(Random.Range(-halfW, halfW) * spread, halfH + 2f, 0);
                     break;
                 case 1: // Sağ
-                    spawnPos = new Vector3(halfW + 2f, Random.Range(-halfH, halfH), 0);
+                    spawnPos = new Vector3(halfW + 2f, Random.Range(-halfH, halfH) * spread, 0);
                     break;
                 case 2: // Alt
-                    spawnPos = new Vector3(Random.Range(-halfW, halfW), -halfH - 2f, 0);
+                    spawnPos = new Vector3(Random.Range(-halfW, halfW) * spread, -halfH - 2f, 0);
                     break;
                 case 3: // Sol
-                    spawnPos = new Vector3(-halfW - 2f, Random.Range(-halfH, halfH), 0);
+                    spawnPos = new Vector3(-halfW - 2f, Random.Range(-halfH, halfH) * spread, 0);
                     break;
             }
         }
@@ -893,7 +910,7 @@ public class BattleManager : MonoBehaviour
                 CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
             }
         }
-        int totalPayout = totalGoldEarned + GetVictoryBonus();
+        int totalPayout = BattleGoldNet + GetVictoryBonus();
         // Tamamlanmış aşamayı tekrar oynamak altın kasma yolu olmasın: toplamın %30'u.
         if (IsReplay) totalPayout = Mathf.RoundToInt(totalPayout * ReplayRewardRate);
         LastPayout = totalPayout;
@@ -959,6 +976,20 @@ public class BattleManager : MonoBehaviour
         return baseWinGoldReward + (battleLevel - 1) * 10;
     }
 
+    /// <summary>Birbirinden farklı rastgele kenarlar.</summary>
+    private static int[] PickWaveEdges(int count)
+    {
+        var edges = new System.Collections.Generic.List<int> { 0, 1, 2, 3 };
+        var picked = new int[Mathf.Clamp(count, 1, 4)];
+        for (int i = 0; i < picked.Length; i++)
+        {
+            int index = Random.Range(0, edges.Count);
+            picked[i] = edges[index];
+            edges.RemoveAt(index);
+        }
+        return picked;
+    }
+
     private static LevelData CreateCampaignWaves(RegionData region, CampaignLevelData campaignLevel)
     {
         if (region == null || campaignLevel == null)
@@ -967,9 +998,10 @@ public class BattleManager : MonoBehaviour
         for (int i = 0; i < campaignLevel.waveCount; i++)
         {
             var wave = new WaveData { waveNumber = i + 1,
-                timeBetweenSpawns = Mathf.Max(0.65f, 1.25f - (region.id - 1) * 0.1f) };
+                timeBetweenSpawns = Progression.SpawnInterval(region.id) };
             int count = campaignLevel.enemyCounts != null && i < campaignLevel.enemyCounts.Length
                 ? campaignLevel.enemyCounts[i] : 7;
+            if (i == 0) count = Mathf.Min(count, Progression.Wave1Cap(region.id));
             EnemyType type = region.enemyTypes != null && region.enemyTypes.Length > 0
                 ? region.enemyTypes[Mathf.Min(i, region.enemyTypes.Length - 1)] : EnemyType.Wolf;
             if (campaignLevel.kind == CampaignLevelKind.Boss && i == campaignLevel.waveCount - 1)
