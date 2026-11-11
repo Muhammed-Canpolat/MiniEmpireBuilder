@@ -34,3 +34,24 @@ Mevcut savaş zemini tek parça döşenen bir karo (100 PPU). Yeni setler **Tiny
 - Bölge 5: `dark fantasy tileset pixel`, `graveyard tileset top down`, `cursed ruins pixel art`, `necromancer dungeon tileset`
 - Bölge 6: `lava tileset pixel art`, `volcano tileset top down`, `hell tileset rpg`, `fire dungeon tiles animated lava`
 - Lisans: ticari kullanıma izin (CC0 / "commercial use allowed") ve yeniden dağıtım yasağına dikkat.
+
+## Martı Adası: tekneler (Docs/design/island_base.md §3)
+Hiçbir pakette tekne yok. Tiny Swords ile aynı **3/4 üstten** bakış, 64 px/birim, yatay şerit; yelken/bayrak fraksiyon
+renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
+
+| # | Varlık | Kare boyu | Kareler | Neden |
+|---|---|---|---|---|
+| 10 | Sandal (2 kişilik) | 128×64 | sallanma 4, kürek 4, batış 6 | Akın 1+ tekne evresi |
+| 11 | Akıncı Teknesi (4 kişilik, tek yelken) | 192×96 | sallanma 4, yelken dalgalanma 4, batış 6, karaya oturma 1 | Akın 5+ |
+| 12 | Kalkanlı Mavna (6 kişilik, yanlarda kalkan dizisi) | 256×128 | sallanma 4, batış 8, yanma üst katmanı 6 | Akın 15+, Ateşli Ok görseli |
+| 13 | Hayalet Gemi | 256×160 | süzülme 6, batış 8 (yeşil sis) | Etkinlik |
+| 14 | Dümen suyu / pruva köpüğü | 64×32 | 6 döngü | Tekne hareketi (şimdilik `Water Foam.png` yeniden kullanılır) |
+
+**Ara çözüm (sırayla):**
+1. **Kodla (MVP):** gövde = koyu ahşap yamuk + kalas çizgileri + kenar, yelken = fraksiyon renginde üçgen, sallanma tween'i,
+   batış = eğilme + alfa + `Particle FX/Water Splash.png`.
+2. **`Tools/campaign_art/generate.py` (Pillow):** aynı biçimleri piksel sanat PNG şeridi olarak pişir (64 PPU, Tiny Swords
+   paleti), `Resources/Island/boats/` altına.
+3. **Hazır paket** (itch.io / Asset Store): `pixel art boat top down`, `rowboat pixel sprite`, `pirate ship pixel art top down`,
+   `viking longship pixel art`, `tiny swords compatible boat`, `pixel frog ship` (Pixel Frog "Treasure Hunters" yan
+   görünüşlü, açı uymayabilir). Lisans kuralları yukarıdaki gibi.
