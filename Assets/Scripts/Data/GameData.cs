@@ -339,7 +339,7 @@ public static class Progression
         public static readonly Color FlyingTint = new Color(0.62f, 0.5f, 0.9f);
         // Bombacı (Kurt gövdesi)
         public const float SaboteurHp = 0.4f, SaboteurSpeed = 1.3f, SaboteurGold = 0.5f, SaboteurScale = 0.85f;
-        public const float SaboteurTowerTaken = 0.7f, SaboteurFuseSeconds = 0.6f;
+        public const float SaboteurTowerTaken = 0.7f, SaboteurFuseSeconds = 1.0f; // 0,6 sn: sıradan oyuncu tepki veremiyordu (bot ölçümü)
         public const float SaboteurTowerDamageFraction = 0.30f, SaboteurBaseDamageFraction = 0.05f;
         public const float SaboteurBurstInterval = 0.35f;
         public static readonly Color SaboteurTint = new Color(1f, 0.6f, 0.25f);
@@ -349,7 +349,7 @@ public static class Progression
         /// <summary>Kalkan havuzu / boss canı: Bölge 1 %15, 2 %20, 3+ %25.</summary>
         public static float WardFraction(int region) => region <= 1 ? 0.15f : region == 2 ? 0.20f : 0.25f;
         /// <summary>Kalkan ayaktayken kule hasarı çarpanı: 0,5 / 0,35 / 0,15.</summary>
-        public static float WardTowerMult(int region) => region <= 1 ? 0.5f : region == 2 ? 0.35f : 0.15f;
+        public static float WardTowerMult(int region) => region <= 1 ? 0.5f : region == 2 ? 0.35f : 0.25f; // 0,15: sıradan oyuncu boss'u hiç geçemiyordu
         /// <summary>Boss türünün bölgesi (kalkanı olmayan tür için 0).</summary>
         public static int WardRegion(EnemyType type)
         {
@@ -380,7 +380,7 @@ public static class Progression
             {
                 switch (region)
                 {
-                    case 2: sab = s5 ? 3 : stage >= 3 ? 2 : 0; break;
+                    case 2: sab = s5 ? 2 : stage >= 3 ? 2 : 0; break; // S5 3 -> 2 (Bölge 2 boss sıçraması)
                     case 3: sab = s5 ? 3 : 2; arm = s5 ? 2 : stage >= 3 ? 2 : 0; break;
                     case 4:
                         fly = 3;

@@ -42,6 +42,10 @@ public static class PlaytestBot
         public List<string> screenshots = new List<string>();
         public List<string> errors = new List<string>();
         public List<string> stallDump = new List<string>(); // kilitlenmede canlı düşmanlar
+        public float heroDamageShare;   // kahraman + Çırak hasarının toplam hasara oranı
+        public List<string> damageBySource = new List<string>();
+        public int wardBreaks;          // boss kalkanı kaç kez kırıldı
+        public List<string> saboteurs = new List<string>(); // hero/tower/detonated sayıları
     }
 
     public static string OutputDir =>
@@ -84,13 +88,14 @@ public static class PlaytestBot
 
     /// <summary>Bir aşamayı oynar. maxSeconds oyun zamanıdır; timeScale ile hızlandırılır.</summary>
     public static IEnumerator PlayBattle(int region, int level, float timeScale = 4f, float maxSeconds = 420f,
-        bool capture = true, int seed = 0, bool casual = false)
+        bool capture = true, int seed = 0, bool casual = false, string strategy = "combined")
     {
         int baseLevel = ExpectedBaseLevel(region, level);
         if (seed != 0) UnityEngine.Random.InitState(seed);
         Casual = casual;
+        Strategy = strategy ?? "combined";
         casualPickAt = 0f; casualTarget = null;
-        var t = new Telemetry { profile = casual ? "casual" : "good", seed = seed, region = region, level = level, mainBaseLevel = baseLevel, heroLevel = baseLevel,
+        var t = new Telemetry { profile = casual ? "casual" : Strategy == "combined" ? "good" : Strategy, seed = seed, region = region, level = level, mainBaseLevel = baseLevel, heroLevel = baseLevel,
             towerLevel = Mathf.Max(1, baseLevel - 1) };
         Last = t;
         Application.logMessageReceived += OnLog;
@@ -128,6 +133,7 @@ public static class PlaytestBot
         Vector3 home = mainBase.transform.position + new Vector3(0f, -1.6f, 0f);
         float start = Time.time, nextBuild = 0f, nextCurve = 0f, nextScan = 0f;
         bool midShot = false;
+        int maxWardBreaks = 0;
         int lastKilled = 0; float lastBaseDmg = 0f, lastProgress = 0f;
         retreatSince = -1f;
         Time.timeScale = timeScale;
@@ -149,6 +155,8 @@ public static class PlaytestBot
             if (now >= nextScan)
             {
                 nextScan = now + 0.2f;
+                foreach (var boss in UnityEngine.Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+                    if (boss != null && boss.WardBreaks > maxWardBreaks) maxWardBreaks = boss.WardBreaks;
                 foreach (var e in UnityEngine.Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
                 {
                     if (e.IsDead || spawnTime.ContainsKey(e)) continue;
@@ -211,6 +219,16 @@ public static class PlaytestBot
         t.goldEarned = battle != null ? battle.GoldEarned : 0;
         if (string.IsNullOrEmpty(t.defeatReason) && battle != null) t.defeatReason = battle.DefeatReason;
         t.structuresBuilt = builtSeen.Count;
+        float totalDamage = 0f, heroDamage = 0f;
+        foreach (var pair in EnemyController.DamageBySource)
+        {
+            totalDamage += pair.Value;
+            if (pair.Key == DamageSource.Hero || pair.Key == DamageSource.Apprentice) heroDamage += pair.Value;
+            t.damageBySource.Add($"{pair.Key}:{pair.Value:0}");
+        }
+        t.heroDamageShare = totalDamage > 0f ? heroDamage / totalDamage : 0f;
+        foreach (var pair in EnemyController.SaboteurOutcomes) t.saboteurs.Add($"{pair.Key}:{pair.Value}");
+        t.wardBreaks = maxWardBreaks;
         t.structuresDestroyed = destroyedSeen.Count;
         foreach (var pair in stats)
         {
@@ -237,7 +255,7 @@ public static class PlaytestBot
         Application.logMessageReceived -= OnLog;
         currentTelemetry = null;
         Directory.CreateDirectory(OutputDir);
-        File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}_s{t.seed}{(t.profile == "casual" ? "_casual" : "")}.json"), JsonUtility.ToJson(t, true));
+        File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}_s{t.seed}{(t.profile == "good" ? "" : "_" + t.profile)}.json"), JsonUtility.ToJson(t, true));
     }
 
     private static Vector3 lastHeroPos;
@@ -247,6 +265,8 @@ public static class PlaytestBot
     /// günceller, en fazla 1 Okçu kulesi kurar. Orta zorluk iki profil arasında olmalı.
     /// </summary>
     private static bool Casual;
+    /// <summary>Strateji profili: combined (kule+kahraman), towerOnly (kahraman kıpırdamaz), heroOnly (yapı yok).</summary>
+    private static string Strategy = "combined";
     private static float casualPickAt;
     private static EnemyController casualTarget;
     private static float sidestepSign = 1f;
@@ -258,6 +278,8 @@ public static class PlaytestBot
     private static void DriveHero(HeroController hero, Vector3 home, Vector3 baseCenter, Telemetry t, int[] edges)
     {
         if (hero == null || hero.IsDowned) { if (hero != null) hero.SetMoveInput(Vector2.zero); return; }
+        // Yalnız kule stratejisi: kahraman yerinden kıpırdamaz (yalnız menziline gireni kendiliğinden vurur).
+        if (Strategy == "towerOnly") { hero.SetMoveInput(Vector2.zero); return; }
         Vector3 pos = hero.transform.position;
         float step = Vector2.Distance(pos, lastHeroPos);
         t.heroDistance += step;
@@ -307,6 +329,9 @@ public static class PlaytestBot
                 if (e.IsDead) continue;
                 // Üsse yakın olanı ve kahramana yakın olanı birlikte gözet.
                 float score = Vector2.Distance(e.transform.position, home) + Vector2.Distance(e.transform.position, pos);
+                // İyi oyuncu: sabotajcıyı ve kalkanı açık boss'u önce yakalar (yalnız kahraman durdurabilir).
+                if (e.Variant == EnemyVariant.Saboteur) score -= 12f;
+                else if (e.WardActive) score -= 6f;
                 if (score < bestScore) { bestScore = score; best = e; }
             }
             if (best != null) target = best.transform.position;
@@ -350,6 +375,7 @@ public static class PlaytestBot
     /// <summary>Boş yuvalara sırayla Manastır (1 tane) → Topçu → Okçu kurmayı dener.</summary>
     private static void TryBuildAll(BattleManager battle)
     {
+        if (Strategy == "heroOnly") return; // yalnız kahraman: hiç yapı kurulmaz
         bool hasMonastery = BattleStructure.All.Any(s => s != null && !s.IsDestroyed && s.Type == BuildingType.Monastery);
         if (Casual)
         {

@@ -63,12 +63,19 @@ public class PlaytestBotTests
         }
     }
 
-    private static IEnumerator Play(int region, int level, int seed, bool capture, bool casual = false)
+    /// <summary>Baskın strateji testi: yalnız boss aşaması (S5), yalnız kule / yalnız kahraman.</summary>
+    private static IEnumerator PlayStrategy(int region, string strategy)
+    {
+        for (int seed = 1; seed <= Seeds; seed++)
+            yield return Play(region, 5, seed, false, false, strategy);
+    }
+
+    private static IEnumerator Play(int region, int level, int seed, bool capture, bool casual = false, string strategy = "combined")
     {
         Screen.SetResolution(390, 844, false);
         var bot = Type("PlaytestBot");
         var routine = (IEnumerator)bot.GetMethod("PlayBattle")
-            .Invoke(null, new object[] { region, level, 4f, 600f, capture, seed * 7919 + region * 31 + level, casual });
+            .Invoke(null, new object[] { region, level, 4f, 600f, capture, seed * 7919 + region * 31 + level, casual, strategy });
         yield return routine;
         var last = bot.GetProperty("Last").GetValue(null);
         string result = (string)last.GetType().GetField("result").GetValue(last);
@@ -90,4 +97,18 @@ public class PlaytestBotTests
     [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion4() { yield return PlayCasual(4); }
     [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion5() { yield return PlayCasual(5); }
     [UnityTest, Timeout(1800000)] public IEnumerator CasualRegion6() { yield return PlayCasual(6); }
+
+    // Baskın strateji (-testFilter PlaytestBotTests.Strategy)
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyTowerOnly1() { yield return PlayStrategy(1, "towerOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyHeroOnly1() { yield return PlayStrategy(1, "heroOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyTowerOnly2() { yield return PlayStrategy(2, "towerOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyHeroOnly2() { yield return PlayStrategy(2, "heroOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyTowerOnly3() { yield return PlayStrategy(3, "towerOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyHeroOnly3() { yield return PlayStrategy(3, "heroOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyTowerOnly4() { yield return PlayStrategy(4, "towerOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyHeroOnly4() { yield return PlayStrategy(4, "heroOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyTowerOnly5() { yield return PlayStrategy(5, "towerOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyHeroOnly5() { yield return PlayStrategy(5, "heroOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyTowerOnly6() { yield return PlayStrategy(6, "towerOnly"); }
+    [UnityTest, Timeout(1800000)] public IEnumerator StrategyHeroOnly6() { yield return PlayStrategy(6, "heroOnly"); }
 }
