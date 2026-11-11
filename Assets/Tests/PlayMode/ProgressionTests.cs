@@ -159,7 +159,7 @@ public class ProgressionTests
         Assert.IsFalse((bool)managerType.GetMethod("StartUpgrade").Invoke(manager, new[] { "archer_1", archer }),
             "Tek inşaatçı meşgulken ikinci yükseltme başlamamalı.");
         double remaining = (double)managerType.GetProperty("BuilderSecondsRemaining").GetValue(manager);
-        Assert.That(remaining, Is.InRange(13d, 15.5d), "1→2 yükseltmesi 15 sn sürmeli.");
+        Assert.That(remaining, Is.InRange(8d, 10.5d), "1→2 yükseltmesi 10 sn sürmeli (TimingConfig).");
 
         // Süreyi geçmişe al: gerçek saatle tamamlanma (oyun kapalıyken de aynı yol).
         var task = managerType.GetProperty("BuilderTask").GetValue(manager);

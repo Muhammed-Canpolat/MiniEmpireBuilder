@@ -28,7 +28,7 @@ public class BattleVfxManager : MonoBehaviour
     /// Düşman üzerinde hasar sayısı göster.
     /// baseDamage: normal hasar referansı (kritik hesabı için)
     /// </summary>
-    public void ShowDamageNumber(Vector3 worldPos, float damage, float baseDamage, bool miss = false)
+    public void ShowDamageNumber(Vector3 worldPos, float damage, float baseDamage, bool miss = false, Color? tint = null)
     {
         GameObject obj = new GameObject("DmgNum");
         obj.transform.position = worldPos + Vector3.up * 0.3f;
@@ -78,6 +78,7 @@ public class BattleVfxManager : MonoBehaviour
                 tmp.fontSize = 28f;
                 tmp.color = Color.white;
             }
+            if (tint.HasValue) { tmp.color = tint.Value; tmp.fontSize = 24f; } // "dayanıklı" (gri) sayı
         }
 
         // Yukarı float + fade out
@@ -124,10 +125,16 @@ public class BattleVfxManager : MonoBehaviour
 
     public void ShowWaveBanner(int waveNumber)
     {
-        StartCoroutine(WaveBannerRoutine(waveNumber));
+        StartCoroutine(WaveBannerRoutine(L.T("DALGA ", "WAVE ") + waveNumber, 0.65f, 0.74f, 52f));
     }
 
-    private IEnumerator WaveBannerRoutine(int waveNumber)
+    /// <summary>Dalga bannerının altında küçük duyuru (ör. "YENİ DÜŞMAN: Zırhlı").</summary>
+    public void ShowNoticeBanner(string text)
+    {
+        StartCoroutine(WaveBannerRoutine(text, 0.56f, 0.63f, 40f));
+    }
+
+    private IEnumerator WaveBannerRoutine(string text, float yMin, float yMax, float fontSize)
     {
         // Canvas oluştur
         GameObject canvasObj = new GameObject("WaveBanner");
@@ -144,8 +151,8 @@ public class BattleVfxManager : MonoBehaviour
         GameObject panel = new GameObject("Panel");
         panel.transform.SetParent(canvasObj.transform, false);
         RectTransform prt = panel.AddComponent<RectTransform>();
-        prt.anchorMin = new Vector2(0.16f, 0.65f);
-        prt.anchorMax = new Vector2(0.84f, 0.74f);
+        prt.anchorMin = new Vector2(0.16f, yMin);
+        prt.anchorMax = new Vector2(0.84f, yMax);
         prt.offsetMin = Vector2.zero; prt.offsetMax = Vector2.zero;
         UnityEngine.UI.Image pImg = panel.AddComponent<UnityEngine.UI.Image>();
         pImg.color = new Color(0f, 0f, 0f, 0.75f);
@@ -173,8 +180,8 @@ public class BattleVfxManager : MonoBehaviour
         trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
         trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
         TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
-        tmp.text = L.T("DALGA ", "WAVE ") + waveNumber;
-        tmp.fontSize = 52f;
+        tmp.text = text;
+        tmp.fontSize = fontSize;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
         tmp.fontStyle = FontStyles.Bold;
@@ -204,7 +211,7 @@ public class BattleVfxManager : MonoBehaviour
     /// Dalga gelmeden önce düşmanların geleceği ekran kenarlarında yanıp sönen kırmızı oklar
     /// (0 üst, 1 sağ, 2 alt, 3 sol). Oyuncu kahramanı ve kuleleri o yöne göre hazırlar.
     /// </summary>
-    public void ShowSpawnWarning(int[] edges, float seconds)
+    public void ShowSpawnWarning(int[] edges, float seconds, Color? color = null)
     {
         if (edges == null || edges.Length == 0) return;
         var sprite = Resources.Load<Sprite>("Battle/enemy_direction_arrow");
@@ -232,7 +239,7 @@ public class BattleVfxManager : MonoBehaviour
             img.sprite = sprite;
             img.preserveAspect = true;
             img.raycastTarget = false;
-            img.color = new Color(1f, 0.25f, 0.2f, 0.95f);
+            img.color = color ?? new Color(1f, 0.25f, 0.2f, 0.95f);
             img.DOFade(0.25f, 0.35f).SetLoops(-1, LoopType.Yoyo).SetLink(arrow);
             arrow.transform.DOScale(1.15f, 0.35f).SetLoops(-1, LoopType.Yoyo).SetLink(arrow);
         }

@@ -93,6 +93,7 @@ public class BattleManager : MonoBehaviour
             gmObj.AddComponent<GameManager>();
         }
 
+        EnemyController.ResetBattleStats();
         // Level verisini oluştur
         int battleLevel = 1;
         if (GameManager.Instance.PlayerData != null)
@@ -605,17 +606,42 @@ public class BattleManager : MonoBehaviour
     {
         foreach (var spawnInfo in wave.enemies)
         {
+            bool saboteur = spawnInfo.variant == EnemyVariant.Saboteur;
+            int saboteurEdge = -1;
+            if (spawnInfo.variant != EnemyVariant.None && spawnedVariants.Add(spawnInfo.variant) && spawnInfo.count > 0
+                && BattleVfxManager.Instance != null)
+                BattleVfxManager.Instance.ShowNoticeBanner(
+                    L.T("YENİ DÜŞMAN: ", "NEW ENEMY: ") + EnemyController.VariantName(spawnInfo.variant));
+            if (saboteur)
+            {
+                // Bombacılar kendi kenarından, tek seferde (kısa aralıklı) gelir; turuncu okla duyurulur.
+                saboteurEdge = PickSaboteurEdge();
+                if (BattleVfxManager.Instance != null)
+                    BattleVfxManager.Instance.ShowSpawnWarning(new[] { saboteurEdge }, 2f, new Color(1f, 0.6f, 0.15f, 0.95f));
+            }
             for (int i = 0; i < spawnInfo.count; i++)
             {
                 if (!battleActive) yield break;
 
-                SpawnEnemy(spawnInfo.enemyType);
-                yield return new WaitForSeconds(wave.timeBetweenSpawns);
+                SpawnEnemy(spawnInfo.enemyType, spawnInfo.variant, saboteurEdge);
+                yield return new WaitForSeconds(saboteur ? Progression.Counters.SaboteurBurstInterval : wave.timeBetweenSpawns);
             }
         }
     }
 
-    private void SpawnEnemy(EnemyType type)
+    private readonly System.Collections.Generic.HashSet<EnemyVariant> spawnedVariants =
+        new System.Collections.Generic.HashSet<EnemyVariant>();
+
+    /// <summary>Bombacı kenarı: dalganın duyurulan kenarlarından farklı biri (yoksa herhangi biri).</summary>
+    private int PickSaboteurEdge()
+    {
+        var free = new System.Collections.Generic.List<int>();
+        for (int e = 0; e < 4; e++)
+            if (waveEdges == null || System.Array.IndexOf(waveEdges, e) < 0) free.Add(e);
+        return free.Count > 0 ? free[Random.Range(0, free.Count)] : Random.Range(0, 4);
+    }
+
+    private void SpawnEnemy(EnemyType type, EnemyVariant variant = EnemyVariant.None, int forcedEdge = -1)
     {
         Vector3 spawnPos = Vector3.zero;
         BattleSceneSetup setup = FindFirstObjectByType<BattleSceneSetup>();
@@ -628,8 +654,9 @@ public class BattleManager : MonoBehaviour
             // Kenar (0: üst, 1: sağ, 2: alt, 3: sol): dalganın duyurulan taraflarından biri,
             // kenarın ortasına yakın (±%30) — oyuncu uyarıya göre kahramanı ve kuleleri konumlayabilsin.
             bool grouped = waveEdges != null && waveEdges.Length > 0;
-            int edge = grouped ? waveEdges[Random.Range(0, waveEdges.Length)] : Random.Range(0, 4);
-            float spread = grouped ? 0.3f : 1f;
+            int edge = forcedEdge >= 0 ? forcedEdge
+                : grouped ? waveEdges[Random.Range(0, waveEdges.Length)] : Random.Range(0, 4);
+            float spread = grouped || forcedEdge >= 0 ? 0.3f : 1f;
             switch (edge)
             {
                 case 0: // Üst
@@ -652,11 +679,15 @@ public class BattleManager : MonoBehaviour
             spawnPos = new Vector3(Mathf.Cos(angle) * 10f, Mathf.Sin(angle) * 10f, 0);
         }
 
-        SpawnEnemyAt(type, spawnPos);
+        SpawnVariantAt(type, spawnPos, variant);
     }
 
     /// <summary>Belirli bir noktada düşman doğurur (ör. Cadı'nın çağırdığı kurtlar).</summary>
-    public EnemyController SpawnEnemyAt(EnemyType type, Vector3 spawnPos)
+    public EnemyController SpawnEnemyAt(EnemyType type, Vector3 spawnPos) =>
+        SpawnVariantAt(type, spawnPos, EnemyVariant.None);
+
+    /// <summary>Karşı düşman çeşidiyle doğurur (çeşit, ScaleToLevel'den sonra uygulanır).</summary>
+    public EnemyController SpawnVariantAt(EnemyType type, Vector3 spawnPos, EnemyVariant variant)
     {
         if (enemyPrefab == null) return null;
         GameObject enemyObj = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
@@ -670,8 +701,9 @@ public class BattleManager : MonoBehaviour
                 ? BattleSession.BattleLevel
                 : GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
             enemy.Initialize(type, battleLevel, mainBaseTransform);
+            if (variant != EnemyVariant.None) enemy.ApplyVariant(variant);
             // "Madeni koru": her iki düşmandan biri (boss hariç) madene yürür.
-            if (DefendedMine != null && !EnemyTypeInfo.IsBoss(type))
+            if (DefendedMine != null && !EnemyTypeInfo.IsBoss(type) && variant != EnemyVariant.Saboteur)
                 enemy.RaidTarget = spawnedCount % 2 == 0 ? DefendedMine : null;
             spawnedCount++;
         }
@@ -934,6 +966,9 @@ public class BattleManager : MonoBehaviour
 
     private void BattleLost()
     {
+        // Genel "üs yıkıldı" yenilgisi: kırılmamış kalkanlı boss ayaktaysa okunur etiket (sonuç ekranı ipucu).
+        if (DefeatReason == "base" && EnemyController.AnyIntactWardAlive())
+            DefeatReason = "ward_never_broken";
         battleActive = false;
         battleWon = false;
 
@@ -996,6 +1031,15 @@ public class BattleManager : MonoBehaviour
         return picked;
     }
 
+    /// <summary>Dalganın ilk (temel) kaydından count düşman çıkarıp yerine çeşitli düşman ekler.</summary>
+    private static void AddVariant(WaveData wave, EnemyType body, EnemyVariant variant, int count)
+    {
+        if (count <= 0 || wave.enemies.Count == 0) return;
+        count = Mathf.Min(count, wave.enemies[0].count);
+        wave.enemies[0].count -= count;
+        wave.enemies.Add(new EnemySpawnInfo { enemyType = body, count = count, variant = variant });
+    }
+
     private static LevelData CreateCampaignWaves(RegionData region, CampaignLevelData campaignLevel)
     {
         if (region == null || campaignLevel == null)
@@ -1017,6 +1061,15 @@ public class BattleManager : MonoBehaviour
                 wave.enemies.Add(new EnemySpawnInfo { enemyType = region.bossType, count = 1 });
             }
             else wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = count });
+
+            // Karşı düşmanlar (round2 C): temel düşmanların yerini alır; Sonsuz/İstila'da yok.
+            if (!BattleSession.IsEndless && !BattleSession.IsInvasion)
+            {
+                var mix = Progression.CounterMix(region.id, campaignLevel.number, i, wave.enemies[0].count);
+                AddVariant(wave, EnemyType.Orc, EnemyVariant.Armored, mix.armored);
+                AddVariant(wave, EnemyType.ShadowWolf, EnemyVariant.Flying, mix.flying);
+                AddVariant(wave, EnemyType.Wolf, EnemyVariant.Saboteur, mix.saboteur);
+            }
             battle.waves.Add(wave);
         }
         return battle;

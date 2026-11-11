@@ -118,6 +118,10 @@ public class TowerController : MonoBehaviour
         if (rangeRing.activeSelf != show) rangeRing.SetActive(show);
     }
 
+    /// <summary>Topçu uçan düşmanı hedefleyemez (Okçu ve kahraman hedefleyebilir).</summary>
+    public static bool CanTarget(BuildingType tower, EnemyController enemy) =>
+        enemy != null && !(tower == BuildingType.CannonTower && enemy.IsFlying);
+
     private EnemyController FindNearestEnemy()
     {
         EnemyController nearest = null;
@@ -125,7 +129,7 @@ public class TowerController : MonoBehaviour
         Vector2 origin = structure != null ? structure.BasePoint : (Vector2)transform.position;
         foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
         {
-            if (enemy.IsDead || !FogOfWar.IsVisible(enemy.transform.position)) continue;
+            if (enemy.IsDead || !CanTarget(towerType, enemy) || !FogOfWar.IsVisible(enemy.transform.position)) continue;
             float dist = Vector2.Distance(origin, enemy.transform.position);
             if (dist < nearestDist)
             {
@@ -148,7 +152,7 @@ public class TowerController : MonoBehaviour
         {
             // Top mermisi isabet ettiği yerde patlar (Tiny Swords Explosion).
             if (cannon) TinyFx.Explosion(target != null ? target.transform.position : impact);
-            if (target != null && !target.IsDead) target.TakeDamage(totalDamage);
+            if (target != null && !target.IsDead) target.TakeDamage(totalDamage, cannon ? DamageSource.Cannon : DamageSource.Archer);
         });
         var garrison = GetComponent<BattleGarrison>();
         if (garrison != null) garrison.Fire();

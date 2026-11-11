@@ -261,7 +261,11 @@ public sealed class VictoryReferenceView : MonoBehaviour
                     // Yenilginin sebebi: süre mi bitti, maden mi düştü, üs mü yıkıldı.
                     string reason = BattleManager.Instance.DefeatReason == "time" ? L.T("Süre doldu!", "Time is up!")
                         : BattleManager.Instance.DefeatReason == "mine" ? L.T("Maden yıkıldı!", "The mine fell!")
-                        : BattleManager.Instance.DefeatReason == "base" ? L.T("Ana Üs yıkıldı!", "The Main Base fell!") : "";
+                        : BattleManager.Instance.DefeatReason == "base" ? L.T("Ana Üs yıkıldı!", "The Main Base fell!")
+                        : BattleManager.Instance.DefeatReason == "ward_never_broken"
+                            ? L.T("Ana Üs yıkıldı!", "The Main Base fell!") + "\n" +
+                              L.T("İpucu: Boss kalkanını yalnız kahraman kırabilir.", "Tip: only your hero can break the boss ward.")
+                        : "";
                     // Yenilgi 1 can götürür (sınırsız can süresinde götürmez).
                     string lives = LivesSystem.Unlimited ? L.T("Sınırsız can: can kaybı yok", "Unlimited lives: no life lost")
                         : L.T($"−1 can · kalan {LivesSystem.Lives}/{LivesSystem.MaxLives}", $"−1 life · {LivesSystem.Lives}/{LivesSystem.MaxLives} left");

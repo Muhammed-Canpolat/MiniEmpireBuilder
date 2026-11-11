@@ -44,6 +44,183 @@ public class EnemyController : MonoBehaviour
     public float MoveSpeed => moveSpeed;
     public Transform CurrentTarget => currentTarget;
 
+    // ==================== KARŞI DÜŞMAN ÇEŞİTLERİ / BOSS KALKANI (round2 C) ====================
+
+    /// <summary>Bu savaşta kaynağa göre verilen hasar (telemetri). Savaş başında sıfırlanır.</summary>
+    public static readonly System.Collections.Generic.Dictionary<DamageSource, float> DamageBySource =
+        new System.Collections.Generic.Dictionary<DamageSource, float>();
+    /// <summary>Bombacı sonuçları: "hero" (kahraman/Çırak öldürdü), "tower" (kule öldürdü), "detonated" (patladı).</summary>
+    public static readonly System.Collections.Generic.Dictionary<string, int> SaboteurOutcomes =
+        new System.Collections.Generic.Dictionary<string, int>();
+
+    public static void ResetBattleStats()
+    {
+        DamageBySource.Clear();
+        SaboteurOutcomes.Clear();
+    }
+
+    private static void CountSaboteur(string outcome)
+    {
+        SaboteurOutcomes.TryGetValue(outcome, out int n);
+        SaboteurOutcomes[outcome] = n + 1;
+    }
+
+    public EnemyVariant Variant { get; private set; }
+    public bool IsFlying => Variant == EnemyVariant.Flying;
+    private bool IsSaboteur => Variant == EnemyVariant.Saboteur;
+
+    private float wardMax, wardHp, wardTowerMult = 1f, exposedUntil, staggerUntil;
+    private HealthBar wardBar;
+    private SpriteRenderer wardBubble;
+    public bool HasWard => wardMax > 0f;
+    /// <summary>Boss kalkanı ayakta (kule hasarı azalır, kahraman kalkanı eritir).</summary>
+    public bool WardActive => wardMax > 0f && wardHp > 0f && !IsExposed;
+    public bool IsExposed => Time.time < exposedUntil;
+    public bool IsStaggered => Time.time < staggerUntil;
+    public int WardBreaks { get; private set; }
+    public float WardHealth => wardHp;
+    public float WardMax => wardMax;
+
+    /// <summary>Bir boss kalkanı hiç kırılmadan ayakta mı (yenilgi ipucu için).</summary>
+    public static bool AnyIntactWardAlive()
+    {
+        foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+            if (enemy != null && !enemy.isDead && enemy.HasWard && enemy.WardBreaks == 0) return true;
+        return false;
+    }
+
+    public static string VariantName(EnemyVariant variant) =>
+        variant == EnemyVariant.Armored ? L.T("Zırhlı", "Armored")
+        : variant == EnemyVariant.Flying ? L.T("Uçan", "Flying")
+        : variant == EnemyVariant.Saboteur ? L.T("Bombacı", "Saboteur") : "";
+
+    /// <summary>Kaynağa ve çeşide göre alınan hasar çarpanı.</summary>
+    public float SourceMultiplier(DamageSource source)
+    {
+        switch (Variant)
+        {
+            case EnemyVariant.Armored:
+                return source == DamageSource.Archer ? Progression.Counters.ArmoredArcherTaken
+                    : source == DamageSource.Cannon ? Progression.Counters.ArmoredCannonTaken : 1f;
+            case EnemyVariant.Saboteur:
+                return source == DamageSource.Archer || source == DamageSource.Cannon
+                    ? Progression.Counters.SaboteurTowerTaken : 1f;
+            default: return 1f;
+        }
+    }
+
+    /// <summary>ScaleToLevel'den sonra çağrılır: çeşidin çarpanları, renk ve boyut.</summary>
+    public void ApplyVariant(EnemyVariant variant)
+    {
+        Variant = variant;
+        if (variant == EnemyVariant.None) return;
+        float hp = 1f, dmg = 1f, speed = 1f, gold = 1f, scale = 1f;
+        Color? tint = null;
+        switch (variant)
+        {
+            case EnemyVariant.Armored:
+                hp = Progression.Counters.ArmoredHp; dmg = Progression.Counters.ArmoredDamage;
+                speed = Progression.Counters.ArmoredSpeed; gold = Progression.Counters.ArmoredGold;
+                scale = Progression.Counters.ArmoredScale; tint = Progression.Counters.ArmoredTint;
+                break;
+            case EnemyVariant.Flying:
+                hp = Progression.Counters.FlyingHp; dmg = Progression.Counters.FlyingDamage;
+                speed = Progression.Counters.FlyingSpeed; gold = Progression.Counters.FlyingGold;
+                tint = Progression.Counters.FlyingTint;
+                break;
+            case EnemyVariant.Saboteur:
+                hp = Progression.Counters.SaboteurHp; speed = Progression.Counters.SaboteurSpeed;
+                gold = Progression.Counters.SaboteurGold; scale = Progression.Counters.SaboteurScale;
+                tint = Progression.Counters.SaboteurTint;
+                break;
+        }
+        maxHealth *= hp;
+        currentHealth = maxHealth;
+        damage *= dmg;
+        moveSpeed *= speed;
+        goldReward = Mathf.Max(1, Mathf.RoundToInt(goldReward * gold));
+        if (healthBar != null) healthBar.SetMax(maxHealth);
+        transform.localScale *= scale;
+        if (spriteRenderer != null && tint.HasValue)
+        {
+            Color c = tint.Value;
+            c.a = variant == EnemyVariant.Flying ? Progression.Counters.FlyingTintAlpha : spriteRenderer.color.a;
+            spriteRenderer.color = c;
+            BaseTint = c;
+        }
+        if (variant == EnemyVariant.Flying) SetupFlight();
+    }
+
+    private void SetupFlight()
+    {
+        if (GetComponent<EnemyFlightVisual>() == null)
+            gameObject.AddComponent<EnemyFlightVisual>();
+        float lift = Progression.Counters.FlyingYOffset;
+        if (healthBar != null) healthBar.Offset += Vector3.up * lift;
+        if (groundShadow != null)
+        {
+            // Gölge yerde kalır: kök yükselirken yerel konumu aşağı çekilir.
+            float sy = Mathf.Max(0.01f, Mathf.Abs(transform.localScale.y));
+            groundShadow.transform.localPosition -= new Vector3(0f, lift / sy, 0f);
+            groundShadow.color = new Color(0f, 0f, 0f, Progression.Counters.FlyingShadowAlpha);
+        }
+    }
+
+    private void SetupWard()
+    {
+        int region = Progression.Counters.WardRegion(enemyType);
+        if (region <= 0) return;
+        wardMax = maxHealth * Progression.Counters.WardFraction(region);
+        wardHp = wardMax;
+        wardTowerMult = Progression.Counters.WardTowerMult(region);
+        wardBar = HealthBar.Create(transform, wardMax, new Vector3(0f, 0.88f, 0f), new Color(0.35f, 0.65f, 1f));
+        wardBar.Resize(new Vector2(0.55f, 0.1f));
+        if (spriteRenderer != null)
+        {
+            var go = new GameObject("WardBubble");
+            go.transform.SetParent(transform, false);
+            wardBubble = go.AddComponent<SpriteRenderer>();
+            wardBubble.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+            Vector2 circle = wardBubble.sprite.bounds.size;
+            // Sprite henüz yoksa (animatörlü Cadı) sabit bir dünya çapı kullanılır.
+            Bounds b = spriteRenderer.sprite != null ? spriteRenderer.sprite.bounds
+                : new Bounds(new Vector3(0f, 1f / Mathf.Max(0.01f, Mathf.Abs(transform.localScale.y)), 0f),
+                    Vector3.one * (2.2f / Mathf.Max(0.01f, Mathf.Abs(transform.localScale.x))));
+            float diameter = Mathf.Max(b.size.x, b.size.y) * 1.15f;
+            go.transform.localPosition = new Vector3(b.center.x, b.center.y, 0f);
+            go.transform.localScale = new Vector3(diameter / Mathf.Max(0.01f, circle.x), diameter / Mathf.Max(0.01f, circle.y), 1f);
+            wardBubble.color = new Color(0.4f, 0.7f, 1f, 0.28f);
+            wardBubble.sortingOrder = spriteRenderer.sortingOrder + 1;
+            wardBubble.DOFade(0.14f, 0.8f).SetLoops(-1, LoopType.Yoyo).SetLink(go);
+        }
+    }
+
+    private void SetWardVisible(bool visible)
+    {
+        if (wardBubble != null) wardBubble.gameObject.SetActive(visible);
+        if (wardBar != null) wardBar.gameObject.SetActive(visible);
+    }
+
+    private void UpdateWardTimers()
+    {
+        if (wardMax <= 0f || wardHp > 0f || IsExposed) return;
+        // Açık pencere bitti: kalkan tam dolu yeniden oluşur.
+        wardHp = wardMax;
+        if (wardBar != null) wardBar.SetMax(wardMax);
+        SetWardVisible(true);
+    }
+
+    private void BreakWard()
+    {
+        wardHp = 0f;
+        WardBreaks++;
+        exposedUntil = Time.time + Progression.Counters.WardExposedSeconds;
+        staggerUntil = Time.time + Progression.Counters.WardStaggerSeconds;
+        SetWardVisible(false);
+        if (BattleVfxManager.Instance != null)
+            BattleVfxManager.Instance.SpawnSpark(transform.position + Vector3.up * 0.8f);
+    }
+
     // Özel davranışlar (Gölge Kurt atılması, Cadı ışınlanması) için
     public bool MovementLocked { get; set; }
     /// <summary>Alınan hasar çarpanı (ör. Kale Muhafızı'nın Kalkan Duvarı 0.3).</summary>
@@ -179,6 +356,7 @@ public class EnemyController : MonoBehaviour
         if (EnemyTypeInfo.IsRegionBoss(type) && GetComponent<RegionBoss>() == null)
             gameObject.AddComponent<RegionBoss>();
         if (spriteRenderer != null) BaseTint = spriteRenderer.color;
+        SetupWard();
     }
 
     private const float ShadowAlpha = 0.38f;
@@ -223,10 +401,77 @@ public class EnemyController : MonoBehaviour
     {
         if (isDead) return;
 
+        UpdateWardTimers();
         FindBestTarget();
+        if (IsSaboteur) { UpdateSaboteur(); return; }
+        if (IsStaggered) return; // Kalkan kırıldı: sersemleme (hareket ve saldırı yok)
         if (MovementLocked) return;
         MoveToTarget();
         TryAttack();
+    }
+
+    // ---- Bombacı: en yakın kuleye koşar, fitil yanar, patlar ----
+    private float fuseEndsAt = -1f;
+    private Transform fuseTarget;
+
+    private static BattleStructure NearestTower(Vector2 from)
+    {
+        BattleStructure nearest = null;
+        float best = float.MaxValue;
+        foreach (var structure in BattleStructure.All)
+        {
+            if (structure == null || structure.IsDestroyed) continue;
+            if (structure.Type != BuildingType.ArcherTower && structure.Type != BuildingType.CannonTower) continue;
+            float d = Vector2.Distance(from, structure.BasePoint);
+            if (d < best) { best = d; nearest = structure; }
+        }
+        return nearest;
+    }
+
+    private void UpdateSaboteur()
+    {
+        if (fuseEndsAt >= 0f)
+        {
+            if (Time.time >= fuseEndsAt) Detonate();
+            return;
+        }
+        if (MovementLocked) return;
+        if (currentTarget != null && DistanceToTarget <= attackRange)
+        {
+            fuseEndsAt = Time.time + Progression.Counters.SaboteurFuseSeconds;
+            fuseTarget = currentTarget;
+            if (spriteRenderer != null)
+                spriteRenderer.DOColor(new Color(1f, 0.9f, 0.4f), 0.15f).SetLoops(-1, LoopType.Yoyo).SetLink(gameObject);
+            if (BattleVfxManager.Instance != null)
+                BattleVfxManager.Instance.SpawnSpark(transform.position + Vector3.up * 0.5f);
+            return;
+        }
+        MoveToTarget();
+    }
+
+    private void Detonate()
+    {
+        if (isDead) return;
+        CountSaboteur("detonated");
+        if (fuseTarget != null)
+        {
+            var structure = fuseTarget.GetComponent<BattleStructure>();
+            var baseCtrl = fuseTarget.GetComponent<MainBaseController>();
+            if (structure != null && !structure.IsDestroyed)
+                structure.TakeDamage(structure.MaxHealth * Progression.Counters.SaboteurTowerDamageFraction);
+            else if (baseCtrl != null)
+                baseCtrl.TakeDamage(baseCtrl.MaxHealth * Progression.Counters.SaboteurBaseDamageFraction);
+        }
+        if (BattleVfxManager.Instance != null)
+        {
+            BattleVfxManager.Instance.SpawnSpark(transform.position);
+            BattleVfxManager.Instance.TryScreenShake(25f);
+        }
+        TinyFx.Explosion(transform.position);
+        goldReward = 0; // Patlayan Bombacı altın düşürmez
+        if (spriteRenderer != null) spriteRenderer.DOKill();
+        currentHealth = 0f;
+        Die();
     }
 
     // ==================== HEDEF BULMA ====================
@@ -276,6 +521,15 @@ public class EnemyController : MonoBehaviour
         }
         nextRetarget = Time.time + RetargetInterval * UnityEngine.Random.Range(0.8f, 1.2f);
         Vector2 position = transform.position;
+        if (IsSaboteur)
+        {
+            // Bombacı: kışkırtmayı yok sayar; kuleyi (her mesafeden) ya da kule yoksa Ana Üs'ü hedefler.
+            if (fuseEndsAt >= 0f) return;
+            var tower = NearestTower(position);
+            if (tower != null) SetTarget(tower.transform, tower.BasePoint, StructureRadius);
+            else if (mainBaseTransform != null) SetTarget(mainBaseTransform, mainBaseTransform.position, BaseRadius);
+            return;
+        }
         HeroController hero = FindFirstObjectByType<HeroController>();
         bool heroAlive = hero != null && hero.CurrentHealth > 0f;
         float heroDistance = heroAlive ? Vector2.Distance(position, hero.transform.position) : float.MaxValue;
@@ -414,12 +668,37 @@ public class EnemyController : MonoBehaviour
         if (healthBar != null) healthBar.UpdateHealth(currentHealth);
     }
 
-    public void TakeDamage(float dmg)
+    public void TakeDamage(float dmg, DamageSource source = DamageSource.Hero)
     {
         if (isDead || Invulnerable) return;
 
         LastHitTime = Time.time;
+        float sourceMult = SourceMultiplier(source);
+        bool resisted = sourceMult < 1f;
+        dmg *= sourceMult;
         dmg *= Mathf.Max(0f, DamageTakenMultiplier);
+        if (IsExposed) dmg *= Progression.Counters.WardExposedDamageMult;
+        float before = dmg;
+
+        if (WardActive && source != DamageSource.Env)
+        {
+            if (source == DamageSource.Hero || source == DamageSource.Apprentice)
+            {
+                // Kahraman/Çırak önce kalkanı eritir (x1,0); taşan hasar cana geçer.
+                float absorbed = Mathf.Min(wardHp, dmg);
+                wardHp -= absorbed;
+                dmg -= absorbed;
+                if (wardBar != null) wardBar.UpdateHealth(wardHp);
+                if (wardHp <= 0f) BreakWard();
+            }
+            else { dmg *= wardTowerMult; before = dmg; } // Kule hasarı kalkan varken azalır
+        }
+        if (before > 0f)
+        {
+            DamageBySource.TryGetValue(source, out float total);
+            DamageBySource[source] = total + before;
+        }
+
         currentHealth -= dmg;
         currentHealth = Mathf.Max(0, currentHealth);
 
@@ -427,19 +706,25 @@ public class EnemyController : MonoBehaviour
         if (spriteRenderer != null)
             StartCoroutine(DamageFlash());
 
-        // Hasar sayısı (yeni VFX)
+        // Hasar sayısı (yeni VFX); Zırhlı'ya kule hasarı gri "dayanıklı" sayıyla gösterilir.
         if (BattleVfxManager.Instance != null)
             BattleVfxManager.Instance.ShowDamageNumber(
                 transform.position + Vector3.up * 0.8f,
-                dmg,
-                damage);
+                before,
+                damage,
+                false,
+                resisted && Variant == EnemyVariant.Armored ? new Color(0.62f, 0.62f, 0.66f) : (Color?)null);
 
         // Can barını güncelle
         if (healthBar != null)
             healthBar.UpdateHealth(currentHealth);
 
         if (currentHealth <= 0)
+        {
+            if (IsSaboteur)
+                CountSaboteur(source == DamageSource.Hero || source == DamageSource.Apprentice ? "hero" : "tower");
             Die();
+        }
     }
 
     private System.Collections.IEnumerator DamageFlash()
@@ -488,5 +773,33 @@ public class EnemyController : MonoBehaviour
         yield return new WaitForSeconds(0.35f);
 
         Destroy(gameObject);
+    }
+}
+
+/// <summary>
+/// Uçan düşman görseli: kök, mantıksal konumun üstünde süzülür. Kule/menzil hesapları Update'te
+/// (ofset kaldırılmışken) yapılır; ofset yalnız LateUpdate'ten sonra, çizim için uygulanır.
+/// </summary>
+[DefaultExecutionOrder(-10000)]
+public sealed class EnemyFlightVisual : MonoBehaviour
+{
+    private Vector3 applied;
+
+    private void Update() => Remove();
+
+    private void LateUpdate()
+    {
+        Remove();
+        float bob = Mathf.Sin(Time.time * Mathf.PI * 2f * Progression.Counters.FlyingBobHz) * Progression.Counters.FlyingBobAmplitude;
+        applied = new Vector3(0f, Progression.Counters.FlyingYOffset + bob, 0f);
+        transform.position += applied;
+    }
+
+    private void OnDisable() => Remove();
+
+    private void Remove()
+    {
+        transform.position -= applied;
+        applied = Vector3.zero;
     }
 }

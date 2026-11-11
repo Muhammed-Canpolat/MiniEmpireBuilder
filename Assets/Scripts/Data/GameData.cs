@@ -300,6 +300,92 @@ public static class Progression
     public static float SpawnInterval(int region) => Mathf.Max(0.9f, 1.25f - 0.07f * (Mathf.Max(1, region) - 1));
     public const int LevelsPerColorTier = 3;
 
+    // ---- Karşı düşmanlar ve Boss Kalkanı (round2 C) ----
+    public static class Counters
+    {
+        // Zırhlı (Ork gövdesi)
+        public const float ArmoredHp = 1.4f, ArmoredDamage = 1f, ArmoredSpeed = 0.8f, ArmoredGold = 1.5f, ArmoredScale = 1.15f;
+        public const float ArmoredArcherTaken = 0.35f, ArmoredCannonTaken = 0.6f;
+        public static readonly Color ArmoredTint = new Color(0.62f, 0.68f, 0.80f);
+        // Uçan (Gölge Kurt gövdesi)
+        public const float FlyingHp = 1.2f, FlyingDamage = 1.3f, FlyingSpeed = 0.85f, FlyingGold = 1.3f;
+        public const float FlyingYOffset = 0.45f, FlyingBobAmplitude = 0.08f, FlyingBobHz = 1.6f, FlyingShadowAlpha = 0.35f, FlyingTintAlpha = 0.85f;
+        public static readonly Color FlyingTint = new Color(0.62f, 0.5f, 0.9f);
+        // Bombacı (Kurt gövdesi)
+        public const float SaboteurHp = 0.4f, SaboteurSpeed = 1.3f, SaboteurGold = 0.5f, SaboteurScale = 0.85f;
+        public const float SaboteurTowerTaken = 0.7f, SaboteurFuseSeconds = 0.6f;
+        public const float SaboteurTowerDamageFraction = 0.30f, SaboteurBaseDamageFraction = 0.05f;
+        public const float SaboteurBurstInterval = 0.35f;
+        public static readonly Color SaboteurTint = new Color(1f, 0.6f, 0.25f);
+
+        // Boss Kalkanı
+        public const float WardExposedSeconds = 6f, WardExposedDamageMult = 1.5f, WardStaggerSeconds = 1.5f;
+        /// <summary>Kalkan havuzu / boss canı: Bölge 1 %15, 2 %20, 3+ %25.</summary>
+        public static float WardFraction(int region) => region <= 1 ? 0.15f : region == 2 ? 0.20f : 0.25f;
+        /// <summary>Kalkan ayaktayken kule hasarı çarpanı: 0,5 / 0,35 / 0,15.</summary>
+        public static float WardTowerMult(int region) => region <= 1 ? 0.5f : region == 2 ? 0.35f : 0.15f;
+        /// <summary>Boss türünün bölgesi (kalkanı olmayan tür için 0).</summary>
+        public static int WardRegion(EnemyType type)
+        {
+            switch (type)
+            {
+                case EnemyType.CastleGuardian: return 1;
+                case EnemyType.ForestWitch: return 2;
+                case EnemyType.MineWarden: return 3;
+                case EnemyType.FrostLord: return 4;
+                case EnemyType.DarkKing: return 5;
+                case EnemyType.DragonWarrior: return 6;
+                default: return 0;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Bir dalganın karşı düşman karışımı (round2 C tablosu). stage 1–5, wave 0 tabanlı (0 = ilk dalga: hiç yok).
+    /// Varyantlar temel düşmanların yerini alır; toplam en fazla baseCount − 2.
+    /// </summary>
+    public static (int armored, int flying, int saboteur) CounterMix(int region, int stage, int wave, int baseCount = int.MaxValue)
+    {
+        int arm = 0, fly = 0, sab = 0;
+        if (wave >= 1 && wave <= 2 && stage >= 2 && stage <= 5 && region >= 2 && region <= 6)
+        {
+            bool s5 = stage == 5;
+            if (wave == 1)
+            {
+                switch (region)
+                {
+                    case 2: sab = s5 ? 3 : stage >= 3 ? 2 : 0; break;
+                    case 3: sab = s5 ? 3 : 2; arm = s5 ? 2 : stage >= 3 ? 2 : 0; break;
+                    case 4:
+                        fly = 3;
+                        arm = s5 ? 0 : stage >= 3 ? 2 : 0;
+                        sab = s5 ? 3 : stage == 4 ? 2 : 0;
+                        break;
+                    case 5: if (s5) { fly = 4; sab = 4; } else { fly = 3; arm = 2; sab = 3; } break;
+                    case 6: if (s5) { fly = 5; sab = 4; } else { fly = 4; arm = 3; sab = 3; } break;
+                }
+            }
+            else if (s5) // 3. dalga yalnız 5. aşamada
+            {
+                switch (region)
+                {
+                    case 3: arm = 3; break;
+                    case 4: arm = 3; fly = 3; break;
+                    case 5: arm = 4; fly = 3; break;
+                    case 6: arm = 5; fly = 4; break;
+                }
+            }
+        }
+        int cap = Mathf.Max(0, baseCount - 2);
+        while (arm + fly + sab > cap)
+        {
+            if (sab >= fly && sab >= arm) sab--;
+            else if (fly >= arm) fly--;
+            else arm--;
+        }
+        return (arm, fly, sab);
+    }
+
     // ==================== İNŞAATÇILAR ====================
     public const int MaxBuilders = 5;
     /// <summary>2. inşaatçının (altınla) açıldığı Ana Üs seviyesi.</summary>
@@ -514,7 +600,14 @@ public class EnemySpawnInfo
 {
     public EnemyType enemyType;
     public int count;
+    public EnemyVariant variant;
 }
+
+/// <summary>Hasarın kaynağı (karşı düşmanların hasar çarpanları ve telemetri için).</summary>
+public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env }
+
+/// <summary>Mevcut gövdeler üzerinde karşı düşman çeşitleri (round2 C).</summary>
+public enum EnemyVariant { None, Armored, Flying, Saboteur }
 
 [Serializable]
 public class WaveData

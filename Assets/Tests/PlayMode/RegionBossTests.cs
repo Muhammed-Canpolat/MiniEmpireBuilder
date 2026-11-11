@@ -56,7 +56,8 @@ public class RegionBossTests
         t.GetMethod("Initialize").Invoke(enemy, new object[] { Enemy("CastleGuardian"), 1, null });
         float max = (float)t.GetProperty("MaxHealth").GetValue(enemy);
         t.GetProperty("DamageTakenMultiplier").SetValue(enemy, 0.3f);
-        t.GetMethod("TakeDamage").Invoke(enemy, new object[] { 100f });
+        // Env kaynağı Boss Kalkanı'nı atlar: yalnız Kalkan Duvarı çarpanı ölçülür.
+        t.GetMethod("TakeDamage").Invoke(enemy, new object[] { 100f, Enum.Parse(Type("DamageSource"), "Env") });
         Assert.AreEqual(max - 30f, (float)t.GetProperty("CurrentHealth").GetValue(enemy), 0.01f);
         t.GetMethod("Heal").Invoke(enemy, new object[] { 1000f });
         Assert.AreEqual(max, (float)t.GetProperty("CurrentHealth").GetValue(enemy), 0.01f);

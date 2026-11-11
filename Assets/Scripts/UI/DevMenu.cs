@@ -154,7 +154,7 @@ public sealed class DevMenu : MonoBehaviour
     private static void KillEnemies()
     {
         foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
-            if (enemy != null && !enemy.IsDead) enemy.TakeDamage(999999f);
+            if (enemy != null && !enemy.IsDead) enemy.TakeDamage(999999f, DamageSource.Env);
     }
 }
 #endif
