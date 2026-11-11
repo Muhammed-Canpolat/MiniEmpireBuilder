@@ -16,7 +16,7 @@ public static class LivesSystem
     private static PlayerSaveData Data => GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
     private static long Now => DateTime.UtcNow.Ticks;
     private static long Period => TimeSpan.FromMinutes(RegenMinutes).Ticks;
-    private static int Today => int.Parse(DateTime.Now.ToString("yyyyMMdd"));
+    private static int Today => GameClock.TodayId;
 
     /// <summary>Sınırsız can: süreli paket/takvim ödülü ya da Kraliyet Üyeliği.</summary>
     public static bool Unlimited => Data != null && (Data.unlimitedLivesUntilTicks > Now || Data.royalUntilTicks > Now);

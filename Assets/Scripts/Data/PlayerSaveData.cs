@@ -77,6 +77,8 @@ public class PlayerSaveData
     // Elmas güçlendirmeleri (GemEconomy): İnşaat İksiri ve geçici inşaatçı bitişi (UTC tick).
     // Son kayıt anı (UTC tick): kopyalar arasından en yenisini seçmek için.
     public long lastSavedTicks;
+    // Oyunun gördüğü en ileri saat (UTC tick): saat geri alınınca günlük sınırlar yenilenmesin (GameClock).
+    public long clockHighWaterTicks;
     public long buildPotionUntilTicks;
     public long tempBuilderUntilTicks;
     // Elmas kazanma (GemRewards): reklamla elmas günü/sayısı, ödüllendirilmiş en yüksek Ana Üs seviyesi.

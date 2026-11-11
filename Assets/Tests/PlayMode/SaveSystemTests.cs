@@ -1,3 +1,4 @@
+using UnityEngine.TestTools;
 using System;
 using System.IO;
 using System.Linq;
@@ -75,6 +76,7 @@ public class SaveSystemTests
 
         // Hepsi bozuksa null döner (oyun yeni kayda geçer), bozuk kayıt saklanır.
         PlayerPrefs.SetString(BackupKey, "{");
+        LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(@"\[SaveSystem\]"));
         Assert.IsNull(Type("SaveSystem").GetMethod("Load").Invoke(null, null));
         Assert.IsTrue(PlayerPrefs.HasKey("MiniEmpireBuilder_SaveData_Corrupt"));
         PlayerPrefs.DeleteKey("MiniEmpireBuilder_SaveData_Corrupt");

@@ -9,7 +9,7 @@ using UnityEngine;
 public static class AdRewards
 {
     private static PlayerSaveData Data => GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
-    private static int Today => int.Parse(DateTime.Now.ToString("yyyyMMdd"));
+    private static int Today => GameClock.TodayId;
 
     // ==================== İNŞAAT −30 DK ====================
 

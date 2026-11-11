@@ -10,7 +10,7 @@ public static class GemRewards
     public static event Action<int, string> OnGemsEarned; // miktar, neden
 
     private static PlayerSaveData Data => GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
-    private static int Today => int.Parse(DateTime.Now.ToString("yyyyMMdd"));
+    private static int Today => GameClock.TodayId;
 
     /// <summary>Son zaferde kazanılan elmas (zafer ekranı için).</summary>
     public static int LastVictoryGems { get; private set; }

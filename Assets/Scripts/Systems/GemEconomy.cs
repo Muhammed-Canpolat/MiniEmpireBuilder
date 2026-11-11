@@ -8,6 +8,8 @@ using UnityEngine;
 public static class GemEconomy
 {
     // ==================== İNŞAAT ====================
+    /// <summary>Elmas üst sınırı (taşma ve oynanmış kayıt koruması).</summary>
+    public const int MaxGems = 999999;
     /// <summary>İnşaat İksiri: süre boyunca bütün inşaatçılar bu kat hızlı çalışır.</summary>
     public const int PotionCost = 40;
     public const int PotionHours = 2;

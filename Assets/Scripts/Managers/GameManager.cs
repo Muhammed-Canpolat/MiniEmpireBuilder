@@ -260,7 +260,8 @@ public class GameManager : MonoBehaviour
     public void AddGems(int amount, bool saveAfter = true)
     {
         if (PlayerData == null || amount <= 0) return;
-        PlayerData.gems += amount;
+        // Taşma koruması (bozuk/oynanmış kayıtta eksiye dönmesin).
+        PlayerData.gems = (int)Math.Min((long)PlayerData.gems + amount, GemEconomy.MaxGems);
         OnGemsChanged?.Invoke(PlayerData.gems);
         if (saveAfter) SaveGame();
     }

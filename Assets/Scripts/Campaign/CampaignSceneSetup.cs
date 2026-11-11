@@ -896,7 +896,7 @@ public class CampaignSceneSetup : MonoBehaviour
         var button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
         string text = active ? L.T("İSTİLA!", "INVASION!")
-            : L.T("İSTİLA ", "INVASION ") + Progression.FormatDuration(DragonInvasion.TimeLeft(System.DateTime.Now).TotalSeconds);
+            : L.T("İSTİLA ", "INVASION ") + Progression.FormatDuration(DragonInvasion.TimeLeft(GameClock.LocalNow).TotalSeconds);
         var label = Label(rect, "Label", text, 11, ReferenceUiVisuals.Light, true, new Vector2(0.12f, 0.15f), new Vector2(0.88f, 0.9f),
             Vector2.zero, Vector2.zero);
         Shadowed(label);
@@ -907,7 +907,7 @@ public class CampaignSceneSetup : MonoBehaviour
             if (!DragonInvasion.Active)
             {
                 ShowToast(L.T("Ejder İstilası hafta sonu gelir: ", "The Dragon Invasion arrives on the weekend: ") +
-                          Progression.FormatDuration(DragonInvasion.TimeLeft(System.DateTime.Now).TotalSeconds));
+                          Progression.FormatDuration(DragonInvasion.TimeLeft(GameClock.LocalNow).TotalSeconds));
                 return;
             }
             ShowInvasionPanel();
@@ -927,7 +927,7 @@ public class CampaignSceneSetup : MonoBehaviour
                 : L.T($"<b>İlk zafer alındı.</b> Sonraki zaferler: ödülün %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}'u\n",
                       $"<b>First win claimed.</b> Further wins: {Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}% of the reward\n")) +
             L.T("<b>Kalan süre:</b> ", "<b>Time left:</b> ") +
-            Progression.FormatDuration(DragonInvasion.TimeLeft(System.DateTime.Now).TotalSeconds);
+            Progression.FormatDuration(DragonInvasion.TimeLeft(GameClock.LocalNow).TotalSeconds);
         bool canPlay = LivesSystem.CanPlay;
         ModeLaunchPanel.Show(L.T("EJDER İSTİLASI", "DRAGON INVASION"), body,
             canPlay ? L.T("SAVAŞA BAŞLA", "START BATTLE")

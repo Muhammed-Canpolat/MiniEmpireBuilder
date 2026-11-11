@@ -28,7 +28,7 @@ public static class DailyRewards
 
     /// <summary>Testler gün değiştirebilsin diye: null değilse bugünün tarihi bu.</summary>
     public static DateTime? TodayOverride { get; set; }
-    private static DateTime TodayDate => (TodayOverride ?? DateTime.Now).Date;
+    private static DateTime TodayDate => (TodayOverride ?? GameClock.LocalNow).Date;
     private static int Stamp(DateTime date) => date.Year * 10000 + date.Month * 100 + date.Day;
     private static int Today => Stamp(TodayDate);
     private static int Yesterday => Stamp(TodayDate.AddDays(-1));

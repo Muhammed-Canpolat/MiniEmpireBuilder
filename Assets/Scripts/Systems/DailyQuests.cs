@@ -41,7 +41,7 @@ public static class DailyQuests
     {
         get
         {
-            var date = (TodayOverride ?? DateTime.Now).Date;
+            var date = (TodayOverride ?? GameClock.LocalNow).Date;
             return date.Year * 10000 + date.Month * 100 + date.Day;
         }
     }

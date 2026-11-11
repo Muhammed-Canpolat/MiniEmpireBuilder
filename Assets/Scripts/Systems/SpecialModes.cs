@@ -120,7 +120,7 @@ public static class DragonInvasion
     private static PlayerSaveData Data => GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
 
     public static bool IsWeekend(DateTime now) => now.DayOfWeek == DayOfWeek.Saturday || now.DayOfWeek == DayOfWeek.Sunday;
-    public static bool Active => ForceActive || IsWeekend(DateTime.Now);
+    public static bool Active => ForceActive || IsWeekend(GameClock.LocalNow);
 
     public static bool Unlocked => GameManager.Instance != null && GameManager.Instance.GetMainBaseLevel() >= RequiredBaseLevel;
 
@@ -131,7 +131,7 @@ public static class DragonInvasion
         return now.Year * 100 + calendar.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
     }
 
-    public static bool FirstWinAvailable => Data != null && Data.invasionRewardWeek != WeekId(DateTime.Now);
+    public static bool FirstWinAvailable => Data != null && Data.invasionRewardWeek != WeekId(GameClock.LocalNow);
 
     /// <summary>Etkinliğin bitmesine (Pazar gece yarısı) ya da başlamasına (Cumartesi) kalan süre.</summary>
     public static TimeSpan TimeLeft(DateTime now)
@@ -208,7 +208,7 @@ public static class DragonInvasion
         var data = Data;
         var gm = GameManager.Instance;
         if (data == null || gm == null || !FirstWinAvailable) return 0;
-        data.invasionRewardWeek = WeekId(DateTime.Now);
+        data.invasionRewardWeek = WeekId(GameClock.LocalNow);
         gm.AddGems(FirstWinGems, false);
         gm.SaveGame();
         return FirstWinGems;
