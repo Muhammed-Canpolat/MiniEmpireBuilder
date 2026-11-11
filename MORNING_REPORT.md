@@ -7,6 +7,7 @@ Dal: **`gece-gelistirme`** (`ui/dark-fantasy-hud`'dan açıldı). **Push edilmed
   `ground_mine_rocks.png.meta` değişikliğini içeriyor. `483cd1d` bunları takipten çıkardı (diskte duruyorlar), ama
   geçmişte kaldılar. Push'tan önce iki commit'i birleştirmek önerilir:
   `git rebase -i a8cc598` → `483cd1d` satırını `fixup` yap (ya da GitHub Desktop/IDE ile "squash").
+- Aynı şey `7853033` için de geçerli (`ground_mine_rocks.png.meta` girdi, hemen sonraki commit geri aldı; net fark sıfır).
 
 ## Ne yapıldı (commit'ler)
 | Commit | İş |
