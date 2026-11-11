@@ -40,18 +40,11 @@ public sealed class DailyQuestsUI : MonoBehaviour
 
     private void CreateSideButton()
     {
-        var anchor = new Vector2(0f, 0.64f);
-        var button = Paper(safe, "QuestsButton", anchor, anchor, new Vector2(8, -30), new Vector2(64, 26), 16f);
-        button.raycastTarget = true;
-        var icon = ReferenceUiVisuals.Image(button.transform, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(-17, -15), new Vector2(17, 21), Color.white);
-        icon.sprite = CampaignSceneSetup.Art("ui_scroll");
-        icon.preserveAspect = true;
-        icon.raycastTarget = false;
-        ReferenceUiVisuals.Text(button.transform, "Label", L.T("GÖREV", "QUESTS"), 10, Ink, TextAlignmentOptions.Center,
-            new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 14), true).raycastTarget = false;
+        // Yuvarlak, kompakt simge düğmesi: sol kenarda, Günlük düğmesinin altında (arazi üstünde yer kaplamaz).
+        var button = ReferenceUiVisuals.RoundHudButton(safe, "QuestsButton", 1, CampaignSceneSetup.Art("ui_scroll"),
+            L.T("GÖREV", "QUESTS"));
         var dotImage = ReferenceUiVisuals.Image(button.transform, "Dot", Vector2.one, Vector2.one,
-            new Vector2(-14, -14), new Vector2(2, 2), ReferenceUiVisuals.Red);
+            new Vector2(-11, -11), new Vector2(3, 3), ReferenceUiVisuals.Red);
         dotImage.sprite = ReferenceUiVisuals.SolidPillSprite();
         dot = dotImage.gameObject;
         dot.transform.DOScale(1.2f, 0.6f).SetLoops(-1, LoopType.Yoyo).SetLink(dot);

@@ -55,14 +55,8 @@ public sealed class DailyRewardsUI : MonoBehaviour
 
     private void CreateSideButton()
     {
-        var anchor = new Vector2(0f, 0.72f);
-        var button = Image(safe, "DailyButton", anchor, anchor, new Vector2(8, -30), new Vector2(64, 26), "ui_paper", 16f);
-        button.raycastTarget = true;
-        Image(button.transform, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(-19, -17), new Vector2(19, 21), "ui_icon_calendar", 0f).preserveAspect = true;
-        var label = ReferenceUiVisuals.Text(button.transform, "Label", L.T("GÜNLÜK", "DAILY"), 10, Ink, TextAlignmentOptions.Center,
-            new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 14), true);
-        label.raycastTarget = false;
+        var button = ReferenceUiVisuals.RoundHudButton(safe, "DailyButton", 0,
+            CampaignSceneSetup.Art("ui_icon_calendar", 0f), L.T("GÜNLÜK", "DAILY"));
         var dotImage = ReferenceUiVisuals.Image(button.transform, "Dot", Vector2.one, Vector2.one,
             new Vector2(-14, -14), new Vector2(2, 2), ReferenceUiVisuals.Red);
         dotImage.sprite = BaseMapManager.MakeCircleSprite(Color.white);

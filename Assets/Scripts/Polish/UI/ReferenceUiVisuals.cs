@@ -26,6 +26,29 @@ public static class ReferenceUiVisuals
     private static Sprite pillSprite;
     private const string TurkishCharacters = "ĞÜŞİÖÇğüşıöç";
 
+    /// <summary>Üst barın altında, sol kenarda yığılan küçük yuvarlak HUD düğmesi (altın halkalı koyu daire + simge + minik etiket).</summary>
+    /// <param name="slot">0 = barın hemen altı, 1 = onun altı...</param>
+    public static Image RoundHudButton(Transform safeArea, string name, int slot, Sprite icon, string label)
+    {
+        const float size = 40f, gap = 18f, top = 70f; // 64 px üst bar + 6 px boşluk
+        float y = -(top + slot * (size + gap));
+        var ring = Image(safeArea, name, new Vector2(0f, 1f), new Vector2(0f, 1f),
+            new Vector2(6f, y - size), new Vector2(6f + size, y), Gold);
+        ring.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+        ring.raycastTarget = true;
+        var face = Image(ring.transform, "Face", Vector2.zero, Vector2.one, new Vector2(2f, 2f), new Vector2(-2f, -2f),
+            new Color(Background.r, Background.g, Background.b, 0.92f));
+        face.sprite = ring.sprite;
+        face.raycastTarget = false;
+        var picture = Image(ring.transform, "Icon", Vector2.zero, Vector2.one, new Vector2(7f, 7f), new Vector2(-7f, -7f), Color.white);
+        picture.sprite = icon;
+        picture.preserveAspect = true;
+        picture.raycastTarget = false;
+        Text(ring.transform, "Label", label, 8f, Light, TextAlignmentOptions.Center, new Vector2(-0.4f, 0f),
+            new Vector2(1.4f, 0f), new Vector2(0f, -13f), new Vector2(0f, -1f), bodyBold: true).raycastTarget = false;
+        return ring;
+    }
+
     public static Color Hex(uint rgb) => new Color32((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, 255);
 
     public static void ConfigureCanvas(CanvasScaler scaler)

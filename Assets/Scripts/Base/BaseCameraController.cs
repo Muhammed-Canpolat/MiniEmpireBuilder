@@ -159,12 +159,70 @@ public sealed class BaseCameraController : MonoBehaviour
         if (!Mathf.Approximately(size, cam.orthographicSize)) cam.orthographicSize = size;
         float halfHeight = size;
         float halfWidth = size * cam.aspect;
+        HudPaddingWorld(size, out float padL, out float padR, out float padT, out float padB);
         Vector3 p = cam.transform.position;
-        p.x = BaseWorldLayout.Width <= halfWidth * 2f ? BaseWorldLayout.Width * 0.5f
-            : Mathf.Clamp(p.x, halfWidth, BaseWorldLayout.Width - halfWidth);
-        p.y = BaseWorldLayout.Height <= halfHeight * 2f ? BaseWorldLayout.Height * 0.5f
-            : Mathf.Clamp(p.y, halfHeight, BaseWorldLayout.Height - halfHeight);
+        // Görüş kenarı dünya sınırının HUD payı kadar ötesine gidebilir: her hücre HUD'un altından çıkarılabilir.
+        p.x = ClampAxis(p.x, halfWidth, -padL, BaseWorldLayout.Width + padR, BaseWorldLayout.Width * 0.5f);
+        p.y = ClampAxis(p.y, halfHeight, -padB, BaseWorldLayout.Height + padT, BaseWorldLayout.Height * 0.5f);
         cam.transform.position = p;
+    }
+
+    private static float ClampAxis(float center, float half, float low, float high, float fallback)
+    {
+        float min = low + half, max = high - half;
+        if (min > max) return (min + max) * 0.5f;
+        return Mathf.Clamp(center, min, max);
+    }
+
+    // ==================== HUD PAYI ====================
+
+    private static readonly string[] HudIconNames = { "DailyButton", "QuestsButton" };
+    private RectTransform[] hudIcons;
+    private RectTransform hudTop, hudBottom;
+    private float nextHudLookup;
+
+    private void FindHud()
+    {
+        if (Time.unscaledTime < nextHudLookup) return;
+        nextHudLookup = Time.unscaledTime + 1f;
+        if (hudIcons == null) hudIcons = new RectTransform[HudIconNames.Length];
+        for (int i = 0; i < HudIconNames.Length; i++)
+            if (hudIcons[i] == null) hudIcons[i] = GameObject.Find(HudIconNames[i])?.GetComponent<RectTransform>();
+        if (hudTop == null) hudTop = GameObject.Find("TopBarBG")?.GetComponent<RectTransform>();
+        if (hudBottom == null) hudBottom = GameObject.Find("BottomDock")?.GetComponent<RectTransform>();
+    }
+
+    /// <summary>
+    /// Kamera görüş alanının üstüne binen HUD parçalarının (üst bar, alt bar, sol kenar simge düğmeleri)
+    /// kapladığı payı dünya biriminde verir. Üst/alt bar zaten görüş alanının dışındaysa pay 0'dır.
+    /// </summary>
+    public void HudPaddingWorld(float orthoSize, out float left, out float right, out float top, out float bottom)
+    {
+        left = right = top = bottom = 0f;
+        if (cam == null) return;
+        FindHud();
+        Rect view = cam.pixelRect;
+        if (view.height <= 1f) return;
+        float perPixel = orthoSize * 2f / view.height;
+        var corners = new Vector3[4];
+        if (hudIcons != null)
+            foreach (var icon in hudIcons)
+            {
+                if (icon == null || !icon.gameObject.activeInHierarchy) continue;
+                icon.GetWorldCorners(corners);
+                left = Mathf.Max(left, (corners[2].x - view.xMin) * perPixel);
+            }
+        if (hudTop != null && hudTop.gameObject.activeInHierarchy)
+        {
+            hudTop.GetWorldCorners(corners);
+            top = Mathf.Max(0f, (view.yMax - corners[0].y) * perPixel);
+        }
+        if (hudBottom != null && hudBottom.gameObject.activeInHierarchy)
+        {
+            hudBottom.GetWorldCorners(corners);
+            bottom = Mathf.Max(0f, (corners[2].y - view.yMin) * perPixel);
+        }
+        left = Mathf.Max(0f, left);
     }
 
     // ==================== GİRİŞ YARDIMCILARI ====================
