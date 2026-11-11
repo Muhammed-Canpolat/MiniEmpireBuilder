@@ -673,6 +673,7 @@ public class EnemyController : MonoBehaviour
         if (isDead || Invulnerable) return;
 
         LastHitTime = Time.time;
+        lastDamageSource = source;
         float sourceMult = SourceMultiplier(source);
         bool resisted = sourceMult < 1f;
         dmg *= sourceMult;
@@ -738,9 +739,14 @@ public class EnemyController : MonoBehaviour
         }
     }
 
+    private DamageSource lastDamageSource = DamageSource.Env;
+
     private void Die()
     {
         isDead = true;
+        // Günlük görev: son vuruş kahraman ya da Çırak'tan geldiyse "kahramanla yen".
+        if (lastDamageSource == DamageSource.Hero || lastDamageSource == DamageSource.Apprentice)
+            DailyQuests.Report(QuestKind.HeroKills);
 
         // BattleManager'a bildir
         BattleManager battleManager = FindFirstObjectByType<BattleManager>();

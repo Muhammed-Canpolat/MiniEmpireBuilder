@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum QuestKind { KillEnemies, WinCampaign, StartUpgrade, CollectMine, SpendGold, EarnStars }
+// Yeni türler hep sona eklenir: kayıtta havuz sırası (int) tutulur.
+public enum QuestKind { KillEnemies, WinCampaign, StartUpgrade, CollectMine, SpendGold, EarnStars, BattleBuild, PlaceDecor, HeroKills }
 
 /// <summary>
 /// Günlük görevler: her gün tarihe göre (gün içinde sabit) 3 görev seçilir. Görev bitince ödülü
@@ -29,6 +30,10 @@ public static class DailyQuests
         new Def { kind = QuestKind.CollectMine, target = 2 },
         new Def { kind = QuestKind.SpendGold, target = 300, gemReward = true, gems = 2 },
         new Def { kind = QuestKind.EarnStars, target = 2, gemReward = true, gems = 2 },
+        // Round 2: savaş (kule + kahraman sinerjisi) ve inşa/dekor görevleri.
+        new Def { kind = QuestKind.BattleBuild, target = 3 },
+        new Def { kind = QuestKind.PlaceDecor, target = 1 },
+        new Def { kind = QuestKind.HeroKills, target = 15, gemReward = true, gems = 2 },
     };
 
     public static event Action OnChanged;
@@ -126,6 +131,9 @@ public static class DailyQuests
             case QuestKind.StartUpgrade: return L.T("Bir bina yükseltmesi başlat", "Start a building upgrade");
             case QuestKind.CollectMine: return L.T($"Madenden {n} kez altın topla", $"Collect gold from the mine {n} times");
             case QuestKind.SpendGold: return L.T($"{n} altın harca", $"Spend {n} gold");
+            case QuestKind.BattleBuild: return L.T($"Savaşta {n} yapı kur", $"Build {n} structures in battle");
+            case QuestKind.PlaceDecor: return L.T("Üssüne bir dekor yerleştir", "Place a decoration in your base");
+            case QuestKind.HeroKills: return L.T($"Kahramanınla {n} düşman yen", $"Defeat {n} enemies with your hero");
             default: return L.T($"Seferde {n} yeni yıldız kazan", $"Earn {n} new campaign stars");
         }
     }

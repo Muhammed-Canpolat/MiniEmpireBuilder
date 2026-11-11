@@ -269,6 +269,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         {
             if (GameManager.Instance == null || !GameManager.Instance.SpendGold(selected.cost)) return;
             Spawn(selected, currentCell, Guid.NewGuid().ToString("N"));
+            DailyQuests.Report(QuestKind.PlaceDecor);
         }
         Save();
         Cancel();

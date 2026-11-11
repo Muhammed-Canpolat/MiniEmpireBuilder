@@ -187,6 +187,7 @@ public class BattleBuildSlot : MonoBehaviour
     {
         int cost = CostFor(type);
         if (!battleManager.TryBuildFromSlot(this, type, transform.position, cost)) return;
+        DailyQuests.Report(QuestKind.BattleBuild);
         builtType = type;
         isBuilt = true;
         if (ruin != null) Destroy(ruin);
