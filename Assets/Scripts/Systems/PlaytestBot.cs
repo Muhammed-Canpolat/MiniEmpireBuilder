@@ -27,6 +27,8 @@ public static class PlaytestBot
         public float durationSec;
         public int wavesReached;
         public int heroDowns;
+        public float heroDistance;      // kahramanın yürüdüğü toplam yol
+        public float heroStuckSec;      // girdi varken ilerleyemediği süre
         public float heroDamageTaken;
         public float baseDamageTaken;
         public float baseHealthEnd;
@@ -122,6 +124,8 @@ public static class PlaytestBot
         float start = Time.time, nextBuild = 0f, nextCurve = 0f, nextScan = 0f;
         bool midShot = false;
         Time.timeScale = timeScale;
+        lastHeroPos = hero.transform.position;
+        stuckFor = 0f; sidestepUntil = 0f;
         if (capture) t.screenshots.Add(Capture($"r{region}_l{level}_start"));
 
         while (!ended && Time.time - start < maxSeconds)
@@ -167,7 +171,7 @@ public static class PlaytestBot
             if (mainBase.CurrentHealth < lastBaseHp) t.baseDamageTaken += lastBaseHp - mainBase.CurrentHealth;
             lastBaseHp = mainBase.CurrentHealth;
 
-            DriveHero(hero, home);
+            DriveHero(hero, home, t);
             if (now >= nextBuild) { nextBuild = now + 1f; TryBuildAll(battle); }
             if (now >= nextCurve) { nextCurve = now + 10f; t.goldCurve.Add($"{now:0}:{battle.GoldEarned}"); }
             if (capture && !midShot && battle.CurrentWave >= 2 && spawnTime.Count >= 4)
@@ -214,10 +218,22 @@ public static class PlaytestBot
         File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}.json"), JsonUtility.ToJson(t, true));
     }
 
-    /// <summary>Basit oyuncu: canı %35 altındaysa üsse çekil; değilse üsse en yakın tehdide koş.</summary>
-    private static void DriveHero(HeroController hero, Vector3 home)
+    private static Vector3 lastHeroPos;
+    private static float stuckFor, sidestepUntil;
+    private static float sidestepSign = 1f;
+
+    /// <summary>
+    /// Basit oyuncu: canı %35 altındaysa üsse çekil; değilse üsse en yakın tehdide koş.
+    /// İlerleyemezse (yapıya takıldıysa) 0,7 sn yana kayar.
+    /// </summary>
+    private static void DriveHero(HeroController hero, Vector3 home, Telemetry t)
     {
-        if (hero == null || hero.IsDowned) { hero?.SetMoveInput(Vector2.zero); return; }
+        if (hero == null || hero.IsDowned) { if (hero != null) hero.SetMoveInput(Vector2.zero); return; }
+        Vector3 pos = hero.transform.position;
+        float step = Vector2.Distance(pos, lastHeroPos);
+        t.heroDistance += step;
+        lastHeroPos = pos;
+
         Vector3 target = home;
         if (hero.HealthPercent >= 0.35f)
         {
@@ -227,13 +243,24 @@ public static class PlaytestBot
             {
                 if (e.IsDead) continue;
                 // Üsse yakın olanı ve kahramana yakın olanı birlikte gözet.
-                float score = Vector2.Distance(e.transform.position, home) + 0.5f * Vector2.Distance(e.transform.position, hero.transform.position);
+                float score = Vector2.Distance(e.transform.position, home) + Vector2.Distance(e.transform.position, pos);
                 if (score < bestScore) { bestScore = score; best = e; }
             }
             if (best != null) target = best.transform.position;
         }
-        Vector2 delta = target - hero.transform.position;
-        hero.SetMoveInput(delta.magnitude < 0.9f ? Vector2.zero : delta.normalized);
+        Vector2 delta = target - pos;
+        if (delta.magnitude < 0.9f) { hero.SetMoveInput(Vector2.zero); stuckFor = 0f; return; }
+        Vector2 dir = delta.normalized;
+        float dt = Time.deltaTime;
+        if (step < 0.2f * dt * 2f) { stuckFor += dt; t.heroStuckSec += dt; } else stuckFor = 0f;
+        if (stuckFor > 0.35f && Time.time > sidestepUntil)
+        {
+            sidestepUntil = Time.time + 0.7f;
+            sidestepSign = -sidestepSign;
+            stuckFor = 0f;
+        }
+        if (Time.time < sidestepUntil) dir = (new Vector2(-dir.y, dir.x) * sidestepSign + dir * 0.3f).normalized;
+        hero.SetMoveInput(dir);
     }
 
     private static readonly System.Reflection.MethodInfo TryBuildMethod =

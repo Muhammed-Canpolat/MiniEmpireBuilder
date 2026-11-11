@@ -96,7 +96,7 @@ public class ExpansionFeatureTests
                     .Invoke(gameManager, null);
                 // 15 seviyelik eğri: 80 × 1.3^(sev-1), 10'a yuvarlı.
                 Assert.AreEqual(new[] { 80, 100, 140, 180, 230 }[level - 1], cost);
-                float income = (float)gameManager.GetType().GetMethod("GetGoldPerSecond")
+                float income = (float)gameManager.GetType().GetMethod("GetGoldPerSecond", Type.EmptyTypes)
                     .Invoke(gameManager, null);
                 if (level == 1) baseIncome = income / 1.1f;
                 Assert.AreEqual(baseIncome * (1.1f + (level - 1) * 0.05f), income, 0.001f);
