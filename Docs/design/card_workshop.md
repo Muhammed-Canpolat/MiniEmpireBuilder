@@ -186,3 +186,11 @@ Testler: `CardWorkshopTests` (bedel/hak formülleri, stok tavanı, kaynak sıras
 2. Destansı kart reklamla anında bitebilsin mi (önerim: evet, günde 3 sınırı içinde), yoksa reklam yalnız Sıradan/Nadir için mi?
 3. §7 Et düzeltmesi kabul mü? Alternatif: §6'yı olduğu gibi bırakıp kart Et bedellerini ×2 yapmak. Bu yol seyrek giren
    oyuncunun Et biriktirme avantajını çözmez.
+
+## Kullanıcı kararları (12 Kasım 2026)
+1. **Yenilgide de** kullanım hakkı düşer (`BeginBattle`'da harcanır).
+2. **Destansı** üretim de reklamla anında biter (günlük 3 reklam hakkının içinden).
+3. §7 Et kıtlığı düzeltmesi kabul. **Ek:** eksik Et elmasla tamamlanabilir (§5'teki "Et elmasla alınamaz" kuralı kalkar),
+   ama altından **5 kat pahalı**: `GemEconomy.MeatPerGem = GoldPerGem / 5` (şu an 40 / 5 = **8 Et/elmas**).
+   `MeatTopUpCost(missing) = ceil(missing / MeatPerGem)`, `GoldTopUpCost` ile aynı kalıp; oran tek yerden (GoldPerGem'e bağlı).
+   Ada binalarındaki "1 elmas = 25 kaynak" kuralı (island_base §6) Et için de bu orana çekilir; Odun 25 kalır.
