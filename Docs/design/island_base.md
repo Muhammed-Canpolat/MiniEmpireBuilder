@@ -417,10 +417,16 @@ Beklenen durum: KK = ⌈N/3⌉, okçu = KK, kuleler KK−1. Her basamak için N 
   `ground_mine_rocks.png.meta`'ya dokunulmaz.
 - **Kışla sefer dengesini değiştirir:** Faz 4'te round2 bot ölçümü yeniden koşulmadan yayına çıkmaz.
 
-## 11. Kullanıcıya açık sorular
-1. İsim: ada **Martı Adası**, kale **Kıyı Kalesi** uygun mu?
-2. Dokunma yorgunluğu için **Otomatik Ateş** (yarı hız) KK 5'te açılsın mı? Kraliyet'e bağlamak P2W olur, önermiyorum.
-3. **Ziyafet:** 300 Et = 1 savaş kartı jetonu (günde 1) eklensin mi? Ada → sefer bağı güçlenir, ama kart reklam
-   gelirini biraz azaltır.
-4. Ana Üs **Kışla** (MB 7) ada ile birlikte mi gelsin, yoksa sefer dengesi sabit kalsın diye ada oturduktan sonra mı (Faz 4)?
-5. Zamanlı baskında hırsızlık (toplanmamış üretimin en çok %15'i) kalsın mı, yoksa yalnız "savun → ödül" (cezasız) mi olsun?
+## 11. Kullanıcı kararları (12 Kasım 2026)
+1. İsimler: **Martı Adası / Kıyı Kalesi** (itiraz yok).
+2. **Otomatik Ateş:** açılır (KK 5). Oyuncu seçer: düğmeye basıp elle atar ya da oto-ateşi açıp atışı okçuya bırakır.
+   Oto-ateş elle en hızlı atıştan biraz yavaş (×0,75) — elle oynamak hâlâ biraz daha iyi, ama zorunlu değil.
+3. **Kışla:** adadan sonra (Faz 4), bot ölçümü yeniden yapılarak.
+4. **Baskın hırsızlığı:** üst sınır **%20** (toplanmamış ada üretimi; cüzdan ve binalar asla).
+5. **Et kazanmak altın kadar kolay olmamalı.** Ziyafet jetonu yerine yeni bina: **Kart Atölyesi** (Tiny Swords `House2.png`):
+   - Ana Üs'te kurulur (kartlar seferde kullanılır), ada açılınca (Ana Üs 5) inşa listesine girer.
+   - Dokununca üretim ekranı: savaş kartları önem/güçlerine göre **Et + altın** ile üretilir.
+   - Üretim ya bekleme süresiyle biter ya da ödüllü reklamla anında.
+   - Kullanım modeli: **kullanım hakkı** (1 savaş = 1 hak); atölye seviyesi arttıkça üretilen kartın hakkı 1 → 2 → 3… artar.
+     Gerekçe: süreli (5–25 dk) kart savaş dışında boşa erir ve duraklatmada kafa karıştırır; hak sayısı okunaklı.
+   - Ayrıntılı tasarım (kart türleri, bedeller, süreler, seviye tablosu): Faz 3b, game-designer.
