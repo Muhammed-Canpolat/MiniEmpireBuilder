@@ -107,6 +107,13 @@ public static class IslandFx
         Object.Destroy(arrow, seconds);
     }
 
+    /// <summary>Dünya yazısına koyu kontur (okunurluk: zemin/tekne üstünde kaybolmasın).</summary>
+    public static void Outline(TextMeshPro tmp)
+    {
+        tmp.outlineWidth = 0.28f;
+        tmp.outlineColor = new Color32(24, 16, 10, 255);
+    }
+
     /// <summary>Yükselerek sönen dünya yazısı ("+3 boğuldu").</summary>
     public static void FloatText(Vector2 position, string text, Color color, float size = 4f)
     {
@@ -118,6 +125,7 @@ public static class IslandFx
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = color;
         tmp.fontStyle = FontStyles.Bold;
+        Outline(tmp);
         tmp.sortingOrder = FxSorting + 5;
         go.transform.DOMoveY(position.y + 1.2f, 1.1f).SetEase(Ease.OutQuad).SetLink(go);
         DOTween.To(() => tmp.color, c => tmp.color = c, new Color(color.r, color.g, color.b, 0f), 0.5f)

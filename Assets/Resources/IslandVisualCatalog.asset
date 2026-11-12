@@ -637,6 +637,15 @@ MonoBehaviour:
   - name: ui_button_blue
     frames:
     - {fileID: 21300000, guid: 74195b8c61865492fb1d0a56e808bec3, type: 3}
+  - name: ui_round_red
+    frames:
+    - {fileID: 21300000, guid: 15fe13ac8df394d44a33d6cfe5a09472, type: 3}
+  - name: ui_round_blue
+    frames:
+    - {fileID: 21300000, guid: c11fbc9afab5441bf9e9690c58ed4240, type: 3}
+  - name: ui_square_blue
+    frames:
+    - {fileID: 21300000, guid: 9ed72fb392fc948c9a6969d95a154995, type: 3}
   - name: ui_button_red
     frames:
     - {fileID: 21300000, guid: cb17f8006e32c48abaaec2c0383c0502, type: 3}
@@ -666,6 +675,7 @@ MonoBehaviour:
     facesRight: 0
     portrait: {fileID: 7995430000723571008, guid: 182499511eda5fd4d85381b53a9e3361, type: 3}
     feetOffsetY: 0
+    centerOffsetX: 0
   - key: Bat
     prefab: {fileID: 5840038882737305133, guid: f4602107911282542bfd45e2bf6bb648, type: 3}
     bodyHeight: 3.507
@@ -673,6 +683,7 @@ MonoBehaviour:
     facesRight: 0
     portrait: {fileID: -3025832048741113203, guid: 9d177e320c2fd494ca52ef53483e680f, type: 3}
     feetOffsetY: 0.0769999
+    centerOffsetX: 0
   - key: WoodGolem
     prefab: {fileID: 4907539015828445137, guid: 99384e50b27970c409ae8b0a9ec1d0f0, type: 3}
     bodyHeight: 4.8999996
@@ -680,6 +691,7 @@ MonoBehaviour:
     facesRight: 0
     portrait: {fileID: -5304075920596870729, guid: d3a4d37e4243c4846a6bdc18e45349ec, type: 3}
     feetOffsetY: -0.28999996
+    centerOffsetX: 5.24
   - key: ButcherCaptain
     prefab: {fileID: 8074491022817363098, guid: 32b4c8e894fcd654d93a9cc3a2c6955c, type: 3}
     bodyHeight: 4.608
@@ -687,6 +699,7 @@ MonoBehaviour:
     facesRight: 0
     portrait: {fileID: -7857379334957835036, guid: cf6e6d8eb6faba747b21257d64003b3e, type: 3}
     feetOffsetY: 0
+    centerOffsetX: 0
   castle: {fileID: 21300000, guid: 5fef2d88b09824faba4be40a870c347e, type: 3}
   tower: {fileID: 21300000, guid: 9150ff9a3f88646ddaf1ed327afa1315, type: 3}
   meatIcon: {fileID: 21300000, guid: 7ae60e0e3b7fd419aa2a0b999da0fb07, type: 3}

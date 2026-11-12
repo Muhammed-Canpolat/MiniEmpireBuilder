@@ -48,6 +48,13 @@ public sealed class IslandEnemy : MonoBehaviour
     private Vector3 lastPosition;
     private float nextRoar, roarUntil, specialUntil;
     private bool deathPlayed;
+    private float centerX;          // prefab merkezinin x ofseti (k ölçeğinde, çevrilmemiş)
+    private int spawnFrame;
+    private bool flierLook;
+    /// <summary>Vuruş/nişan/seçim noktası: DM2D'de gövde ortası (kök ayaktadır); Tiny Swords'ta kök zaten gövde merkezi.</summary>
+    public Vector2 AimPoint => monster != null
+        ? (Vector2)transform.position + Vector2.up * (visualHeight * 0.5f + (flierLook ? 0.55f : 0f))
+        : (Vector2)transform.position;
 
     private void OnEnable() => all.Add(this);
     private void OnDisable() => all.Remove(this);
@@ -149,6 +156,8 @@ public sealed class IslandEnemy : MonoBehaviour
         baseVisualScale = monster.localScale * k;
         visualHeight = entry.targetHeight * (boss ? Progression.Island.BossScale : 1f);
         bool flier = IslandTargeting.RoleOf(Type) == IslandTargeting.Role.Flyer;
+        flierLook = flier;
+        centerX = entry.centerOffsetX * k;
         baseVisualPosition = new Vector3(0f, -entry.feetOffsetY * k + (flier ? 0.55f : 0f), 0f);
         monster.localScale = baseVisualScale;
         monster.localPosition = baseVisualPosition;
@@ -177,8 +186,8 @@ public sealed class IslandEnemy : MonoBehaviour
             shadowRenderer.sortingOrder = -50;
         }
         // Can çubuğu gövdenin üstünde
-        var bar = GetComponentInChildren<HealthBar>(true);
-        if (bar != null) bar.transform.localPosition = new Vector3(0f, visualHeight + 0.35f + (flier ? 0.55f : 0f), 0f);
+        var bar = Controller != null ? Controller.Bar : null;
+        if (bar != null) bar.Offset = new Vector3(0f, visualHeight + 0.3f + (flier ? 0.55f : 0f), 0f);   // HealthBar kendi konumunu LateUpdate'te Offset'ten sürer
         lastSeenAttack = Controller.LastAttackTime;
         lastSeenHit = Controller.LastHitTime;
         lastPosition = transform.position;
@@ -206,11 +215,31 @@ public sealed class IslandEnemy : MonoBehaviour
     {
         FacingRight = right;
         if (monster == null) return;
-        // Yön localScale.x ile çevrilir; prefab sola bakıyorsa işaret ters.
+        // Yön localScale.x ile çevrilir; prefab sola bakıyorsa işaret ters. Gövde merkezi köke hizalanır (çevrilince ofset işaret değiştirir).
         bool positive = entry.facesRight ? right : !right;
         var scale = baseVisualScale;
         scale.x = Mathf.Abs(scale.x) * (positive ? 1f : -1f);
         monster.localScale = scale;
+        baseVisualPosition.x = -centerX * (positive ? 1f : -1f);
+        monster.localPosition = baseVisualPosition;
+    }
+
+    /// <summary>Üçüncü karede (Idle pozu oturunca) canlı SpriteRenderer sınırlarına göre gövdeyi köke hizalar: görsel, can çubuğu, nişan noktası tek yerde.</summary>
+    private void Calibrate()
+    {
+        Bounds bounds = default; bool any = false;
+        foreach (var renderer in monsterRenderers)
+        {
+            if (renderer == null || !renderer.enabled || renderer.sprite == null) continue;
+            if (!any) { bounds = renderer.bounds; any = true; } else bounds.Encapsulate(renderer.bounds);
+        }
+        if (!any) return;
+        float dx = bounds.center.x - transform.position.x;
+        bool positive = monster.localScale.x > 0f;
+        baseVisualPosition.x -= dx;
+        centerX = -baseVisualPosition.x * (positive ? 1f : -1f);
+        if (!flierLook) baseVisualPosition.y -= bounds.min.y - transform.position.y;
+        monster.localPosition = baseVisualPosition;
     }
 
     // ==================== ISLAKLIK / HASAR ====================
@@ -262,6 +291,7 @@ public sealed class IslandEnemy : MonoBehaviour
             if (anim != null) anim.Attack();
             attackUntil = Time.time + 0.55f;
         }
+        if (monster != null && ++spawnFrame == 3) Calibrate();
         if (monster != null && Alive) UpdateMonster(delta);
         lastPosition = transform.position;
     }
@@ -318,7 +348,7 @@ public sealed class IslandEnemy : MonoBehaviour
     {
         if (deathPlayed) return;
         deathPlayed = true;
-        var bar = GetComponentInChildren<HealthBar>(true);
+        var bar = Controller != null ? Controller.Bar : null;
         if (bar != null) bar.gameObject.SetActive(false);
         Vector2 feet = transform.position - Vector3.up * (monster != null ? 0f : FeetPixels(Type) / 64f * Progression.Island.UnitScale);
         if (monster != null)

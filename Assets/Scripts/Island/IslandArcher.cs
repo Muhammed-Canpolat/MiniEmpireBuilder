@@ -12,7 +12,7 @@ public sealed class IslandTarget
     public IslandTarget(RaidBoat b) { boat = b; }
 
     public bool Valid => enemy != null ? enemy.Alive : boat != null && boat.Alive;
-    public Vector2 Position => enemy != null ? (Vector2)enemy.transform.position : boat != null ? boat.Position : Vector2.zero;
+    public Vector2 Position => enemy != null ? enemy.AimPoint : boat != null ? boat.Position : Vector2.zero;
     public bool IsBoat => boat != null;
     public Transform Transform => enemy != null ? enemy.transform : boat != null ? boat.transform : null;
 
@@ -150,6 +150,8 @@ public sealed class IslandArcher : MonoBehaviour
     public IslandTarget Locked { get; private set; }
     public Vector2 Position => transform.position;
     public float Range => IslandLayout.Posts[CurrentPost].Range;
+    /// <summary>Ateş bekleme dolumu 0..1 (1 = az önce ateşlendi): ATEŞ düğmesi üstündeki dolum.</summary>
+    public float CooldownFraction => Mathf.Clamp01((nextShot - Time.time) / Progression.Island.FireCooldown);
     public int KeepLevel { get; private set; } = 1;
 
     public event Action<int> PostChanged;

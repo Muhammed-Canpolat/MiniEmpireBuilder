@@ -119,6 +119,7 @@ public sealed class RaidBoat : MonoBehaviour
         crewBadge.alignment = TextAlignmentOptions.Center;
         crewBadge.color = new Color(1f, 0.95f, 0.85f);
         crewBadge.fontStyle = FontStyles.Bold;
+        IslandFx.Outline(crewBadge);
         crewBadge.sortingOrder = IslandFx.FxSorting;
         crewBadge.text = "×" + crew.Count;
     }

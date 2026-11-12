@@ -180,6 +180,18 @@ public sealed class IslandRaidBoard
         }
     }
 
+    /// <summary>Portre boyu normalizasyonu: Tiny Swords kareleri (192 px, içerik ~%40) büyütülür; DM2D parçaları kutuya sığdırılır.</summary>
+    private static float PortraitScale(EnemyType type)
+    {
+        switch (type)
+        {
+            case EnemyType.Raider: case EnemyType.ShoreArcher: case EnemyType.ShieldLancer: return 2.3f;
+            case EnemyType.Bat: return 0.7f;
+            case EnemyType.Rat: return 0.85f;
+            default: return 1f;
+        }
+    }
+
     /// <summary>Panoyu yeniler. <paramref name="maxSelectable"/>: oynanabilir en yüksek Akın; sonrası kilitli kartlar olarak görünür.</summary>
     public void Refresh(int selectedAkin, int highestAkin, int keepLevel, int maxSelectable, bool canStart, string gateText)
     {
@@ -206,6 +218,7 @@ public sealed class IslandRaidBoard
                 card.portraits[p].gameObject.SetActive(has);
                 if (!has) continue;
                 card.portraits[p].sprite = PortraitOf(roster[p]);
+                card.portraits[p].rectTransform.localScale = Vector3.one * PortraitScale(roster[p]);
                 card.portraits[p].color = n > highestAkin + 1 ? new Color(0.45f, 0.45f, 0.45f) : Color.white;
             }
             int beaches = Mathf.Min(Progression.Island.BeachesOpen(n), IslandLayout.Beaches.Length);

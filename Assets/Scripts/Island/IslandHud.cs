@@ -32,8 +32,10 @@ public sealed class IslandHud : MonoBehaviour
     private IslandArcher archer;
 
     private RectTransform safe;
-    private TextMeshProUGUI titleText, meatText, woodText, goldText, castleText, hintText, respawnText, autoLabel, homeLabel;
-    private Image castleFill, hintBg, chargeRing, fireFace;
+    private TextMeshProUGUI titleText, meatText, woodText, goldText, castleText, hintText, autoLabel, homeLabel, bannerText, mapLabel;
+    private Image castleFill, hintBg, chargeRing, fireFace, cooldownFill, bannerBg;
+    private Button mapButton;
+    private readonly System.Collections.Generic.List<Image> edgeArrows = new System.Collections.Generic.List<Image>();
     private GameObject fireRoot, resultPanel, autoRoot, dock, castleBar;
     private IslandRaidBoard board;
     private bool prepOpen;
@@ -44,7 +46,6 @@ public sealed class IslandHud : MonoBehaviour
     private TextMeshProUGUI resultTitle, resultBody;
     private Button resultAgain, resultNext, resultHome;
     private float toastUntil;
-    private TextMeshProUGUI toastText;
 
     public static readonly Color Gold = ReferenceUiVisuals.Gold;
 
@@ -165,34 +166,100 @@ public sealed class IslandHud : MonoBehaviour
         var rootRt = (RectTransform)fireRoot.transform;
         rootRt.anchorMin = Vector2.zero; rootRt.anchorMax = Vector2.one; rootRt.offsetMin = rootRt.offsetMax = Vector2.zero;
 
+        // ATEŞ / OTO / HARİTA: Tiny Swords UI düğme sprite'ları (kodla çizilmiş daire yok); dolum/şarj sprite üstünde dolgu
+        var round = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("ui_round_red") : null;
         var fire = ReferenceUiVisuals.Image(rootRt, "FireButton", new Vector2(1, 0), new Vector2(1, 0),
-            new Vector2(-170, 34), new Vector2(-24, 180), new Color(0.78f, 0.2f, 0.14f));
-        fire.sprite = IslandArt.Circle;
+            new Vector2(-176, 30), new Vector2(-22, 184), Color.white);
+        fire.sprite = round;
         fire.raycastTarget = true;
         fireFace = fire;
         var hold = fire.gameObject.AddComponent<IslandHoldButton>();
-        hold.Pressed = () => { if (archer != null) archer.PressFire(); };
-        hold.Released = () => { if (archer != null) archer.ReleaseFire(); };
-        var ring = ReferenceUiVisuals.Image(fire.transform, "ChargeRing", new Vector2(-0.08f, -0.08f), new Vector2(1.08f, 1.08f),
-            Vector2.zero, Vector2.zero, new Color(1f, 0.85f, 0.35f));
-        ring.sprite = IslandArt.Ring;
-        ring.type = Image.Type.Filled;
-        ring.fillMethod = Image.FillMethod.Radial360;
-        ring.fillAmount = 0f;
-        chargeRing = ring;
+        hold.Pressed = () => { if (archer != null) archer.PressFire(); fire.rectTransform.localScale = Vector3.one * 0.94f; };
+        hold.Released = () => { if (archer != null) archer.ReleaseFire(); fire.rectTransform.localScale = Vector3.one; };
+        cooldownFill = RadialOverlay(fire.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.5f));
+        chargeRing = RadialOverlay(fire.transform, "Charge", round, new Color(1f, 0.85f, 0.3f, 0.65f));
         ReferenceUiVisuals.Text(fire.transform, "Label", L.T("ATEŞ", "FIRE"), 26, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
 
-        autoButton = ReferenceUiVisuals.Button(rootRt, "AutoButton", L.T("OTO", "AUTO"), false, new Vector2(1, 0), new Vector2(1, 0),
-            new Vector2(-250, 70), new Vector2(-180, 124), 14);
-        autoLabel = autoButton.GetComponentInChildren<TextMeshProUGUI>();
+        autoButton = SquareButton(rootRt, "AutoButton", L.T("OTO", "AUTO"), new Vector2(-266, 40), out autoLabel);
         autoRoot = autoButton.gameObject;
         autoButton.onClick.AddListener(OnAutoToggle);
+        mapButton = SquareButton(rootRt, "MapButton", L.T("HARİTA", "MAP"), new Vector2(-266, 112), out mapLabel);
+        mapButton.onClick.AddListener(() => { setup.CameraController.ToggleFullFrame(); });
 
-        respawnText = ReferenceUiVisuals.Text(safe, "RespawnText", "", 16, ReferenceUiVisuals.Red, TextAlignmentOptions.Center,
-            new Vector2(0.1f, 0.5f), new Vector2(0.9f, 0.5f), new Vector2(0, -20), new Vector2(0, 20), true);
-        toastText = ReferenceUiVisuals.Text(safe, "Toast", "", 14, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
-            new Vector2(0.05f, 0), new Vector2(0.95f, 0), new Vector2(0, 190), new Vector2(0, 224), false, true);
+        // Kısa bildirimler (okçu düştü, atış yeri kilidi...): Tiny Swords kurdele üstünde, otomatik kapanır
+        bannerBg = ReferenceUiVisuals.Image(safe, "Banner", new Vector2(0.1f, 1), new Vector2(0.9f, 1),
+            new Vector2(0, -150), new Vector2(0, -102), Color.white);
+        var ribbon = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("ui_ribbon") : null;
+        bannerBg.sprite = ribbon;
+        if (ribbon != null) { bannerBg.type = Image.Type.Sliced; bannerBg.pixelsPerUnitMultiplier = 3f; }
+        bannerText = ReferenceUiVisuals.Text(bannerBg.transform, "Text", "", 15, Color.white, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(44, 6), new Vector2(-44, -6), true);
+        bannerBg.gameObject.SetActive(false);
+    }
+
+    private static Image RadialOverlay(Transform parent, string name, Sprite sprite, Color color)
+    {
+        var overlay = ReferenceUiVisuals.Image(parent, name, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, color);
+        overlay.sprite = sprite;
+        overlay.type = Image.Type.Filled;
+        overlay.fillMethod = Image.FillMethod.Radial360;
+        overlay.fillOrigin = (int)Image.Origin360.Top;
+        overlay.fillClockwise = false;
+        overlay.fillAmount = 0f;
+        return overlay;
+    }
+
+    private static Button SquareButton(RectTransform parent, string name, string label, Vector2 corner, out TextMeshProUGUI text)
+    {
+        var image = ReferenceUiVisuals.Image(parent, name, new Vector2(1, 0), new Vector2(1, 0), corner, corner + new Vector2(84, 68), Color.white);
+        image.sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("ui_square_blue") : null;
+        image.raycastTarget = true;
+        var button = image.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        button.transition = Selectable.Transition.None;
+        image.gameObject.AddComponent<ReferenceButtonPress>();
+        text = ReferenceUiVisuals.Text(image.transform, "Label", label, 12, Color.white, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(2, 4), new Vector2(-2, -4), true);
+        text.textWrappingMode = TextWrappingModes.Normal;
+        return button;
+    }
+
+    /// <summary>Ekran dışındaki tekne/düşmanlar için kenar okları (takip kamerası).</summary>
+    private void UpdateEdgeArrows()
+    {
+        var camera = setup.WorldCamera;
+        bool show = raid.Phase == IslandRaidManager.State.Running && setup.CameraController != null && !setup.CameraController.FullFrame && camera != null;
+        var targets = show ? IslandTarget.Collect() : new System.Collections.Generic.List<IslandTarget>();
+        var offscreen = new System.Collections.Generic.List<(float d, Vector2 vp, bool boat)>();
+        foreach (var target in targets)
+        {
+            Vector3 vp = camera.WorldToViewportPoint(target.Position);
+            if (vp.x >= 0.03f && vp.x <= 0.97f && vp.y >= 0.1f && vp.y <= 0.93f) continue;
+            offscreen.Add((Vector2.Distance(target.Position, camera.transform.position), new Vector2(vp.x, vp.y), target.IsBoat));
+        }
+        offscreen.Sort((x, y) => x.d.CompareTo(y.d));
+        int count = Mathf.Min(offscreen.Count, 6);
+        var sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("arrow") : null;
+        while (edgeArrows.Count < count)
+        {
+            var arrow = ReferenceUiVisuals.Image(safe, "EdgeArrow", Vector2.zero, Vector2.zero, new Vector2(-22, -22), new Vector2(22, 22), Color.white);
+            arrow.sprite = sprite;
+            arrow.preserveAspect = true;
+            edgeArrows.Add(arrow);
+        }
+        for (int i = 0; i < edgeArrows.Count; i++)
+        {
+            var arrow = edgeArrows[i];
+            if (i >= count) { arrow.gameObject.SetActive(false); continue; }
+            arrow.gameObject.SetActive(true);
+            Vector2 vp = offscreen[i].vp;
+            Vector2 dir = (vp - new Vector2(0.5f, 0.5f)).normalized;
+            Vector2 pos = new Vector2(Mathf.Clamp(vp.x, 0.06f, 0.94f), Mathf.Clamp(vp.y, 0.14f, 0.9f));
+            arrow.rectTransform.anchorMin = arrow.rectTransform.anchorMax = pos;
+            arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            arrow.color = offscreen[i].boat ? new Color(1f, 0.75f, 0.3f, 0.95f) : new Color(1f, 0.3f, 0.25f, 0.95f);
+        }
     }
 
     private void BuildHint()
@@ -290,7 +357,8 @@ public sealed class IslandHud : MonoBehaviour
 
     public void Toast(string text)
     {
-        toastText.text = text;
+        bannerText.text = text;
+        bannerBg.gameObject.SetActive(true);
         toastUntil = Time.unscaledTime + 2.4f;
     }
 
@@ -392,6 +460,8 @@ public sealed class IslandHud : MonoBehaviour
             : archer.AutoFire ? L.T("OTO: AÇIK", "AUTO: ON") : L.T("OTO: KAPALI", "AUTO: OFF");
         var image = autoButton.GetComponent<Image>();
         if (image != null) image.color = archer.AutoFire ? new Color(0.6f, 1f, 0.6f) : Color.white;
+        if (mapLabel != null && setup.CameraController != null)
+            mapLabel.text = setup.CameraController.FullFrame ? L.T("TAKİP", "FOLLOW") : L.T("HARİTA", "MAP");
     }
 
     private void Update()
@@ -427,14 +497,18 @@ public sealed class IslandHud : MonoBehaviour
         if (archer != null)
         {
             chargeRing.fillAmount = archer.Charging ? archer.Charge01 : 0f;
+            cooldownFill.fillAmount = archer.IsAlive ? archer.CooldownFraction : 1f;
             bool pulse = raid.TutorialStep == 1 && raid.Phase == IslandRaidManager.State.Running;
-            fireFace.color = pulse ? Color.Lerp(new Color(0.78f, 0.2f, 0.14f), new Color(1f, 0.55f, 0.2f),
-                0.5f + 0.5f * Mathf.Sin(Time.time * 6f)) : new Color(0.78f, 0.2f, 0.14f);
-            respawnText.text = !archer.IsAlive
-                ? L.T($"Okçu {Mathf.CeilToInt(archer.RespawnLeft)} sn sonra P1'de geri döner", $"Archer returns at P1 in {Mathf.CeilToInt(archer.RespawnLeft)}s")
-                : "";
+            fireFace.color = pulse ? Color.Lerp(Color.white, new Color(1f, 0.75f, 0.4f), 0.5f + 0.5f * Mathf.Sin(Time.time * 6f)) : Color.white;
+            if (!archer.IsAlive)
+            {
+                bannerText.text = L.T($"OKÇU DÜŞTÜ · {Mathf.CeilToInt(archer.RespawnLeft)} sn", $"ARCHER DOWN · {Mathf.CeilToInt(archer.RespawnLeft)}s");
+                bannerBg.gameObject.SetActive(true);
+                toastUntil = Time.unscaledTime + 0.4f;
+            }
         }
+        UpdateEdgeArrows();
         RefreshAuto();
-        if (toastText != null && toastText.text.Length > 0 && Time.unscaledTime > toastUntil) toastText.text = "";
+        if (bannerBg != null && bannerBg.gameObject.activeSelf && Time.unscaledTime > toastUntil) bannerBg.gameObject.SetActive(false);
     }
 }

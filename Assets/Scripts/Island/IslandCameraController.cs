@@ -58,25 +58,94 @@ public sealed class IslandCameraController : MonoBehaviour
         ClampView();
     }
 
+    /// <summary>Tam savaş çerçevesi (HARİTA düğmesi, bot, testler): takip kapanır, tüm harita görünür.</summary>
     public void SetBattleView()
     {
+        FullFrame = true;
         cam.orthographicSize = BattleSize;
         cam.transform.position = new Vector3(BattleCenter.x, BattleCenter.y, cam.transform.position.z);
     }
 
-    /// <summary>Savaşa girerken: görünümü sakla ve savaş çerçevesine kay.</summary>
+    /// <summary>Savaş takibi: HARİTA düğmesi tam çerçeve ↔ takip arasında geçirir.</summary>
+    public void ToggleFullFrame()
+    {
+        FullFrame = !FullFrame;
+        if (!InBattle) return;
+        StopAllCoroutines();
+        if (FullFrame) StartCoroutine(Glide(new Vector3(BattleCenter.x, BattleCenter.y, cam.transform.position.z), BattleSize, 0.5f, false));
+        else { manualUntil = 0f; moving = false; }
+    }
+
+    /// <summary>Takip çerçevesi: harita tam boyunun %60'ı; okçu + en yakın tehdit sığar (en çok %85).</summary>
+    public const float FollowZoom = 0.6f, FollowMaxZoom = 0.85f;
+    public bool InBattle { get; private set; }
+    public bool FullFrame { get; private set; }
+    private float manualUntil;
+    private Vector3 velocity;
+    private float sizeVelocity;
+
+    /// <summary>Testler/ekran görüntüsü: takibi geçici durdurur / sürdürür.</summary>
+    public void HoldFollow(float seconds) { manualUntil = Time.unscaledTime + seconds; }
+    public void ResumeFollow() { FullFrame = false; manualUntil = 0f; }
+
+    /// <summary>Takip hedefi: okçu ile en yakın etkin tehdidin (kıyıdaki düşman, yoksa tekne) orta noktası.</summary>
+    public void ComputeFollowTarget(out Vector2 center, out float size)
+    {
+        Vector2 archer = IslandArcher.Instance != null ? IslandArcher.Instance.Position : IslandLayout.CastleCenter;
+        Vector2 castle = IslandLayout.CastleCenter;
+        Vector2? threat = null;
+        float best = float.MaxValue;
+        foreach (var target in IslandTarget.Collect())
+        {
+            Vector2 p = target.Position;
+            // Karadaki düşman kaleye yakınlığıyla; tekne kumsala (inişe) yakınlığıyla önceliklenir
+            float d = target.IsBoat ? Vector2.Distance(p, IslandLayout.Beaches[Mathf.Clamp(target.boat.BeachIndex, 0, 3)].landing) + 6f
+                : Vector2.Distance(p, castle);
+            if (d < best) { best = d; threat = p; }
+        }
+        float baseSize = Mathf.Max(0.1f, FullSize * FollowZoom);
+        if (!threat.HasValue) { center = (archer + castle) * 0.5f; size = baseSize; return; }
+        center = (archer + threat.Value) * 0.5f;
+        float needH = Mathf.Abs(archer.y - threat.Value.y) * 0.5f + 3.5f;
+        float needW = (Mathf.Abs(archer.x - threat.Value.x) * 0.5f + 3f) / Mathf.Max(0.3f, cam.aspect);
+        size = Mathf.Clamp(Mathf.Max(baseSize, needH, needW), baseSize, FullSize * FollowMaxZoom);
+    }
+
+    private void UpdateBattleFollow()
+    {
+        if (FullFrame) return;
+        // Oyuncu kaydırır/sıkıştırırsa 4 sn serbest bırakılır, sonra takip süzülerek döner
+        Vector3 before = cam.transform.position; float beforeSize = cam.orthographicSize;
+        HandleInput();
+        if ((cam.transform.position - before).sqrMagnitude > 1e-6f || !Mathf.Approximately(beforeSize, cam.orthographicSize)) manualUntil = Time.unscaledTime + 4f;
+        if (Time.unscaledTime < manualUntil) { ClampView(); return; }
+        ComputeFollowTarget(out var center, out float size);
+        float halfHeight = size, halfWidth = size * cam.aspect;
+        center.x = ClampAxis(center.x, halfWidth, -BoundsPad, IslandLayout.Width + BoundsPad, IslandLayout.Width * 0.5f);
+        center.y = ClampAxis(center.y - 0.8f, halfHeight, -BoundsPad, IslandLayout.Height + BoundsPad, IslandLayout.Height * 0.5f);
+        var goal = new Vector3(center.x, center.y, cam.transform.position.z);
+        float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        if (dt <= 0f) return;
+        cam.transform.position = Vector3.SmoothDamp(cam.transform.position, goal, ref velocity, 0.6f, 30f, dt);
+        cam.orthographicSize = Mathf.SmoothDamp(cam.orthographicSize, size, ref sizeVelocity, 0.8f, 30f, dt);
+    }
+
+    /// <summary>Savaşa girerken: görünümü sakla ve takip çerçevesine kay (kilit yok: kaydırma/sıkıştırma çalışır).</summary>
     public void EnterBattle(float seconds)
     {
         savedPosition = cam.transform.position;
         savedSize = cam.orthographicSize;
-        Locked = true;
+        InBattle = true; FullFrame = false; Locked = false;
+        manualUntil = 0f; velocity = Vector3.zero; sizeVelocity = 0f;
         StopAllCoroutines();
-        StartCoroutine(Glide(new Vector3(BattleCenter.x, BattleCenter.y, savedPosition.z), BattleSize, seconds, false));
+        ComputeFollowTarget(out var center, out float size);
+        StartCoroutine(Glide(new Vector3(center.x, center.y - 0.8f, savedPosition.z), size, seconds, false));
     }
 
     /// <summary>Sonuçtan dönerken: önceki görünüme kay ve kilidi aç.</summary>
     public void ExitBattle(float seconds)
     {
+        InBattle = false; FullFrame = false;
         if (savedSize <= 0f) { Locked = false; return; }
         StopAllCoroutines();
         StartCoroutine(Glide(savedPosition, savedSize, seconds, true));
@@ -102,7 +171,9 @@ public sealed class IslandCameraController : MonoBehaviour
 
     private void Update()
     {
-        if (cam == null || Locked || moving) return;
+        if (cam == null || moving) return;
+        if (InBattle) { UpdateBattleFollow(); return; }
+        if (Locked) return;
         HandleInput();
         ClampView();
     }

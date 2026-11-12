@@ -202,6 +202,7 @@ public class IslandPhaseCTests
             Assert.Greater(renderers.Length, 0, $"{name}: sprite parçaları");
             var bounds = renderers[0].bounds;
             foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+            Assert.That(Mathf.Abs(bounds.center.x - enemy.transform.position.x), Is.LessThan(0.3f), $"{name}: gövde merkezi köke hizalı (|dx| {Mathf.Abs(bounds.center.x - enemy.transform.position.x):0.00} u)");
             float expected = target * (name == "ButcherCaptain" ? (float)IslandConst("BossScale") : 1f);
             Assert.That(bounds.size.y, Is.InRange(expected * 0.55f, expected * 1.6f), $"{name}: boy {bounds.size.y:0.00} u, hedef {expected:0.00}");
 

@@ -138,6 +138,9 @@ public static class BuildIslandCatalog
         Add("ui_ribbon", new[] { First($"{Root}/UI Elements/Ribbons/BigRibbons 1.png", missing) });
         Add("ui_paper_special", new[] { First($"{Root}/UI Elements/Papers/SpecialPaper.png", missing) });
         Add("ui_button_blue", new[] { First($"{Root}/UI Elements/Buttons/BigBlueButton_Regular.png", missing) });
+        Add("ui_round_red", new[] { First($"{Root}/UI Elements/Buttons/SmallRedRoundButton_Regular.png", missing) });
+        Add("ui_round_blue", new[] { First($"{Root}/UI Elements/Buttons/SmallBlueRoundButton_Regular.png", missing) });
+        Add("ui_square_blue", new[] { First($"{Root}/UI Elements/Buttons/SmallBlueSquareButton_Regular.png", missing) });
         Add("ui_button_red", new[] { First($"{Root}/UI Elements/Buttons/BigRedButton_Regular.png", missing) });
         // Kenney Pirate Pack efektleri (CC0): batan teknede patlama, hasarlı teknede ateş, top mermisi
         const string kenneyFx = "Assets/kenney_piratePack/PNG/Retina/Effects";
@@ -171,16 +174,16 @@ public static class BuildIslandCatalog
                 key = spec.key, prefab = prefab, targetHeight = spec.height,
                 facesRight = false,   // DM2D prefabları varsayılan olarak SOLA bakar (ekran görüntüsüyle doğrulandı)
             };
-            Measure(prefab, out entry.bodyHeight, out entry.feetOffsetY);
+            Measure(prefab, out entry.bodyHeight, out entry.feetOffsetY, out entry.centerOffsetX);
             entry.portrait = Portrait(prefab);
             list.Add(entry);
-            Debug.Log($"[IslandCatalog] DM2D {spec.key}: gövde {entry.bodyHeight:0.00} u (prefab ölçeğinde), ayak ofseti {entry.feetOffsetY:0.00}");
+            Debug.Log($"[IslandCatalog] DM2D {spec.key}: gövde {entry.bodyHeight:0.00} u (prefab ölçeğinde), ayak ofseti {entry.feetOffsetY:0.00}, merkez x {entry.centerOffsetX:0.00}");
         }
         catalog.monsters = list;
     }
 
     /// <summary>Prefabın etkin SpriteRenderer'larının birleşik gövde yüksekliği ve en alt noktası (kök yerel uzayı, prefab ölçeğinde).</summary>
-    private static void Measure(GameObject prefab, out float height, out float feetOffset)
+    private static void Measure(GameObject prefab, out float height, out float feetOffset, out float centerX)
     {
         var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         instance.transform.position = Vector3.zero;
@@ -194,6 +197,7 @@ public static class BuildIslandCatalog
         }
         height = any ? Mathf.Max(0.05f, bounds.size.y) : 1f;
         feetOffset = any ? bounds.min.y : 0f;
+        centerX = any ? bounds.center.x : 0f;
         UnityEngine.Object.DestroyImmediate(instance);
     }
 
@@ -216,7 +220,7 @@ public static class BuildIslandCatalog
         var importer = AssetImporter.GetAtPath(path) as TextureImporter;
         if (importer == null) { missing.Add(path); return null; }
         bool dirty = importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single
-            || !Mathf.Approximately(importer.spritePixelsPerUnit, 64f) || importer.filterMode != FilterMode.Bilinear
+            || !Mathf.Approximately(importer.spritePixelsPerUnit, 64f) || importer.filterMode != FilterMode.Point
             || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
             || !importer.alphaIsTransparency;
         if (dirty)
@@ -224,7 +228,7 @@ public static class BuildIslandCatalog
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.spritePixelsPerUnit = 64f;
-            importer.filterMode = FilterMode.Bilinear;
+            importer.filterMode = FilterMode.Point;   // piksel sanatın yanında net (Retina en büyük Kenney boyu; 2–2,5× büyütülür)
             importer.mipmapEnabled = false;
             importer.alphaIsTransparency = true;
             importer.textureCompression = TextureImporterCompression.Uncompressed;

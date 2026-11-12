@@ -108,6 +108,8 @@ public class MonsterEntry
     public Sprite portrait;
     [Tooltip("Prefab kökünden gövdenin en alt noktasına y farkı (prefab ölçeğinde; negatif = kök gövdenin üstünde)")]
     public float feetOffsetY;
+    [Tooltip("Prefab kökünden gövde sınırlarının merkezine x farkı (prefab ölçeğinde, çevrilmemiş)")]
+    public float centerOffsetX;
 }
 
 [Serializable]

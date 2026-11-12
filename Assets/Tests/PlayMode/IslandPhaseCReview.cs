@@ -35,6 +35,12 @@ public partial class IslandReviewScreenshots
         View("SetBattleView");
     }
 
+    private static void FollowControl(string method, params object[] args)
+    {
+        var controller = Prop(Setup, "CameraController");
+        controller.GetType().GetMethod(method).Invoke(controller, args);
+    }
+
     private static object BotProfile(string name) => Enum.Parse(Type("IslandBot+Profile"), name);
 
     [UnityTest]
@@ -50,8 +56,8 @@ public partial class IslandReviewScreenshots
         foreach (var sheep in UnityEngine.Object.FindObjectsByType(Type("IslandSheep"), FindObjectsSortMode.None)) ((Component)sheep).gameObject.SetActive(false);
         var specs = new[]
         {
-            ("Raider", 5.4f, 21.4f, false), ("ShoreArcher", 7.2f, 21.4f, false), ("ShieldLancer", 9.0f, 21.4f, false), ("Rat", 10.8f, 21.4f, false),
-            ("Bat", 5.8f, 18.4f, false), ("WoodGolem", 8.0f, 18.4f, false), ("ButcherCaptain", 10.6f, 18.4f, true),
+            ("Raider", 4.4f, 21.4f, false), ("ShoreArcher", 7.0f, 21.4f, false), ("ShieldLancer", 9.6f, 21.4f, false), ("Rat", 12.3f, 21.4f, false),
+            ("Bat", 4.8f, 17.8f, false), ("WoodGolem", 8.0f, 17.8f, false), ("ButcherCaptain", 11.8f, 17.8f, true),
         };
         foreach (var (name, x, y, boss) in specs)
         {
@@ -61,7 +67,7 @@ public partial class IslandReviewScreenshots
         }
         var cameraController = Prop(Setup, "CameraController");
         cameraController.GetType().GetProperty("Locked").SetValue(cameraController, true);
-        SetCamera(new Vector2(8.1f, 19.7f), 6.0f);
+        SetCamera(new Vector2(8.0f, 19.6f), 8.2f);
         yield return new WaitForSecondsRealtime(0.6f);
         Capture("13_enemy_scale_lineup");
     }
@@ -91,10 +97,11 @@ public partial class IslandReviewScreenshots
         if (target == null) yield break;
         float scale = Time.timeScale;
         Time.timeScale = 0f;
+        FollowControl("HoldFollow", 5f);
         SetCamera(target.transform.position, size);
         yield return new WaitForSecondsRealtime(0.25f);
         Capture(name);
-        BattleCamera();
+        FollowControl("ResumeFollow");
         yield return new WaitForSecondsRealtime(0.1f);
         Time.timeScale = scale;
     }
@@ -116,11 +123,14 @@ public partial class IslandReviewScreenshots
         var bot = (Component)Type("IslandBot").GetMethod("Attach").Invoke(null, new object[] { Setup, BotProfile("Good") });
         Time.timeScale = 4f;
         raid.GetType().GetMethod("StartAkin").Invoke(raid, new object[] { 10 });
-        yield return new WaitForSecondsRealtime(1.0f);
-        BattleCamera();
-        yield return new WaitForSecondsRealtime(1.5f);
+        yield return new WaitForSecondsRealtime(2.5f);   // varsayılan: takip kamerası (okçu + tehdit)
         Time.timeScale = 1f;
+        Capture("15_battle_follow");
+        BattleCamera();                                   // HARİTA düğmesi: tam çerçeve
+        yield return new WaitForSecondsRealtime(0.3f);
         Capture("15_battle_frame");
+        FollowControl("ResumeFollow");
+        yield return new WaitForSecondsRealtime(0.8f);
         var archer = Prop(Setup, "Archer");
 
         Time.timeScale = 3f;

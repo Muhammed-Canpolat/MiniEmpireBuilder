@@ -27,6 +27,8 @@ public class EnemyController : MonoBehaviour
     // Bileşenler
     private SpriteRenderer spriteRenderer;
     private HealthBar healthBar;
+    /// <summary>Can çubuğu (ayrı nesne; ada görseli konumunu/gizlenmesini buradan yönetir).</summary>
+    public HealthBar Bar => healthBar;
 
     // Public erişim
     public bool IsDead => isDead;

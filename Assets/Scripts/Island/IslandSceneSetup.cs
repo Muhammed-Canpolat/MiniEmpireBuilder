@@ -156,7 +156,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
         if (WorldCamera != null && !Mathf.Approximately(lastAspect, WorldCamera.aspect))
         {
             lastAspect = WorldCamera.aspect;
-            if (InDefense) CameraController.SetBattleView();
+            if (InDefense && CameraController.FullFrame) CameraController.SetBattleView();
             else if (Ready) CameraController.ClampView();
         }
         UpdatePostMarkers();
