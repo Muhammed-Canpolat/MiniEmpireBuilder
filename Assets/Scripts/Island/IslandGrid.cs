@@ -39,6 +39,8 @@ public static class IslandGrid
     public static Vector2Int Size(IslandLayout.BuildingKind kind)
     {
         foreach (var spot in IslandLayout.Buildings) if (spot.kind == kind) return new Vector2Int(spot.w, spot.h);
+        if (kind == IslandLayout.BuildingKind.Barracks) return new Vector2Int(3, 2);     // Faz E1 (§5)
+        if (kind == IslandLayout.BuildingKind.Monastery) return new Vector2Int(3, 3);
         return new Vector2Int(2, 2);
     }
 
@@ -213,6 +215,7 @@ public static class IslandGrid
         var center = CenterCell(kind, col, row);
         if (kind == IslandLayout.BuildingKind.Lumber && TreesNear(center, zoneMask) < 1) return Reason.NeedTrees;
         if (kind == IslandLayout.BuildingKind.Pasture && (height > 1 || MeadowNear(center) < 1)) return height > 1 ? Reason.Height : Reason.NeedMeadow;
+        if (kind == IslandLayout.BuildingKind.Barracks && height > 1) return Reason.Height;   // Kışla: yayla/ova (§5), zirve değil
         return Reason.None;
     }
 

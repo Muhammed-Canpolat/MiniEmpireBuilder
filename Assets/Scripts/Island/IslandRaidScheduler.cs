@@ -142,7 +142,18 @@ public static class IslandRaidScheduler
         return false;
     }
 
-    /// <summary>Savunma değerlendirmesi: D, R ve çalınacak oran. Kışla ve bayrak henüz yok (Faz E): 0 / yolda değil.</summary>
+    /// <summary>
+    /// Kışla terimi girdileri (Faz E1, §7.8): tamamlanmış Kışla'nın seviyesi (yoksa 0) ve bayrağın hedef kumsalın yürüyüş şeridinde olup olmadığı.
+    /// </summary>
+    public static (int level, bool onRoute) BarracksTerm(IslandSaveData save, int beach)
+    {
+        if (save == null) return (0, false);
+        var barracks = IslandEconomy.CompletedOf(IslandLayout.BuildingKind.Barracks, save.placed);
+        if (barracks == null) return (0, false);
+        return (barracks.level, IslandLayout.FlagOnRoute(save.flagStair, beach));
+    }
+
+    /// <summary>Savunma değerlendirmesi: D, R ve çalınacak oran. Kışla terimi <see cref="BarracksTerm"/> ile (Faz E1) çağıranca verilir.</summary>
     public static Assessment Assess(IslandSaveData save, int beach, int keepLevel, int archerLevel, int barracksLevel = 0, bool flagOnRoute = false)
     {
         var result = new Assessment();
@@ -227,7 +238,8 @@ public static class IslandRaidScheduler
     public static Outcome ResolveOffline(IslandSaveData save, long windowEnd, long now)
     {
         IslandEconomy.Accumulate(save, Math.Min(now, windowEnd));
-        var assess = Assess(save, save.raidBeach, Mathf.Max(1, KeepOf(save)), Mathf.Max(1, ArcherOf(save)));
+        var term = BarracksTerm(save, save.raidBeach);
+        var assess = Assess(save, save.raidBeach, Mathf.Max(1, KeepOf(save)), Mathf.Max(1, ArcherOf(save)), term.level, term.onRoute);
         var (wood, meat) = ApplyTheft(save, assess.fraction);
         var outcome = new Outcome { beach = save.raidBeach, towersCovering = assess.covering, wood = wood, meat = meat, fraction = assess.fraction, kind = "offline" };
         Report(save, outcome);
@@ -244,7 +256,8 @@ public static class IslandRaidScheduler
     {
         IslandEconomy.Accumulate(save, now);
         int keep = Mathf.Max(1, KeepOf(save));
-        var assess = Assess(save, save.raidBeach, keep, Mathf.Max(1, ArcherOf(save)));
+        var term = BarracksTerm(save, save.raidBeach);
+        var assess = Assess(save, save.raidBeach, keep, Mathf.Max(1, ArcherOf(save)), term.level, term.onRoute);
         float fraction = (won ? 0f : assess.fraction * Progression.Island.RaidLossTheftMult) + Mathf.Max(0, ratEscapes) * Progression.Island.RatTheft;
         fraction = Mathf.Min(Progression.Island.TheftCap, fraction);
         var (wood, meat) = ApplyTheft(save, fraction);

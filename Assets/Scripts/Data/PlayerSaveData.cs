@@ -277,6 +277,10 @@ public class IslandSaveData
     public long raidSeenTicks;      // zamanlayıcının en son çalıştığı an (24 sa+ kapalı kalırsa saat durur)
     public string raidReportKind = "";   // "" okunmamış rapor yok · "offline" · "won" · "lost"
     public int raidReportBeach, raidReportTowers, raidReportWood, raidReportMeat;
+    // Faz E1 (island_base_v2 §5–§7.5, §20): Kışla bayrağı ve Altın Damarı. Eski kayıtta hepsi 0 (bayrak S1, damar boş): güvenli; kayıt sürümü değişmedi.
+    public int flagStair;           // Kışla toplanma bayrağı: 0 = S1 zirve · 1 = S2 batı · 2 = S3 doğu
+    public float veinStock;         // Altın Damarı: toplanmamış Ana Üs altını (Z3 açıkken birikir)
+    public long veinTick;           // damar stokunun son güncellendiği an (UTC tick; 0 = başlamadı)
     // Faz C (island_base_v2 §7.7, §8): bina savaş durumu/onarım ve günlük tekrar ödülü sayacı. Eski kayıtta boş/0: güvenli.
     public List<IslandBuildingSave> buildings = new List<IslandBuildingSave>();
     public string replayDay = "";   // yyyy-MM-dd (UTC)

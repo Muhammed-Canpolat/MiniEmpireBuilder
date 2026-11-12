@@ -460,6 +460,8 @@ public static class Progression
             {
                 case "Tower": return 80f + 30f * l;
                 case "Archery": return 100f + 25f * l;
+                case "Barracks": return 120f + 30f * l;     // Faz E1 (§5)
+                case "Monastery": return 90f + 25f * l;
                 default: return 80f + 20f * l;
             }
         }
@@ -488,6 +490,8 @@ public static class Progression
                 case IslandLayout.BuildingKind.Lumber: return (0.15f, 0.2f);
                 case IslandLayout.BuildingKind.Pasture: return (0.45f, 0f);
                 case IslandLayout.BuildingKind.Tower: return (0.5f, 0.1f);
+                case IslandLayout.BuildingKind.Barracks: return (0.35f, 0.25f);   // Faz E1 (§5)
+                case IslandLayout.BuildingKind.Monastery: return (0.4f, 0.15f);
                 default: return (1f, 0.3f);   // Kale (KK Ana Üs'ü izlediği sürece kullanılmaz)
             }
         }
@@ -516,6 +520,8 @@ public static class Progression
                 case IslandLayout.BuildingKind.Tower: return (60, 10);
                 case IslandLayout.BuildingKind.Lumber: return (300, 60);
                 case IslandLayout.BuildingKind.Pasture: return (600, 0);
+                case IslandLayout.BuildingKind.Barracks: return (150, 40);    // Faz E1 (§5)
+                case IslandLayout.BuildingKind.Monastery: return (400, 80);
                 default: return (0, 0);
             }
         }
@@ -529,10 +535,12 @@ public static class Progression
                 case IslandLayout.BuildingKind.Lumber: return keep >= SecondLumberKeep ? 2 : 1;
                 case IslandLayout.BuildingKind.Pasture: return keep >= SecondPastureKeep ? 2 : 1;
                 case IslandLayout.BuildingKind.Archery: return 1;
+                case IslandLayout.BuildingKind.Barracks: return keep >= BarracksKeep ? 1 : 0;      // Faz E1: KK3'te 1 (ada KK ≥ 5'te açılır)
+                case IslandLayout.BuildingKind.Monastery: return keep >= MonasteryKeep ? 1 : 0;    // KK6'da 1
                 default: return 1;
             }
         }
-        public const int SecondLumberKeep = 7, SecondPastureKeep = 10;
+        public const int SecondLumberKeep = 7, SecondPastureKeep = 10, BarracksKeep = 3, MonasteryKeep = 6;
         public static int HousePawns(int level) => 2 + (level >= 5 ? 1 : 0) + (level >= 10 ? 1 : 0);
         public static int LumberSlots(int level) => 2 + (level >= 5 ? 1 : 0) + (level >= 10 ? 1 : 0);
         public static int PastureSlots(int level) => 1 + (level >= 5 ? 1 : 0) + (level >= 10 ? 1 : 0);
@@ -554,14 +562,33 @@ public static class Progression
         /// <summary>Bina saldırıya/üretime hazır tamamlanan en yüksek seviye = Kıyı Kalesi.</summary>
         public static int MaxBuildingLevel(int keep) => Mathf.Clamp(keep, 1, MaxLevel);
 
-        // Bölge keşfi (§4, §8): Z1–Z2 Faz B'de açılır (Z3–Z5 Faz E). Bedel Odun/Et, süre sn (Usta).
-        public const int LastRevealableZone = 2;
+        // Bölge keşfi (§4, §8): Z1–Z2 Faz B'de, Z3–Z5 Faz E1'de açılır. Bedel Odun/Et, süre sn (Usta).
+        public const int LastRevealableZone = 5;   // Faz E1: Z3–Z5 de Usta görevi olarak açılır
         public static readonly int[] ZoneKeep = { 1, 2, 3, 4, 5, 6 };
         public static readonly int[] ZoneWood = { 0, 150, 300, 500, 800, 1500 };
         public static readonly int[] ZoneMeat = { 0, 0, 30, 50, 80, 150 };
         public static readonly int[] ZoneSeconds = { 0, 30, 180, 300, 900, 3600 };
         public static bool ZoneRevealable(int zone) => zone >= 1 && zone <= LastRevealableZone;
         public const float ZoneDispersalSeconds = 1.5f;
+
+        // ---- Faz E1: Kışla + bayrak, Manastır, Altın Damarı, Z5 çayırı (island_base_v2 §5, §6, §7.5, §8) ----
+        /// <summary>Kışla: 1 + ⌊L/5⌋ mavi Lancer; can 70·(1+0,15(L−1)), hasar 6·(…), 1 vuruş/sn, 12 sn'de yeniden doğar.</summary>
+        public static int LancerCount(int level) => 1 + Mathf.Max(1, level) / 5;
+        public static float LancerHp(int level) => 70f * (1f + 0.15f * (Mathf.Max(1, level) - 1));
+        public static float LancerDamage(int level) => 6f * (1f + 0.15f * (Mathf.Max(1, level) - 1));
+        public const float LancerHitInterval = 1f, LancerRespawn = 12f, LancerSpeed = 3.2f, LancerReach = 1.1f;
+        /// <summary>Lancer bayrak çevresindeki bu yarıçaptaki düşmanı tutar; peşinde bayraktan en çok bu kadar uzaklaşır.</summary>
+        public const float LancerEngageRadius = 4f, LancerLeash = 5.5f;
+        /// <summary>Düşman şeritte Lancer'ı bu kadar yakında görürse ona vurur (§7.5 "yakın"); Tank yalnız yolunu keserse.</summary>
+        public const float LancerAggro = 1.5f, LancerBlockAggro = 1.0f;
+        /// <summary>Bayrak merdivenleri: S1 zirve, S2 batı, S3 doğu. Bayrak hedef şeridin bu yarıçapı içindeyse "yolda" sayılır.</summary>
+        public const float FlagRouteRadius = 1.5f;
+        /// <summary>Manastır (mavi Monk): 4 sn'de bir 3 u içindeki dostlara ve binalara %8 can; onarım süresi ×<see cref="RepairMonasteryMult"/>.</summary>
+        public const float MonkHealFraction = 0.08f, MonkHealInterval = 4f, MonkHealRadius = 3f;
+        /// <summary>Altın Damarı (Z3): Ana Üs altını/sa = 6 + 3(k−1), 1 işçi yuvası; depo 8 sa; Z3 açılınca çalışır.</summary>
+        public static float GoldVeinPerHour(int keep) => 6f + 3f * (Mathf.Max(1, keep) - 1);
+        public const int VeinSlots = 1, VeinZone = 3, MeadowZone = 5;
+        public static int VeinCapacity(int keep) => Mathf.CeilToInt(GoldVeinPerHour(keep) * ProducerStorageHours);
 
         /// <summary>Ada Ana Üs ilerlemesine bağlı: en yüksek Akın = 3 × Kıyı Kalesi.</summary>
         public static int MaxAkin(int keepLevel) => 3 * Mathf.Max(1, keepLevel);
@@ -964,7 +991,7 @@ public class EnemySpawnInfo
 }
 
 /// <summary>Hasarın kaynağı (karşı düşmanların hasar çarpanları ve telemetri için).</summary>
-public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env, IslandArcher }
+public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env, IslandArcher, IslandLancer }
 
 /// <summary>Mevcut gövdeler üzerinde karşı düşman çeşitleri (round2 C).</summary>
 public enum EnemyVariant { None, Armored, Flying, Saboteur }

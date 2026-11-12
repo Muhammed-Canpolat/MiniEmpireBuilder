@@ -702,6 +702,8 @@ public class EnemyController : MonoBehaviour
             IslandStats.RecordEnemyHit(this, currentTarget, damage);
             var islandArcher = currentTarget.GetComponent<IslandArcher>();
             if (islandArcher != null) { islandArcher.TakeDamage(damage); return; }
+            var islandLancer = currentTarget.GetComponent<IslandLancer>();   // Faz E1: Kışla Lancer'ı
+            if (islandLancer != null) { islandLancer.TakeDamage(damage); return; }
         }
         var baseCtrl = currentTarget.GetComponent<MainBaseController>();
         if (baseCtrl != null) { baseCtrl.TakeDamage(damage); return; }

@@ -44,7 +44,7 @@ public static class IslandStats
     public static readonly Dictionary<EnemyType, float> DamageByType = new Dictionary<EnemyType, float>();
     public static readonly float[] CastleDamageByBeach = new float[4];
     public static int ShieldBlocks, GolemArmorHits, BuildingsLost;
-    public static float BuildingDamage, ArcherDamageTaken;
+    public static float BuildingDamage, ArcherDamageTaken, LancerDamageTaken, LancerDamageDealt;
 
     public static void Reset()
     {
@@ -53,13 +53,14 @@ public static class IslandStats
         DamageByType.Clear();
         System.Array.Clear(CastleDamageByBeach, 0, CastleDamageByBeach.Length);
         ShieldBlocks = GolemArmorHits = BuildingsLost = 0;
-        BuildingDamage = ArcherDamageTaken = 0f;
+        BuildingDamage = ArcherDamageTaken = LancerDamageTaken = LancerDamageDealt = 0f;
     }
 
     /// <summary>Düşman vuruşu (EnemyController, yalnız ada): kale / bina / okçu hasarı türe ve kumsala göre toplanır.</summary>
     public static void RecordEnemyHit(EnemyController enemy, Transform target, float damage)
     {
         if (enemy == null || target == null || damage <= 0f) return;
+        if (target.GetComponent<IslandLancer>() != null) { LancerDamageTaken += damage; return; }   // Faz E1: yenilgi etiketi payına girmez
         DamageByType.TryGetValue(enemy.Type, out float total);
         DamageByType[enemy.Type] = total + damage;
         if (target.GetComponent<IslandArcher>() != null) { ArcherDamageTaken += damage; return; }
@@ -423,6 +424,15 @@ public sealed class IslandArcher : MonoBehaviour
         if (BattleVfxManager.Instance != null)
             BattleVfxManager.Instance.ShowDamageNumber(transform.position + Vector3.up * 0.6f, amount, amount);
         if (Hp <= 0f) Die();
+    }
+
+    /// <summary>Manastır şifası (Faz E1): tavanı aşmaz; gerçekten iyileştiyse true.</summary>
+    public bool Heal(float amount)
+    {
+        if (!IsAlive || amount <= 0f || Hp >= MaxHp) return false;
+        Hp = Mathf.Min(MaxHp, Hp + amount);
+        if (healthBar != null) healthBar.UpdateHealth(Hp);
+        return true;
     }
 
     private void Die()

@@ -418,6 +418,73 @@ MonoBehaviour:
     - {fileID: -7960767608736850561, guid: c2f16b5b8909b4331b1fb3af084a9e2d, type: 3}
     - {fileID: -1814465234445016347, guid: c2f16b5b8909b4331b1fb3af084a9e2d, type: 3}
     - {fileID: -5558503021728595732, guid: c2f16b5b8909b4331b1fb3af084a9e2d, type: 3}
+  - name: blue_lancer_idle
+    frames:
+    - {fileID: -594197781322936934, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: 455444515322244926, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: 517828865657036009, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: -3032027852008287605, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: -5574184733968180747, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: -1753309511941541117, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: 4863313082578348910, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: -5592250592134132327, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: 2319514263577396720, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: -4102534018874827341, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: 9164178780147294991, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+    - {fileID: 8611835898225032345, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
+  - name: blue_lancer_run
+    frames:
+    - {fileID: -8580444238127179786, guid: ce378960746b14f2d830cac2b7d11921, type: 3}
+    - {fileID: 828278362111410375, guid: ce378960746b14f2d830cac2b7d11921, type: 3}
+    - {fileID: -4153816518293905039, guid: ce378960746b14f2d830cac2b7d11921, type: 3}
+    - {fileID: 1456675321045083290, guid: ce378960746b14f2d830cac2b7d11921, type: 3}
+    - {fileID: -3942745417268178275, guid: ce378960746b14f2d830cac2b7d11921, type: 3}
+    - {fileID: -1776823346852784203, guid: ce378960746b14f2d830cac2b7d11921, type: 3}
+  - name: blue_lancer_attack
+    frames:
+    - {fileID: 6331980819534964110, guid: e9222978b50fc478bac2042c170d401a, type: 3}
+    - {fileID: 7232042838751349278, guid: e9222978b50fc478bac2042c170d401a, type: 3}
+    - {fileID: -4157329051755591257, guid: e9222978b50fc478bac2042c170d401a, type: 3}
+  - name: monk_idle
+    frames:
+    - {fileID: 4723107735738678597, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
+    - {fileID: -7385789195546760866, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
+    - {fileID: 3234629978573100161, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
+    - {fileID: 6373048116405451881, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
+    - {fileID: 7264182050183361747, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
+    - {fileID: -2834552850196481573, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
+  - name: monk_heal
+    frames:
+    - {fileID: 2903848411162822477, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: -893675218100121079, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: 2928916444087662039, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: -1398132742003509683, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: 5238786112167760410, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: -2599149563224560162, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: 5951998098815178954, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: -7882718956405584606, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: 2725092365876084024, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: 992378399082110112, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+    - {fileID: 2421232261252437877, guid: a182e0e943b8d43d28dd037a779558e8, type: 3}
+  - name: heal_fx
+    frames:
+    - {fileID: -7024647307699674525, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 5961021751012434444, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 4245197819410898624, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: -4178271230150291121, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 8633989232224805090, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 3027786467292887404, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: -6516564901735614582, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 5558680185361507994, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 7906872027508097994, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: 1076212263093357779, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+    - {fileID: -6975476344276479993, guid: 104b54f3748eb417ea1085bf0eafaf1f, type: 3}
+  - name: rally_pole
+    frames:
+    - {fileID: 21300122, guid: 7810966f0f690954c87305933cabf2b0, type: 3}
+  - name: rally_banner
+    frames:
+    - {fileID: 21300124, guid: 7810966f0f690954c87305933cabf2b0, type: 3}
   - name: unit_shadow
     frames:
     - {fileID: 21300000, guid: 0d08322cf406f4512bdf8ddfaac15258, type: 3}

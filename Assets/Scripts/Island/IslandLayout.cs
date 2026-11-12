@@ -87,7 +87,7 @@ public static class IslandLayout
 
     // ==================== KALE VE BİNALAR (hazır köy, §14) ====================
 
-    public enum BuildingKind { Castle, House, Lumber, Pasture, Archery, Tower }
+    public enum BuildingKind { Castle, House, Lumber, Pasture, Archery, Tower, Barracks, Monastery }
 
     /// <summary>Bina ayak izi: sol-üst hücre (col, row) ve boyut; ayak çizgisi alt kenar.</summary>
     public struct BuildingSpot
@@ -324,6 +324,43 @@ public static class IslandLayout
         var path = PathBetween(fromPost, toPost);
         for (int i = 1; i < path.Count; i++) length += Vector2.Distance(path[i - 1], path[i]);
         return Mathf.Max(Progression.Island.MinPostSwitch, length / Progression.Island.ArcherRunSpeed);
+    }
+
+    // ==================== KIŞLA BAYRAĞI (Faz E1, §7.5) ====================
+
+    /// <summary>Toplanma bayrağının konabileceği merdivenler: 0 = S1 (zirve; her yol buradan geçer), 1 = S2 (batı), 2 = S3 (doğu).</summary>
+    public static readonly Vector2[] FlagPoints =
+    {
+        World(15.5f, 8.2f),   // S1
+        World(3.5f, 14.0f),   // S2
+        World(18.5f, 14.0f),  // S3
+    };
+
+    public static string FlagName(int index)
+    {
+        switch (index)
+        {
+            case 1: return L.T("S2 batı (A, C yolu)", "S2 west (A, C route)");
+            case 2: return L.T("S3 doğu (B, D yolu)", "S3 east (B, D route)");
+            default: return L.T("S1 zirve (her yol)", "S1 summit (every route)");
+        }
+    }
+
+    public static string FlagShortName(int index) => index == 1 ? "S2" : index == 2 ? "S3" : "S1";
+
+    /// <summary>Bayrak noktası bu kumsalın yürüyüş şeridine <see cref="Progression.Island.FlagRouteRadius"/> içinde mi (baskın formülü "bayrak yolda").</summary>
+    public static bool FlagOnRoute(int flag, int beach)
+    {
+        flag = Mathf.Clamp(flag, 0, FlagPoints.Length - 1);
+        var path = Beaches[Mathf.Clamp(beach, 0, Beaches.Length - 1)].walkPath;
+        Vector2 p = FlagPoints[flag];
+        for (int i = 0; i + 1 < path.Length; i++)
+        {
+            Vector2 a = path[i], b = path[i + 1], ab = b - a;
+            float t = ab.sqrMagnitude < 1e-6f ? 0f : Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+            if (Vector2.Distance(p, a + ab * t) <= Progression.Island.FlagRouteRadius) return true;
+        }
+        return false;
     }
 
     // ==================== BÖLGELER (bulut altında başlar; §4 tablosu) ====================

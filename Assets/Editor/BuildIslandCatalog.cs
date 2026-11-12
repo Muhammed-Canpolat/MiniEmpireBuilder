@@ -112,6 +112,18 @@ public static class BuildIslandCatalog
         Add("lancer_run", Frames($"{lancer}/Lancer_Run.png", missing));
         Add("lancer_attack", Frames($"{lancer}/Lancer_Right_Attack.png", missing));
         Add("lancer_defence", Frames($"{lancer}/Lancer_Right_Defence.png", missing));
+        // Faz E1: Kışla'nın mavi Lancer'ı, Manastır'ın Monk'u + şifa efekti, Kışla toplanma bayrağı (Kenney mavi yelken)
+        string blueLancer = $"{Root}/Units/Blue Units/Lancer";
+        Add("blue_lancer_idle", Frames($"{blueLancer}/Lancer_Idle.png", missing));
+        Add("blue_lancer_run", Frames($"{blueLancer}/Lancer_Run.png", missing));
+        Add("blue_lancer_attack", Frames($"{blueLancer}/Lancer_Right_Attack.png", missing));
+        string monk = $"{Root}/Units/Blue Units/Monk";
+        Add("monk_idle", Frames($"{monk}/Idle.png", missing));
+        Add("monk_heal", Frames($"{monk}/Heal.png", missing));
+        Add("heal_fx", Frames($"{Root}/Units/Extra/Heal Effect/Heal_Effect.png", missing));
+        const string cainosProps = "Assets/Cainos/Pixel Art Platformer - Village Props/Texture/TX Village Props.png";
+        Add("rally_pole", new[] { NamedSprite(cainosProps, "TX Village Props - Banner Pillar", missing) });
+        Add("rally_banner", new[] { NamedSprite(cainosProps, "TX Village Props - Banner", missing) });
         Add("unit_shadow", new[] { First($"{Root}/Terrain/Tileset/Shadow.png", missing) });
 
         string sheep = $"{Root}/Pawn and Resources/Meat/Sheep";
@@ -249,6 +261,14 @@ public static class BuildIslandCatalog
         var frames = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().OrderBy(Order).ToArray();
         if (frames.Length == 0) missing.Add(path);
         return frames;
+    }
+
+    /// <summary>Çok-dilimli bir dokudan adıyla tek sprite (Cainos Village Props).</summary>
+    private static Sprite NamedSprite(string path, string spriteName, List<string> missing)
+    {
+        var sprite = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault(s => s.name == spriteName);
+        if (sprite == null) missing.Add(path + "#" + spriteName);
+        return sprite;
     }
 
     /// <summary>"Ad_12" gibi son sayıya göre doğal sıra (Ad_2 &lt; Ad_10).</summary>

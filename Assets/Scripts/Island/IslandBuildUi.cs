@@ -91,12 +91,13 @@ public sealed class IslandBuildUi
     private static readonly IslandLayout.BuildingKind[] MenuKinds =
     {
         IslandLayout.BuildingKind.House, IslandLayout.BuildingKind.Lumber, IslandLayout.BuildingKind.Pasture,
-        IslandLayout.BuildingKind.Tower, IslandLayout.BuildingKind.Archery,
+        IslandLayout.BuildingKind.Tower, IslandLayout.BuildingKind.Barracks, IslandLayout.BuildingKind.Monastery,
+        IslandLayout.BuildingKind.Archery,
     };
 
     private void BuildMenu()
     {
-        var panel = NineSlice(safe, "BuildMenu", new Vector2(0.03f, 0.04f), new Vector2(0.97f, 0.66f), Vector2.zero, Vector2.zero, "ui_paper", Color.white, 2.4f);
+        var panel = NineSlice(safe, "BuildMenu", new Vector2(0.03f, 0.04f), new Vector2(0.97f, 0.80f), Vector2.zero, Vector2.zero, "ui_paper", Color.white, 2.4f);
         panel.raycastTarget = true;
         menuRoot = panel.gameObject;
         var ribbon = NineSlice(panel.transform, "Ribbon", new Vector2(0.1f, 1f), new Vector2(0.9f, 1f), new Vector2(0, -34), new Vector2(0, 20), "ui_ribbon", Color.white, 3f);
@@ -162,6 +163,21 @@ public sealed class IslandBuildUi
         }
     }
 
+    /// <summary>Bölgenin getirdiği (§4): oyuncuya "neden açayım" cevabı.</summary>
+    public static string ZoneBenefit(int zone)
+    {
+        switch (zone)
+        {
+            case 1: return L.T("Doğu kıyısında yeni ağaç, çayır ve yer; B kumsalı da buradan çıkar.", "New trees, meadow and room on the east shore; beach B lands here.");
+            case 2: return L.T("Güneybatı koyunda ağaç ve geniş yer; C kumsalı burası.", "Trees and room in the southwest cove; beach C lands here.");
+            case 3: return L.T($"Altın Damarı: Ana Üs'e saatte {Progression.Island.GoldVeinPerHour(IslandEconomy.Keep):0} altın (8 saat depo). Dokunup topla.",
+                $"Gold Vein: {Progression.Island.GoldVeinPerHour(IslandEconomy.Keep):0} Main Base gold per hour (8 h storage). Tap to collect.");
+            case 4: return L.T("Güneydoğu koyunda yeni ağaç ve yer; D kumsalı burası.", "New trees and room in the southeast cove; beach D lands here.");
+            case 5: return L.T("Orta çayır: Ağıl üretimi +%15 ve güney çayırında yeni yer.", "Middle meadow: Pasture output +15% and room in the south meadow.");
+            default: return "";
+        }
+    }
+
     private static int NextZone()
     {
         var save = IslandSession.Save;
@@ -184,6 +200,10 @@ public sealed class IslandBuildUi
         var save = IslandSession.Save;
         if (save == null) return L.T("Kayıt yok", "No save");
         if (kind == IslandLayout.BuildingKind.Archery) return L.T("Okçuluk Alanı hazır kurulu; taşınabilir", "The archery range is ready; it can be moved");
+        if (kind == IslandLayout.BuildingKind.Barracks && IslandEconomy.Keep < Progression.Island.BarracksKeep)
+            return L.T($"Kışla Kıyı Kalesi {Progression.Island.BarracksKeep}'te açılır", $"Barracks unlock at Keep {Progression.Island.BarracksKeep}");
+        if (kind == IslandLayout.BuildingKind.Monastery && IslandEconomy.Keep < Progression.Island.MonasteryKeep)
+            return L.T($"Manastır Kıyı Kalesi {Progression.Island.MonasteryKeep}'te açılır", $"Monastery unlocks at Keep {Progression.Island.MonasteryKeep}");
         int have = IslandEconomy.CountOf(kind), max = Progression.Island.MaxCount(kind, IslandEconomy.Keep);
         if (have >= max) return L.T($"Adet doldu ({have}/{max})", $"Limit reached ({have}/{max})");
         if (IslandEconomy.InDefense) return L.T("Savaşta inşa yapılamaz", "Cannot build during defense");
@@ -212,7 +232,7 @@ public sealed class IslandBuildUi
         if (zone <= 0)
         {
             zoneTitle.text = L.T("Yeni bölge", "New zone");
-            zoneInfo.text = L.T("Sıradaki bölgeler sonraki güncellemede açılır.", "More zones open in a later update.");
+            zoneInfo.text = L.T("Tüm bölgeler keşfedildi.", "All zones explored.");
             zoneState.text = "";
         }
         else
@@ -234,6 +254,8 @@ public sealed class IslandBuildUi
             case IslandLayout.BuildingKind.Lumber: return L.T("Odun üretir; yakında ağaç ister", "Makes Wood; needs trees nearby");
             case IslandLayout.BuildingKind.Pasture: return L.T("Et üretir (kıt); çayır ister", "Makes Meat (scarce); needs meadow");
             case IslandLayout.BuildingKind.Tower: return L.T("Savunma; adacığa da kurulur", "Defense; also fits on islets");
+            case IslandLayout.BuildingKind.Barracks: return L.T("Lancer'lar bayrağı korur", "Lancers guard the flag");
+            case IslandLayout.BuildingKind.Monastery: return L.T("Şifa verir; onarım ×0,5", "Heals allies; repairs x0.5");
             default: return L.T("Hazır kurulu", "Ready-made");
         }
     }
@@ -339,7 +361,7 @@ public sealed class IslandBuildUi
 
     private enum PrimaryAction { None, Upgrade, Explore, Akin }
     private PrimaryAction primaryAction;
-    private enum TertiaryAction { None, Collect, FinishNow }
+    private enum TertiaryAction { None, Collect, FinishNow, Flag }
     private TertiaryAction tertiaryAction;
     private bool secondaryIsMove;
 
@@ -415,6 +437,13 @@ public sealed class IslandBuildUi
             tertiaryOn = true;
         }
 
+        if (!taskHere && !building && kind == IslandLayout.BuildingKind.Barracks && !IslandEconomy.InDefense)
+        {
+            int next = ((save != null ? save.flagStair : 0) + 1) % IslandLayout.FlagPoints.Length;
+            tertiaryAction = TertiaryAction.Flag;
+            tertiaryText = L.T($"BAYRAK → {IslandLayout.FlagShortName(next)}", $"FLAG → {IslandLayout.FlagShortName(next)}");
+            tertiaryOn = true;
+        }
         if (building) { SetCost(0, 0, null, false); SetButtons(null, false, null, false, tertiaryText, tertiaryOn); return; }
 
         string blocked = IslandEconomy.UpgradeBlockedReason(entry);
@@ -481,6 +510,22 @@ public sealed class IslandBuildUi
                 body.AppendLine(L.T($"Savaş canı {Progression.Island.StructureHp("Tower", level):0}", $"Battle HP {Progression.Island.StructureHp("Tower", level):0}"));
                 break;
             }
+            case IslandLayout.BuildingKind.Barracks:
+            {
+                int stair = save != null ? save.flagStair : 0;
+                body.AppendLine(L.T($"{Progression.Island.LancerCount(level)} Lancer · can {Progression.Island.LancerHp(level):0} · hasar {Progression.Island.LancerDamage(level):0.#}/sn",
+                    $"{Progression.Island.LancerCount(level)} Lancer(s) · HP {Progression.Island.LancerHp(level):0} · damage {Progression.Island.LancerDamage(level):0.#}/s"));
+                body.AppendLine(L.T($"Bayrak: {IslandLayout.FlagName(stair)}", $"Flag: {IslandLayout.FlagName(stair)}"));
+                body.AppendLine(L.T($"Bina canı {Progression.Island.StructureHp("Barracks", level):0} · Lancer {Progression.Island.LancerRespawn:0} sn'de döner",
+                    $"Building HP {Progression.Island.StructureHp("Barracks", level):0} · Lancer back in {Progression.Island.LancerRespawn:0} s"));
+                break;
+            }
+            case IslandLayout.BuildingKind.Monastery:
+                body.AppendLine(L.T($"Her {Progression.Island.MonkHealInterval:0} sn'de {Progression.Island.MonkHealRadius:0} u içine %{Progression.Island.MonkHealFraction * 100f:0} can",
+                    $"Heals {Progression.Island.MonkHealFraction * 100f:0}% every {Progression.Island.MonkHealInterval:0} s within {Progression.Island.MonkHealRadius:0} u"));
+                body.AppendLine(L.T("Binaların onarım süresi ×0,5", "Building repair time x0.5"));
+                body.AppendLine(L.T($"Savaş canı {Progression.Island.StructureHp("Monastery", level):0}", $"Battle HP {Progression.Island.StructureHp("Monastery", level):0}"));
+                break;
             default:
                 body.AppendLine(L.T($"Okçu Kaptan Sv {IslandSession.ArcherLevel()}", $"Archer Captain Lv {IslandSession.ArcherLevel()}"));
                 body.AppendLine(L.T($"Savaş canı {Progression.Island.StructureHp("Archery", level):0}", $"Battle HP {Progression.Island.StructureHp("Archery", level):0}"));
@@ -547,8 +592,8 @@ public sealed class IslandBuildUi
         var task = save.task;
         bool here = task != null && task.Active && task.kind == "zone" && task.zone == zone;
         bool open = IslandGrid.ZoneOpen(zone, save.zoneMask);
-        panelBody.text = open ? L.T("Bölge açık.", "Zone is open.")
-            : L.T("Bulutların altında: yeni ağaç, çayır ve alan getirir; yeni bir çıkarma kumsalı da demektir.", "Hidden under clouds: brings trees, meadow and space, and possibly a new landing beach.");
+        panelBody.text = open ? L.T("Bölge açık. ", "Zone is open. ") + ZoneBenefit(zone)
+            : L.T("Bulutların altında: ", "Hidden under clouds: ") + ZoneBenefit(zone);
         panelNote.text = "";
         primaryAction = PrimaryAction.None; tertiaryAction = TertiaryAction.None;
         secondaryIsMove = false;
@@ -632,6 +677,15 @@ public sealed class IslandBuildUi
             {
                 if (!IslandEconomy.TryFinishNow(out string reason)) { Toast?.Invoke(reason); return; }
                 Close();
+                break;
+            }
+            case TertiaryAction.Flag:
+            {
+                var village = IslandVillage.Instance;
+                if (village == null) return;
+                int stair = village.CycleFlag();
+                Toast?.Invoke(L.T($"Bayrak: {IslandLayout.FlagName(stair)}", $"Flag: {IslandLayout.FlagName(stair)}"));
+                RefreshPanel();
                 break;
             }
         }

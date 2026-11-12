@@ -665,6 +665,8 @@ public sealed class IslandHud : MonoBehaviour
             case IslandLayout.BuildingKind.Pasture: return L.T("Ağıl", "Pasture");
             case IslandLayout.BuildingKind.Archery: return L.T("Okçuluk", "Archery");
             case IslandLayout.BuildingKind.Tower: return L.T("Kule", "Tower");
+            case IslandLayout.BuildingKind.Barracks: return L.T("Kışla", "Barracks");
+            case IslandLayout.BuildingKind.Monastery: return L.T("Manastır", "Monastery");
             default: return L.T("Kale", "Keep");
         }
     }

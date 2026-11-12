@@ -30,7 +30,11 @@ public sealed class IslandVillage : MonoBehaviour
     private readonly Dictionary<string, Site> sites = new Dictionary<string, Site>();
     private readonly Dictionary<string, Pile> piles = new Dictionary<string, Pile>();
     private IslandPawn builderPawn;
+    private IslandRallyFlag flag;
+    private Pile veinPile;
     private float nextTick;
+    /// <summary>Altın Damarı yığını konumu (altın taşlarının önü; ayak, dünya).</summary>
+    private static readonly Vector2 VeinPileCenter = IslandLayout.World(16.3f, 10.7f);
     private Marker marker;
 
     private sealed class Site { public GameObject go; public SpriteRenderer sr; public IslandLayout.BuildingSpot spot; }
@@ -55,6 +59,8 @@ public sealed class IslandVillage : MonoBehaviour
             case IslandLayout.BuildingKind.Lumber: return "building_house2";
             case IslandLayout.BuildingKind.Pasture: return "building_house3";
             case IslandLayout.BuildingKind.Archery: return "building_archery";
+            case IslandLayout.BuildingKind.Barracks: return "building_barracks";
+            case IslandLayout.BuildingKind.Monastery: return "building_monastery";
             default: return "building_tower";
         }
     }
@@ -68,6 +74,8 @@ public sealed class IslandVillage : MonoBehaviour
             case IslandLayout.BuildingKind.Lumber: return 77f;
             case IslandLayout.BuildingKind.Pasture: return 70f;
             case IslandLayout.BuildingKind.Archery: return 104f;
+            case IslandLayout.BuildingKind.Barracks: return 109f;     // sprite 192×256, alt kenar merkezden 117 px aşağıda
+            case IslandLayout.BuildingKind.Monastery: return 142f;    // sprite 192×320, alt kenar 150 px
             default: return 94f;
         }
     }
@@ -81,6 +89,8 @@ public sealed class IslandVillage : MonoBehaviour
             case IslandLayout.BuildingKind.Lumber: return "LumberCamp";
             case IslandLayout.BuildingKind.Pasture: return "Pasture";
             case IslandLayout.BuildingKind.Archery: return "ArcheryRange";
+            case IslandLayout.BuildingKind.Barracks: return "Barracks";
+            case IslandLayout.BuildingKind.Monastery: return "Monastery";
             default: return "WatchTower";
         }
     }
@@ -93,6 +103,8 @@ public sealed class IslandVillage : MonoBehaviour
             case IslandLayout.BuildingKind.Lumber: return L.T("Oduncu Kampı", "Lumber Camp");
             case IslandLayout.BuildingKind.Pasture: return L.T("Ağıl", "Pasture");
             case IslandLayout.BuildingKind.Archery: return L.T("Okçuluk Alanı", "Archery Range");
+            case IslandLayout.BuildingKind.Barracks: return L.T("Kışla", "Barracks");
+            case IslandLayout.BuildingKind.Monastery: return L.T("Manastır", "Monastery");
             case IslandLayout.BuildingKind.Tower: return L.T("Gözcü Kulesi", "Watch Tower");
             default: return L.T("Kıyı Kalesi", "Coastal Keep");
         }
@@ -138,7 +150,40 @@ public sealed class IslandVillage : MonoBehaviour
 
         BuildSheep();
         RebuildPawns();
+        RefreshFlag();
         RefreshPiles(true);
+    }
+
+    // ==================== KIŞLA BAYRAĞI (Faz E1) ====================
+
+    public IslandRallyFlag Flag => flag;
+
+    /// <summary>Tamamlanmış Kışla varsa bayrak durur (kayıttaki merdivende); yoksa kaldırılır.</summary>
+    public void RefreshFlag()
+    {
+        var save = IslandSession.Save;
+        bool has = save != null && IslandEconomy.CompletedOf(IslandLayout.BuildingKind.Barracks, save.placed) != null;
+        if (has && flag == null) flag = IslandRallyFlag.Create(villageRoot, save.flagStair);
+        else if (!has && flag != null) { Destroy(flag.gameObject); flag = null; }
+    }
+
+    /// <summary>Bayrağı sıradaki merdivene taşır (S1 → S2 → S3 → S1). Yeni merdiven indeksini döndürür.</summary>
+    public int CycleFlag()
+    {
+        var save = IslandSession.Save;
+        if (save == null) return 0;
+        return SetFlag((save.flagStair + 1) % IslandLayout.FlagPoints.Length);
+    }
+
+    public int SetFlag(int stair)
+    {
+        var save = IslandSession.Save;
+        if (save == null) return 0;
+        save.flagStair = Mathf.Clamp(stair, 0, IslandLayout.FlagPoints.Length - 1);
+        GameManager.Instance?.SaveGame();
+        RefreshFlag();
+        if (flag != null) flag.SetStair(save.flagStair, true);
+        return save.flagStair;
     }
 
     private SpriteRenderer MakeRenderer(IslandLayout.BuildingSpot spot, string objectName, int bias)
@@ -210,9 +255,9 @@ public sealed class IslandVillage : MonoBehaviour
         int idle = Mathf.Min(3, Mathf.Max(0, IslandEconomy.PawnPool(save.placed) - used));
         for (int i = 0; i < idle; i++)
             IslandPawn.Create(workersRoot, catalog, IslandPawn.Job.Idler, keepDoor + new Vector2(1.2f + i * 0.9f, -0.1f));
-        if (setup != null && setup.KeepOverride > 0)
+        if (setup != null && setup.KeepOverride > 0 || IslandEconomy.VeinOpen(save))
         {
-            // "Tüm bölgeler açık" geliştirici görünümü: Z3 Altın Damarı Faz E'dedir; yalnız bu görünümde madenci gösterilir.
+            // Altın Damarı (Z3, Faz E1) açıkken madenci altın taşını kazar (havuzdan düşmez); "tüm bölgeler açık" görünümünde de görünür.
             var stone = IslandLayout.GoldStones[0];
             var route = new[]
             {
@@ -262,6 +307,7 @@ public sealed class IslandVillage : MonoBehaviour
     {
         var save = IslandSession.Save;
         if (save == null) return;
+        RefreshVeinPile(save, instant);
         var alive = new HashSet<string>();
         foreach (var entry in save.placed)
         {
@@ -290,6 +336,60 @@ public sealed class IslandVillage : MonoBehaviour
         }
         foreach (var id in new List<string>(piles.Keys))
             if (!alive.Contains(id)) { if (piles[id].root != null) Destroy(piles[id].root.gameObject); piles.Remove(id); }
+    }
+
+    /// <summary>Altın Damarı yığını (0–6 altın simgesi): Z3 açıkken depo doluluğuna göre; dokununca Ana Üs altınına eklenir.</summary>
+    private void RefreshVeinPile(IslandSaveData save, bool instant)
+    {
+        var catalog = IslandVisualCatalog.Instance;
+        if (veinPile == null)
+        {
+            veinPile = new Pile { root = new GameObject("Pile_GoldVein").transform, icons = new SpriteRenderer[6] };
+            veinPile.root.SetParent(pilesRoot, false);
+            veinPile.center = VeinPileCenter;
+            veinPile.root.position = new Vector3(VeinPileCenter.x, VeinPileCenter.y, 0f);
+            Vector2[] offsets = { new Vector2(-0.34f, 0f), new Vector2(0f, 0.02f), new Vector2(0.34f, 0f), new Vector2(-0.17f, 0.3f), new Vector2(0.17f, 0.3f), new Vector2(0f, 0.58f) };
+            for (int i = 0; i < 6; i++)
+            {
+                var go = new GameObject("Icon" + i);
+                go.transform.SetParent(veinPile.root, false);
+                go.transform.localPosition = offsets[i];
+                go.transform.localScale = Vector3.one * 0.8f;
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = catalog != null ? catalog.Single("gold_icon") : null;
+                veinPile.icons[i] = sr;
+                go.SetActive(false);
+            }
+        }
+        int count = IslandEconomy.VeinPileCount(save, keep);
+        for (int i = 0; i < veinPile.icons.Length; i++)
+        {
+            bool on = i < count;
+            var go = veinPile.icons[i].gameObject;
+            if (go.activeSelf != on)
+            {
+                go.SetActive(on);
+                if (on && !instant)
+                {
+                    go.transform.localScale = Vector3.one * 0.2f;
+                    go.transform.DOScale(0.8f, 0.25f).SetEase(Ease.OutBack).SetLink(go);
+                }
+            }
+            veinPile.icons[i].sortingOrder = IslandYSort.OrderFor(VeinPileCenter.y, 60) + i;
+        }
+        veinPile.shown = count;
+    }
+
+    public int VeinPileShown => veinPile != null ? veinPile.shown : 0;
+
+    private void CollectVein()
+    {
+        int amount = IslandEconomy.CollectVein();
+        if (amount <= 0) { Toast?.Invoke(L.T("Damarda henüz altın yok", "No gold in the vein yet")); return; }
+        Toast?.Invoke(L.T($"+{amount} altın (Ana Üs)", $"+{amount} gold (Main Base)"));
+        var catalog = IslandVisualCatalog.Instance;
+        FlyIcon(catalog != null ? catalog.Single("gold_icon") : null, VeinPileCenter);
+        RefreshVeinPile(IslandSession.Save, false);
     }
 
     /// <summary>Yığın simgesi sayısı (testler/ekran görüntüsü).</summary>
@@ -335,6 +435,13 @@ public sealed class IslandVillage : MonoBehaviour
             var pile = pair.Value;
             if (pile.shown <= 0 || pile.root == null) continue;
             if (Vector2.Distance(world, pile.center + Vector2.up * 0.3f) < 0.85f) { Collect(pair.Key); return true; }
+        }
+        if (veinPile != null && veinPile.shown > 0 && Vector2.Distance(world, VeinPileCenter + Vector2.up * 0.3f) < 0.95f) { CollectVein(); return true; }
+        if (flag != null && flag.Hit(world))
+        {
+            int stair = CycleFlag();
+            Toast?.Invoke(L.T($"Bayrak: {IslandLayout.FlagName(stair)}", $"Flag: {IslandLayout.FlagName(stair)}"));
+            return true;
         }
         string best = null;
         float bestArea = float.MaxValue;
@@ -487,6 +594,7 @@ public sealed class IslandVillage : MonoBehaviour
         {
             setup.DisperseZone(task.zone);
             Toast?.Invoke(L.T($"{ZoneName(task.zone)} açıldı!", $"{ZoneName(task.zone)} revealed!"));
+            if (task.zone == Progression.Island.VeinZone) RebuildPawns();   // madenci damara gelir
         }
         else
         {
@@ -506,6 +614,7 @@ public sealed class IslandVillage : MonoBehaviour
                     : L.T($"{name} Sv {entry.level}", $"{name} Lv {entry.level}"));
             }
             RebuildPawns();
+            RefreshFlag();
         }
         RefreshPiles(true);
         UpdateTaskVisuals(true);

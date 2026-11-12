@@ -254,8 +254,12 @@ public static class IslandEconomy
     {
         var kind = KindOf(b);
         int slots = Mathf.Max(1, Progression.Island.Slots(kind, b.level));
-        return FullRate(b) * Mathf.Clamp01(workers / (float)slots) * NatureFactor(b, zoneMask) * PastureOrderMult(b, placed);
+        return FullRate(b) * Mathf.Clamp01(workers / (float)slots) * NatureFactor(b, zoneMask) * PastureOrderMult(b, placed) * MeadowBonusMult(b, zoneMask);
     }
+
+    /// <summary>Orta Çayır (Z5) açıkken Ağıl üretimi +%15 (§4, §6; <see cref="Progression.Island.MeadowBonus"/>).</summary>
+    public static float MeadowBonusMult(IslandPlacedBuilding b, int zoneMask) =>
+        KindOf(b) == IslandLayout.BuildingKind.Pasture && IslandGrid.ZoneOpen(Progression.Island.MeadowZone, zoneMask) ? 1f + Progression.Island.MeadowBonus : 1f;
 
     /// <summary>Bina deposu: 8 sa tam kadro üretim (doğa kısıtı depoyu küçültmez).</summary>
     public static float Capacity(IslandPlacedBuilding b) => FullRate(b) * Progression.Island.ProducerStorageHours;
@@ -276,7 +280,64 @@ public static class IslandEconomy
             b.stock = Mathf.Min(Capacity(b), b.stock + produced);
             b.lastTick = now;
         }
+        AccumulateVein(save, now);
     }
+
+    // ==================== ALTIN DAMARI (Z3, Faz E1: §5, §6) ====================
+
+    /// <summary>Altın Damarı Z3 açılınca çalışır (doğa nesnesi: kurulmaz, yükseltilmez; seviye = Kıyı Kalesi).</summary>
+    public static bool VeinOpen(IslandSaveData save) => save != null && IslandGrid.ZoneOpen(Progression.Island.VeinZone, save.zoneMask);
+
+    public static float VeinRate(int keep) => Progression.Island.GoldVeinPerHour(keep);
+
+    /// <summary>Damar deposu: 8 sa üretim (toplamak için dokunulur). Madenci piyon havuzdan düşmez (sapma, §20).</summary>
+    public static float VeinCapacity(int keep) => VeinRate(keep) * Progression.Island.ProducerStorageHours;
+
+    /// <summary>Damar stokunu <paramref name="now"/> anına getirir (çevrimdışı dahil, 8 sa tavan). Z3 kapalıysa hiçbir şey yapmaz.</summary>
+    public static void AccumulateVein(IslandSaveData save, long now)
+    {
+        if (save == null) return;
+        if (!VeinOpen(save)) { save.veinTick = 0; return; }
+        if (save.veinTick <= 0 || save.veinTick > now) { save.veinTick = now; return; }
+        double hours = (now - save.veinTick) / (double)TimeSpan.TicksPerHour;
+        int keep = Mathf.Max(1, Progression.Island.EffectiveKeepLevel(save.keepLevel, IslandSession.MainBaseLevel));
+        save.veinStock = Mathf.Min(VeinCapacity(keep), save.veinStock + VeinRate(keep) * (float)hours);
+        save.veinTick = now;
+    }
+
+    /// <summary>Damardaki altını Ana Üs altınına ekler (toplanmamış stok). Eklenen miktarı döndürür.</summary>
+    public static int CollectVein()
+    {
+        var save = Save;
+        if (save == null || !VeinOpen(save)) return 0;
+        AccumulateVein(save, Now);
+        int amount = Mathf.FloorToInt(save.veinStock);
+        if (amount <= 0) return 0;
+        save.veinStock -= amount;
+        GameManager.Instance?.AddGold(amount);
+        GameManager.Instance?.SaveGame();
+        return amount;
+    }
+
+    /// <summary>Yığın simgesi sayısı 0–6 (depo doluluğu; 1 altının altı 0).</summary>
+    public static int VeinPileCount(IslandSaveData save, int keep)
+    {
+        if (save == null || !VeinOpen(save) || save.veinStock < 1f) return 0;
+        return Mathf.Clamp(Mathf.CeilToInt(save.veinStock / Mathf.Max(1f, VeinCapacity(keep)) * 6f - 0.001f), 1, 6);
+    }
+
+    // ==================== KIŞLA / MANASTIR SORGULARI (Faz E1) ====================
+
+    /// <summary>Tamamlanmış (level ≥ 1) ilk bina bu türde mi; yoksa null.</summary>
+    public static IslandPlacedBuilding CompletedOf(IslandLayout.BuildingKind kind, IList<IslandPlacedBuilding> placed = null)
+    {
+        foreach (var b in placed ?? Save?.placed)
+            if (b != null && b.level >= 1 && b.kind == kind.ToString()) return b;
+        return null;
+    }
+
+    /// <summary>Tamamlanmış bir Manastır var mı (onarım süresi ×0,5, §7.7).</summary>
+    public static bool HasMonastery() => Save != null && CompletedOf(IslandLayout.BuildingKind.Monastery, Save.placed) != null;
 
     /// <summary>Yığındaki 0–6 simge sayısı (doluluk oranı; stok 1'in altındaysa 0).</summary>
     public static int PileCount(IslandPlacedBuilding b)
@@ -447,7 +508,10 @@ public static class IslandEconomy
             {
                 case "build": if (entry != null) { entry.level = 1; entry.lastTick = task.endTicks; } break;
                 case "upgrade": if (entry != null) entry.level = Mathf.Max(entry.level, done.targetLevel); break;
-                case "zone": save.zoneMask |= 1 << done.zone; break;
+                case "zone":
+                    save.zoneMask |= 1 << done.zone;
+                    if (done.zone == Progression.Island.VeinZone) { save.veinTick = task.endTicks; save.veinStock = 0f; }   // damar bu andan çalışır
+                    break;
             }
             save.task = new IslandBuilderTask();
             GameManager.Instance?.SaveGame();

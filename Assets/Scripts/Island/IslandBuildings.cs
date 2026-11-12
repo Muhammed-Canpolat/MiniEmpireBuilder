@@ -26,6 +26,8 @@ public sealed class IslandBuilding : MonoBehaviour
     public long RepairEndTicks { get; private set; }
     public bool IsCastle => Kind == IslandLayout.BuildingKind.Castle;
     public bool IsTower => Kind == IslandLayout.BuildingKind.Tower;
+    public bool IsBarracks => Kind == IslandLayout.BuildingKind.Barracks;
+    public bool IsMonastery => Kind == IslandLayout.BuildingKind.Monastery;
     public bool IsProduction => Kind == IslandLayout.BuildingKind.House || Kind == IslandLayout.BuildingKind.Lumber
         || Kind == IslandLayout.BuildingKind.Pasture;
     public bool Ruined => Structure == null || Structure.IsDestroyed;
@@ -90,6 +92,8 @@ public sealed class IslandBuilding : MonoBehaviour
         structure.Destroyed += building.OnCollapsed;
         building.Structure = structure;
         if (building.IsTower) go.AddComponent<IslandTower>();
+        if (building.IsBarracks) go.AddComponent<IslandBarracks>();     // Faz E1: savaşta Lancer doğurur
+        if (building.IsMonastery) go.AddComponent<IslandMonastery>();   // Faz E1: Monk şifa verir
         IslandRepair.Apply(building);
         return building;
     }
@@ -141,7 +145,7 @@ public sealed class IslandBuilding : MonoBehaviour
         if (fraction >= 0.999f && !UnderRepair) return;
         if (fraction >= 0.999f) { FinishRepair(false); return; }
         bool destroyed = fraction <= 0f;
-        float seconds = Progression.Island.RepairSeconds(1f - fraction, destroyed, false);
+        float seconds = Progression.Island.RepairSeconds(1f - fraction, destroyed, IslandEconomy.HasMonastery());   // Faz E1: Manastır ×0,5
         RepairEndTicks = IslandRepair.Now + (long)(seconds * TimeSpan.TicksPerSecond);
         savedFraction = fraction;
         if (destroyed) SetRuinVisual(true);

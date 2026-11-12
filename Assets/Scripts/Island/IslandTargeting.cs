@@ -32,6 +32,22 @@ public static class IslandTargeting
     private static Result Of(IslandBuilding building) =>
         new Result { target = building.transform, point = building.Center, radius = building.Radius };
 
+    /// <summary>Faz E1: yakın dövüşçüyü tutan en yakın Kışla Lancer'ı (yoksa boş sonuç).</summary>
+    private static Result NearLancer(Vector2 position, float radius)
+    {
+        var none = new Result();
+        float best = radius;
+        foreach (var lancer in IslandLancer.All)
+        {
+            if (lancer == null || !lancer.Alive) continue;
+            float d = Vector2.Distance(position, lancer.Position);
+            if (d >= best) continue;
+            best = d;
+            none = new Result { target = lancer.transform, point = lancer.Position, radius = 0.4f };
+        }
+        return none;
+    }
+
     public static Result Pick(EnemyType type, Vector2 position, Transform castle, float attackRange)
     {
         var none = new Result();
@@ -45,7 +61,7 @@ public static class IslandTargeting
                 return none;   // kaleye düz çizgi (v1 varsayılanı)
             }
             case Role.Tank:
-                return none;   // yalnız kale
+                return NearLancer(position, Progression.Island.LancerBlockAggro);   // yalnız kale; Lancer yolunu keserse onu vurur (§7.5)
             case Role.Ranged:
             {
                 // 5 u içine giren ilk kule ya da okçu (adacık kulesi dahil)
@@ -80,7 +96,9 @@ public static class IslandTargeting
             }
             default:
             {
-                // Yakın: şeritteki 1,5 u içindeki bina
+                // Yakın: şeritteki 1,5 u içindeki Lancer (önce) ya da bina
+                var lancerHit = NearLancer(position, Progression.Island.LancerAggro);
+                if (lancerHit.target != null) return lancerHit;
                 Result best = none;
                 float bestDistance = Progression.Island.LaneAggroRadius;
                 foreach (var building in IslandBuilding.All)
