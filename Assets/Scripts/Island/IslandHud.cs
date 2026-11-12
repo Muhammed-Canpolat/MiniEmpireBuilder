@@ -220,8 +220,12 @@ public sealed class IslandHud : MonoBehaviour
         button.transition = Selectable.Transition.None;
         image.gameObject.AddComponent<ReferenceButtonPress>();
         text = ReferenceUiVisuals.Text(image.transform, "Label", label, 12, Color.white, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(2, 4), new Vector2(-2, -4), true);
+            Vector2.zero, Vector2.one, new Vector2(8, 8), new Vector2(-8, -10), true);
         text.textWrappingMode = TextWrappingModes.Normal;
+        // Düğme kenarına taşmasın: uzun etiket ("OTO KAPALI", "HARİTA") küçülür.
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 7f;
+        text.fontSizeMax = 12f;
         return button;
     }
 
@@ -457,7 +461,7 @@ public sealed class IslandHud : MonoBehaviour
         if (autoLabel == null || archer == null) return;
         bool unlocked = IslandSession.AutoFireUnlocked(IslandSession.KeepLevel());
         autoLabel.text = !unlocked ? L.T("OTO ", "AUTO ") + "KK" + Progression.Island.AutoFireUnlockKeepLevel
-            : archer.AutoFire ? L.T("OTO: AÇIK", "AUTO: ON") : L.T("OTO: KAPALI", "AUTO: OFF");
+            : archer.AutoFire ? L.T("OTO\nAÇIK", "AUTO\nON") : L.T("OTO\nKAPALI", "AUTO\nOFF");
         var image = autoButton.GetComponent<Image>();
         if (image != null) image.color = archer.AutoFire ? new Color(0.6f, 1f, 0.6f) : Color.white;
         if (mapLabel != null && setup.CameraController != null)
