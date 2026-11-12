@@ -107,7 +107,11 @@ public sealed class IslandPlacementController : MonoBehaviour
     private string lastLabel;
     private readonly GhostPointerDrag drag = new GhostPointerDrag();
 
-    private static readonly Color Green = new Color(0.25f, 1f, 0.3f), Red = new Color(1f, 0.25f, 0.2f);
+    private static readonly Color Green = new Color(0.25f, 1f, 0.3f), Red = new Color(1f, 0.12f, 0.18f);
+    /// <summary>Yerleştirmede yasak şerit/merdiven hücresi rengi ve boyu (kırmızımsı, yarı opak).</summary>
+    /// (Doğrusal renk uzayında yarı saydam kırmızı, alttaki yeşil çimle turuncu/kahverengiye kayar: opaklık yüksek tutulur.)
+    public static readonly Color LaneColor = new Color(0.9f, 0.06f, 0.14f, 0.9f);
+    public const float LaneCellScale = 0.86f;
 
     private void Awake() => Instance = this;
     private void OnDestroy() { if (Instance == this) Instance = null; }
@@ -227,8 +231,9 @@ public sealed class IslandPlacementController : MonoBehaviour
                 go.transform.position = IslandLayout.World(c + 0.5f, r + 0.5f);
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = tile;
-                go.transform.localScale = tileScale;
-                sr.color = new Color(1f, 0.18f, 0.12f, 0.55f);
+                // Hücreden biraz küçük (aralarda çim görünür) ve daha opak kırmızı: yarı saydam kırmızı yeşil çimle karışıp kahverengi görünüyordu.
+                go.transform.localScale = tileScale * LaneCellScale;
+                sr.color = LaneColor;
                 sr.sortingOrder = -4;
             }
         ghost = new GameObject("IslandPlacementGhost");
@@ -304,7 +309,7 @@ public sealed class IslandPlacementController : MonoBehaviour
                 bool cellOk = IslandGrid.StaticReason(cell.x + dx, cell.y + dy) == IslandGrid.Reason.None;
                 sr.transform.position = IslandLayout.World(cell.x + dx + 0.5f, cell.y + dy + 0.5f);
                 var tint = Valid ? Green : Red;
-                sr.color = new Color(tint.r, tint.g, tint.b, Valid || !cellOk ? 0.6f : 0.4f);
+                sr.color = new Color(tint.r, tint.g, tint.b, Valid ? 0.6f : !cellOk ? 0.8f : 0.55f);
             }
         UpdateConfirm();
     }
