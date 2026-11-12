@@ -44,6 +44,8 @@ public sealed class AudioLibrary : ScriptableObject
     public AudioClip enemyDeath;
     public AudioClip victory;
     public AudioClip defeat;
+    [Tooltip("Ada baskını boru sesi (Faz D). Boşsa sessiz.")]
+    public AudioClip raidHorn;
 
     [Header("Genel ses seviyeleri")]
     [Range(0f, 1f)] public float musicVolume = 0.6f;

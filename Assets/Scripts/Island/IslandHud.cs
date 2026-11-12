@@ -55,6 +55,9 @@ public sealed class IslandHud : MonoBehaviour
     private IslandPlacementController placement;
     private Image touchSurfaceImage;
     private bool placing;
+    private Image raidBadgeBg;
+    private TextMeshProUGUI raidBadgeText;
+    private float nextRaidUiPoll;
 
     public static readonly Color Gold = ReferenceUiVisuals.Gold;
 
@@ -83,6 +86,7 @@ public sealed class IslandHud : MonoBehaviour
         touch.Tapped = screen => setup.HandleScreenTap(screen);
 
         BuildTopBar();
+        BuildRaidBadge();
         BuildDock();
         BuildPrepPanel();
         BuildBuildUi();
@@ -124,6 +128,114 @@ public sealed class IslandHud : MonoBehaviour
         castleFill.fillMethod = Image.FillMethod.Horizontal;
         castleText = ReferenceUiVisuals.Text(barBg.transform, "Text", "", 11, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, false, true);
+    }
+
+    // ==================== ZAMANLI BASKIN (Faz D) ====================
+
+    /// <summary>Sağ üstte baskın rozeti: "Sakin · 3 sa 12 dk" / "Baskın geliyor · 24 dk" / "BASKIN! · savun". Dokununca (pencere açıksa) savunma başlar.</summary>
+    private void BuildRaidBadge()
+    {
+        raidBadgeBg = ReferenceUiVisuals.Image(safe, "RaidBadge", new Vector2(1, 1), new Vector2(1, 1), new Vector2(-196, -90), new Vector2(-8, -58),
+            new Color(0.12f, 0.3f, 0.36f, 0.92f));
+        raidBadgeBg.sprite = ReferenceUiVisuals.PillSprite();
+        raidBadgeBg.type = Image.Type.Sliced;
+        raidBadgeBg.raycastTarget = true;
+        var button = raidBadgeBg.gameObject.AddComponent<Button>();
+        button.targetGraphic = raidBadgeBg;
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(OnRaidBadge);
+        raidBadgeText = ReferenceUiVisuals.Text(raidBadgeBg.transform, "Label", "", 12, Color.white, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(8, 0), new Vector2(-8, 0), true);
+        raidBadgeText.textWrappingMode = TextWrappingModes.NoWrap;
+        raidBadgeText.enableAutoSizing = true;
+        raidBadgeText.fontSizeMin = 8f;
+        raidBadgeText.fontSizeMax = 12f;
+        raidBadgeBg.gameObject.SetActive(false);
+    }
+
+    private static string Span(double seconds)
+    {
+        long minutes = (long)Math.Ceiling(Math.Max(0d, seconds) / 60d);
+        if (minutes < 1) minutes = 1;
+        long h = minutes / 60, m = minutes % 60;
+        return h > 0 ? L.T($"{h} sa {m} dk", $"{h}h {m}m") : L.T($"{m} dk", $"{m}m");
+    }
+
+    /// <summary>Rozet metni (testler de okur): baskın yoksa boş.</summary>
+    public static string RaidBadgeText(IslandSaveData save, long now)
+    {
+        if (save == null || save.nextRaidTicks <= 0) return "";
+        double left = IslandRaidScheduler.SecondsLeft(save, now);
+        switch (IslandRaidScheduler.PhaseAt(save, now))
+        {
+            case IslandRaidScheduler.Phase.Live: return L.T($"BASKIN! · {Span(left)}", $"RAID! · {Span(left)}");
+            case IslandRaidScheduler.Phase.Warning: return L.T($"Baskın geliyor · {Span(left)}", $"Raid incoming · {Span(left)}");
+            default: return L.T($"Sakin · {Span(left)}", $"Calm · {Span(left)}");
+        }
+    }
+
+    private void RefreshRaidUi()
+    {
+        var save = IslandSession.Save;
+        long now = IslandRepair.Now;
+        string text = RaidBadgeText(save, now);
+        bool idle = raid.Phase == IslandRaidManager.State.Idle;
+        bool show = text.Length > 0 && idle && !placing;
+        if (raidBadgeBg.gameObject.activeSelf != show) raidBadgeBg.gameObject.SetActive(show);
+        if (show)
+        {
+            raidBadgeText.text = text;
+            var phase = IslandRaidScheduler.PhaseAt(save, now);
+            raidBadgeBg.color = phase == IslandRaidScheduler.Phase.Live ? new Color(0.78f, 0.2f, 0.16f, 0.95f)
+                : phase == IslandRaidScheduler.Phase.Warning ? new Color(0.72f, 0.42f, 0.12f, 0.95f) : new Color(0.12f, 0.3f, 0.36f, 0.92f);
+        }
+        if (board != null && board.Visible) board.SetRaid(RaidBoardInfo(save, now));
+        if (idle && save != null && !string.IsNullOrEmpty(save.raidReportKind) && !prepOpen)
+        {
+            // Pencere ada açıkken ya da çevrimdışı bitti: rapor satırı bir kez gösterilir
+            string line = IslandRaidScheduler.TakeReport(save);
+            if (line.Length > 0) { Toast(line); toastUntil = Time.unscaledTime + 6f; GameManager.Instance?.SaveGame(); }
+        }
+    }
+
+    private IslandRaidBoard.RaidInfo RaidBoardInfo(IslandSaveData save, long now)
+    {
+        var phase = IslandRaidScheduler.PhaseAt(save, now);
+        if (save == null || phase == IslandRaidScheduler.Phase.None) return default;
+        double left = IslandRaidScheduler.SecondsLeft(save, now);
+        string beach = IslandRaidScheduler.BeachName(save.raidBeach);
+        int power = Progression.Island.RaidPower(save.highestAkin);
+        bool live = phase == IslandRaidScheduler.Phase.Live;
+        return new IslandRaidBoard.RaidInfo
+        {
+            active = true,
+            live = live,
+            title = live ? L.T($"BASKIN! {beach} kumsalı", $"RAID! Beach {beach}") : L.T($"Baskın geliyor · {beach} kumsalı", $"Raid incoming · Beach {beach}"),
+            detail = live ? L.T($"Güç {power} · 2 dalga · {Span(left)} içinde savun, yoksa kuleler çözer", $"Power {power} · 2 waves · defend within {Span(left)} or the towers decide")
+                : L.T($"Güç {power} · {Span(left)} sonra çıkar · kuleyi {beach} kumsalına bakan yara taşı", $"Power {power} · lands in {Span(left)} · move a tower to cover beach {beach}"),
+        };
+    }
+
+    private void OnRaidBadge()
+    {
+        var save = IslandSession.Save;
+        long now = IslandRepair.Now;
+        var phase = IslandRaidScheduler.PhaseAt(save, now);
+        if (phase == IslandRaidScheduler.Phase.Live) { StartRaidDefense(); return; }
+        if (phase == IslandRaidScheduler.Phase.Warning)
+            Toast(L.T($"Korsanlar {Span(IslandRaidScheduler.SecondsLeft(save, now))} sonra {IslandRaidScheduler.BeachName(save.raidBeach)} kumsalına çıkar.",
+                $"Pirates land on beach {IslandRaidScheduler.BeachName(save.raidBeach)} in {Span(IslandRaidScheduler.SecondsLeft(save, now))}."));
+        else Toast(L.T("Ada sakin. Baskın 8 saatte bir gelir; 30 dk önce haber verilir.", "The isle is calm. Raids come every ~8 hours with 30 minutes' warning."));
+    }
+
+    /// <summary>Canlı baskın savunmasını başlatır (rozet, tekne ya da Akın Panosu kırmızı kartı). Pencere kapalıysa bilgi verir.</summary>
+    public void StartRaidDefense()
+    {
+        if (raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        if (IslandRaidScheduler.PhaseAt(IslandSession.Save, IslandRepair.Now) != IslandRaidScheduler.Phase.Live) { OnRaidBadge(); return; }
+        buildUi?.Close();
+        prepOpen = false;
+        if (raid.StartRaid()) { Toast(L.T("BASKIN! Kumsalı koru.", "RAID! Hold the beach.")); Refresh(); }
     }
 
     /// <summary>Alt dock (görünüm modu): AKIN düğmesi. Akın yalnız buradan başlar; ada girişte üs görünümü açılır (v2 §3).</summary>
@@ -228,6 +340,7 @@ public sealed class IslandHud : MonoBehaviour
         board.Build(safe);
         board.Selected = n => { selectedAkin = Mathf.Clamp(n, 1, Mathf.Max(1, MaxSelectable() + 3)); Refresh(); };
         board.StartPressed = OnStart;
+        board.RaidStartPressed = StartRaidDefense;
         board.ClosePressed = () => { prepOpen = false; Refresh(); };
     }
 
@@ -476,11 +589,17 @@ public sealed class IslandHud : MonoBehaviour
             {
                 bool can = raid.CanStart(n);
                 board.Refresh(n, IslandSession.Save?.highestAkin ?? 0, IslandSession.KeepLevel(), MaxSelectable(), can, GateText(n));
+                board.SetRaid(RaidBoardInfo(IslandSession.Save, IslandRepair.Now));
             }
         }
 
-        if (state == IslandRaidManager.State.Won)
+        if (raid.IsRaid && (state == IslandRaidManager.State.Won || state == IslandRaidManager.State.Lost))
         {
+            ShowRaidResult(state == IslandRaidManager.State.Won);
+        }
+        else if (state == IslandRaidManager.State.Won)
+        {
+            resultAgain.gameObject.SetActive(true);
             var r = raid.LastReward;
             resultTitle.text = L.T("ZAFER!", "VICTORY!");
             string gems = r.gems > 0 ? L.T($"\n+{r.gems} elmas", $"\n+{r.gems} gems") : "";
@@ -498,11 +617,28 @@ public sealed class IslandHud : MonoBehaviour
         }
         else if (state == IslandRaidManager.State.Lost)
         {
+            resultAgain.gameObject.SetActive(true);
             resultTitle.text = L.T("YENİLGİ", "DEFEAT");
             resultBody.text = L.T($"Kıyı Kalesi düştü.\n{raid.DefeatReason}", $"The keep has fallen.\n{raid.DefeatReason}") + DamagedBuildings();
             resultNext.gameObject.SetActive(false);
         }
         RefreshAuto();
+    }
+
+    /// <summary>Canlı baskın sonucu: ödül ya da çalıntı (Akın ödülü/ilerlemesi yok).</summary>
+    private void ShowRaidResult(bool won)
+    {
+        var o = raid.LastRaidOutcome;
+        resultNext.gameObject.SetActive(false);
+        resultAgain.gameObject.SetActive(false);
+        resultTitle.text = won ? L.T("BASKIN PÜSKÜRTÜLDÜ!", "RAID REPELLED!") : L.T("KORSANLAR KAÇTI", "PIRATES GOT AWAY");
+        string loot = o.wood > 0 || o.meat > 0
+            ? L.T($"Çalınan: {o.wood} Odun · {o.meat} Et", $"Stolen: {o.wood} Wood · {o.meat} Meat")
+            : L.T("Hiçbir şey çalınmadı.", "Nothing was stolen.");
+        string body = won
+            ? L.T($"Beklemedeki üretime +%{Mathf.RoundToInt(Progression.Island.RaidWinBonus * 100)}, +{o.gold} altın (Ana Üs).\n{loot}", $"+{Mathf.RoundToInt(Progression.Island.RaidWinBonus * 100)}% on pending production, +{o.gold} gold (Base).\n{loot}")
+            : L.T($"Kıyı Kalesi düştü; korsanlar kumsaldan döndü.\n{loot}\n{raid.DefeatReason}", $"The keep fell; the pirates sailed off.\n{loot}\n{raid.DefeatReason}");
+        resultBody.text = body + DamagedBuildings();
     }
 
     /// <summary>Sonuç ekranı: hasarlı binalar ve onarım süresi (§7.7; ücretsiz, yalnız bekleme).</summary>
@@ -567,6 +703,7 @@ public sealed class IslandHud : MonoBehaviour
             woodText.color = save.wood >= IslandEconomy.WoodCap ? Gold : ReferenceUiVisuals.Light;
         }
         buildUi?.Tick();
+        if (Time.unscaledTime >= nextRaidUiPoll) { nextRaidUiPoll = Time.unscaledTime + 0.5f; RefreshRaidUi(); }
         if (dock != null && raid.Phase == IslandRaidManager.State.Idle)
         {
             bool dockOn = !prepOpen && !placing && !(buildUi != null && buildUi.Open);
@@ -575,7 +712,9 @@ public sealed class IslandHud : MonoBehaviour
         woodText.text = save != null ? save.wood.ToString() : "0";
         var player = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
         goldText.text = player != null ? player.gold.ToString() : "0";
-        titleText.text = raid.Phase == IslandRaidManager.State.Running
+        titleText.text = raid.Phase == IslandRaidManager.State.Running && raid.IsRaid
+            ? L.T($"BASKIN · DALGA {raid.Wave}/{raid.TotalWaves}", $"RAID · WAVE {raid.Wave}/{raid.TotalWaves}")
+            : raid.Phase == IslandRaidManager.State.Running
             ? L.T($"AKIN {raid.Akin} · DALGA {raid.Wave}/{raid.TotalWaves}", $"RAID {raid.Akin} · WAVE {raid.Wave}/{raid.TotalWaves}")
             : L.T("MARTI ADASI", "GULL ISLE");
         if (homeLabel != null)

@@ -71,7 +71,13 @@ public static class IslandStats
             if (island != null && island.BeachIndex >= 0 && island.BeachIndex < CastleDamageByBeach.Length)
                 CastleDamageByBeach[island.BeachIndex] += damage;
         }
-        else BuildingDamage += damage;
+        else
+        {
+            BuildingDamage += damage;
+            // Faz D: canlı baskında üretim binasına ulaşan Fare kaçak sayılır (%2 çalar)
+            if (enemy.Type == EnemyType.Rat && building.IsProduction && IslandSceneSetup.Instance != null && IslandSceneSetup.Instance.Raid != null)
+                IslandSceneSetup.Instance.Raid.NoteRatTheft(enemy);
+        }
     }
 }
 

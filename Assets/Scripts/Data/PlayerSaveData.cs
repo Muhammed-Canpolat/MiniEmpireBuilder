@@ -268,6 +268,15 @@ public class IslandSaveData
     public bool autoFire;           // oto-ateş tercihi
     public long nextRaidTicks;      // Faz 3: sonraki baskın (UTC tick)
     public string lastReport = "";  // Faz 3: "Sen yokken" tek satırı
+    // Faz D (island_base_v2 §7.8): zamanlı baskın. nextRaidTicks (üstte) = bekleyen baskının varış anı T0 (0: planlı baskın yok).
+    // Eski kayıtta hepsi 0/boş: ilk Tick'te (Akın >= 5 ise) planlanır. Kayıt sürümü değişmedi (yalnız yeni alanlar). Konum: `task` hâlâ island'ın son alanı (eski sürüm testleri regex'le keser).
+    public int raidBeach;           // hedef kumsal indeksi (0..3 = A..D)
+    public int raidSeed;            // baskının rastgelelik tohumu
+    public int raidSerial;          // kaç baskın planlandı (tohum kaynağı)
+    public int raidsResolved;       // çözülen (çevrimdışı ya da canlı) baskın sayısı
+    public long raidSeenTicks;      // zamanlayıcının en son çalıştığı an (24 sa+ kapalı kalırsa saat durur)
+    public string raidReportKind = "";   // "" okunmamış rapor yok · "offline" · "won" · "lost"
+    public int raidReportBeach, raidReportTowers, raidReportWood, raidReportMeat;
     // Faz C (island_base_v2 §7.7, §8): bina savaş durumu/onarım ve günlük tekrar ödülü sayacı. Eski kayıtta boş/0: güvenli.
     public List<IslandBuildingSave> buildings = new List<IslandBuildingSave>();
     public string replayDay = "";   // yyyy-MM-dd (UTC)
@@ -278,15 +287,6 @@ public class IslandSaveData
     public int nextBuildingSerial = 1;
     public int zoneMask = 1;        // bit i = bölge Zi açık (Z0 hep açık)
     public IslandBuilderTask task = new IslandBuilderTask();
-    // Faz D (island_base_v2 §7.8): zamanlı baskın. nextRaidTicks (üstte) = bekleyen baskının varış anı T0 (0: planlı baskın yok).
-    // Eski kayıtta hepsi 0/boş: ilk Tick'te (Akın >= 5 ise) planlanır. Kayıt sürümü değişmedi (yalnız yeni alanlar).
-    public int raidBeach;           // hedef kumsal indeksi (0..3 = A..D)
-    public int raidSeed;            // baskının rastgelelik tohumu
-    public int raidSerial;          // kaç baskın planlandı (tohum kaynağı)
-    public int raidsResolved;       // çözülen (çevrimdışı ya da canlı) baskın sayısı
-    public long raidSeenTicks;      // zamanlayıcının en son çalıştığı an (24 sa+ kapalı kalırsa saat durur)
-    public string raidReportKind = "";   // "" okunmamış rapor yok · "offline" · "won" · "lost"
-    public int raidReportBeach, raidReportTowers, raidReportWood, raidReportMeat;
 }
 
 /// <summary>Yerleştirilmiş ada binası (Kale hariç; sabit). level 0 = inşaatta (yeni bina). Üretim: stok + son tick (UTC).</summary>

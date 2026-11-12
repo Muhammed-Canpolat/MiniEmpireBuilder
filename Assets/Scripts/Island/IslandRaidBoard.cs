@@ -15,6 +15,12 @@ public sealed class IslandRaidBoard
 
     public Action<int> Selected;
     public Action StartPressed, ClosePressed;
+    /// <summary>Faz D: bekleyen zamanlı baskın kırmızı kartı.</summary>
+    public struct RaidInfo { public bool active, live; public string title, detail; }
+    public Action RaidStartPressed;
+    private RectTransform raidStrip;
+    private TextMeshProUGUI raidTitle, raidDetail;
+    private Button raidButton;
 
     private GameObject root;
     private RectTransform cardsRoot;
@@ -82,6 +88,7 @@ public sealed class IslandRaidBoard
 
         cardsRoot = ReferenceUiVisuals.Rect(panel.transform, "Cards", Vector2.zero, Vector2.one, new Vector2(18, 84), new Vector2(-18, -44));
         for (int i = 0; i < Cards; i++) cards.Add(BuildCard(i));
+        BuildRaidStrip(panel.transform);
 
         footerNote = ReferenceUiVisuals.Text(panel.transform, "Note", "", 12, new Color(0.35f, 0.2f, 0.1f), TextAlignmentOptions.Center,
             new Vector2(0, 0), new Vector2(1, 0), new Vector2(70, 56), new Vector2(-70, 80), false, true);
@@ -95,6 +102,42 @@ public sealed class IslandRaidBoard
             TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(10, 4), new Vector2(-10, -2), true);
         startButton.onClick.AddListener(() => StartPressed?.Invoke());
         root.SetActive(false);
+    }
+
+    /// <summary>Üstte kırmızı kart (bekleyen baskın varsa): başlık, kısa ayrıntı, pencere açıkken SAVUN düğmesi.</summary>
+    private void BuildRaidStrip(Transform panel)
+    {
+        raidStrip = ReferenceUiVisuals.Rect(panel, "RaidStrip", new Vector2(0, 1), new Vector2(1, 1), new Vector2(18, -102), new Vector2(-18, -42));
+        var paper = NineSlice(raidStrip, "Paper", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, "ui_paper_special", new Color(1f, 0.5f, 0.45f), 4f);
+        paper.raycastTarget = true;
+        raidTitle = ReferenceUiVisuals.Text(raidStrip, "Title", "", 15, new Color(1f, 0.95f, 0.8f), TextAlignmentOptions.Left,
+            new Vector2(0, 0.45f), Vector2.one, new Vector2(16, 0), new Vector2(-112, -10), true);
+        raidDetail = ReferenceUiVisuals.Text(raidStrip, "Detail", "", 10, new Color(1f, 0.92f, 0.78f), TextAlignmentOptions.Left,
+            Vector2.zero, new Vector2(1, 0.5f), new Vector2(16, 4), new Vector2(-112, 0), false, true);
+        var go = NineSlice(raidStrip, "RaidDefend", new Vector2(1, 0), new Vector2(1, 1), new Vector2(-104, 8), new Vector2(-10, -8), "ui_button_red", Color.white, 3f);
+        go.raycastTarget = true;
+        raidButton = go.gameObject.AddComponent<Button>();
+        raidButton.targetGraphic = go;
+        raidButton.transition = Selectable.Transition.ColorTint;
+        ReferenceUiVisuals.Text(go.transform, "Label", L.T("SAVUN", "DEFEND"), 14, Color.white, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(4, 2), new Vector2(-4, -2), true);
+        raidButton.onClick.AddListener(() => RaidStartPressed?.Invoke());
+        raidStrip.gameObject.SetActive(false);
+    }
+
+    /// <summary>Bekleyen baskın kartını göster/gizle; kartlar alanı kırmızı kart kadar aşağı kayar.</summary>
+    public void SetRaid(RaidInfo info)
+    {
+        if (raidStrip == null) return;
+        if (raidStrip.gameObject.activeSelf != info.active)
+        {
+            raidStrip.gameObject.SetActive(info.active);
+            cardsRoot.offsetMax = new Vector2(-18, info.active ? -108 : -44);
+        }
+        if (!info.active) return;
+        raidTitle.text = info.title;
+        raidDetail.text = info.detail;
+        raidButton.gameObject.SetActive(info.live);
     }
 
     private Card BuildCard(int index)

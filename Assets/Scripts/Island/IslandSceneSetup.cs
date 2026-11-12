@@ -19,6 +19,8 @@ public sealed class IslandSceneSetup : MonoBehaviour
     public IslandArcher Archer { get; private set; }
     public IslandRaidManager Raid { get; private set; }
     public IslandHud Hud { get; private set; }
+    /// <summary>Faz D: ufuk tekneleri + kırmızı kumsal işareti (zamanlı baskın).</summary>
+    public IslandRaidVisuals RaidVisuals { get; private set; }
     public BattleStructure CastleStructure { get; private set; }
     /// <summary>Kurulum bitti mi (testler bekler).</summary>
     public bool Ready { get; private set; }
@@ -101,6 +103,8 @@ public sealed class IslandSceneSetup : MonoBehaviour
         Raid.StateChanged += OnRaidState;
         Hud = new GameObject("IslandHud").AddComponent<IslandHud>();
         Hud.Build(this, Raid, Archer, WorldCamera);
+        RaidVisuals = new GameObject("IslandRaidVisuals").AddComponent<IslandRaidVisuals>();
+        RaidVisuals.StartRequested = Hud.StartRaidDefense;
         IslandStats.Reset();
         ShowHealthBars(false);
         RefreshZones();
@@ -324,6 +328,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
         {
             // Üs görünümü (Faz B): yığın topla, bina/kale/bulut seç; boş yere dokunuş açık paneli kapatır
             if (IslandPlacementController.Instance != null && IslandPlacementController.Instance.IsPlacing) return;
+            if (RaidVisuals != null && RaidVisuals.HandleTap(world)) return;   // Faz D: tekneye/işarete dokunmak baskını savunur
             if (Village != null && Village.HandleTap(world)) return;
             Hud?.CloseBuildUi();
             return;

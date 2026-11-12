@@ -271,6 +271,7 @@ public sealed class AudioManager : MonoBehaviour
             case "victory": return library.victory;
             case "arrowShoot": return library.arrowShoot;
             case "defeat": return library.defeat;
+            case "raidHorn": return library.raidHorn;
             default: return null;
         }
     }

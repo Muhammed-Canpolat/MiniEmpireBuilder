@@ -16,6 +16,10 @@ public sealed class IslandRaidManager : MonoBehaviour
     public int Akin { get; private set; }
     public int Wave { get; private set; }
     public int TotalWaves { get; private set; }
+    /// <summary>Faz D: bu savaş zamanlı baskın savunması (güç = en yüksek Akın − 2, 2 dalga, tek hedef kumsal; Akın ödülü/merdiveni değişmez).</summary>
+    public bool IsRaid { get; private set; }
+    public int RaidBeach { get; private set; }
+    public IslandRaidScheduler.Outcome LastRaidOutcome { get; private set; }
     public int BattleLevel { get; private set; }
     public float BreakLeft { get; private set; }
     public IslandSession.Reward LastReward { get; private set; }
@@ -43,6 +47,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     private bool bossSpawned;
     private bool tutorialRun;
     private int pendingFlyers;
+    private readonly HashSet<int> ratThieves = new HashSet<int>();
 
     public void Bind(BattleStructure castleStructure, IslandArcher islandArcher)
     {
@@ -54,6 +59,7 @@ public sealed class IslandRaidManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        IslandRaidScheduler.LiveFightActive = false;
         if (castle != null) castle.Destroyed -= OnCastleDestroyed;
         if (archer != null) archer.PostChanged -= OnPostChanged;
     }
@@ -69,6 +75,8 @@ public sealed class IslandRaidManager : MonoBehaviour
     public bool StartAkin(int akin)
     {
         if (Phase == State.Running) return false;
+        IsRaid = false;
+        IslandRaidScheduler.LiveFightActive = false;
         Akin = Mathf.Max(1, akin);
         BattleLevel = Progression.Island.AkinBattleLevel(Akin);
         TotalWaves = Progression.Island.AkinWaves(Akin);
@@ -87,6 +95,43 @@ public sealed class IslandRaidManager : MonoBehaviour
         StateChanged?.Invoke(Phase);
         run = StartCoroutine(RunAkin());
         return true;
+    }
+
+    /// <summary>
+    /// Zamanlı baskını canlı savunur (§7.3/§7.8): pencere açıkken (T0..T0+2 sa) çağrılır. Güç = en yüksek Akın − 2, 2 dalga, tüm tekneler
+    /// hedef kumsala. Sonuç <see cref="IslandRaidScheduler.CompleteLive"/> ile işlenir; Akın ilerlemesi ve Akın ödülü değişmez.
+    /// </summary>
+    public bool StartRaid()
+    {
+        var save = IslandSession.Save;
+        if (Phase == State.Running || save == null) return false;
+        if (IslandRaidScheduler.PhaseAt(save, IslandRepair.Now) != IslandRaidScheduler.Phase.Live) return false;
+        IsRaid = true;
+        RaidBeach = Mathf.Clamp(save.raidBeach, 0, IslandLayout.Beaches.Length - 1);
+        Akin = Progression.Island.RaidPower(save.highestAkin);
+        BattleLevel = Progression.Island.AkinBattleLevel(Akin);
+        TotalWaves = Progression.Island.RaidWaves;
+        Wave = 0;
+        Elapsed = 0f;
+        spawnedBoats = finishedBoats = 0;
+        bossBoat = null; bossSpawned = false;
+        DefeatReason = ""; DefeatTag = "";
+        pendingFlyers = 0;
+        ratThieves.Clear();
+        TutorialFinishedThisRun = false;
+        tutorialRun = false;
+        IslandStats.Reset();
+        IslandRaidScheduler.LiveFightActive = true;
+        Phase = State.Running;
+        StateChanged?.Invoke(Phase);
+        run = StartCoroutine(RunAkin());
+        return true;
+    }
+
+    /// <summary>Canlı baskında kumsala çıkan Fare üretim binasına vurdu: bu Fare bir kez %2 çalar (toplam TheftCap'e bağlı).</summary>
+    public void NoteRatTheft(EnemyController enemy)
+    {
+        if (IsRaid && Phase == State.Running && enemy != null) ratThieves.Add(enemy.GetInstanceID());
     }
 
     public bool CanStart(int akin)
@@ -129,7 +174,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         for (int i = 0; i < boats; i++)
         {
             if (Phase != State.Running) yield break;
-            int beach = (i + wave - 1) % openBeaches;
+            int beach = IsRaid ? RaidBeach : (i + wave - 1) % openBeaches;
             // Öğretici: ikinci tekne doğu kumsalından gelir (atış yeri değiştirmeyi öğretir).
             if (tutorialRun && Akin == 1 && i == 1) beach = 1;
             var kind = BoatKindFor(i);
@@ -249,6 +294,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     private void Win()
     {
         Phase = State.Won;
+        if (IsRaid) { FinishRaid(true); StateChanged?.Invoke(Phase); return; }
         LastReward = IslandSession.GrantVictory(Akin);
         IslandRepair.CommitBattle();
         if (tutorialRun) { SetTutorial(4); TutorialFinishedThisRun = true; }
@@ -261,6 +307,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         var label = ComputeDefeatLabel();
         DefeatReason = label.text; DefeatTag = label.tag;
         Phase = State.Lost;
+        if (IsRaid) FinishRaid(false);
         // Yenilgide kalan düşmanlar donar (kale onarılınca tekrar vurulmasın)
         foreach (var enemy in IslandEnemy.All)
             if (enemy != null && enemy.Controller != null) enemy.Controller.MovementLocked = true;
@@ -268,6 +315,24 @@ public sealed class IslandRaidManager : MonoBehaviour
         IslandRepair.CommitBattle();
         if (run != null) StopCoroutine(run);
         StateChanged?.Invoke(Phase);
+    }
+
+    /// <summary>Canlı baskın sonucu: çalıntı/ödül kayda geçer, sonraki baskın planlanır (birikmez).</summary>
+    private void FinishRaid(bool won)
+    {
+        IslandRaidScheduler.LiveFightActive = false;
+        var save = IslandSession.Save;
+        if (save != null)
+        {
+            LastRaidOutcome = IslandRaidScheduler.CompleteLive(save, won, ratThieves.Count, IslandRepair.Now);
+            var gm = GameManager.Instance;
+            if (gm != null)
+            {
+                if (LastRaidOutcome.gold > 0) gm.AddGold(LastRaidOutcome.gold);
+                gm.SaveGame();
+            }
+        }
+        IslandRepair.CommitBattle();
     }
 
     /// <summary>Yenilgi etiketi (§7.6): hasar dağılımı + kumsal izleme durumundan (≥%90 açıklanmalı).</summary>
@@ -280,6 +345,8 @@ public sealed class IslandRaidManager : MonoBehaviour
     {
         if (Phase != State.Running) return;
         if (run != null) StopCoroutine(run);
+        IslandRaidScheduler.LiveFightActive = false;   // baskın bekler; pencere dolarsa çevrimdışı çözülür
+        IsRaid = false;
         Phase = State.Idle;
         foreach (var boat in new List<RaidBoat>(RaidBoat.All)) if (boat != null) Destroy(boat.gameObject);
         foreach (var enemy in new List<IslandEnemy>(IslandEnemy.All)) if (enemy != null) Destroy(enemy.gameObject);
@@ -290,6 +357,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     public void ReturnToIdle()
     {
         if (Phase == State.Running) return;
+        IsRaid = false;
         // Yenilgide kalan (donmuş) düşman ve tekneler ada görünümüne geçerken temizlenir
         foreach (var boat in new List<RaidBoat>(RaidBoat.All)) if (boat != null) Destroy(boat.gameObject);
         foreach (var enemy in new List<IslandEnemy>(IslandEnemy.All)) if (enemy != null) Destroy(enemy.gameObject);
