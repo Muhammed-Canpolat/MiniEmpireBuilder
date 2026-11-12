@@ -107,7 +107,7 @@ public sealed class IslandHud : MonoBehaviour
         homeLabel = homeButton.GetComponentInChildren<TextMeshProUGUI>();
         homeButton.onClick.AddListener(OnHome);
         titleText = ReferenceUiVisuals.Text(bar.transform, "Title", "", 13, Gold, TextAlignmentOptions.Center,
-            new Vector2(0.21f, 0), new Vector2(0.45f, 1), Vector2.zero, Vector2.zero, true);
+            new Vector2(0.21f, 0), new Vector2(0.40f, 1), Vector2.zero, Vector2.zero, true);
         // Kaynaklar: Tiny Swords simgeleri (Et, Odun, Ana Üs altını) + sayı
         var catalog = IslandVisualCatalog.Instance;
         meatText = ResourceChip(bar.transform, 0, catalog != null ? catalog.meatIcon : null);
@@ -129,19 +129,21 @@ public sealed class IslandHud : MonoBehaviour
     /// <summary>Alt dock (görünüm modu): AKIN düğmesi. Akın yalnız buradan başlar; ada girişte üs görünümü açılır (v2 §3).</summary>
     private TextMeshProUGUI ResourceChip(Transform bar, int index, Sprite icon)
     {
-        float x0 = 0.445f + index * 0.135f;
-        var group = ReferenceUiVisuals.Image(bar, "Res" + index, new Vector2(x0, 0), new Vector2(x0 + 0.135f, 1),
+        float x0 = 0.40f + index * 0.15f;   // 3 çip × 0,15: dört basamaklı sayı bir sonraki simgeye binmez
+        var group = ReferenceUiVisuals.Image(bar, "Res" + index, new Vector2(x0, 0), new Vector2(x0 + 0.15f, 1),
             Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0f));
         group.raycastTarget = false;
         var image = ReferenceUiVisuals.Image(group.transform, "Icon", new Vector2(0, 0.5f), new Vector2(0, 0.5f),
-            new Vector2(0, -15), new Vector2(30, 15), Color.white);
+            new Vector2(0, -12), new Vector2(24, 12), Color.white);
         image.sprite = icon;
         image.preserveAspect = true;
         image.raycastTarget = false;
         var value = ReferenceUiVisuals.Text(group.transform, "Value", "0", 14, ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
-            new Vector2(0, 0), Vector2.one, new Vector2(33, 0), new Vector2(40, 0), true);
+            new Vector2(0, 0), Vector2.one, new Vector2(26, 0), new Vector2(-2, 0), true);
         value.textWrappingMode = TextWrappingModes.NoWrap;
-        value.overflowMode = TextOverflowModes.Overflow;
+        value.enableAutoSizing = true;   // 5 basamakta küçülür, taşmaz
+        value.fontSizeMin = 9f;
+        value.fontSizeMax = 14f;
         return value;
     }
 
