@@ -918,7 +918,7 @@ public class BattleManager : MonoBehaviour
                 Resume();
                 if (battleActive) BattleLost();
             }, true,
-            L.T("▶ REKLAM İZLE, DEVAM ET", "▶ WATCH AD TO CONTINUE"),
+            L.T("REKLAM İZLE, DEVAM ET", "WATCH AD TO CONTINUE"),
             // Reklam oyun dururken oynar (gerçek zamanla sayar); bitince savaş sürer.
             () => RewardedAds.Show("battle_continue", ok =>
             {

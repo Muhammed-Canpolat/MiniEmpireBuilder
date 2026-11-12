@@ -253,7 +253,7 @@ public sealed class GemShopUI : MonoBehaviour
                 GemActions.Toast(L.T("Maden 2x: ", "Mine 2x: ") + GemEconomy.FormatRemaining(gm.PlayerData.mineBoostUntilTicks));
                 Refresh();
             }, null, false,
-            adOption ? L.T($"▶ REKLAM: {GemEconomy.AdMineBoostHours} SA BEDAVA", $"▶ AD: {GemEconomy.AdMineBoostHours} H FREE") : null,
+            adOption ? L.T($"REKLAM: {GemEconomy.AdMineBoostHours} SA BEDAVA", $"AD: {GemEconomy.AdMineBoostHours} H FREE") : null,
             () => RewardedAds.Show("mine_boost", ok =>
             {
                 if (!ok || !AdRewards.RewardMineBoost()) return;

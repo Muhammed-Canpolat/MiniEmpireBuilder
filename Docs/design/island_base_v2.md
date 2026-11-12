@@ -604,3 +604,8 @@ seçilenler `Docs/playtest/`):
 - Eski kayıtta oyuncunun binası yeni kilitli bölgeye düşerse o bölge yüklemede bedava açılır (`IslandEconomy.OpenZonesUnderBuildings`;
   hazır köy kuleleri sayılmaz). Bölge bulutları yeniden pişirildi; pişirici artık bölge haritasını hash'e katar, köy çevresi boşluğu 4,3 → 3,2.
   Bilinen küçük kusur: Ağıl'ın sağ kenarına bir Z1 bulutu biraz biniyor. Görüntü `Docs/playtest/island_v2_polish_zones.png`.
+- **Kereste Sevkiyatı (Odun gideri):** "HEMEN BİTİR" penceresinde reklamın üstünde üçüncü seçenek: 100 ada Odun'u süren Ana Üs
+  inşaatını 10 dk kısaltır, günde 3 (`GemEconomy.LumberShipment*`, `IslandEconomy.TryShipLumber`, kayıt `lumberShipDay/Count`).
+  Ana Üs 5'ten (ada) önce görünmez; Odun yetmezse soluk. Günlük gider ≤ 300 Odun: depo tavanı (KK1 600) hâlâ 4. günden sonra
+  dolabilir; bot ölçümünde yeterli değilse sevkiyat hakkı ya da Odun bedeli artırılabilir. Testler `LumberShipmentTests` (3).
+  Ayrıca düğmelerdeki "▶" kaldırıldı (Cinzel'de glif yok, "□" görünüyordu).

@@ -313,7 +313,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
         if (doubleAmount > 0)
         {
             var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = L.T($"▶ 2X ÖDÜL  +{doubleAmount}", $"▶ 2X REWARD  +{doubleAmount}");
+            if (label != null) label.text = L.T($"2X ÖDÜL  +{doubleAmount}", $"2X REWARD  +{doubleAmount}");
             ReferenceUiVisuals.ApplyButtonSkin(retryButton, true);
         }
         else if (retryButton != null)

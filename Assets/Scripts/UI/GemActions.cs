@@ -24,6 +24,11 @@ public static class GemActions
             : string.IsNullOrEmpty(task.label) ? L.T("İnşaat", "Construction") : task.label;
         // Bedava seçenek: reklamla −30 dk (günde 3; yalnız 1 dk'dan uzun işlerde).
         bool adOption = cost > 0 && AdRewards.SpeedupAdsLeft > 0;
+        // Kereste Sevkiyatı: ada Odun'u (100) inşaatı 10 dk kısaltır, günde 3; Odun yetmezse düğme soluk görünür.
+        bool lumberOption = cost > 0 && IslandEconomy.LumberShipmentOffered;
+        string lumberLabel = !lumberOption ? null
+            : L.T($"KERESTE: {GemEconomy.LumberShipmentWood} ODUN → −{GemEconomy.LumberShipmentMinutes} DK ({IslandEconomy.LumberShipmentsLeft})",
+                $"LUMBER: {GemEconomy.LumberShipmentWood} WOOD → −{GemEconomy.LumberShipmentMinutes} MIN ({IslandEconomy.LumberShipmentsLeft})");
         GemConfirm.Show(L.T("HEMEN BİTİR", "FINISH NOW"),
             $"{what}\n{L.T("Kalan süre", "Time left")}: {Progression.FormatDuration(GameManager.SecondsRemaining(task))}",
             cost, L.T("BİTİR", "FINISH"), () =>
@@ -33,15 +38,30 @@ public static class GemActions
                 Toast(cost > 0 ? L.T($"Bitti! −{cost} elmas", $"Done! −{cost} gems") : L.T("Bitti!", "Done!"));
                 after?.Invoke();
             }, null, false,
-            adOption ? L.T($"▶ REKLAM: −{GemEconomy.AdSpeedupMinutes} DK ({AdRewards.SpeedupAdsLeft} hak)",
-                $"▶ AD: −{GemEconomy.AdSpeedupMinutes} MIN ({AdRewards.SpeedupAdsLeft} left)") : null,
+            adOption ? L.T($"REKLAM: −{GemEconomy.AdSpeedupMinutes} DK ({AdRewards.SpeedupAdsLeft} hak)",
+                $"AD: −{GemEconomy.AdSpeedupMinutes} MIN ({AdRewards.SpeedupAdsLeft} left)") : null,
             () => RewardedAds.Show("builder_speedup", ok =>
             {
                 if (!ok || !AdRewards.RewardSpeedup(task)) return;
                 Toast(L.T($"İnşaat {GemEconomy.AdSpeedupMinutes} dk kısaldı!",
                     $"Construction {GemEconomy.AdSpeedupMinutes} min faster!"));
                 after?.Invoke();
-            }));
+            }),
+            lumberLabel,
+            () =>
+            {
+                if (!IslandEconomy.TryShipLumber(task))
+                {
+                    Toast(L.T($"Odun yetmiyor ({IslandEconomy.Wood}/{GemEconomy.LumberShipmentWood}): Martı Adası Oduncusu",
+                        $"Not enough Wood ({IslandEconomy.Wood}/{GemEconomy.LumberShipmentWood}): Gull Isle Lumber Mill"));
+                    return;
+                }
+                AudioManager.Instance?.PlaySfx("buildingPlace");
+                Toast(L.T($"Kereste geldi: inşaat {GemEconomy.LumberShipmentMinutes} dk kısaldı!",
+                    $"Lumber delivered: construction {GemEconomy.LumberShipmentMinutes} min faster!"));
+                after?.Invoke();
+            },
+            IslandEconomy.CanShipLumber);
     }
 
     public static void OfferPotion(Action after = null)

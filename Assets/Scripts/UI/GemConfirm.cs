@@ -23,7 +23,7 @@ public sealed class GemConfirm : MonoBehaviour
     /// <param name="onCancel">Vazgeçilince ya da pencere kapanınca (savaşta oyunu sürdürmek için).</param>
     /// <param name="altAction">İsteğe bağlı ikinci seçenek (ör. "REKLAM İZLE"): elmas istemez.</param>
     public static void Show(string title, string body, int cost, string action, Action onConfirm, Action onCancel = null,
-        bool unscaled = false, string altAction = null, Action onAlt = null)
+        bool unscaled = false, string altAction = null, Action onAlt = null, string alt2Action = null, Action onAlt2 = null, bool alt2Enabled = true)
     {
         Close(false);
         var root = new GameObject("GemConfirm", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -68,8 +68,25 @@ public sealed class GemConfirm : MonoBehaviour
                 onAlt?.Invoke();
             });
         }
+        bool hasAlt2 = !string.IsNullOrEmpty(alt2Action);
+        if (hasAlt2)
+        {
+            // Üçüncü seçenek (ör. Kereste Sevkiyatı): öbür seçeneklerin üstünde; pencere bir düğme boyu daha uzar.
+            float bottom = hasAlt ? 132 : 80;
+            float half = hasAlt ? 174 : 146;
+            panel.rectTransform.offsetMin = new Vector2(-160, -half);
+            panel.rectTransform.offsetMax = new Vector2(160, half);
+            var alt2 = ReferenceUiVisuals.Button(panel.transform, "Alt2Button", alt2Action, false,
+                new Vector2(0, 0), new Vector2(1, 0), new Vector2(22, bottom), new Vector2(-22, bottom + 44), 14);
+            alt2.interactable = alt2Enabled;
+            alt2.onClick.AddListener(() =>
+            {
+                Close(false);
+                onAlt2?.Invoke();
+            });
+        }
         ReferenceUiVisuals.Text(panel.transform, "Body", body, 14, InkMuted, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(22, hasAlt ? 130 : 84), new Vector2(-22, -58), false, true);
+            Vector2.zero, Vector2.one, new Vector2(22, (hasAlt ? 130 : 84) + (hasAlt2 ? 52 : 0)), new Vector2(-22, -58), false, true);
 
         var gm = GameManager.Instance;
         int gems = gm != null ? gm.Gems : 0;

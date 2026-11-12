@@ -40,6 +40,10 @@ public static class GemEconomy
     // ==================== ÖDÜLLÜ REKLAM (AdRewards) ====================
     public const int AdSpeedupMinutes = 30;   // inşaatta −30 dk
     public const int DailySpeedupAds = 3;
+    // Kereste Sevkiyatı (island_base_v2 §6 tablo): ada Odun'u Ana Üs inşaatını kısaltır; Odun fazlasının harcama yeri.
+    public const int LumberShipmentWood = 100;
+    public const int LumberShipmentMinutes = 10;
+    public const int DailyLumberShipments = 3;
     public const int AdMineBoostHours = 2;    // madende 2 sa 2x, günde 1
     public const int DailyMineAds = 1;
     public const int DailyChestAds = 1;       // dükkânda günlük sandık

@@ -41,6 +41,38 @@ public static class IslandEconomy
         return save.zoneMask != before;
     }
 
+    // ==================== KERESTE SEVKİYATI (Odun → Ana Üs inşaatı) ====================
+
+    public static int LumberShipmentsToday
+    {
+        get
+        {
+            var data = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
+            return data == null || data.lumberShipDay != GameClock.TodayId ? 0 : data.lumberShipCount;
+        }
+    }
+
+    public static int LumberShipmentsLeft => Mathf.Max(0, GemEconomy.DailyLumberShipments - LumberShipmentsToday);
+
+    /// <summary>Sevkiyat seçeneği gösterilsin mi: ada açık (Ana Üs 5+) ve bugün hak kalmış. Odun yetmese de görünür (neden yazar).</summary>
+    public static bool LumberShipmentOffered => IslandSession.Unlocked() && LumberShipmentsLeft > 0 && Save != null;
+
+    public static bool CanShipLumber => LumberShipmentOffered && Wood >= GemEconomy.LumberShipmentWood;
+
+    /// <summary>100 Odun → süren Ana Üs inşaatı 10 dk kısalır (günde 3). Odun yoksa ya da iş geçersizse hiçbir şey harcanmaz.</summary>
+    public static bool TryShipLumber(BuilderTaskSave task)
+    {
+        var gm = GameManager.Instance;
+        if (gm == null || task == null || !CanShipLumber) return false;
+        if (!gm.SpeedUpTask(task, GemEconomy.LumberShipmentMinutes)) return false;
+        Save.wood -= GemEconomy.LumberShipmentWood;
+        var data = gm.PlayerData;
+        if (data.lumberShipDay != GameClock.TodayId) { data.lumberShipDay = GameClock.TodayId; data.lumberShipCount = 0; }
+        data.lumberShipCount++;
+        gm.SaveGame();
+        return true;
+    }
+
     // ==================== CÜZDAN (Et / Odun) ====================
 
     public static int Meat => Save != null ? Save.meat : 0;

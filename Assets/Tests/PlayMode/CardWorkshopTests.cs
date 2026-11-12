@@ -431,11 +431,11 @@ public class CardWorkshopTests
     }
 
     /// <summary>Ekranı (Overlay tuvaller dahil) <c>PlaytestOutput/workshop/name.png</c> olarak yazar.</summary>
-    private static void CaptureScreen(string name)
+    internal static void CaptureScreen(string name, string subfolder = "workshop")
     {
         const int W = 780, H = 1688;
         var camera = Camera.main != null ? Camera.main : Object.FindFirstObjectByType<Camera>();
-        string folder = Path.GetFullPath(Path.Combine(Application.dataPath, "../PlaytestOutput/workshop"));
+        string folder = Path.GetFullPath(Path.Combine(Application.dataPath, "../PlaytestOutput/" + subfolder));
         Directory.CreateDirectory(folder);
         var texture = new RenderTexture(W, H, 24);
         camera.targetTexture = texture;

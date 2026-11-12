@@ -849,7 +849,7 @@ public class CampaignSceneSetup : MonoBehaviour
                 GemEconomy.BattleCardCost, L.T("AÇ", "UNLOCK"), () =>
                 {
                     if (BattleCards.UnlockWithGems(card) && detailOpen) RenderLevelDetail();
-                }, null, false, L.T("▶ REKLAM İZLE", "▶ WATCH AD"), () => RewardedAds.Show("battle_card", ok =>
+                }, null, false, L.T("REKLAM İZLE", "WATCH AD"), () => RewardedAds.Show("battle_card", ok =>
                 {
                     if (!ok) return;
                     BattleCards.UnlockFromAd(card);
@@ -1050,7 +1050,7 @@ public class CampaignSceneSetup : MonoBehaviour
                 ShowToast(L.T("Canlar doldu!", "Lives refilled!"));
                 AfterChange();
             }, null, false,
-            adOption ? L.T($"▶ REKLAM: +1 CAN ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} hak)", $"▶ AD: +1 LIFE ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} left)") : null,
+            adOption ? L.T($"REKLAM: +1 CAN ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} hak)", $"AD: +1 LIFE ({LivesSystem.DailyAdLives - LivesSystem.AdLivesToday} left)") : null,
             () => RewardedAds.Show("extra_life", ok =>
             {
                 if (!ok) return;

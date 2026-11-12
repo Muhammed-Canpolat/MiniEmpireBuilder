@@ -94,6 +94,9 @@ public class PlayerSaveData
     // Ödüllü reklam günlük hakları (AdRewards; gün = yyyyMMdd) ve Kraliyet günlük elması.
     public int adSpeedupDay;
     public int adSpeedupCount;
+    // Kereste Sevkiyatı: günlük sayaç (gün = GameClock.TodayId). Eski kayıtta 0 gelir.
+    public int lumberShipDay;
+    public int lumberShipCount;
     public int adMineDay;
     public int adChestDay;
     public int royalGemDay;
