@@ -171,6 +171,19 @@ public static class NotificationPlanner
                 L.T($"{what} hazır. İnşaatçın yeni iş bekliyor.", $"{what} is ready. Your builder is waiting."), end);
         }
 
+        // Kart Atölyesi: 30 dk ve üzeri üretim bitince "Kart hazır" (kısa üretimler bildirim istemez).
+        if (data?.workshop?.queue != null)
+        {
+            int jobIndex = 0;
+            foreach (var job in data.workshop.queue)
+            {
+                if (job == null || new TimeSpan(job.endTicks - job.startTicks).TotalMinutes < 30d) continue;
+                var ready = new DateTime(job.endTicks, DateTimeKind.Utc).ToLocalTime();
+                Add(500 + jobIndex++, L.T("Kart hazır!", "Card ready!"),
+                    L.T($"{BattleCards.Name((BattleCard)job.card)} kartın atölyede hazır.", $"Your {BattleCards.Name((BattleCard)job.card)} card is ready in the workshop."), ready);
+            }
+        }
+
         // Can: hepsi dolunca.
         if (!LivesSystem.Unlimited && LivesSystem.Lives < LivesSystem.MaxLives)
         {

@@ -778,7 +778,9 @@ public class CampaignSceneSetup : MonoBehaviour
         // Savaş kartları: bu savaş için +%10 (Kraliyet %15).
         TopLabel(detailPanel, "CardsTitle", L.T("SAVAŞ KARTLARI", "BATTLE CARDS"), 18, 148, 130, 20, 12, Ink, true, TextAlignmentOptions.Left);
         TopLabel(detailPanel, "CardsHint", CardsHint(), 150, 148, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
-        for (int i = 0; i < BattleCards.Count; i++) CreateCard((BattleCard)i, i);
+        CardWorkshop.TickIfAny();
+        for (int i = 0; i < BattleCards.BasicCount; i++) CreateCard((BattleCard)i, i);
+        if (CardWorkshop.Built) CreateWorkshopRow(level.kind == CampaignLevelKind.Boss);
 
         bool canPlay = LivesSystem.CanPlay;
         var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle",
@@ -793,7 +795,8 @@ public class CampaignSceneSetup : MonoBehaviour
         });
     }
 
-    private const float DetailHeight = 300f;
+    /// <summary>Atölye kuruluysa ayrıntı paneli bir "ATÖLYE KARTLARI" satırı kadar uzar.</summary>
+    private static float DetailHeight => CardWorkshop.Built ? 388f : 300f;
 
     private static string CardsHint()
     {
@@ -803,8 +806,7 @@ public class CampaignSceneSetup : MonoBehaviour
         return L.T($"Reklam ya da {GemEconomy.BattleCardCost} elmasla aç", $"Unlock with an ad or {GemEconomy.BattleCardCost} gems");
     }
 
-    private static string CardIcon(BattleCard card)
-        => card == BattleCard.HeroDamage ? "ui_icon_sword" : card == BattleCard.HeroHealth ? "ui_icon_heart" : "ui_icon_shield";
+    private static string CardIcon(BattleCard card) => BattleCards.IconName(card);
 
     private void CreateCard(BattleCard card, int index)
     {
@@ -829,13 +831,16 @@ public class CampaignSceneSetup : MonoBehaviour
             new Vector2(0, 0.66f), Vector2.one, new Vector2(34, 0), new Vector2(-4, -3), TextAlignmentOptions.Left);
         Label(rect, "CardName", BattleCards.Name(card), 12, ReferenceUiVisuals.Light, false,
             new Vector2(0, 0.34f), new Vector2(1, 0.66f), new Vector2(34, 0), new Vector2(-4, 0), TextAlignmentOptions.Left);
-        string state = active ? L.T("AÇIK", "ON")
+        int stock = CardWorkshop.Stock(card);
+        string state = active ? (BattleCards.ChosenFromStock(card) ? L.T($"ATÖLYE ×{stock}", $"WORKSHOP x{stock}") : L.T("AÇIK", "ON"))
             : BattleCards.FreeCardAvailable ? L.T("BEDAVA AL", "GET FREE")
+            : stock > 0 ? L.T($"ATÖLYE ×{stock}", $"WORKSHOP x{stock}")
             : BattleCards.Tokens > 0 ? L.T("JETONLA AÇ", "USE TOKEN") : L.T($"▶ / {GemEconomy.BattleCardCost} ELMAS", $"▶ / {GemEconomy.BattleCardCost} GEMS");
         Label(rect, "State", state, 10.5f, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8D5B0), false,
             Vector2.zero, new Vector2(1, 0.34f), new Vector2(34, 3), new Vector2(-4, 0), TextAlignmentOptions.Left);
         button.onClick.AddListener(() =>
         {
+            if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); RenderLevelDetail(); return; }   // atölye seçimi geri alınır (hak savaşta düşer)
             if (BattleCards.IsUnlocked(card)) { ShowToast(L.T($"{BattleCards.Description(card)} kartı bu savaş için açık.", $"{BattleCards.Description(card)} card is active for this battle.")); return; }
             if (BattleCards.TryUnlockWithoutAd(card)) { RenderLevelDetail(); return; }
             // Elmasla hemen aç ya da reklam izle.
@@ -850,6 +855,59 @@ public class CampaignSceneSetup : MonoBehaviour
                     BattleCards.UnlockFromAd(card);
                     if (detailOpen) RenderLevelDetail();
                 }));
+        });
+    }
+
+    /// <summary>
+    /// "ATÖLYE KARTLARI" satırı: Nadir/Destansı kartlar (stok = kalan hak). Yuva sayacı atölye seviyesine bağlıdır; savaş başına en çok 1 Destansı.
+    /// Kalkan Kıran kalkansız aşamada soluk gösterilir ve hak harcamaz (<see cref="BattleCards.BeginBattle"/>).
+    /// </summary>
+    private void CreateWorkshopRow(bool wardStage)
+    {
+        int slots = Progression.Workshop.SpecialSlots(CardWorkshop.Level);
+        TopLabel(detailPanel, "WorkshopTitle", L.T("ATÖLYE KARTLARI", "WORKSHOP CARDS"), 18, 238, 160, 20, 12, Ink, true, TextAlignmentOptions.Left);
+        TopLabel(detailPanel, "WorkshopHint", slots > 0
+            ? L.T($"Yuva {BattleCards.SpecialsChosen}/{slots} · savaşta hak düşer", $"Slots {BattleCards.SpecialsChosen}/{slots} · a use is spent")
+            : L.T("Nadir kartlar: Atölye Sv 3", "Rare cards: Workshop Lv 3"), 150, 238, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
+        for (int i = BattleCards.BasicCount; i < BattleCards.Count; i++) CreateWorkshopChip((BattleCard)i, i - BattleCards.BasicCount, wardStage);
+    }
+
+    private void CreateWorkshopChip(BattleCard card, int index, bool wardStage)
+    {
+        bool tierOpen = CardWorkshop.IsUnlocked(card);
+        bool active = BattleCards.IsUnlocked(card);
+        bool useless = card == BattleCard.WardBreaker && !wardStage;   // kalkanlı boss yok: soluk, hak harcamaz
+        int stock = CardWorkshop.Stock(card);
+        var rect = ReferenceUiVisuals.Rect(detailPanel, "WorkshopCard_" + card, new Vector2(index / 4f, 1), new Vector2((index + 1) / 4f, 1),
+            new Vector2(index == 0 ? 16 : 3, -310), new Vector2(index == 3 ? -16 : -3, -262));
+        var image = rect.gameObject.AddComponent<Image>();
+        image.sprite = ReferenceUiVisuals.SolidPillSprite();
+        image.type = Image.Type.Sliced;
+        image.color = active ? ReferenceUiVisuals.Hex(0x3E7A3A)
+            : !tierOpen || useless ? ReferenceUiVisuals.Hex(0x4A3A2A)
+            : BattleCards.Tier(card) == CardTier.Epic ? ReferenceUiVisuals.Hex(0x5B3A7A) : ReferenceUiVisuals.Hex(0x2F5A80);
+        var edge = rect.gameObject.AddComponent<Outline>();
+        edge.effectColor = active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0x2A1C10);
+        edge.effectDistance = new Vector2(1.5f, -1.5f);
+        var button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        var icon = ArtImage(rect, "Icon", CardIcon(card), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(5, -11), new Vector2(27, 11), 0f, true);
+        icon.raycastTarget = false;
+        if (!tierOpen || useless) icon.color = new Color(1f, 1f, 1f, 0.45f);
+        Label(rect, "CardName", BattleCards.Name(card), 11, ReferenceUiVisuals.Light, false,
+            new Vector2(0, 0.5f), Vector2.one, new Vector2(29, 0), new Vector2(-2, -2), TextAlignmentOptions.Left);
+        string state = active ? L.T($"AÇIK ×{stock}", $"ON x{stock}")
+            : !tierOpen ? L.T($"Atölye Sv {Progression.Workshop.UnlockLevel((int)BattleCards.Tier(card))}", $"Workshop Lv {Progression.Workshop.UnlockLevel((int)BattleCards.Tier(card))}")
+            : useless ? L.T("Kalkan yok", "No ward")
+            : stock > 0 ? $"×{stock}" : L.T("Stok yok", "No stock");
+        Label(rect, "State", state, 10.5f, active ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8D5B0), false,
+            Vector2.zero, new Vector2(1, 0.5f), new Vector2(29, 2), new Vector2(-2, 0), TextAlignmentOptions.Left);
+        button.onClick.AddListener(() =>
+        {
+            if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); RenderLevelDetail(); return; }
+            if (useless) { ShowToast(L.T("Bu aşamada kalkanlı boss yok: kart işe yaramaz.", "No shielded boss in this stage: the card would do nothing.")); return; }
+            if (BattleCards.TrySelectSpecial(card, out string reason)) RenderLevelDetail();
+            else ShowToast(reason);
         });
     }
 

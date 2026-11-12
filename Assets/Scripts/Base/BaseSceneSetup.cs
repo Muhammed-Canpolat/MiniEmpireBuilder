@@ -1200,6 +1200,8 @@ public class BaseSceneSetup : MonoBehaviour
                 }
 
                 var ui = GetComponent<BaseWorldUI>();
+                // Kart Atölyesi: dokununca üretim ekranı açılır (yükseltme o ekrandaki düğmeden bina paneline gider).
+                if (mapObj.buildingType == BuildingType.CardWorkshop && CardWorkshopPanel.Open(mapObj.id)) return;
                 if (ui != null && mapObj.buildingType.HasValue)
                 {
                     ui.ShowBuildingInfo(mapObj.buildingType.Value, mapObj.id);

@@ -108,6 +108,8 @@ public class PlayerSaveData
     public int invasionRewardWeek;
     // v6: Martı Adası (Docs/design/island_base.md). Eski kayıtta null gelir; yüklemede oluşturulur.
     public IslandSaveData island = new IslandSaveData();
+    // v8: Kart Atölyesi (Docs/design/card_workshop.md §8). Eski kayıtta null/boş gelir; yüklemede onarılır.
+    public WorkshopSaveData workshop = new WorkshopSaveData();
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
@@ -191,11 +193,58 @@ public class PlayerSaveData
         data.terrainResources = new List<TerrainResourceSave>();
         data.terrainLastGrowTicks = 0;
         data.island = new IslandSaveData();
+        data.workshop = new WorkshopSaveData();
+        EnsureWorkshopEntry(data);
 
         return data;
     }
 
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
+
+    /// <summary>Kart Atölyesi türü kayıtta yoksa ekler (eski kayıt göçü ve yeni oyun): Ana Üs 5'te açık, yoksa kilitli.</summary>
+    public static void EnsureWorkshopEntry(PlayerSaveData data)
+    {
+        if (data == null) return;
+        if (data.buildings == null) data.buildings = new List<BuildingSaveEntry>();
+        if (data.buildings.Exists(entry => entry.buildingType == BuildingType.CardWorkshop)) return;
+        var main = data.buildings.Find(entry => entry.buildingType == BuildingType.MainBase);
+        bool open = main != null && main.level >= Progression.Workshop.UnlockMainBaseLevel;
+        data.buildings.Add(new BuildingSaveEntry { buildingType = BuildingType.CardWorkshop, level = open ? 1 : 0, isUnlocked = open });
+    }
+}
+
+/// <summary>Atölye üretim işi: kart, başlangıç/bitiş (UTC tick) ve üretim başlarken kilitlenen hak sayısı.</summary>
+[Serializable]
+public class WorkshopJob
+{
+    public int card;
+    public long startTicks;
+    public long endTicks;
+    public int uses;
+}
+
+/// <summary>
+/// Kart Atölyesi kaydı: kart başına kalan hak (dizin = <see cref="BattleCard"/>), üretim kuyruğu, ilk bedava üretim bayrağı ve
+/// günlük reklam sayacı (gün = yyyyMMdd). Uzunluk eksikse yüklemede büyütülür (yeni kart eklenirse stok kaybolmaz).
+/// </summary>
+[Serializable]
+public class WorkshopSaveData
+{
+    public int[] stock = new int[BattleCards.Count];
+    public List<WorkshopJob> queue = new List<WorkshopJob>();
+    public bool firstFreeUsed;
+    public int adDay;
+    public int adsToday;
+
+    /// <summary>Boş/eksik alanları onarır ve negatif değerleri sıfırlar.</summary>
+    public void Repair()
+    {
+        if (stock == null) stock = new int[BattleCards.Count];
+        if (stock.Length < BattleCards.Count) Array.Resize(ref stock, BattleCards.Count);
+        for (int i = 0; i < stock.Length; i++) stock[i] = Mathf.Max(0, stock[i]);
+        if (queue == null) queue = new List<WorkshopJob>();
+        queue.RemoveAll(job => job == null || job.card < 0 || job.card >= BattleCards.Count);
+    }
 }
 
 /// <summary>
@@ -641,6 +690,15 @@ public static class SaveSystem
             if (data.saveVersion < 7)
             {
                 data.saveVersion = 7;
+                Save(data);
+            }
+            // v8: Kart Atölyesi. Eski kayıtta workshop boştur; bina türü kaydı Ana Üs seviyesine göre eklenir. Mevcut veriye dokunulmaz.
+            if (data.workshop == null) data.workshop = new WorkshopSaveData();
+            data.workshop.Repair();
+            PlayerSaveData.EnsureWorkshopEntry(data);
+            if (data.saveVersion < 8)
+            {
+                data.saveVersion = 8;
                 Save(data);
             }
             MigrateTimings(data);

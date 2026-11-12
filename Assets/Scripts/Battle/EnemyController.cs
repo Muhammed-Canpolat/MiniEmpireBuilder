@@ -172,7 +172,7 @@ public class EnemyController : MonoBehaviour
     {
         int region = Progression.Counters.WardRegion(enemyType);
         if (region <= 0) return;
-        wardMax = maxHealth * Progression.Counters.WardFraction(region);
+        wardMax = maxHealth * Progression.Counters.WardFraction(region) * BattleCards.WardPoolMultiplier;   // Kalkan Kıran: havuz −%30
         wardHp = wardMax;
         wardTowerMult = Progression.Counters.WardTowerMult(region);
         wardBar = HealthBar.Create(transform, wardMax, new Vector3(0f, 0.88f, 0f), new Color(0.35f, 0.65f, 1f));
@@ -216,7 +216,7 @@ public class EnemyController : MonoBehaviour
     {
         wardHp = 0f;
         WardBreaks++;
-        exposedUntil = Time.time + Progression.Counters.WardExposedSeconds;
+        exposedUntil = Time.time + Progression.Counters.WardExposedSeconds + BattleCards.WardExposedBonus;   // Kalkan Kıran: +2 sn
         staggerUntil = Time.time + Progression.Counters.WardStaggerSeconds;
         SetWardVisible(false);
         if (BattleVfxManager.Instance != null)
@@ -734,6 +734,7 @@ public class EnemyController : MonoBehaviour
         float sourceMult = SourceMultiplier(source);
         bool resisted = sourceMult < 1f;
         dmg *= sourceMult;
+        dmg *= BattleCards.TowerHitMultiplier(source, Variant);   // Atölye kartları (Keskin Oklar/Zırh Delici/Gök Avcısı; ×1,5 tavanlı)
         dmg *= Mathf.Max(0f, DamageTakenMultiplier);
         if (IsExposed) dmg *= Progression.Counters.WardExposedDamageMult;
         float before = dmg;

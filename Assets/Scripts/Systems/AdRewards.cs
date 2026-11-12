@@ -29,6 +29,23 @@ public static class AdRewards
         return true;
     }
 
+    // ==================== KART ATÖLYESİ: ÜRETİMİ ANINDA BİTİR ====================
+
+    public static int WorkshopAdsToday => Data?.workshop == null || Data.workshop.adDay != Today ? 0 : Data.workshop.adsToday;
+    public static int WorkshopAdsLeft => Mathf.Max(0, GemEconomy.DailyWorkshopAds - WorkshopAdsToday);
+
+    /// <summary>Reklam izlendi: günlük atölye hakkından 1 düşer (inşaatın −30 dk hakkından ayrıdır). Hak yoksa false.</summary>
+    public static bool ConsumeWorkshopAd()
+    {
+        var data = Data;
+        if (data == null || WorkshopAdsLeft <= 0) return false;
+        if (data.workshop == null) data.workshop = new WorkshopSaveData();
+        if (data.workshop.adDay != Today) { data.workshop.adDay = Today; data.workshop.adsToday = 0; }
+        data.workshop.adsToday++;
+        GameManager.Instance?.SaveGame();
+        return true;
+    }
+
     // ==================== MADEN 2X ====================
 
     public static bool MineAdAvailable => Data != null && Data.adMineDay != Today;

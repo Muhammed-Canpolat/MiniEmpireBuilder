@@ -43,6 +43,7 @@ public static class GemEconomy
     public const int AdMineBoostHours = 2;    // madende 2 sa 2x, günde 1
     public const int DailyMineAds = 1;
     public const int DailyChestAds = 1;       // dükkânda günlük sandık
+    public const int DailyWorkshopAds = 3;    // Kart Atölyesi: üretimi anında bitir (her kademe, inşaat hakkından ayrı)
 
     // ==================== KRALİYET ÜYELİĞİ ====================
     public const int RoyalDailyGems = 10;

@@ -97,9 +97,11 @@ public class BuildMenuController : MonoBehaviour
 
         CreateTab("YAPI", 0, 0.05f, 0.43f);
         CreateTab("DEKOR", 1, 0.48f, 0.86f);
-        CreateItem(BuildingType.ArcherTower, 0.03f, 0.32f, 50);
-        CreateItem(BuildingType.CannonTower, 0.35f, 0.64f, 80);
-        CreateItem(BuildingType.Monastery, 0.67f, 0.96f, 60);
+        // 4 yapı: Kart Atölyesi (Ana Üs 5) dördüncü sütun.
+        CreateItem(BuildingType.ArcherTower, 0.015f, 0.26f, 50);
+        CreateItem(BuildingType.CannonTower, 0.265f, 0.505f, 80);
+        CreateItem(BuildingType.Monastery, 0.51f, 0.75f, 60);
+        CreateItem(BuildingType.CardWorkshop, 0.755f, 0.985f, Progression.Workshop.BuildCost);
         var decor = DecorPlacementController.All;
         // Doğa → köy eşyaları → büyük yapılar; listede olmayan yeni dekorlar en sona, bedele göre.
         string[] decorOrder = { "tree", "bush", "rock", "flowers", "sheep", "stone_path",
@@ -198,7 +200,8 @@ public class BuildMenuController : MonoBehaviour
             bool hasLocked = GameManager.Instance != null &&
                 (GameManager.Instance.Buildings.TryGetValue(BuildingType.ArcherTower, out var archer) && !archer.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.CannonTower, out var cannon) && !cannon.isUnlocked ||
-                 GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var monastery) && !monastery.isUnlocked);
+                 GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var monastery) && !monastery.isUnlocked ||
+                 GameManager.Instance.Buildings.TryGetValue(BuildingType.CardWorkshop, out var workshop) && !workshop.isUnlocked);
             hint.gameObject.SetActive(index == 1 || hasLocked);
             hint.text = index == 0 ? L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows.") :
                 L.T("Dekora uzun bas: taşı veya sil (%50 iade).", "Long-press decor: move or remove (50% refund).");
@@ -322,6 +325,10 @@ public class BuildMenuController : MonoBehaviour
         nameTmp.color = Color.white;
         nameTmp.alignment = TextAlignmentOptions.Center;
         nameTmp.fontSize = 18f;
+        nameTmp.enableAutoSizing = true;
+        nameTmp.fontSizeMin = 10f;
+        nameTmp.fontSizeMax = 18f;
+        nameTmp.textWrappingMode = TextWrappingModes.NoWrap;
 
         // Cost
         GameObject costGO = new GameObject("Cost");
@@ -375,7 +382,9 @@ public class BuildMenuController : MonoBehaviour
                 if (GameManager.Instance.Gold >= cost)
                 {
                     Hide();
-                    PlacementController.Instance?.BeginPlacement(type, 60f, cost); // Varsayılan 60s inşa süresi
+                    // Varsayılan 60 sn inşa süresi; Kart Atölyesi'nin süresi Progression/TimingConfig'ten.
+                    PlacementController.Instance?.BeginPlacement(type,
+                        type == BuildingType.CardWorkshop ? Progression.Workshop.BuildSeconds : 60f, cost);
                 }
                 else
                 {
@@ -446,7 +455,9 @@ public class BuildMenuController : MonoBehaviour
             if (cost != null)
             {
                 cost.text = unlocked ? (type == BuildingType.ArcherTower ? L.T("50 Altın", "50 Gold")
-                    : type == BuildingType.CannonTower ? L.T("80 Altın", "80 Gold") : L.T("60 Altın", "60 Gold"))
+                    : type == BuildingType.CannonTower ? L.T("80 Altın", "80 Gold")
+                    : type == BuildingType.CardWorkshop ? L.T($"{Progression.Workshop.BuildCost} Altın", $"{Progression.Workshop.BuildCost} Gold")
+                    : L.T("60 Altın", "60 Gold"))
                     : L.T("Ana Üs Sev. ", "Main Base Lv. ") + (data?.GetRequiredMainBaseLevel() ?? 1);
                 cost.color = unlocked ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted;
             }
@@ -454,7 +465,7 @@ public class BuildMenuController : MonoBehaviour
         var hint = _panelRoot?.transform.Find("BuildMenuHint");
         if (hint != null && _activeTab == 0 && GameManager.Instance != null)
             hint.gameObject.SetActive(System.Array.Exists(new[] { BuildingType.ArcherTower,
-                BuildingType.CannonTower, BuildingType.Monastery }, type =>
+                BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop }, type =>
                 GameManager.Instance.Buildings.TryGetValue(type, out var item) && !item.isUnlocked));
         foreach (var btn in _decorButtons)
         {

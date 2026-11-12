@@ -632,6 +632,7 @@ public class BaseWorldUI : MonoBehaviour
             case BuildingType.CannonTower: return L.T("Topçu Kulesi", "Cannon Tower");
             case BuildingType.GoldMine: return L.T("Altın Madeni", "Gold Mine");
             case BuildingType.Monastery: return L.T("Manastır", "Monastery");
+            case BuildingType.CardWorkshop: return L.T("Kart Atölyesi", "Card Workshop");
             default: return type.ToString();
         }
     }
@@ -641,7 +642,7 @@ public class BaseWorldUI : MonoBehaviour
         int nextLevel = currentLevel + 1;
         if (nextLevel > Progression.MaxLevel) return "";
         var unlocked = new List<string>();
-        foreach (var type in new[] { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery })
+        foreach (var type in new[] { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop })
         {
             if (Progression.FirstUnlockLevel(type) == nextLevel) unlocked.Add(GetBuildingDisplayName(type));
             else if (Progression.SecondUnlockLevel(type) == nextLevel) unlocked.Add("2. " + GetBuildingDisplayName(type));
@@ -677,6 +678,11 @@ public class BaseWorldUI : MonoBehaviour
                 int healPct = Mathf.RoundToInt(Progression.MonasteryHealFraction(building.level) * 100f);
                 return L.T($"Can: {building.maxHealth:F0}\nİyileştirme: 3 sn'de %{healPct}\nMenzil: 4",
                     $"Health: {building.maxHealth:F0}\nHealing: {healPct}% every 3 s\nRange: 4");
+
+            case BuildingType.CardWorkshop:
+                int uses = Progression.Workshop.UsesPerCraft(building.level);
+                return L.T($"Üretim başına {uses} hak (1 savaş = 1 hak)\nKuyruk: {Progression.Workshop.QueueSlots(building.level)} · Özel kart yuvası: {Progression.Workshop.SpecialSlots(building.level)}\nNadir Sv {Progression.Workshop.RareUnlockLevel} · Destansı Sv {Progression.Workshop.EpicUnlockLevel}",
+                    $"{uses} uses per craft (1 battle = 1 use)\nQueue: {Progression.Workshop.QueueSlots(building.level)} · Special card slots: {Progression.Workshop.SpecialSlots(building.level)}\nRare Lv {Progression.Workshop.RareUnlockLevel} · Epic Lv {Progression.Workshop.EpicUnlockLevel}");
 
 
             default:

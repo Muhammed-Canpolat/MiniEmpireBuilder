@@ -23,7 +23,9 @@ public enum BuildingType
     ArcherTower,    // Okçu Kulesi
     CannonTower,    // Topçu Kulesi
     GoldMine,       // Altın Madeni
-    Monastery       // Manastır — dost birimleri iyileştirir
+    Monastery,      // Manastır — dost birimleri iyileştirir
+    // Yeni türler hep sona eklenir (kayıtlar enum'u sayı/ad olarak saklar).
+    CardWorkshop    // Kart Atölyesi — Et + altınla savaş kartı üretir (savaşa girmez)
 }
 
 /// <summary>
@@ -230,6 +232,11 @@ public class BuildingData
 
             case BuildingType.Monastery:
                 maxHealth = 90f + (level - 1) * 25f;
+                currentHealth = maxHealth;
+                break;
+
+            case BuildingType.CardWorkshop:   // savaşa girmez; yalnız seviye (hak sayısı) anlamlı
+                maxHealth = 100f;
                 currentHealth = maxHealth;
                 break;
         }
@@ -561,6 +568,44 @@ public static class Progression
             n >= 1 && n <= highestAkin + 1 && keepLevel >= AkinRequiredCastle(n);
     }
 
+    // ---- Kart Atölyesi (Docs/design/card_workshop.md): bina, bedel, süre, hak ve yuva sayıları yalnız burada ----
+    public static class Workshop
+    {
+        /// <summary>Açılış: Ana Üs 5 (= ada ile birlikte; belge açılış seviyesi vermiyor, kararlaştırıldı).</summary>
+        public const int UnlockMainBaseLevel = 5;
+        public const int BuildCost = 150;                          // İnşa et (altın)
+        /// <summary>İnşa süresi TimingConfig tablosundan (2. seviye süresi; şu an 10 sn).</summary>
+        public static int BuildSeconds => UpgradeSecondsTo(2);
+        public const float UpgradeFactor = 0.45f;                  // UpgradeCost çarpanı (Okçu 0,5'in biraz altı)
+        public const float CostSlope = 0.15f;                      // üretim bedeli: taban × (1 + 0,15 (sv − 1))
+        public const float CardStackCap = 0.5f;                    // bir yolda kartlardan gelen toplam çarpan en çok ×1,5
+        public const int FirstCraftSeconds = 30;                   // ilk üretim bedava ve kısa (öğretici)
+        public const int RareUnlockLevel = 3, EpicUnlockLevel = 7;
+        public const int SecondQueueLevel = 6;
+        public const int MaxEpicPerBattle = 1;
+
+        /// <summary>Üretim başına hak: her renk kademesi (3 seviye) +1 (1 → 5).</summary>
+        public static int UsesPerCraft(int level) => 1 + (Mathf.Max(1, level) - 1) / LevelsPerColorTier;
+        public static int QueueSlots(int level) => level >= SecondQueueLevel ? 2 : 1;
+        /// <summary>Savaşta atölye özel (Nadir/Destansı) kart yuvası: sv3'te 1, sv7'de 2.</summary>
+        public static int SpecialSlots(int level) => level >= EpicUnlockLevel ? 2 : level >= RareUnlockLevel ? 1 : 0;
+
+        // Kademe: 0 Sıradan, 1 Nadir, 2 Destansı. Et/altın tabanları ada Et ekonomisine göre ayarlıdır (island_base_v2 §17:
+        // sıradan oyuncu altın:Et ~16:1 → gün 1 ~180 Et, gün 7 ~750 Et): gün 1'de 1, ilk günlerde 1–2 Sıradan kart.
+        private static readonly int[] BaseMeat = { 150, 360, 900 };
+        private static readonly int[] BaseGold = { 180, 430, 1080 };
+        private static readonly int[] CraftSeconds = { 5 * 60, 30 * 60, 2 * 60 * 60 };
+        private static readonly int[] StockCaps = { 12, 8, 5 };
+        public static int UnlockLevel(int tier) => tier <= 0 ? 1 : tier == 1 ? RareUnlockLevel : EpicUnlockLevel;
+        public static int Seconds(int tier) => CraftSeconds[Mathf.Clamp(tier, 0, 2)];
+        public static int StockCap(int tier) => StockCaps[Mathf.Clamp(tier, 0, 2)];
+
+        private static int Scaled(int baseValue, int level) =>
+            Mathf.RoundToInt(baseValue * (1f + CostSlope * (Mathf.Max(1, level) - 1)) / 10f) * 10;
+        public static int Meat(int tier, int level) => Scaled(BaseMeat[Mathf.Clamp(tier, 0, 2)], level);
+        public static int Gold(int tier, int level) => Scaled(BaseGold[Mathf.Clamp(tier, 0, 2)], level);
+    }
+
     // ---- Karşı düşmanlar ve Boss Kalkanı (round2 C) ----
     public static class Counters
     {
@@ -682,6 +727,7 @@ public static class Progression
             : type == BuildingType.CannonTower ? 0.7f
             : type == BuildingType.Monastery ? 0.6f
             : type == BuildingType.GoldMine ? 0.55f
+            : type == BuildingType.CardWorkshop ? Workshop.UpgradeFactor
             : 0.5f; // Okçu
         return Mathf.Max(10, Mathf.RoundToInt(baseCost * factor / 10f) * 10);
     }
@@ -693,6 +739,7 @@ public static class Progression
             case BuildingType.ArcherTower: return 2;
             case BuildingType.CannonTower: return 4;
             case BuildingType.Monastery: return 6;
+            case BuildingType.CardWorkshop: return Workshop.UnlockMainBaseLevel;
             default: return 1;
         }
     }

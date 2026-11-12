@@ -28,8 +28,8 @@ public static class BuildBaseVisualCatalog
         }
         var baseController = MakeBaseController();
         var buildingTypes = new[] { BuildingType.MainBase, BuildingType.ArcherTower,
-            BuildingType.CannonTower, BuildingType.Monastery, BuildingType.GoldMine };
-        var buildingFiles = new[] { "Castle", "Archery", "Tower", "Monastery", "" };
+            BuildingType.CannonTower, BuildingType.Monastery, BuildingType.GoldMine, BuildingType.CardWorkshop };
+        var buildingFiles = new[] { "Castle", "Archery", "Tower", "Monastery", "", "House2" };
         catalog.buildings = new BaseVisualCatalog.BuildingSet[buildingTypes.Length];
         var atlasItems = new List<UnityEngine.Object>();
         for (int type = 0; type < buildingTypes.Length; type++)
@@ -109,6 +109,29 @@ public static class BuildBaseVisualCatalog
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[BaseVisual] Visual catalog and atlas built.");
+    }
+
+    /// <summary>
+    /// Kart Atölyesi (House2, 5 renk) görsellerini mevcut kataloğa ekler; diğer girdilere ve atlasa dokunmaz.
+    /// (Tüm katalog yeniden üretilmeden güvenle koşar: batchmode -executeMethod BuildBaseVisualCatalog.AddWorkshopVisuals.)
+    /// </summary>
+    [MenuItem("Tools/Base Review/Add Card Workshop Visuals")]
+    public static void AddWorkshopVisuals()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<BaseVisualCatalog>(Output);
+        if (catalog == null) { Debug.LogError("[BaseVisual] Katalog yok: önce Build Visual Assets."); return; }
+        var set = new BaseVisualCatalog.BuildingSet { type = BuildingType.CardWorkshop };
+        for (int level = 0; level < 5; level++)
+        {
+            Sprite sprite = FirstSprite($"{Root}/Buildings/{Colors[level]} Buildings/House2.png");
+            set.levels[level] = new BuildingLevelVisual { color = LevelColor(level), sprite = sprite };
+        }
+        var list = (catalog.buildings ?? new BaseVisualCatalog.BuildingSet[0]).Where(b => b != null && b.type != BuildingType.CardWorkshop).ToList();
+        list.Add(set);
+        catalog.buildings = list.ToArray();
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[BaseVisual] Kart Atölyesi görselleri eklendi: {set.levels.Count(l => l.sprite != null)}/5 sprite.");
     }
 
     private static RuntimeAnimatorController[] UnitControllers(string folder, string subfolder, string prefix)

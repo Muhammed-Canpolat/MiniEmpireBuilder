@@ -537,6 +537,7 @@ UI_COPY = {
     "ui_icon_sword": "UI Elements/Icons/Icon_05.png",
     "ui_icon_shield": "UI Elements/Icons/Icon_06.png",
     "ui_icon_hammer": "UI Elements/Icons/Icon_01.png",
+    "ui_icon_cross": "UI Elements/Icons/Icon_09.png",   # Kart Atölyesi: Kalkan Kıran
     "ui_sword_red": "UI Elements/Swords/Swords 2.png",
 }
 

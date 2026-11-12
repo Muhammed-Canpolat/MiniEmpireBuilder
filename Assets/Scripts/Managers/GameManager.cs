@@ -287,6 +287,9 @@ public class GameManager : MonoBehaviour
     private void RebuildBuildingData()
     {
         Buildings.Clear();
+        PlayerSaveData.EnsureWorkshopEntry(PlayerData);   // Kart Atölyesi türü eski/elle kurulan kayıtta da bulunsun
+        if (PlayerData.workshop == null) PlayerData.workshop = new WorkshopSaveData();
+        PlayerData.workshop.Repair();
 
         foreach (var entry in PlayerData.buildings)
         {
@@ -720,7 +723,11 @@ public class GameManager : MonoBehaviour
     }
 #endif
 
-    private void Update() => CheckBuilderTask();
+    private void Update()
+    {
+        CheckBuilderTask();
+        CardWorkshop.TickIfAny();   // biten atölye üretimleri stoğa girer (çevrimdışı dahil: GameClock)
+    }
 
     private void CheckBuilderTask()
     {

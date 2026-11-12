@@ -49,15 +49,18 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         var cards = new System.Collections.Generic.List<string>();
         for (int i = 0; i < BattleCards.Count; i++)
             if (BattleCards.ActiveInBattle((BattleCard)i)) cards.Add(BattleCards.Name((BattleCard)i));
+        // "+%10" yalnız temel kart etkinse; özel (Atölye) kartların etkisi adında/ayrıntısındadır.
+        bool basicActive = false;
+        for (int i = 0; i < BattleCards.BasicCount; i++) basicActive |= BattleCards.ActiveInBattle((BattleCard)i);
         if (cards.Count > 0)
         {
             float top = timed || mine ? -144f : -110f;
             var cardPill = ReferenceUiVisuals.Image(safe, "ActiveCardsPill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(-110f, top - 24f), new Vector2(110f, top), new Color(0.2f, 0.4f, 0.18f, 0.9f));
+                new Vector2(-140f, top - 24f), new Vector2(140f, top), new Color(0.2f, 0.4f, 0.18f, 0.9f));
             cardPill.sprite = ReferenceUiVisuals.SolidPillSprite();
             cardPill.type = Image.Type.Sliced;
             ReferenceUiVisuals.Text(cardPill.transform, "ActiveCardsText",
-                L.T($"KART +%{BattleCards.ActiveBattlePercent}: ", $"CARDS +{BattleCards.ActiveBattlePercent}%: ") + string.Join(" · ", cards), 12, ReferenceUiVisuals.Light,
+                (basicActive ? L.T($"KART +%{BattleCards.ActiveBattlePercent}: ", $"CARDS +{BattleCards.ActiveBattlePercent}%: ") : L.T("KART: ", "CARDS: ")) + string.Join(" · ", cards), 12, ReferenceUiVisuals.Light,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
             stackBottom = -(top - 24f);
         }

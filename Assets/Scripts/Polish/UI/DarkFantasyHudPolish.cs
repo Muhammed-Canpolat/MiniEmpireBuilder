@@ -191,13 +191,13 @@ public static class DarkFantasyHudPolish
             }
         }
 
-        BuildingType[] types = { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery };
+        BuildingType[] types = { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop };
         for (int i = 0; i < types.Length; i++)
         {
             var item = panel.Find("Item_" + types[i]);
             if (item == null) continue;
-            float left = 0.04f + i * 0.32f;
-            SetAnchors(item as RectTransform, new Vector2(left, 0.14f), new Vector2(left + 0.28f, 0.65f));
+            float left = 0.025f + i * 0.2438f;   // 4 sütun (Kart Atölyesi dördüncü)
+            SetAnchors(item as RectTransform, new Vector2(left, 0.14f), new Vector2(left + 0.227f, 0.65f));
             var itemBg = item.GetComponent<Image>();
             if (itemBg != null) itemBg.color = ReferenceUiVisuals.Background;
             var outline = item.GetComponent<Outline>();
@@ -207,7 +207,7 @@ public static class DarkFantasyHudPolish
 
             var icon = item.Find("Icon")?.GetComponent<Image>();
             if (icon != null) { icon.color = Color.white; icon.preserveAspect = true; }
-            StyleText(item, "Name", 15, ReferenceUiVisuals.Light, true);
+            StyleText(item, "Name", 14, ReferenceUiVisuals.Light, true);
             StyleText(item, "Cost", 13, ReferenceUiVisuals.Gold, false);
             SetAnchors(item.Find("Cost") as RectTransform, new Vector2(0, 0.12f), new Vector2(1, 0.27f));
             StyleText(item, "PlacedCount", 11, ReferenceUiVisuals.Muted, false);

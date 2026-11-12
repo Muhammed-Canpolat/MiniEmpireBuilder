@@ -98,6 +98,23 @@ MonoBehaviour:
     - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
       sprite: {fileID: 0}
       animatorOverride: {fileID: 22100000, guid: 59d45d2d3fb213e40a293f19803732c6, type: 2}
+  - type: 5
+    levels:
+    - color: {r: 0.43, g: 0.69, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: c3dedc0ecab4047cc891892591447655, type: 3}
+      animatorOverride: {fileID: 0}
+    - color: {r: 1, g: 0.84, b: 0.37, a: 1}
+      sprite: {fileID: 21300000, guid: a53cf2c9640d64d8b8d50e3b2df10739, type: 3}
+      animatorOverride: {fileID: 0}
+    - color: {r: 1, g: 0.42, b: 0.4, a: 1}
+      sprite: {fileID: 21300000, guid: 234d9257f4c1741cab35823879833351, type: 3}
+      animatorOverride: {fileID: 0}
+    - color: {r: 0.74, g: 0.53, b: 1, a: 1}
+      sprite: {fileID: 21300000, guid: cc7e4ac7dc23447c0899b7d94a5f2b60, type: 3}
+      animatorOverride: {fileID: 0}
+    - color: {r: 0.34, g: 0.35, b: 0.42, a: 1}
+      sprite: {fileID: 21300000, guid: cb445ff62c7c14026925f63218d44e2a, type: 3}
+      animatorOverride: {fileID: 0}
   archerControllers:
   - {fileID: 9100000, guid: e69e54e6f75584bf382ddbe934f532b6, type: 2}
   - {fileID: 9100000, guid: 4ba6eb628742f4b56929badd18c4b61a, type: 2}
