@@ -8,7 +8,12 @@ using UnityEngine.UI;
 public sealed class IslandTouchSurface : MonoBehaviour, IPointerClickHandler
 {
     public Action<Vector2> Tapped;
-    public void OnPointerClick(PointerEventData eventData) => Tapped?.Invoke(eventData.position);
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // Kaydırma/sıkıştırma bırakılışı dokunuş sayılmaz (Faz B: yığın toplama ve bina seçimi yanlışlıkla tetiklenmesin).
+        if (Vector2.Distance(eventData.pressPosition, eventData.position) > 24f) return;
+        Tapped?.Invoke(eventData.position);
+    }
 }
 
 /// <summary>Basılı tutma düğmesi (ATEŞ): bas / bırak olayları okçuya gider.</summary>
@@ -46,8 +51,15 @@ public sealed class IslandHud : MonoBehaviour
     private TextMeshProUGUI resultTitle, resultBody;
     private Button resultAgain, resultNext, resultHome;
     private float toastUntil;
+    private IslandBuildUi buildUi;
+    private IslandPlacementController placement;
+    private Image touchSurfaceImage;
+    private bool placing;
 
     public static readonly Color Gold = ReferenceUiVisuals.Gold;
+
+    public IslandBuildUi BuildUi => buildUi;
+    public bool Placing => placing;
 
     public void Build(IslandSceneSetup owner, IslandRaidManager raidManager, IslandArcher islandArcher, Camera cam)
     {
@@ -66,12 +78,14 @@ public sealed class IslandHud : MonoBehaviour
         var surface = ReferenceUiVisuals.Image(safe, "TouchSurface", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
             new Color(0f, 0f, 0f, 0f));
         surface.raycastTarget = true;
+        touchSurfaceImage = surface;
         var touch = surface.gameObject.AddComponent<IslandTouchSurface>();
         touch.Tapped = screen => setup.HandleScreenTap(screen);
 
         BuildTopBar();
         BuildDock();
         BuildPrepPanel();
+        BuildBuildUi();
         BuildFireControls();
         BuildHint();
         BuildResult();
@@ -137,12 +151,72 @@ public sealed class IslandHud : MonoBehaviour
         root.transform.SetParent(safe, false);
         var rt = (RectTransform)root.transform;
         rt.anchorMin = new Vector2(0.5f, 0); rt.anchorMax = new Vector2(0.5f, 0);
-        rt.offsetMin = new Vector2(-120, 26); rt.offsetMax = new Vector2(120, 92);
+        rt.offsetMin = new Vector2(-170, 26); rt.offsetMax = new Vector2(170, 92);
         dock = root;
-        var button = ReferenceUiVisuals.Button(rt, "AkinButton", L.T("AKIN", "RAID"), true, Vector2.zero, Vector2.one,
+        // Alt dock (v2 §3): İNŞA ET · AKIN (KAPTAN düğmesi Faz E'de gelir)
+        var build = ReferenceUiVisuals.Button(rt, "BuildButton", L.T("İNŞA ET", "BUILD"), false, Vector2.zero, new Vector2(0.48f, 1),
+            Vector2.zero, Vector2.zero, 22);
+        build.onClick.AddListener(OpenBuildMenu);
+        var button = ReferenceUiVisuals.Button(rt, "AkinButton", L.T("AKIN", "RAID"), true, new Vector2(0.52f, 0), Vector2.one,
             Vector2.zero, Vector2.zero, 24);
         akinDockLabel = button.GetComponentInChildren<TextMeshProUGUI>();
-        button.onClick.AddListener(() => { prepOpen = true; Refresh(); });
+        button.onClick.AddListener(() => { buildUi?.Close(); prepOpen = true; Refresh(); });
+    }
+
+    // ==================== İNŞA (Faz B) ====================
+
+    private void BuildBuildUi()
+    {
+        buildUi = new IslandBuildUi();
+        buildUi.Build(safe);
+        buildUi.Toast = Toast;
+        buildUi.PlaceRequested = kind => StartPlacement(IslandPlacementHost.ForNew(kind));
+        buildUi.MoveRequested = id => StartPlacement(IslandPlacementHost.ForMove(id));
+        buildUi.AkinRequested = () => { prepOpen = true; Refresh(); };
+        placement = setup.gameObject.GetComponent<IslandPlacementController>() ?? setup.gameObject.AddComponent<IslandPlacementController>();
+        var village = IslandVillage.Instance;
+        if (village != null)
+        {
+            village.Toast = Toast;
+            village.BuildingTapped = id => { buildUi.ShowBuilding(id); FocusBuilding(id); };
+            village.CastleTapped = () => { buildUi.ShowCastle(); setup.CameraController.FocusUpper(IslandLayout.CastleCenter); };
+            village.ZoneTapped = zone => { buildUi.ShowZone(zone); setup.CameraController.FocusUpper(setup.ZoneCenter(zone)); };
+        }
+    }
+
+    public void OpenBuildMenu()
+    {
+        if (raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        prepOpen = false;
+        board.SetVisible(false);
+        buildUi.ShowMenu();
+    }
+
+    public void CloseBuildUi() => buildUi?.Close();
+
+    /// <summary>Bina paneli alttan açılır: seçilen bina panelin üstünde görünsün diye kamera kayar.</summary>
+    public void FocusBuilding(string id)
+    {
+        var village = IslandVillage.Instance;
+        var entry = IslandEconomy.Find(id);
+        if (village == null || entry == null || setup.CameraController == null) return;
+        var spot = IslandVillage.SpotFor(entry);
+        setup.CameraController.FocusUpper(spot.FeetWorld + Vector2.up * 1f);
+    }
+
+    /// <summary>Yerleştirmeyi başlatır (yeni bina ya da taşıma); hayalet, YERLEŞTİR / İPTAL çubuğu açılır.</summary>
+    public void StartPlacement(IPlacementHost host)
+    {
+        if (raid.Phase != IslandRaidManager.State.Idle) return;
+        buildUi.Close();
+        placement.Begin(host, setup.WorldCamera, setup.CameraController, safe, SetPlacementUi, Toast);
+    }
+
+    private void SetPlacementUi(bool on)
+    {
+        placing = on;
+        if (touchSurfaceImage != null) touchSurfaceImage.raycastTarget = !on;   // hayalet sürüklemesi dünya dokunuşuna karışmasın
+        if (dock != null) dock.SetActive(!on && raid.Phase == IslandRaidManager.State.Idle && !prepOpen);
     }
 
     /// <summary>Akın Panosu (§3): AKIN düğmesi açar; kartlar merdiveni gösterir, SAVUNMAYA BAŞLA savunmayı başlatır.</summary>
@@ -385,7 +459,8 @@ public sealed class IslandHud : MonoBehaviour
         bool idle = state == IslandRaidManager.State.Idle;
         if (!idle) prepOpen = false;
         board.SetVisible(idle && prepOpen);
-        dock.SetActive(idle && !prepOpen);
+        dock.SetActive(idle && !prepOpen && !placing && !(buildUi != null && buildUi.Open));
+        if (!idle) { buildUi?.Close(); }
         castleBar.SetActive(!idle);
         fireRoot.SetActive(running);
         resultPanel.SetActive(state == IslandRaidManager.State.Won || state == IslandRaidManager.State.Lost);
@@ -412,8 +487,8 @@ public sealed class IslandHud : MonoBehaviour
                 $"Raid {raid.Akin} cleared.\n+{r.gold} gold (Base) · +{r.meat} Meat · +{r.wood} Wood{gems}");
             if (raid.TutorialFinishedThisRun)
             {
-                resultBody.text += "\n" + L.T("Ağıl ve Oduncu yakında: Et ve Odun orada harcanacak.",
-                    "Pasture and Lumber Camp are coming: Meat and Wood will be spent there.");
+                resultBody.text += "\n" + L.T("Odun ödülünü İNŞA ET menüsünde harca. Et yavaş gelir: Ağıl'ı yükselt.",
+                    "Spend the Wood in the BUILD menu. Meat comes slowly: upgrade the Pasture.");
             }
             resultBody.text += DamagedBuildings();
             bool next = raid.CanStart(raid.Akin + 1);
@@ -483,6 +558,18 @@ public sealed class IslandHud : MonoBehaviour
         }
         var save = IslandSession.Save;
         meatText.text = save != null ? save.meat.ToString() : "0";
+        if (save != null)
+        {
+            // Cüzdan tavanına ulaşan sayaç sarıya döner (üretim durur)
+            meatText.color = save.meat >= IslandEconomy.MeatCap ? Gold : ReferenceUiVisuals.Light;
+            woodText.color = save.wood >= IslandEconomy.WoodCap ? Gold : ReferenceUiVisuals.Light;
+        }
+        buildUi?.Tick();
+        if (dock != null && raid.Phase == IslandRaidManager.State.Idle)
+        {
+            bool dockOn = !prepOpen && !placing && !(buildUi != null && buildUi.Open);
+            if (dock.activeSelf != dockOn) dock.SetActive(dockOn);
+        }
         woodText.text = save != null ? save.wood.ToString() : "0";
         var player = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
         goldText.text = player != null ? player.gold.ToString() : "0";

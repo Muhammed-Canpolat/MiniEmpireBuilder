@@ -27,7 +27,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
     /// <summary>Test/Dev: "tüm bölgeler açık" görünümü için Kıyı Kalesi seviyesini geçersiz kılar (0: kayıttan).</summary>
     public int KeepOverride { get; private set; }
 
-    private Transform worldRoot, villageRoot, pawnsRoot;
+    private Transform worldRoot, pawnsRoot;
     private GameObject terrainObject, natureObject;
     private readonly List<SpriteRenderer> postMarkers = new List<SpriteRenderer>();
     private readonly List<IslandCloud> edgeClouds = new List<IslandCloud>();
@@ -198,6 +198,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
     {
         KeepOverride = keepLevel;
         RefreshZones();
+        Village?.RebuildPawns();
     }
 
     private void CollectClouds()
@@ -207,84 +208,65 @@ public sealed class IslandSceneSetup : MonoBehaviour
         zoneClouds.AddRange(natureObject.GetComponentsInChildren<IslandZoneCloud>(true));
     }
 
-    /// <summary>Kilitli bölge bulutları: bölge açıksa ya da savunmadaysak gizli.</summary>
+    /// <summary>Kilitli bölge bulutları: bölge açıksa (kayıttaki maske) ya da savunmadaysak gizli. Dev "hepsi açık" görünümü KeepOverride ile.</summary>
     public void RefreshZones()
     {
-        int keep = KeepOverride > 0 ? KeepOverride : IslandSession.KeepLevel();
+        int mask = IslandSession.Save != null ? IslandSession.Save.zoneMask : 1;
         foreach (var cloud in zoneClouds)
-            if (cloud != null) cloud.gameObject.SetActive(!InDefense && !IslandLayout.ZoneUnlocked(cloud.zone, keep));
+        {
+            if (cloud == null) continue;
+            bool open = KeepOverride > 0 || IslandGrid.ZoneOpen(cloud.zone, mask);
+            // Dağılma animasyonu sürerken kapatma (animasyon kendi bitirir)
+            if (cloud.Dissolving && !InDefense) continue;
+            cloud.gameObject.SetActive(!InDefense && !open);
+        }
     }
 
-    // ==================== KALE VE HAZIR KÖY ====================
+    // ==================== KALE VE KÖY (Faz B: kayıttan) ====================
 
-    private SpriteRenderer MakeBuilding(string spriteName, Vector2 feet, float feetPixels, int bias, string objectName)
-    {
-        var catalog = IslandVisualCatalog.Instance;
-        var sprite = catalog != null ? catalog.Single(spriteName) : null;
-        var go = new GameObject(objectName);
-        go.transform.SetParent(villageRoot, false);
-        go.transform.position = new Vector3(feet.x, feet.y + feetPixels / 64f, 0f);
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        sr.sortingOrder = IslandYSort.OrderFor(feet.y, bias);
-        return sr;
-    }
+    public IslandVillage Village { get; private set; }
 
     private void BuildVillage(int keep)
     {
-        villageRoot = new GameObject("Village").transform;
-        villageRoot.SetParent(worldRoot, false);
-        pawnsRoot = new GameObject("Pawns").transform;
-        pawnsRoot.SetParent(worldRoot, false);
-        var catalog = IslandVisualCatalog.Instance;
+        Village = gameObject.GetComponent<IslandVillage>() ?? gameObject.AddComponent<IslandVillage>();
+        Village.Build(this, worldRoot, keep);
+        pawnsRoot = Village.PawnsRoot;
+        CastleStructure = Village.CastleStructure;
+    }
 
-        IslandBuilding.PawnsParent = pawnsRoot;
-        foreach (var spot in IslandLayout.Buildings)
+    /// <summary>Bölge açılınca bulutlar kayıp dağılır (1,5 sn); Kale ve işaretçiler değişmez.</summary>
+    public void DisperseZone(int zone)
+    {
+        Vector2 center = ZoneCenter(zone);
+        foreach (var cloud in zoneClouds)
         {
-            Vector2 feet = spot.FeetWorld;
-            SpriteRenderer renderer = null;
-            switch (spot.kind)
-            {
-                case IslandLayout.BuildingKind.Castle: renderer = MakeBuilding("building_castle", feet, 121f, -30, "CoastalKeep"); break;
-                case IslandLayout.BuildingKind.House: renderer = MakeBuilding("building_house1", feet, 69f, 0, "House"); break;
-                case IslandLayout.BuildingKind.Lumber: renderer = MakeBuilding("building_house2", feet, 77f, 0, "LumberCamp"); break;
-                case IslandLayout.BuildingKind.Pasture: renderer = MakeBuilding("building_house3", feet, 70f, 0, "Pasture"); break;
-                case IslandLayout.BuildingKind.Archery: renderer = MakeBuilding("building_archery", feet, 104f, 0, "ArcheryRange"); break;
-                case IslandLayout.BuildingKind.Tower: renderer = MakeBuilding("building_tower", feet, 94f, 0, "WatchTower"); break;
-            }
-            if (renderer == null) continue;
-            // Her ada binası savaşta bir BattleStructure olur (§7.5); hazır köy sabit seviyede (Faz B bağlayana kadar).
-            var building = IslandBuilding.Attach(renderer, spot, keep);
-            if (spot.kind == IslandLayout.BuildingKind.Castle) CastleStructure = building.Structure;
+            if (cloud == null || cloud.zone != zone || !cloud.gameObject.activeSelf) continue;
+            Vector2 away = (Vector2)cloud.transform.position - center;
+            if (away.sqrMagnitude < 0.01f) away = Vector2.up;
+            cloud.Dissolve(away, Progression.Island.ZoneDispersalSeconds);
         }
+    }
 
-        // Piyonlar: oduncu, çoban, madenci, usta, 2 boşta (en az 3 farklı iş).
-        var lumber = IslandLayout.Building(IslandLayout.BuildingKind.Lumber);
-        var pasture = IslandLayout.Building(IslandLayout.BuildingKind.Pasture);
-        var house = IslandLayout.Building(IslandLayout.BuildingKind.House);
-        IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Lumberjack, IslandLayout.World(lumber.DoorCell));
-        IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Shepherd, IslandLayout.World(pasture.DoorCell));
-        IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Builder, IslandLayout.World(house.col - 0.55f, house.row + house.h + 0.1f));
-        var stone = IslandLayout.GoldStones[0];
-        var route = new[]
-        {
-            IslandLayout.World(15.5f, 9.5f), IslandLayout.World(15.5f, 7.5f), IslandLayout.World(15.5f, 6.5f),
-            IslandLayout.World(13.5f, 6.5f), IslandLayout.World(11.6f, 6.6f),
-        };
-        IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Miner, IslandLayout.World(stone.x - 0.25f, stone.y + 1.15f), route);
-        IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Idler, IslandLayout.World(9.4f, 6.7f));
-        IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Idler, IslandLayout.World(12.2f, 6.7f));
+    /// <summary>Bölgenin bulut merkezi (görev işareti ve dağılma yönü).</summary>
+    public Vector2 ZoneCenter(int zone)
+    {
+        Vector2 sum = Vector2.zero; int count = 0;
+        foreach (var cloud in zoneClouds)
+            if (cloud != null && cloud.zone == zone) { sum += cloud.anchor; count++; }
+        return count > 0 ? sum / count : IslandLayout.CastleCenter;
+    }
 
-        // Koyunlar çayırda otlar.
-        var meadow = IslandLayout.Meadow;
-        var rect = Rect.MinMaxRect(meadow.xMin + 0.5f, IslandLayout.Height - meadow.yMax + 0.3f,
-            meadow.xMax - 0.5f, IslandLayout.Height - meadow.yMin - 0.3f);
-        for (int i = 0; i < IslandLayout.SheepCount && catalog != null; i++)
+    /// <summary>Dokunulan noktadaki (görünür) bölge bulutunun bölgesi; yoksa -1.</summary>
+    public int ZoneCloudAt(Vector2 world)
+    {
+        int best = -1; float bestDistance = 2.6f;
+        foreach (var cloud in zoneClouds)
         {
-            var feet = new Vector2(Random.Range(rect.xMin, rect.xMax), Random.Range(rect.yMin, rect.yMax));
-            IslandSheep.Create(villageRoot, rect, feet, catalog.Frames("sheep_grass"), catalog.Frames("sheep_idle"),
-                catalog.Frames("sheep_move"), 20f);
+            if (cloud == null || !cloud.gameObject.activeSelf || cloud.Dissolving) continue;
+            float d = Vector2.Distance(world, cloud.transform.position);
+            if (d < bestDistance) { bestDistance = d; best = cloud.zone; }
         }
+        return best;
     }
 
     // ==================== ATIŞ YERİ İŞARETLERİ ====================
@@ -338,6 +320,14 @@ public sealed class IslandSceneSetup : MonoBehaviour
     /// <summary>Dünya dokunuşu (yalnız savunmada): hedef kilidi → atış yeri → boş su (kilidi kaldırır).</summary>
     public void HandleWorldTap(Vector2 world)
     {
+        if (!InDefense && Raid != null && Raid.Phase == IslandRaidManager.State.Idle)
+        {
+            // Üs görünümü (Faz B): yığın topla, bina/kale/bulut seç; boş yere dokunuş açık paneli kapatır
+            if (IslandPlacementController.Instance != null && IslandPlacementController.Instance.IsPlacing) return;
+            if (Village != null && Village.HandleTap(world)) return;
+            Hud?.CloseBuildUi();
+            return;
+        }
         if (Archer == null || !Archer.IsAlive || Raid == null || Raid.Phase != IslandRaidManager.State.Running) return;
         IslandTarget best = null;
         float bestDistance = 1.0f;

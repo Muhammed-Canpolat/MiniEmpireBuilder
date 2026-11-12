@@ -288,6 +288,9 @@ public sealed class BaseCameraController : MonoBehaviour
 public sealed class GhostPointerDrag
 {
     public bool Dragging { get; private set; }
+    /// <summary>Ada gibi başka kamera/arayüz kullanan ev sahipleri için (null: Ana Üs davranışı).</summary>
+    public Func<Vector2, bool> OverUi;
+    public Action<Vector2> EdgeScroller;
     private Vector2 pressStart;
     private bool tracking;
     private bool moved;
@@ -310,7 +313,7 @@ public sealed class GhostPointerDrag
         {
             pressStart = position;
             moved = false;
-            tracking = !BaseCameraController.IsOverUi(position);
+            tracking = !(OverUi != null ? OverUi(position) : BaseCameraController.IsOverUi(position));
             Dragging = tracking && hitsGhost(camera.ScreenToWorldPoint(position));
         }
         if (down && tracking)
@@ -320,7 +323,7 @@ public sealed class GhostPointerDrag
             {
                 world = camera.ScreenToWorldPoint(position);
                 take = true;
-                BaseCameraController.Instance?.EdgeScroll(position);
+                if (EdgeScroller != null) EdgeScroller(position); else BaseCameraController.Instance?.EdgeScroll(position);
             }
         }
         if (released)

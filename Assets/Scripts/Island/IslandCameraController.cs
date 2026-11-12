@@ -201,6 +201,7 @@ public sealed class IslandCameraController : MonoBehaviour
             if (Mathf.Abs(scroll) > 0.01f && !IsOverUi(mouse)) ZoomBy(Mathf.Pow(0.9f, scroll / 120f), mouse);
         }
 
+        if (BaseCameraController.GhostDragActive) { panning = false; return; }   // yerleştirmede hayalet sürükleniyor
         if (!BaseCameraController.ReadPointer(out Vector2 position, out bool pressed, out bool down, out _)) { panning = false; return; }
         if (pressed) { panning = !IsOverUi(position); lastPan = position; return; }
         if (!down) { panning = false; return; }
@@ -213,6 +214,48 @@ public sealed class IslandCameraController : MonoBehaviour
             cam.transform.position = p;
         }
         lastPan = position;
+    }
+
+    /// <summary>Yerleştirmede hayalet ekran kenarına yaklaşınca kamerayı kaydırır (Ana Üs EdgeScroll ile aynı kural).</summary>
+    public void EdgeScroll(Vector2 screenPoint)
+    {
+        if (cam == null) return;
+        Rect view = cam.pixelRect;
+        float marginX = view.width * BaseCameraController.EdgeFraction, marginY = view.height * BaseCameraController.EdgeFraction;
+        float dx = 0f, dy = 0f;
+        if (screenPoint.x < view.xMin + marginX) dx = -(1f - (screenPoint.x - view.xMin) / marginX);
+        else if (screenPoint.x > view.xMax - marginX) dx = 1f - (view.xMax - screenPoint.x) / marginX;
+        if (screenPoint.y < view.yMin + marginY) dy = -(1f - (screenPoint.y - view.yMin) / marginY);
+        else if (screenPoint.y > view.yMax - marginY) dy = 1f - (view.yMax - screenPoint.y) / marginY;
+        if (dx == 0f && dy == 0f) return;
+        float speed = cam.orthographicSize * 1.1f * Time.unscaledDeltaTime;
+        var p = cam.transform.position;
+        p.x += Mathf.Clamp(dx, -1f, 1f) * speed;
+        p.y += Mathf.Clamp(dy, -1f, 1f) * speed;
+        cam.transform.position = p;
+        ClampView();
+    }
+
+    /// <summary>Alt panel açılınca seçilen yapı panelin üstünde kalsın: dünya noktasını ekranın üst yarısına (viewportY) süzer.</summary>
+    public void FocusUpper(Vector2 world, float viewportY = 0.74f, float seconds = 0.3f)
+    {
+        if (cam == null || InBattle || Locked) return;
+        float size = cam.orthographicSize;
+        float halfWidth = size * cam.aspect;
+        float x = ClampAxis(world.x, halfWidth, -BoundsPad, IslandLayout.Width + BoundsPad, IslandLayout.Width * 0.5f);
+        float y = ClampAxis(world.y - (viewportY - 0.5f) * 2f * size, size, -BoundsPad, IslandLayout.Height + BoundsPad, IslandLayout.Height * 0.5f);
+        StopAllCoroutines(); moving = false;
+        StartCoroutine(Glide(new Vector3(x, y, cam.transform.position.z), size, seconds, false));
+    }
+
+    /// <summary>Dünya noktası görüş alanının iç %80'inde değilse kamerayı ona ortalar.</summary>
+    public void EnsureVisible(Vector2 world)
+    {
+        if (cam == null) return;
+        Vector3 viewport = cam.WorldToViewportPoint(new Vector3(world.x, world.y, 0f));
+        if (viewport.x > 0.1f && viewport.x < 0.9f && viewport.y > 0.1f && viewport.y < 0.9f) return;
+        cam.transform.position = new Vector3(world.x, world.y, cam.transform.position.z);
+        ClampView();
     }
 
     public void ZoomBy(float factor, Vector2 screenPoint)
@@ -247,7 +290,7 @@ public sealed class IslandCameraController : MonoBehaviour
         return min > max ? fallback : Mathf.Clamp(center, min, max);
     }
 
-    private static bool IsOverUi(Vector2 screenPoint)
+    public static bool IsOverUi(Vector2 screenPoint)
     {
         if (EventSystem.current == null) return false;
         var data = new PointerEventData(EventSystem.current) { position = screenPoint };
