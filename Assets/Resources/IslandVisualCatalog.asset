@@ -767,6 +767,134 @@ MonoBehaviour:
     portrait: {fileID: -7857379334957835036, guid: cf6e6d8eb6faba747b21257d64003b3e, type: 3}
     feetOffsetY: 0
     centerOffsetX: 0
+  - key: SkeletonWarrior
+    prefab: {fileID: 312320201983474571, guid: 3aa6818780362f946a7ff630e00e7f65, type: 3}
+    bodyHeight: 3.8400004
+    targetHeight: 1.1
+    facesRight: 0
+    portrait: {fileID: -830027892863679530, guid: 9183229b53570b240a9b92aa3d47d2cf, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0.00000011920929
+  - key: SkeletonArcher
+    prefab: {fileID: 7773741634138198696, guid: e3f10a49adf9da94196f359c3bc3cece, type: 3}
+    bodyHeight: 3.8400002
+    targetHeight: 1.1
+    facesRight: 0
+    portrait: {fileID: 8542607308030733107, guid: b1581a5dd68a7254fbd6ff24a7ee8ba6, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: -0.00000023841858
+  - key: BoneMage
+    prefab: {fileID: 6679783802021260202, guid: 0f9692da27a35e64fb6c73920e21165e, type: 3}
+    bodyHeight: 3.84
+    targetHeight: 1.15
+    facesRight: 0
+    portrait: {fileID: -6780070641073512035, guid: fb0cc0d4077b90246bb7a0c85c6d4d95, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0.0074999332
+  - key: Imp
+    prefab: {fileID: 3969665838359622139, guid: c68d316493781284bb1e2f62f16d006c, type: 3}
+    bodyHeight: 3.072
+    targetHeight: 0.8
+    facesRight: 0
+    portrait: {fileID: 350773238471674477, guid: 1856c8c23d193604b9004abe53a187f5, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0
+  - key: Spider
+    prefab: {fileID: 7641684595017193777, guid: 1cf0c6b0174163042a1a2c98be28bf1a, type: 3}
+    bodyHeight: 2.1239998
+    targetHeight: 0.7
+    facesRight: 0
+    portrait: {fileID: 9081456074689672952, guid: c195ca8773caf3c4aaea67db32b63bf8, type: 3}
+    feetOffsetY: 0.024000168
+    centerOffsetX: 0
+  - key: Zombie
+    prefab: {fileID: 5284643900520674695, guid: 027b1c9cd4f5b4344995f03cc92fd18e, type: 3}
+    bodyHeight: 3.584
+    targetHeight: 1.1
+    facesRight: 0
+    portrait: {fileID: 5564762980746340542, guid: e804d870a62635a44a746d2ff783a377, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0
+  - key: StoneGolem
+    prefab: {fileID: 3945939611434538402, guid: 42e8d62848b3a7c4c93521c2a038e3da, type: 3}
+    bodyHeight: 4.6
+    targetHeight: 1.6
+    facesRight: 0
+    portrait: {fileID: 166603316701877667, guid: 675cbe2d8fee82d409bd601d86bf4ea7, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0
+  - key: Ghost
+    prefab: {fileID: 6981722426433150837, guid: c7ba699d54ffef146a65ae69b8cb2961, type: 3}
+    bodyHeight: 2.5609999
+    targetHeight: 1
+    facesRight: 0
+    portrait: {fileID: 2563332947682448753, guid: 3e4a209cd7b30854a90f86798787df48, type: 3}
+    feetOffsetY: -0.00000011920929
+    centerOffsetX: -0.00000011920929
+  - key: ZombieWarrior
+    prefab: {fileID: 1140409485138595432, guid: e3543dbbee0fcec4f902848ce6828b20, type: 3}
+    bodyHeight: 4.608
+    targetHeight: 1.3
+    facesRight: 0
+    portrait: {fileID: 7798717680525400892, guid: ab1032f710b1a1b4398b8087753b3a3e, type: 3}
+    feetOffsetY: -0.18540001
+    centerOffsetX: 0
+  - key: Succubus
+    prefab: {fileID: 2511095851095899296, guid: 0d91a1e718ea6d343be4026cdffa51c6, type: 3}
+    bodyHeight: 4.608
+    targetHeight: 1.2
+    facesRight: 0
+    portrait: {fileID: 8800064702068792763, guid: 5e039f09d2651164aa0e1e24931e817a, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: -0.0044999123
+  - key: CrystalGolem
+    prefab: {fileID: 7458748613824806050, guid: abb08ce993549f04ea69db5809d42793, type: 3}
+    bodyHeight: 5.12
+    targetHeight: 1.6
+    facesRight: 0
+    portrait: {fileID: 8411811763461953259, guid: b16ac1c23537dde4ba3a4c3987ced0ed, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0
+  - key: Vampire
+    prefab: {fileID: 6540533714014168249, guid: dc4eb993c6c2e434f88d7a71922b2879, type: 3}
+    bodyHeight: 6.8005886
+    targetHeight: 1.3
+    facesRight: 0
+    portrait: {fileID: -7285918330323661122, guid: 2f196da5980551d42a2c146266db324f, type: 3}
+    feetOffsetY: -0.15779448
+    centerOffsetX: 0.05250001
+  - key: Demon
+    prefab: {fileID: 3676971076677257608, guid: 0b5757230de2ac846926c905719e30e3, type: 3}
+    bodyHeight: 5.12
+    targetHeight: 1.6
+    facesRight: 0
+    portrait: {fileID: -1420063423324078859, guid: 969c0a5913bda7748be57dddc5ee82f5, type: 3}
+    feetOffsetY: -1.04
+    centerOffsetX: 0
+  - key: MagmaGolem
+    prefab: {fileID: 6828922712980065891, guid: 0c7fdddfb0724a241be092dac8fdf9dc, type: 3}
+    bodyHeight: 6.144
+    targetHeight: 1.6
+    facesRight: 0
+    portrait: {fileID: -8994480787570454025, guid: 2f29221e99ad1d742a939f6eb39df161, type: 3}
+    feetOffsetY: -1.4760001
+    centerOffsetX: 0
+  - key: SunkenKnight
+    prefab: {fileID: 8503205845727376740, guid: c73248559e291b94ba9724f9314df423, type: 3}
+    bodyHeight: 6.839999
+    targetHeight: 1.4
+    facesRight: 0
+    portrait: {fileID: -7216944109977960138, guid: 2d014b189ab491f4dafca53e6cc4c4f8, type: 3}
+    feetOffsetY: 0
+    centerOffsetX: 0.0044999123
+  - key: RedDragon
+    prefab: {fileID: 5650423630096164307, guid: ed7afb02a2246614da8d0e93b155ef48, type: 3}
+    bodyHeight: 7.524
+    targetHeight: 1.5
+    facesRight: 0
+    portrait: {fileID: 336585044460263896, guid: 59d30bb756e9b024a93af35adb34bbee, type: 3}
+    feetOffsetY: 0.20899987
+    centerOffsetX: 0.00000047683716
   castle: {fileID: 21300000, guid: 5fef2d88b09824faba4be40a870c347e, type: 3}
   tower: {fileID: 21300000, guid: 9150ff9a3f88646ddaf1ed327afa1315, type: 3}
   meatIcon: {fileID: 21300000, guid: 7ae60e0e3b7fd419aa2a0b999da0fb07, type: 3}

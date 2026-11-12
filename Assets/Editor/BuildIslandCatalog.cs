@@ -172,6 +172,12 @@ public static class BuildIslandCatalog
         var specs = new (string key, string prefab, float height)[]
         {
             ("Rat", "Rat", 0.5f), ("Bat", "Bat", 0.75f), ("WoodGolem", "WoodGolem", 1.5f), ("ButcherCaptain", "Butcher", 1.3f),
+            // Faz E2: Kademe II–IV (§7.3). Hedef gövde boyları Kızıl Warrior ≈1,2 u'ya göre ≤1,35× (boss hariç)
+            ("SkeletonWarrior", "SkeletonWarrior", 1.1f), ("SkeletonArcher", "SkeletonArcher", 1.1f), ("BoneMage", "SkeletonMage 1", 1.15f),
+            ("Imp", "Imp", 0.8f), ("Spider", "Spider", 0.7f), ("Zombie", "Zombie", 1.1f), ("StoneGolem", "StoneGolem", 1.6f),
+            ("Ghost", "Ghost", 1.0f), ("ZombieWarrior", "ZombieWarrior", 1.3f), ("Succubus", "Succubus", 1.2f),
+            ("CrystalGolem", "CrystalGolem", 1.6f), ("Vampire", "Vampire", 1.3f), ("Demon", "Demon", 1.6f), ("MagmaGolem", "MagmaGolem", 1.6f),
+            ("SunkenKnight", "GhostKnight", 1.4f), ("RedDragon", "DragonRed", 1.5f),
         };
         var old = catalog.monsters ?? new List<MonsterEntry>();
         var list = new List<MonsterEntry>();
