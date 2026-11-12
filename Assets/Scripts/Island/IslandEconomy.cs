@@ -18,6 +18,29 @@ public static class IslandEconomy
     /// <summary>Usta görevi bitti (yeni bina, yükseltme ya da bölge): görseller bunu dinler.</summary>
     public static event Action<IslandBuilderTask> TaskCompleted;
 
+    /// <summary>
+    /// Bölge sınırı değişince (12 Kasım 2026: orta çayır Z1/Z2'ye bölündü) eski kayıtta oyuncunun binası kilitli bölgeye düşebilir:
+    /// o bölge bedava açılır (bina bulut altında kalmaz, üretimi düşmez). Değişen maskeyi döndürür; idempotent.
+    /// </summary>
+    public static bool OpenZonesUnderBuildings(IslandSaveData save)
+    {
+        if (save?.placed == null) return false;
+        int before = save.zoneMask;
+        foreach (var b in save.placed)
+        {
+            if (b == null || !Enum.TryParse(b.kind, out IslandLayout.BuildingKind kind)) continue;
+            if (b.id != null && b.id.Contains("@")) continue;   // hazır köy (adacık kuleleri Z1/Z3'te durur, bölgeyi açmaz)
+            var size = IslandGrid.Size(kind);
+            for (int c = b.col; c < b.col + size.x; c++)
+                for (int r = b.row; r < b.row + size.y; r++)
+                {
+                    int zone = IslandLayout.ZoneAt(c, r);
+                    if (zone > 0) save.zoneMask |= 1 << zone;
+                }
+        }
+        return save.zoneMask != before;
+    }
+
     // ==================== CÜZDAN (Et / Odun) ====================
 
     public static int Meat => Save != null ? Save.meat : 0;

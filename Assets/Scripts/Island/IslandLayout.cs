@@ -341,6 +341,9 @@ public static class IslandLayout
         new Zone { name = "Orta Çayır / Middle Meadow", unlockKeep = 6 },
     };
 
+    /// <summary>Orta çayırın bölünme sütunları: c ≤ batı → Z2, c ≥ doğu → Z1 (r15–22).</summary>
+    public const int MeadowSplitWest = 8, MeadowSplitEast = 14;
+
     /// <summary>Hücrenin bölgesi (0..5); belge §4 tablosu. Adacıklar ilgili bölgeye bağlıdır.</summary>
     public static int ZoneAt(int c, int r)
     {
@@ -350,6 +353,10 @@ public static class IslandLayout
         if (c >= 18 && c <= 19 && r >= 29 && r <= 30) return 4;     // SE adacığı → Z4
         if (c >= 15 && c <= 17 && r >= 2 && r <= 8) return 3;
         // Hazır köy (Kale, evler, Okçuluk, Ağıl) Z0'da kalır: açılışta bulut yalnız kenar kuşağını örter.
+        // Orta çayır (r15–22) bölünür: batısı Z2'ye, doğusu Z1'e (12 Kasım 2026 kararı: Z1/Z2 yalnız şerit/yardan ibaretti,
+        // birer ev sığıyordu). Ağıl (c12–13) ve çayır ortası Z0'da kalır.
+        if (r >= 15 && r <= 22 && c <= MeadowSplitWest) return 2;
+        if (r >= 15 && r <= 22 && c >= MeadowSplitEast) return 1;
         if (r <= 22) return c >= 16 ? 1 : 0;
         if (c >= 9 && c <= 12) return 5;
         return c <= 8 ? 2 : 4;

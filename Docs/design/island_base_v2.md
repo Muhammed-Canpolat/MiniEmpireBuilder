@@ -594,3 +594,13 @@ seçilenler `Docs/playtest/`):
   - Düzenli (günde 3 oturum, ≈21 sa): gün 1 **13,7 : 1**, gün 7 **3,4 : 1** (Et 1.034/gün). Et erken çok kıt, gelişince ≈4 : 1'e iner; test aralık denetimidir (10–30 / 3,5–6; düzenli 2,8–6).
   - Bu sonuç belge tablosundaki KK1'den başlayan gün 2–3 sayılarıyla birebir değil: ada Ana Üs 5'ten açıldığı için seviye tavanı (KK) bağlayıcı değil; erken Et'i belgedeki 400–550 aralığında tutan şey 8 sa depo tavanı ve işçi yuvasıdır. Gün 2 Et 381, aralığın (380–600) alt ucunda.
 - **Testler:** `IslandPhaseBTests` (formüller §8, bedeller/süreler, elmas, 8 sa çevrimdışı + tavan + onarım ×0,5 + kısmi onarım, işçi dağılımı, yerleştirme geçerliliği, hazır köy geçerliliği, sahnede inşa → yükseltme → elmasla bitirme → yığın/toplama → bölge keşfi + bulut dağılması), `IslandEconomySimTests`, `IslandSaveTests` (v7 gidiş-dönüş, v6→v7 + tohumlama, v5), `IslandReviewScreenshotsB` (`PlaytestOutput/island/B*.png`).
+
+## §18 Ada cilası (12 Kasım 2026)
+- **Yasak hücreler kırmızı:** proje doğrusal renk uzayında; %55 saydam kırmızı yeşil çimle kahverengiye kayıyordu.
+  Şerit/merdiven kaplaması artık %90 opak kırmızı, hücreden biraz küçük (`IslandPlacementController.LaneColor`).
+- **Z1/Z2 genişledi (kullanıcı kararı: sınırları yeniden çiz):** orta çayır (r15–22) bölündü: c ≤ 8 → Z2, c ≥ 14 → Z1
+  (`IslandLayout.MeadowSplitWest/East`). Geçerli Ev hücresi Z1 1 → 3, Z2 1 → 6; Z0 22. Hazır köy (Ağıl c12–13 dahil) Z0'da.
+  Z1 hâlâ şeritle dolu: daha fazla yer için sınır Ağıl'ı kilitlerdi; kalıcı çözüm Faz E'de kara genişletme.
+- Eski kayıtta oyuncunun binası yeni kilitli bölgeye düşerse o bölge yüklemede bedava açılır (`IslandEconomy.OpenZonesUnderBuildings`;
+  hazır köy kuleleri sayılmaz). Bölge bulutları yeniden pişirildi; pişirici artık bölge haritasını hash'e katar, köy çevresi boşluğu 4,3 → 3,2.
+  Bilinen küçük kusur: Ağıl'ın sağ kenarına bir Z1 bulutu biraz biniyor. Görüntü `Docs/playtest/island_v2_polish_zones.png`.

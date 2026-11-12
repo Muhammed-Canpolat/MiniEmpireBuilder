@@ -686,6 +686,7 @@ public static class SaveSystem
             if (data.island.placed == null) data.island.placed = new List<IslandPlacedBuilding>();
             if (data.island.task == null) data.island.task = new IslandBuilderTask();
             data.island.zoneMask |= 1;
+            IslandEconomy.OpenZonesUnderBuildings(data.island);   // bölge sınırı değişikliği: binası olan bölge açık kalır
             data.island.nextBuildingSerial = Mathf.Max(1, data.island.nextBuildingSerial);
             if (data.saveVersion < 7)
             {

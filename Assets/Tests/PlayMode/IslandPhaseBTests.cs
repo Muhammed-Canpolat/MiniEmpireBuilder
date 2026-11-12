@@ -463,6 +463,54 @@ public class IslandPhaseBTests
         Assert.IsTrue(clouds.Where(cloud => (int)Field(cloud, "zone") == 2).All(cloud => ((Component)cloud).gameObject.activeSelf), "Z2 bulutları yerinde");
     }
 
+    /// <summary>12 Kasım 2026: orta çayır Z1/Z2'ye bölündü (önce birer ev sığıyordu); hazır köy Z0'da kalır.</summary>
+    [Test]
+    public void MeadowSplitGivesZoneOneAndTwoRoomAndKeepsVillageInZoneZero()
+    {
+        var island = NewIsland(15);
+        Placed(island).Clear();
+        int Count(string kind, int zone)
+        {
+            int n = 0;
+            for (int c = 0; c < 22; c++)
+                for (int r = 0; r < 36; r++)
+                    if ((int)Call("IslandLayout", "ZoneAt", c, r) == zone && Check(kind, c, r, island, 63, null, 15) == "None") n++;
+            return n;
+        }
+        Assert.GreaterOrEqual(Count("House", 2), 5, "Z2: birden çok ev yeri");
+        Assert.GreaterOrEqual(Count("House", 1), 3, "Z1: en az 3 ev yeri (önce 1)");
+        Assert.GreaterOrEqual(Count("House", 0), 15, "Z0 hâlâ geniş");
+        var spots = (Array)T("IslandLayout").GetField("Buildings").GetValue(null);
+        foreach (var spot in spots)
+        {
+            string kind = Field(spot, "kind").ToString();
+            if (kind == "Tower") continue;   // adacık kuleleri kendi bölgelerinde
+            int col = (int)Field(spot, "col"), row = (int)Field(spot, "row"), w = (int)Field(spot, "w"), h = (int)Field(spot, "h");
+            for (int c = col; c < col + w; c++)
+                for (int r = row; r < row + h; r++)
+                    Assert.AreEqual(0, (int)Call("IslandLayout", "ZoneAt", c, r), $"hazır köy {kind} Z0'da kalır");
+        }
+    }
+
+    [Test]
+    public void OldSaveBuildingInNewlyLockedZoneOpensThatZoneForFree()
+    {
+        var island = NewIsland(3);
+        Set(island, "zoneMask", 1);
+        var placed = Placed(island);
+        placed.Clear();
+        // Hazır köy kuleleri (kimlikte @) adacıklarda durur ama bölge açmaz.
+        placed.Add(Entry("Tower@19,10", "Tower", 1, 19, 10));
+        Assert.IsFalse((bool)Call("IslandEconomy", "OpenZonesUnderBuildings", island));
+        Assert.AreEqual(1, (int)Field(island, "zoneMask"));
+        // Eskiden Z0 olan orta çayırın batısına kurulmuş Ev → Z2 bedava açılır.
+        placed.Add(Entry("House#4", "House", 1, 5, 16));
+        Assert.AreEqual(2, (int)Call("IslandLayout", "ZoneAt", 5, 16));
+        Assert.IsTrue((bool)Call("IslandEconomy", "OpenZonesUnderBuildings", island));
+        Assert.AreEqual(1 | 4, (int)Field(island, "zoneMask"), "Z2 açıldı, Z1 kapalı kaldı");
+        Assert.IsFalse((bool)Call("IslandEconomy", "OpenZonesUnderBuildings", island), "ikinci kez değişmez");
+    }
+
     internal static object FindEntryById(object island, string id)
     {
         foreach (var entry in Placed(island)) if ((string)Field(entry, "id") == id) return entry;

@@ -238,7 +238,8 @@ public static class BakeIslandTerrain
     private static bool BakeNature(bool force)
     {
         string inputHash = Sha(RulesVersion + "nature" + string.Join(";", IslandLayout.Trees) + string.Join(";", IslandLayout.Bushes) +
-            string.Join(";", IslandLayout.Rocks) + string.Join(";", IslandLayout.GoldStones) + string.Join(";", IslandLayout.WaterRocks));
+            string.Join(";", IslandLayout.Rocks) + string.Join(";", IslandLayout.GoldStones) + string.Join(";", IslandLayout.WaterRocks) +
+            ZoneSignature());
         if (File.Exists(NaturePath) && EditedByHand(NaturePath) && !force)
         {
             Debug.LogWarning("[IslandBake] IslandNature.prefab elle düzenlenmiş görünüyor; üzerine yazılmadı (-force ile zorla).");
@@ -407,7 +408,8 @@ public static class BakeIslandTerrain
                 int col = Mathf.Clamp(Mathf.FloorToInt(x + 1.6f), 0, IslandLayout.Width - 1);
                 int row = Mathf.Clamp(Mathf.FloorToInt(IslandLayout.Height - y - 1.1f), 0, IslandLayout.Height - 1);
                 if (IslandLayout.ZoneAt(col, row) != zone || !NearLand(col, row, 2)) continue;
-                if (NearOpenBuilding(new Vector2(x + 1.6f, y + 1.1f), 4.3f)) continue;   // hazır köy binasını örtmesin
+                // Hazır köy binasını örtmesin. 4,3 idi; orta çayır bölününce Ağıl'ın yanındaki yeni Z1 alanı bulutsuz kalıyordu.
+                if (NearOpenBuilding(new Vector2(x + 1.6f, y + 1.1f), ZoneCloudClearance)) continue;
                 var go = new GameObject($"ZoneCloud_{zone}_{count++}");
                 go.transform.SetParent(group, false);
                 var sr = go.AddComponent<SpriteRenderer>();
@@ -423,6 +425,17 @@ public static class BakeIslandTerrain
             }
         }
     }
+
+    /// <summary>Bölge haritası (bulutlar ZoneAt'e göre dizilir): sınır değişince doğa prefab'ı yeniden pişirilir.</summary>
+    private static string ZoneSignature()
+    {
+        var sb = new StringBuilder("zones");
+        for (int r = 0; r < IslandLayout.Height; r++)
+            for (int c = 0; c < IslandLayout.Width; c++) sb.Append(IslandLayout.ZoneAt(c, r));
+        return sb.ToString();
+    }
+
+    private const float ZoneCloudClearance = 3.2f;
 
     private static bool NearOpenBuilding(Vector2 world, float radius)
     {
