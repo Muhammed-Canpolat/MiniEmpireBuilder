@@ -485,5 +485,86 @@ public class IslandRaidTests
             $"stok önce {stocksBefore.wood:0}/{stocksBefore.meat:0}");
     }
 
+    // ==================== FAZ E1: KIŞLA + BAYRAK TERİMİ (§7.8) ====================
+
+    /// <summary>Bayrak merdiveni hedef kumsalın yürüyüş şeridinde mi: S1 her yolda, S2 yalnız A/C, S3 yalnız B/D.</summary>
+    [Test]
+    public void FlagStairIsOnTheRouteOfTheBeachesThatCrossIt()
+    {
+        var layout = IslandPhaseBTests.T("IslandLayout");
+        bool On(int flag, int beach) => (bool)layout.GetMethod("FlagOnRoute").Invoke(null, new object[] { flag, beach });
+        for (int beach = 0; beach < 4; beach++) Assert.IsTrue(On(0, beach), $"S1 her yol (kumsal {beach})");
+        Assert.IsTrue(On(1, 0)); Assert.IsTrue(On(1, 2)); Assert.IsFalse(On(1, 1)); Assert.IsFalse(On(1, 3));   // S2: A, C
+        Assert.IsTrue(On(2, 1)); Assert.IsTrue(On(2, 3)); Assert.IsFalse(On(2, 0)); Assert.IsFalse(On(2, 2));   // S3: B, D
+    }
+
+    /// <summary>D'nin Kışla terimi 1,5·L·(bayrak yolda ? 1 : 0,5); Kışla yoksa/inşaattaysa 0 (eskiden hep 0 sayılıyordu).</summary>
+    [Test]
+    public void BarracksTermUsesLevelAndFlagOnRouteAndLowersTheTheft()
+    {
+        object Island(int level, int flag)
+        {
+            var island = IslandPhaseBTests.NewIsland(5);
+            IslandPhaseBTests.Placed(island).Add(IslandPhaseBTests.Entry("Barracks#1", "Barracks", level, 5, 10));
+            IslandPhaseBTests.Set(island, "flagStair", flag);
+            return island;
+        }
+        (int level, bool onRoute) Term(object island, int beach)
+        {
+            var tuple = Call("BarracksTerm", island, beach);
+            return ((int)tuple.GetType().GetField("Item1").GetValue(tuple), (bool)tuple.GetType().GetField("Item2").GetValue(tuple));
+        }
+        Assert.AreEqual((0, false), Term(IslandPhaseBTests.NewIsland(5), 0), "Kışla yok: terim 0");
+        Assert.AreEqual((0, false), Term(Island(0, 0), 0), "inşaattaki (Sv0) Kışla sayılmaz");
+        Assert.AreEqual((4, true), Term(Island(4, 0), 1), "S1 B'de de yolda");
+        Assert.AreEqual((4, false), Term(Island(4, 1), 1), "S2 bayrağı B yolunda değil");
+        Assert.AreEqual((4, true), Term(Island(4, 1), 0), "S2 bayrağı A yolunda");
+
+        float Defense(object island, int beach)
+        {
+            var term = Term(island, beach);
+            return (float)IslandPhaseBTests.Field(Call("Assess", island, beach, 5, 5, term.level, term.onRoute), "defense");
+        }
+        float baseline = Defense(IslandPhaseBTests.NewIsland(5), 1);
+        Assert.AreEqual(baseline + 1.5f * 4f * 1f, Defense(Island(4, 0), 1), 1e-4f, "bayrak yolda: +1,5·L");
+        Assert.AreEqual(baseline + 1.5f * 4f * 0.5f, Defense(Island(4, 1), 1), 1e-4f, "bayrak yolda değil: yarım");
+        float Fraction(object island, int beach)
+        {
+            var term = Term(island, beach);
+            return (float)IslandPhaseBTests.Field(Call("Assess", island, beach, 5, 5, term.level, term.onRoute), "fraction");
+        }
+        Assert.Less(Fraction(Island(4, 0), 1), Fraction(Island(4, 1), 1), "yoldaki bayrak daha az çaldırır");
+        Assert.Less(Fraction(Island(4, 1), 1), Fraction(IslandPhaseBTests.NewIsland(5), 1), "yolda olmayan bayrak bile Kışla'sızdan iyi");
+        Assert.LessOrEqual(Fraction(IslandPhaseBTests.NewIsland(5), 1), 0.20f);
+    }
+
+    /// <summary>Çevrimdışı çözüm gerçek kayıttaki Kışla + bayrağı kullanır: aynı kayıt, bayrak yolda ise daha az Odun çalınır.</summary>
+    [Test]
+    public void OfflineResolveReadsBarracksAndFlagFromTheSave()
+    {
+        long t0 = new DateTime(2026, 11, 12, 10, 0, 0, DateTimeKind.Utc).Ticks;
+        int Resolve(bool barracks, int flag)
+        {
+            var island = SeededIsland(5, 8, t0);
+            IslandPhaseBTests.Placed(island).Clear();
+            IslandPhaseBTests.Set(island, "villageSeeded", true);
+            if (barracks) IslandPhaseBTests.Placed(island).Add(IslandPhaseBTests.Entry("Barracks#1", "Barracks", 5, 5, 10));
+            var lumber = IslandPhaseBTests.Entry("Lumber#1", "Lumber", 5, 8, 14);
+            IslandPhaseBTests.Set(lumber, "lastTick", t0); IslandPhaseBTests.Set(lumber, "stock", 300f);
+            IslandPhaseBTests.Placed(island).Add(lumber);
+            IslandPhaseBTests.Set(island, "flagStair", flag);
+            IslandPhaseBTests.Set(island, "raidBeach", 1);   // B: S1 ve S3 yolda, S2 değil
+            IslandPhaseBTests.Set(island, "nextRaidTicks", t0 - 3 * Hour);
+            IslandPhaseBTests.Set(island, "raidSeenTicks", t0);
+            Call("Tick", island, t0);
+            Assert.AreEqual("offline", (string)IslandPhaseBTests.Field(island, "raidReportKind"));
+            return Int(island, "raidReportWood");
+        }
+        int none = Resolve(false, 0), onRoute = Resolve(true, 0), offRoute = Resolve(true, 1);
+        Assert.Greater(none, 0, "Kışla'sız Odun çalındı");
+        Assert.Less(onRoute, offRoute, "bayrak B yolunda: daha az çalındı");
+        Assert.LessOrEqual(offRoute, none, "Kışla hiçbir zaman çalıntıyı artırmaz");
+    }
+
     private static string L(string tr, string en) => (string)T("L").GetMethod("T", new[] { typeof(string), typeof(string) }).Invoke(null, new object[] { tr, en });
 }
