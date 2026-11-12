@@ -47,14 +47,15 @@ public class IslandSaveTests
 
     private static object Load() => Type("SaveSystem").GetMethod("Load").Invoke(null, null);
     private static object Field(object target, string name) => target.GetType().GetField(name).GetValue(target);
+    /// <summary>Güncel kayıt sürümü (v8: Kart Atölyesi); testler sabit sayıya bağlanmaz.</summary>
+    private static int Current => (int)Type("PlayerSaveData").GetField("CurrentVersion").GetValue(null);
 
     [Test]
     public void NewSaveHasIslandAndCurrentVersion()
     {
         var save = NewSave();
-        Assert.AreEqual(7, Type("PlayerSaveData").GetField("CurrentVersion") != null
-            ? Type("PlayerSaveData").GetField("CurrentVersion").GetValue(null) : 7);
-        Assert.AreEqual(7, Field(save, "saveVersion"));
+        Assert.GreaterOrEqual(Current, 7, "ada kaydı en az v7");
+        Assert.AreEqual(Current, Field(save, "saveVersion"));
         var island = Field(save, "island");
         Assert.NotNull(island);
         Assert.AreEqual(1, Field(island, "keepLevel"));
@@ -84,7 +85,7 @@ public class IslandSaveTests
         Assert.NotNull(island, "island yüklemede oluşturulur");
         Assert.GreaterOrEqual((int)Field(island, "keepLevel"), 1);
         Assert.GreaterOrEqual((int)Field(island, "lastAkin"), 1);
-        Assert.AreEqual(7, Field(loaded, "saveVersion"), "kayıt sürümü 7'ye taşınır");
+        Assert.AreEqual(Current, Field(loaded, "saveVersion"), "kayıt güncel sürüme taşınır");
     }
 
     [Test]
@@ -174,7 +175,7 @@ public class IslandSaveTests
 
         var loaded = Load();
         Assert.NotNull(loaded, "v6 kaydı açılmalı");
-        Assert.AreEqual(7, Field(loaded, "saveVersion"));
+        Assert.AreEqual(Current, Field(loaded, "saveVersion"));
         var back = Field(loaded, "island");
         Assert.AreEqual(222, Field(back, "wood"), "cüzdan korunur");
         Assert.AreEqual(77, Field(back, "meat"));

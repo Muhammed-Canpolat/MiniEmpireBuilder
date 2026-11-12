@@ -194,3 +194,25 @@ Testler: `CardWorkshopTests` (bedel/hak formülleri, stok tavanı, kaynak sıras
    ama altından **5 kat pahalı**: `GemEconomy.MeatPerGem = GoldPerGem / 5` (şu an 40 / 5 = **8 Et/elmas**).
    `MeatTopUpCost(missing) = ceil(missing / MeatPerGem)`, `GoldTopUpCost` ile aynı kalıp; oran tek yerden (GoldPerGem'e bağlı).
    Ada binalarındaki "1 elmas = 25 kaynak" kuralı (island_base §6) Et için de bu orana çekilir; Odun 25 kalır.
+
+## Uygulama notu (12 Kasım 2026)
+Kod: `Systems/CardWorkshop.cs` (mantık), `UI/CardWorkshopPanel.cs` (ekran 1–2), `Systems/BattleCards.cs` (7 kart, kaynak sırası,
+savaş çarpanları), `Progression.Workshop` (`Data/GameData.cs`, bütün sayılar), kayıt `WorkshopSaveData` (`Data/PlayerSaveData.cs`).
+- **Bina:** Ana Üs 5'te açılır, 1 adet, 150 altın, yuva `workshop_1` (3×3). Görsel Tiny Swords `House2`, Ana Üs renk kademesine göre
+  (`BaseVisualCatalog` tür 5; `Tools/Base Review/Add Card Workshop Visuals`). Dokununca üretim ekranı açılır; YÜKSELT bina paneline gider.
+- **Bedeller belgeden farklı (§4):** ada v2 Et ekonomisi (island_base_v2 §17) belgedeki §7 varsayımından çok daha kıt çıktı
+  (sıradan oyuncu gün 1 ≈ 241, gün 2 ≈ 381, gün 7 ≈ 752 Et). Bu yüzden tabanlar Et/altın **Sıradan 150/180, Nadir 360/430,
+  Destansı 900/1080** (eğim 0,15/sv aynı). Sonuç: gün 1'de 1, ilk günlerde 1–2 Sıradan kart; hak başına Et sv1 150 → sv13 84.
+- **Hak:** üretim başına `1 + (sv−1)/3` hak, üretim başlarken kilitlenir. Hak `BattleCards.BeginBattle`'da düşer (zafer/yenilgi fark etmez).
+  Kraliyet açıkken temel kart, rekabet modu ve kalkansız aşamadaki Kalkan Kıran hak harcamaz.
+- **Bitirme:** süre (çevrimdışı dahil, `GameClock`), ödüllü reklam (her kademe, günde 3, `GemEconomy.DailyWorkshopAds`) ya da
+  `GemEconomy.FinishCost`. Eksik Et elmasla: 1 elmas = 8 Et (`MeatTopUpCost`); eksik altın `GemActions.OfferGoldTopUp`. İlk üretim bedava, 30 sn.
+- **Kayıt v8** (belgedeki v6 değil: ada v6/v7'yi aldı). Eski kayıtta atölye boş başlar; bina türü kaydı Ana Üs seviyesine göre eklenir.
+- **Arayüz:** ön-savaşta "ATÖLYE KARTLARI" satırı (yuva sayacı, Destansı sınırı, kalkansız aşamada soluk Kalkan Kıran);
+  savaş HUD'ı "KART +%10" yalnız temel kart etkinse yazar. "Kart hazır" bildirimi 30 dk+ üretimlerde. DevMenu: +500 ET, ATÖLYEYİ BİTİR.
+  Kalkan Kıran simgesi Tiny Swords Icon_09 (`CampaignArt/ui_icon_cross`).
+- **Testler** `CardWorkshopTests` (13): formüller, sıradan oyuncunun gün 1–2 kart sayısı, ilk bedava + süreyle üretim, reklamla
+  (Destansı dahil, günde 3), Et + elmasla tamamlama (eksikte hiçbir şey harcanmaz), seviyeye göre hak, zafer ve yenilgide hak,
+  Kraliyet/rekabet/kalkansız aşama, ×1,5 tavanı, v7→v8 göçü, gerçek savaşta Keskin Oklar (okçu ×1,15, kahraman ×1).
+  Görüntüler `Docs/playtest/card_workshop_*.png`.
+- **Yapılmadı:** §10 telemetri olayları ve bot "kartsız/temel/tam" ölçümü (sonraki bot turunda), kart stoğu rozeti (bina üstü).

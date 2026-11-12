@@ -189,3 +189,7 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - Başlangıç altını Ana Üs 7/10/13'te 25/50/75; kule eğrisi `Progression.TowerDamage/TowerUnits`.
 - `Systems/DevSettings.cs` (test kolaylıkları tek anahtar), `Tools/economy_sim.py`, bot profilleri (good/casual/towerOnly/heroOnly).
 - Tasarım: `Docs/design/round2.md`; rapor: `MORNING_REPORT.md`.
+
+## 12 Kasım 2026: Kart Atölyesi
+- Ana Üs 5 binası (House2), Et + altınla 7 kart (3 Sıradan + Nadir Keskin Oklar/Zırh Delici/Gök Avcısı + Destansı Kalkan Kıran).
+  Kullanım hakkı modeli (1 savaş = 1 hak, yenilgide de). Kayıt v8. Ayrıntı: `Docs/design/card_workshop.md` sonundaki uygulama notu.
