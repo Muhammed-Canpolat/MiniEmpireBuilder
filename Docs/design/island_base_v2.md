@@ -520,3 +520,10 @@ seçilenler `Docs/playtest/`):
 3. **Altın Damarı:** ada Ana Üs'e günde ≈%8 altın versin mi (görünür, §6), yoksa ada altını yalnız Akın/baskından mı gelsin?
 4. **Kışla:** "adadan sonra" kararı Ana Üs Kışlası için mi (önerim; ada Kışlası Faz E'de kalır), yoksa ada Kışlası da mı ertelensin?
 5. **Akın Eti 5 + 2N** (kabul edilen 15 + 4N yerine) onaylanıyor mu?
+
+## 14. Varsayılan kararlar (12 Kasım 2026, kullanıcı aksini demedikçe)
+1. Ada **hazır küçük bir köyle** başlar (Kale + 1 Ev + Ağıl + Oduncu): ilk görüş referans görüntüye benzesin.
+2. Akın sonrası onarım **ücretsiz, onarım süresince üretim yavaş** (cezasız ama anlamlı).
+3. Altın damarı Ana Üs'e günlük ~%8 ek altın: **evet** (görünür, küçük).
+4. "Kışla adadan sonra" = **Ana Üs Kışlası** (Faz F); ada Kışlası Faz E'de.
+5. Akın Et ödülü **5 + 2N**, tekrar oynamada 0 (kullanıcı "akından çok Et geliyor" dedi).
