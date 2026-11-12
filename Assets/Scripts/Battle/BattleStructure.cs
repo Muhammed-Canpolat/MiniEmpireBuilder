@@ -24,6 +24,8 @@ public sealed class BattleStructure : MonoBehaviour
     public float HealthPercent => MaxHealth > 0f ? CurrentHealth / MaxHealth : 0f;
 
     public event Action<BattleStructure> Destroyed;
+    /// <summary>Martı Adası: yıkılan bina yok edilmez (kalıntı olarak durur, onarımla yeniden kurulur); <see cref="Destroyed"/> yine tetiklenir.</summary>
+    public bool KeepOnCollapse { get; set; }
 
     private SpriteRenderer body;
     private HealthBar healthBar;
@@ -71,6 +73,27 @@ public sealed class BattleStructure : MonoBehaviour
         if (IsDestroyed) Collapse();
     }
 
+    /// <summary>
+    /// Martı Adası: kalıcı kayıttan/onarımdan can atar (sessiz: hasar yazısı, yıkılma efekti yok). 0 → kalıntı (hedef olmaz),
+    /// 0'dan yukarı → yeniden kurulur (kayıt + engel geri gelir).
+    /// </summary>
+    public void SetHealthSilently(float hp)
+    {
+        bool wasDead = IsDestroyed;
+        CurrentHealth = Mathf.Clamp(hp, 0f, MaxHealth);
+        if (healthBar != null) healthBar.UpdateHealth(CurrentHealth);
+        if (CurrentHealth <= 0f && !wasDead)
+        {
+            BattleObstacles.Unregister(this);
+            registry.Remove(this);
+        }
+        else if (CurrentHealth > 0f && wasDead && !registry.Contains(this))
+        {
+            BattleObstacles.Register(this, BattleObstacles.Footprint(BasePoint, 1.25f, 0.25f, 0.75f));
+            registry.Add(this);
+        }
+    }
+
     public void Heal(float amount)
     {
         if (IsDestroyed || amount <= 0f || CurrentHealth >= MaxHealth) return;
@@ -93,6 +116,11 @@ public sealed class BattleStructure : MonoBehaviour
         BaseBuildingVisual.SpawnDust((Vector3)BasePoint + Vector3.up * 0.2f, 160);
         Slot?.OnStructureDestroyed();
         Destroyed?.Invoke(this);
+        if (KeepOnCollapse)
+        {
+            if (healthBar != null) healthBar.gameObject.SetActive(false);
+            return;
+        }
         if (healthBar != null) Destroy(healthBar.gameObject);
         transform.DOKill();
         transform.DOScaleY(transform.localScale.y * 0.2f, 0.25f).SetEase(Ease.InBack);

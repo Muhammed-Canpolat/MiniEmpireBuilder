@@ -241,6 +241,11 @@ public class EnemyController : MonoBehaviour
     // true iken FogOfWar alfa değerine dokunmaz (davranış kendi soluklaşmasını yönetir).
     public bool FogOverride { get; set; }
 
+    /// <summary>Martı Adası: true iken ölüm efektini (kırmızı/küçülme) <see cref="Died"/> dinleyicisi (IslandEnemy) üstlenir.</summary>
+    public bool SuppressDeathEffect { get; set; }
+    /// <summary>Geçici hız çarpanı (Kasap Kaptan "Nara"); 1 = normal.</summary>
+    public float SpeedMultiplier { get; set; } = 1f;
+
     /// <summary>Çağrılmış birimler altın düşürmez; boss ile altın kasılmasını önler.</summary>
     public void SuppressGoldReward() => goldReward = 0;
 
@@ -602,6 +607,9 @@ public class EnemyController : MonoBehaviour
     /// <summary>Ada: Kıyı Okçusu menzildeki okçuyu vurur; diğerleri kaleye yürür.</summary>
     private void FindIslandTarget(Vector2 position)
     {
+        // v2 Faz C: rol tabanlı hedefleme (island_base_v2 §7.5); sonuç yoksa aşağıdaki v1 kuralı.
+        var picked = IslandTargeting.Pick(enemyType, position, mainBaseTransform, attackRange);
+        if (picked.target != null) { SetTarget(picked.target, picked.point, picked.radius); return; }
         var archer = IslandArcher.Instance;
         if (enemyType == EnemyType.ShoreArcher && archer != null && archer.IsAlive &&
             Vector2.Distance(position, archer.Position) <= attackRange + 0.5f)
@@ -666,7 +674,7 @@ public class EnemyController : MonoBehaviour
         Vector3 direction = (aim - transform.position);
         direction.z = 0f;
         direction.Normalize();
-        transform.position += direction * moveSpeed * Time.deltaTime;
+        transform.position += direction * moveSpeed * SpeedMultiplier * Time.deltaTime;
         if (spriteRenderer != null && direction.x != 0)
             spriteRenderer.flipX = direction.x > 0; // Düşmanlar sağdan gelirse sola baksın
     }
@@ -689,6 +697,7 @@ public class EnemyController : MonoBehaviour
         if (route != null)
         {
             if (attackRange > 2.5f) IslandFx.EnemyShot(transform.position, targetPoint);
+            IslandStats.RecordEnemyHit(this, currentTarget, damage);
             var islandArcher = currentTarget.GetComponent<IslandArcher>();
             if (islandArcher != null) { islandArcher.TakeDamage(damage); return; }
         }
@@ -803,7 +812,7 @@ public class EnemyController : MonoBehaviour
 
         Debug.Log($"[Enemy] {enemyType} öldü! +{goldReward} altın");
 
-        StartCoroutine(DeathEffect());
+        if (!SuppressDeathEffect) StartCoroutine(DeathEffect());
     }
 
     private System.Collections.IEnumerator DeathEffect()

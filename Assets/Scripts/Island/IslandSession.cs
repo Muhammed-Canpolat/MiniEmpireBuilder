@@ -38,6 +38,7 @@ public static class IslandSession
         public bool firstWin;
     }
 
+    /// <summary>Et yalnız ilk zaferde (düşük: 5 + 2N); Odun/altın tekrarda %30; elmas yalnız ilk zaferde.</summary>
     public static Reward RewardFor(int akin, int highestAkin)
     {
         bool first = akin > highestAkin;
@@ -45,11 +46,22 @@ public static class IslandSession
         return new Reward
         {
             firstWin = first,
-            meat = Mathf.RoundToInt(Progression.Island.AkinMeat(akin) * rate),
+            meat = first ? Progression.Island.AkinMeat(akin) : 0,
             wood = Mathf.RoundToInt(Progression.Island.AkinWood(akin) * rate),
             gold = Mathf.RoundToInt(Progression.Island.AkinGold(akin) * rate),
             gems = first ? Progression.Island.AkinGems(akin) : 0,
         };
+    }
+
+    private static string Today => System.DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+    /// <summary>Bugün kaç tekrar ödülü hakkı kaldı (altın kasma sınırı).</summary>
+    public static int ReplayRewardsLeft()
+    {
+        var save = Save;
+        if (save == null) return Progression.Island.ReplayRewardsPerDay;
+        if (save.replayDay != Today) return Progression.Island.ReplayRewardsPerDay;
+        return Mathf.Max(0, Progression.Island.ReplayRewardsPerDay - save.replaysToday);
     }
 
     /// <summary>
@@ -62,6 +74,15 @@ public static class IslandSession
         int highest = save != null ? save.highestAkin : 0;
         var reward = RewardFor(akin, highest);
         if (save == null) return reward;
+        if (!reward.firstWin)
+        {
+            if (ReplayRewardsLeft() <= 0) { reward.wood = 0; reward.gold = 0; }
+            else
+            {
+                if (save.replayDay != Today) { save.replayDay = Today; save.replaysToday = 0; }
+                save.replaysToday++;
+            }
+        }
         save.meat += reward.meat;
         save.wood += reward.wood;
         save.highestAkin = Mathf.Max(save.highestAkin, akin);

@@ -186,7 +186,11 @@ public sealed class IslandSceneSetup : MonoBehaviour
     private static void ShowHealthBars(bool visible)
     {
         foreach (var bar in FindObjectsByType<HealthBar>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (bar != null) bar.gameObject.SetActive(visible);
+        {
+            if (bar == null) continue;
+            var owner = bar.GetComponentInParent<IslandBuilding>();
+            bar.gameObject.SetActive(visible && (owner == null || !owner.Ruined));   // kalıntının çubuğu yok
+        }
     }
 
     /// <summary>"Tüm bölgeler açık" görünümü (Dev/test): Kıyı Kalesi seviyesini geçersiz kılar.</summary>
@@ -234,26 +238,24 @@ public sealed class IslandSceneSetup : MonoBehaviour
         pawnsRoot.SetParent(worldRoot, false);
         var catalog = IslandVisualCatalog.Instance;
 
+        IslandBuilding.PawnsParent = pawnsRoot;
         foreach (var spot in IslandLayout.Buildings)
         {
             Vector2 feet = spot.FeetWorld;
+            SpriteRenderer renderer = null;
             switch (spot.kind)
             {
-                case IslandLayout.BuildingKind.Castle:
-                {
-                    var sr = MakeBuilding("building_castle", feet, 121f, -30, "CoastalKeep");
-                    var go = sr.gameObject;
-                    CastleStructure = go.AddComponent<BattleStructure>();
-                    CastleStructure.Initialize(BuildingType.MainBase, keep, null, IslandLayout.CastleCenter, 2.3f);
-                    CastleStructure.SetMaxHealth(Progression.Island.CastleHp(keep));
-                    break;
-                }
-                case IslandLayout.BuildingKind.House: MakeBuilding("building_house1", feet, 69f, 0, "House"); break;
-                case IslandLayout.BuildingKind.Lumber: MakeBuilding("building_house2", feet, 77f, 0, "LumberCamp"); break;
-                case IslandLayout.BuildingKind.Pasture: MakeBuilding("building_house3", feet, 70f, 0, "Pasture"); break;
-                case IslandLayout.BuildingKind.Archery: MakeBuilding("building_archery", feet, 104f, 0, "ArcheryRange"); break;
-                case IslandLayout.BuildingKind.Tower: MakeBuilding("building_tower", feet, 94f, 0, "WatchTower"); break;
+                case IslandLayout.BuildingKind.Castle: renderer = MakeBuilding("building_castle", feet, 121f, -30, "CoastalKeep"); break;
+                case IslandLayout.BuildingKind.House: renderer = MakeBuilding("building_house1", feet, 69f, 0, "House"); break;
+                case IslandLayout.BuildingKind.Lumber: renderer = MakeBuilding("building_house2", feet, 77f, 0, "LumberCamp"); break;
+                case IslandLayout.BuildingKind.Pasture: renderer = MakeBuilding("building_house3", feet, 70f, 0, "Pasture"); break;
+                case IslandLayout.BuildingKind.Archery: renderer = MakeBuilding("building_archery", feet, 104f, 0, "ArcheryRange"); break;
+                case IslandLayout.BuildingKind.Tower: renderer = MakeBuilding("building_tower", feet, 94f, 0, "WatchTower"); break;
             }
+            if (renderer == null) continue;
+            // Her ada binası savaşta bir BattleStructure olur (§7.5); hazır köy sabit seviyede (Faz B bağlayana kadar).
+            var building = IslandBuilding.Attach(renderer, spot, keep);
+            if (spot.kind == IslandLayout.BuildingKind.Castle) CastleStructure = building.Structure;
         }
 
         // Piyonlar: oduncu, çoban, madenci, usta, 2 boşta (en az 3 farklı iş).

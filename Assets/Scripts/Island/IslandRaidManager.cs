@@ -20,6 +20,8 @@ public sealed class IslandRaidManager : MonoBehaviour
     public float BreakLeft { get; private set; }
     public IslandSession.Reward LastReward { get; private set; }
     public string DefeatReason { get; private set; } = "";
+    /// <summary>Yenilgi etiketi (§7.6): telemetri anahtarı; açıklanamayan yenilgi için <see cref="IslandDefeat.Unexplained"/>.</summary>
+    public string DefeatTag { get; private set; } = "";
     public float Elapsed { get; private set; }
     /// <summary>Bu zafer öğreticiyi bitirdi (HUD "Ağıl" ipucunu gösterir).</summary>
     public bool TutorialFinishedThisRun { get; private set; }
@@ -40,6 +42,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     private RaidBoat bossBoat;
     private bool bossSpawned;
     private bool tutorialRun;
+    private int pendingFlyers;
 
     public void Bind(BattleStructure castleStructure, IslandArcher islandArcher)
     {
@@ -73,7 +76,8 @@ public sealed class IslandRaidManager : MonoBehaviour
         Elapsed = 0f;
         spawnedBoats = finishedBoats = 0;
         bossBoat = null; bossSpawned = false;
-        DefeatReason = "";
+        DefeatReason = ""; DefeatTag = "";
+        pendingFlyers = 0;
         TutorialFinishedThisRun = false;
         IslandStats.Reset();
         tutorialRun = Akin == 1 && IslandSession.Save != null && IslandSession.Save.tutorialStep < 3;
@@ -97,6 +101,8 @@ public sealed class IslandRaidManager : MonoBehaviour
         {
             Wave = wave;
             if (BattleVfxManager.Instance != null) BattleVfxManager.Instance.ShowWaveBanner(wave);
+            if (wave == 1 && IslandWaves.NewTypeAt(Akin) is EnemyType fresh && BattleVfxManager.Instance != null)
+                BattleVfxManager.Instance.ShowNoticeBanner(L.T($"YENİ DÜŞMAN: {EnemyTypeInfo.DisplayName(fresh)}", $"NEW ENEMY: {EnemyTypeInfo.DisplayName(fresh)}"));
             yield return SpawnWave(wave);
             // Dalga bitene kadar: tekneler batar/boşalır, inen düşmanlar ölür.
             while (Phase == State.Running && !WaveCleared()) yield return null;
@@ -119,6 +125,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         if (tutorialRun && Akin == 1) boats = 2;
         int openBeaches = Mathf.Min(Progression.Island.BeachesOpen(Akin), IslandLayout.Beaches.Length);
         bool lastWave = wave == TotalWaves;
+        if (IslandWaves.FlyerSwarmSize(Akin, wave) > 0) { pendingFlyers++; StartCoroutine(SpawnFlyers(wave)); }
         for (int i = 0; i < boats; i++)
         {
             if (Phase != State.Running) yield break;
@@ -128,7 +135,7 @@ public sealed class IslandRaidManager : MonoBehaviour
             var kind = BoatKindFor(i);
             bool isBossBoat = Progression.Island.IsBossAkin(Akin) && lastWave && i == boats - 1;
             if (isBossBoat) kind = Progression.Island.BoatKind.Barge;
-            var crew = CrewFor(kind, i, isBossBoat, Akin);
+            var crew = IslandWaves.CrewFor(kind, i, isBossBoat, Akin, wave);
             float speedMult = tutorialRun && Akin == 1 && i == 0 ? Progression.Island.TutorialBoatSpeedMult : 1f;
             var boat = RaidBoat.Spawn(kind, BattleLevel, beach, crew, speedMult);
             if (isBossBoat) { bossBoat = boat; bossSpawned = false; }
@@ -148,21 +155,26 @@ public sealed class IslandRaidManager : MonoBehaviour
         return Progression.Island.BoatKind.Rowboat;
     }
 
-    /// <summary>Tayfa: Akın 1'de Tayfa; sonra Tayfa/Akıncı dönüşür, Akın 4+ her üçüncüsü Kıyı Okçusu. Boss teknesinde ilk kişi Kaptan.</summary>
-    public static List<EnemyType> CrewFor(Progression.Island.BoatKind kind, int boatIndex, bool bossBoat, int akin)
+    /// <summary>Uçanlar teknesiz gelir (§7.1): kenardan 3–5'lik sürü, 2 sn önce yön okuyla haber verilir.</summary>
+    private IEnumerator SpawnFlyers(int wave)
     {
-        var crew = new List<EnemyType>();
-        int count = Progression.Island.BoatCrew(kind);
-        for (int i = 0; i < count; i++)
+        int size = IslandWaves.FlyerSwarmSize(Akin, wave);
+        Vector2 edge = IslandWaves.FlyerEdgePoint(Akin + wave);
+        Vector2 inward = (IslandLayout.CastleCenter - edge).normalized;
+        float telegraph = Progression.Island.FlyerTelegraph;
+        IslandFx.Telegraph(edge, inward, telegraph);
+        float until = Time.time + telegraph;
+        while (Time.time < until) { if (Phase != State.Running) { pendingFlyers--; yield break; } yield return null; }
+        for (int k = 0; k < size; k++)
         {
-            EnemyType type;
-            if (akin < 2) type = EnemyType.Deckhand;
-            else if (akin >= 4 && (i + boatIndex) % 3 == 2) type = EnemyType.ShoreArcher;
-            else type = (i + boatIndex) % 2 == 0 ? EnemyType.Deckhand : EnemyType.Raider;
-            crew.Add(type);
+            if (Phase != State.Running) break;
+            Vector2 at = edge + new Vector2(Mathf.Abs(inward.x) > Mathf.Abs(inward.y) ? 0f : (k - size * 0.5f) * 0.9f,
+                Mathf.Abs(inward.x) > Mathf.Abs(inward.y) ? (k - size * 0.5f) * 0.9f : 0f);
+            IslandEnemy.Spawn(EnemyType.Bat, BattleLevel, castle != null ? castle.transform : null, at, new Vector2[0], -1, false, false);
+            IslandStats.CrewTotal++; IslandStats.Landed++;
+            yield return new WaitForSeconds(0.2f);
         }
-        if (bossBoat && crew.Count > 0) crew[0] = EnemyType.Raider; // Kaptan
-        return crew;
+        pendingFlyers--;
     }
 
     // ==================== OLAYLAR ====================
@@ -171,7 +183,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     {
         if (Phase != State.Running) return;
         var beach = IslandLayout.Beaches[boat.BeachIndex];
-        bool boss = boat == bossBoat && !bossSpawned;
+        bool boss = type == EnemyType.ButcherCaptain;
         if (boss) bossSpawned = true;
         var route = (Vector2[])beach.walkPath.Clone();
         IslandEnemy.Spawn(type, BattleLevel, castle != null ? castle.transform : null,
@@ -204,6 +216,7 @@ public sealed class IslandRaidManager : MonoBehaviour
 
     private bool WaveCleared()
     {
+        if (pendingFlyers > 0) return false;
         foreach (var boat in RaidBoat.All)
             if (boat != null && boat.Alive) return false;
         foreach (var enemy in IslandEnemy.All)
@@ -237,6 +250,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     {
         Phase = State.Won;
         LastReward = IslandSession.GrantVictory(Akin);
+        IslandRepair.CommitBattle();
         if (tutorialRun) { SetTutorial(4); TutorialFinishedThisRun = true; }
         StateChanged?.Invoke(Phase);
     }
@@ -244,28 +258,22 @@ public sealed class IslandRaidManager : MonoBehaviour
     private void OnCastleDestroyed(BattleStructure structure)
     {
         if (Phase != State.Running) return;
-        DefeatReason = ComputeDefeatReason();
+        var label = ComputeDefeatLabel();
+        DefeatReason = label.text; DefeatTag = label.tag;
         Phase = State.Lost;
+        // Yenilgide kalan düşmanlar donar (kale onarılınca tekrar vurulmasın)
+        foreach (var enemy in IslandEnemy.All)
+            if (enemy != null && enemy.Controller != null) enemy.Controller.MovementLocked = true;
+        foreach (var boat in RaidBoat.All) if (boat != null) boat.enabled = false;
+        IslandRepair.CommitBattle();
         if (run != null) StopCoroutine(run);
         StateChanged?.Invoke(Phase);
     }
 
-    /// <summary>Yenilgi etiketi (okunabilirlik): kaleyi vuran düşmanların geldiği kumsal izlenmiyorsa onu söyler.</summary>
-    private string ComputeDefeatReason()
-    {
-        var counts = new int[IslandLayout.Beaches.Length];
-        foreach (var enemy in IslandEnemy.All)
-            if (enemy != null && enemy.Alive && enemy.BeachIndex >= 0 && enemy.BeachIndex < counts.Length) counts[enemy.BeachIndex]++;
-        int worst = 0;
-        for (int i = 1; i < counts.Length; i++) if (counts[i] > counts[worst]) worst = i;
-        if (counts[worst] == 0) return L.T("Kale düştü.", "The keep fell.");
-        var beach = IslandLayout.Beaches[worst];
-        bool watched = archer != null && archer.IsAlive &&
-            Vector2.Distance(archer.Position, beach.landing) <= archer.Range + 1f;
-        return watched
-            ? L.T("Kale düştü: hedefi kilitleyip dolu atış dene.", "The keep fell: lock a target and try a charged shot.")
-            : L.T($"{beach.name} kumsalı izlenmedi.", $"Beach {beach.name} was not watched.");
-    }
+    /// <summary>Yenilgi etiketi (§7.6): hasar dağılımı + kumsal izleme durumundan (≥%90 açıklanmalı).</summary>
+    private IslandDefeatLabel ComputeDefeatLabel() =>
+        IslandDefeat.Classify(IslandStats.DamageByType, IslandStats.CastleDamageByBeach, IslandStats.ShieldBlocks,
+            beach => IslandDefeat.BeachWatched(beach, archer));
 
     /// <summary>Sonuç ekranından ya da testlerden: akını bırak.</summary>
     public void Abandon()
@@ -282,6 +290,9 @@ public sealed class IslandRaidManager : MonoBehaviour
     public void ReturnToIdle()
     {
         if (Phase == State.Running) return;
+        // Yenilgide kalan (donmuş) düşman ve tekneler ada görünümüne geçerken temizlenir
+        foreach (var boat in new List<RaidBoat>(RaidBoat.All)) if (boat != null) Destroy(boat.gameObject);
+        foreach (var enemy in new List<IslandEnemy>(IslandEnemy.All)) if (enemy != null) Destroy(enemy.gameObject);
         Phase = State.Idle;
         StateChanged?.Invoke(Phase);
     }

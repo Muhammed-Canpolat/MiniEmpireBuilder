@@ -216,6 +216,19 @@ public class IslandSaveData
     public bool autoFire;           // oto-ateş tercihi
     public long nextRaidTicks;      // Faz 3: sonraki baskın (UTC tick)
     public string lastReport = "";  // Faz 3: "Sen yokken" tek satırı
+    // Faz C (island_base_v2 §7.7, §8): bina savaş durumu/onarım ve günlük tekrar ödülü sayacı. Eski kayıtta boş/0: güvenli.
+    public List<IslandBuildingSave> buildings = new List<IslandBuildingSave>();
+    public string replayDay = "";   // yyyy-MM-dd (UTC)
+    public int replaysToday;        // bugün verilen tekrar ödülü sayısı (Progression.Island.ReplayRewardsPerDay tavanı)
+}
+
+/// <summary>Ada binasının kalıcı savaş durumu: can oranı ve onarımın biteceği an (UTC tick; 0: onarım yok).</summary>
+[Serializable]
+public class IslandBuildingSave
+{
+    public string id;               // "Tower@19,10" gibi: tür + sol-üst hücre
+    public float hpFraction = 1f;   // 0 = yıkık
+    public long repairEndTicks;
 }
 
 /// <summary>İnşaatçı kulübesinin konumu (index = inşaatçı sırası). Konum yoksa varsayılan yere konur.</summary>

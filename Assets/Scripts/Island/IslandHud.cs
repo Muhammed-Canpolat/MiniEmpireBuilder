@@ -32,13 +32,13 @@ public sealed class IslandHud : MonoBehaviour
     private IslandArcher archer;
 
     private RectTransform safe;
-    private TextMeshProUGUI titleText, meatText, woodText, goldText, castleText, hintText, respawnText, prepTitle, prepInfo, autoLabel, homeLabel;
+    private TextMeshProUGUI titleText, meatText, woodText, goldText, castleText, hintText, respawnText, autoLabel, homeLabel;
     private Image castleFill, hintBg, chargeRing, fireFace;
-    private GameObject prepPanel, fireRoot, resultPanel, autoRoot, dock, castleBar;
+    private GameObject fireRoot, resultPanel, autoRoot, dock, castleBar;
+    private IslandRaidBoard board;
     private bool prepOpen;
     private TextMeshProUGUI akinDockLabel;
-    private Button startButton, prevButton, nextButton, homeButton, autoButton;
-    private TextMeshProUGUI startLabel;
+    private Button homeButton, autoButton;
     private int selectedAkin = 1;
     private float homeConfirmUntil;
     private TextMeshProUGUI resultTitle, resultBody;
@@ -114,17 +114,17 @@ public sealed class IslandHud : MonoBehaviour
     /// <summary>Alt dock (görünüm modu): AKIN düğmesi. Akın yalnız buradan başlar; ada girişte üs görünümü açılır (v2 §3).</summary>
     private TextMeshProUGUI ResourceChip(Transform bar, int index, Sprite icon)
     {
-        float x0 = 0.45f + index * 0.125f;
-        var group = ReferenceUiVisuals.Image(bar, "Res" + index, new Vector2(x0, 0), new Vector2(x0 + 0.12f, 1),
+        float x0 = 0.445f + index * 0.135f;
+        var group = ReferenceUiVisuals.Image(bar, "Res" + index, new Vector2(x0, 0), new Vector2(x0 + 0.135f, 1),
             Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0f));
         group.raycastTarget = false;
         var image = ReferenceUiVisuals.Image(group.transform, "Icon", new Vector2(0, 0.5f), new Vector2(0, 0.5f),
-            new Vector2(0, -20), new Vector2(40, 20), Color.white);
+            new Vector2(0, -15), new Vector2(30, 15), Color.white);
         image.sprite = icon;
         image.preserveAspect = true;
         image.raycastTarget = false;
         var value = ReferenceUiVisuals.Text(group.transform, "Value", "0", 14, ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
-            new Vector2(0, 0), Vector2.one, new Vector2(42, 0), new Vector2(40, 0), true);
+            new Vector2(0, 0), Vector2.one, new Vector2(33, 0), new Vector2(40, 0), true);
         value.textWrappingMode = TextWrappingModes.NoWrap;
         value.overflowMode = TextOverflowModes.Overflow;
         return value;
@@ -144,35 +144,19 @@ public sealed class IslandHud : MonoBehaviour
         button.onClick.AddListener(() => { prepOpen = true; Refresh(); });
     }
 
+    /// <summary>Akın Panosu (§3): AKIN düğmesi açar; kartlar merdiveni gösterir, SAVUNMAYA BAŞLA savunmayı başlatır.</summary>
     private void BuildPrepPanel()
     {
-        var panel = ReferenceUiVisuals.Image(safe, "PrepPanel", new Vector2(0.04f, 0), new Vector2(0.96f, 0),
-            new Vector2(0, 14), new Vector2(0, 214), new Color(0.1f, 0.08f, 0.05f, 0.9f));
-        prepPanel = panel.gameObject;
-        panel.sprite = ReferenceUiVisuals.PillSprite();
-        panel.type = Image.Type.Sliced;
-        prevButton = ReferenceUiVisuals.Button(panel.transform, "Prev", "<", false, new Vector2(0, 1), new Vector2(0, 1),
-            new Vector2(12, -52), new Vector2(60, -12), 22);
-        nextButton = ReferenceUiVisuals.Button(panel.transform, "Next", ">", false, new Vector2(1, 1), new Vector2(1, 1),
-            new Vector2(-60, -52), new Vector2(-12, -12), 22);
-        prepTitle = ReferenceUiVisuals.Text(panel.transform, "AkinTitle", "", 22, Gold, TextAlignmentOptions.Center,
-            new Vector2(0, 1), new Vector2(1, 1), new Vector2(66, -52), new Vector2(-66, -12), true);
-        prepInfo = ReferenceUiVisuals.Text(panel.transform, "Info", "", 12, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
-            new Vector2(0, 0), new Vector2(1, 1), new Vector2(14, 56), new Vector2(-14, -56), false, true);
-        startButton = ReferenceUiVisuals.Button(panel.transform, "Start", L.T("BAŞLAT", "START"), true,
-            new Vector2(0.15f, 0), new Vector2(0.85f, 0), new Vector2(0, 10), new Vector2(0, 52), 18);
-        startLabel = startButton.GetComponentInChildren<TextMeshProUGUI>();
-        prevButton.onClick.AddListener(() => { selectedAkin = Mathf.Max(1, selectedAkin - 1); Refresh(); });
-        nextButton.onClick.AddListener(() =>
-        {
-            selectedAkin = Mathf.Min(MaxSelectable(), selectedAkin + 1);
-            Refresh();
-        });
-        startButton.onClick.AddListener(OnStart);
-        var close = ReferenceUiVisuals.Button(panel.transform, "Close", "X", false, new Vector2(1, 1), new Vector2(1, 1),
-            new Vector2(-40, -10), new Vector2(-6, 24), 14);
-        close.onClick.AddListener(() => { prepOpen = false; Refresh(); });
+        board = new IslandRaidBoard();
+        board.Build(safe);
+        board.Selected = n => { selectedAkin = Mathf.Clamp(n, 1, Mathf.Max(1, MaxSelectable() + 3)); Refresh(); };
+        board.StartPressed = OnStart;
+        board.ClosePressed = () => { prepOpen = false; Refresh(); };
     }
+
+    /// <summary>Test/ekran görüntüsü: panoyu açar ve N'yi seçer.</summary>
+    public void OpenBoard(int akin) { selectedAkin = Mathf.Max(1, akin); prepOpen = true; Refresh(); }
+    public bool BoardVisible => board != null && board.Visible;
 
     private void BuildFireControls()
     {
@@ -328,7 +312,7 @@ public sealed class IslandHud : MonoBehaviour
         bool running = state == IslandRaidManager.State.Running;
         bool idle = state == IslandRaidManager.State.Idle;
         if (!idle) prepOpen = false;
-        prepPanel.SetActive(idle && prepOpen);
+        board.SetVisible(idle && prepOpen);
         dock.SetActive(idle && !prepOpen);
         castleBar.SetActive(!idle);
         fireRoot.SetActive(running);
@@ -339,23 +323,11 @@ public sealed class IslandHud : MonoBehaviour
         {
             int n = selectedAkin;
             akinDockLabel.text = L.T($"AKIN {Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin))}", $"RAID {Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin))}");
-            int keep = IslandSession.KeepLevel();
-            bool can = raid.CanStart(n);
-            var reward = IslandSession.RewardFor(n, IslandSession.Save?.highestAkin ?? 0);
-            prepTitle.text = L.T($"AKIN {n}", $"RAID {n}");
-            string gems = reward.gems > 0 ? L.T($" · {reward.gems} elmas", $" · {reward.gems} gems") : "";
-            string rewardLine = L.T(
-                $"Ödül{(reward.firstWin ? "" : " (tekrar %30)")}: {reward.gold} altın (Ana Üs) · {reward.meat} Et · {reward.wood} Odun{gems}",
-                $"Reward{(reward.firstWin ? "" : " (replay 30%)")}: {reward.gold} gold (Base) · {reward.meat} Meat · {reward.wood} Wood{gems}");
-            string boss = Progression.Island.IsBossAkin(n) ? L.T(" · BOSS", " · BOSS") : "";
-            prepInfo.text = L.T(
-                $"Güç {Progression.Island.AkinBattleLevel(n)} · {Progression.Island.AkinWaves(n)} dalga · dalgada {Progression.Island.AkinBoats(n)} tekne{boss}\n{rewardLine}",
-                $"Power {Progression.Island.AkinBattleLevel(n)} · {Progression.Island.AkinWaves(n)} waves · {Progression.Island.AkinBoats(n)} boats per wave{boss}\n{rewardLine}");
-            if (!can) prepInfo.text += "\n" + GateText(n);
-            startButton.interactable = can;
-            prevButton.interactable = n > 1;
-            nextButton.interactable = n < MaxSelectable();
-            startLabel.text = can ? L.T("BAŞLAT", "START") : L.T("KİLİTLİ", "LOCKED");
+            if (prepOpen)
+            {
+                bool can = raid.CanStart(n);
+                board.Refresh(n, IslandSession.Save?.highestAkin ?? 0, IslandSession.KeepLevel(), MaxSelectable(), can, GateText(n));
+            }
         }
 
         if (state == IslandRaidManager.State.Won)
@@ -371,16 +343,45 @@ public sealed class IslandHud : MonoBehaviour
                 resultBody.text += "\n" + L.T("Ağıl ve Oduncu yakında: Et ve Odun orada harcanacak.",
                     "Pasture and Lumber Camp are coming: Meat and Wood will be spent there.");
             }
+            resultBody.text += DamagedBuildings();
             bool next = raid.CanStart(raid.Akin + 1);
             resultNext.gameObject.SetActive(next);
         }
         else if (state == IslandRaidManager.State.Lost)
         {
             resultTitle.text = L.T("YENİLGİ", "DEFEAT");
-            resultBody.text = L.T($"Kıyı Kalesi düştü.\n{raid.DefeatReason}", $"The keep has fallen.\n{raid.DefeatReason}");
+            resultBody.text = L.T($"Kıyı Kalesi düştü.\n{raid.DefeatReason}", $"The keep has fallen.\n{raid.DefeatReason}") + DamagedBuildings();
             resultNext.gameObject.SetActive(false);
         }
         RefreshAuto();
+    }
+
+    /// <summary>Sonuç ekranı: hasarlı binalar ve onarım süresi (§7.7; ücretsiz, yalnız bekleme).</summary>
+    private static string DamagedBuildings()
+    {
+        var names = new System.Text.StringBuilder();
+        int count = 0;
+        foreach (var building in IslandBuilding.All)
+        {
+            if (building == null || !building.UnderRepair) continue;
+            if (count++ > 0) names.Append(", ");
+            int left = Mathf.CeilToInt(building.RepairSecondsLeft);
+            names.Append($"{BuildingName(building.Kind)} {left / 60}:{left % 60:00}");
+        }
+        return count == 0 ? "" : "\n" + L.T("Onarımda (ücretsiz): ", "Repairing (free): ") + names;
+    }
+
+    private static string BuildingName(IslandLayout.BuildingKind kind)
+    {
+        switch (kind)
+        {
+            case IslandLayout.BuildingKind.House: return L.T("Ev", "House");
+            case IslandLayout.BuildingKind.Lumber: return L.T("Oduncu", "Lumber");
+            case IslandLayout.BuildingKind.Pasture: return L.T("Ağıl", "Pasture");
+            case IslandLayout.BuildingKind.Archery: return L.T("Okçuluk", "Archery");
+            case IslandLayout.BuildingKind.Tower: return L.T("Kule", "Tower");
+            default: return L.T("Kale", "Keep");
+        }
     }
 
     private void RefreshAuto()
@@ -433,6 +434,7 @@ public sealed class IslandHud : MonoBehaviour
                 ? L.T($"Okçu {Mathf.CeilToInt(archer.RespawnLeft)} sn sonra P1'de geri döner", $"Archer returns at P1 in {Mathf.CeilToInt(archer.RespawnLeft)}s")
                 : "";
         }
+        RefreshAuto();
         if (toastText != null && toastText.text.Length > 0 && Time.unscaledTime > toastUntil) toastText.text = "";
     }
 }

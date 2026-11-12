@@ -16,10 +16,10 @@ public sealed class IslandTarget
     public bool IsBoat => boat != null;
     public Transform Transform => enemy != null ? enemy.transform : boat != null ? boat.transform : null;
 
-    public void Hit(float damage, bool charged)
+    public void Hit(float damage, bool charged, Vector2? from = null)
     {
         if (!Valid) return;
-        if (enemy != null) enemy.Controller.TakeDamage(damage, DamageSource.IslandArcher);
+        if (enemy != null) enemy.Controller.TakeDamage(enemy.ArrowDamage(damage, charged, from), DamageSource.IslandArcher);
         else boat.TakeArrow(damage, charged);
     }
 
@@ -35,12 +35,44 @@ public sealed class IslandTarget
     }
 }
 
-/// <summary>Savaş başına ada telemetrisi (bot/test için).</summary>
+/// <summary>Savaş başına ada telemetrisi (bot/test/yenilgi etiketi için).</summary>
 public static class IslandStats
 {
     public static int Shots, AutoShots, ChargedShots, Taps, PostSwitches, Drowned, DrownedGold, CrewTotal, Landed, ArcherDeaths;
     public static float ArcherDamage;
-    public static void Reset() { Shots = AutoShots = ChargedShots = Taps = PostSwitches = Drowned = DrownedGold = CrewTotal = Landed = ArcherDeaths = 0; ArcherDamage = 0f; }
+    // Faz C: kime ne kadar hasar verildi (yenilgi etiketleri, §7.6)
+    public static readonly Dictionary<EnemyType, float> DamageByType = new Dictionary<EnemyType, float>();
+    public static readonly float[] CastleDamageByBeach = new float[4];
+    public static int ShieldBlocks, GolemArmorHits, BuildingsLost;
+    public static float BuildingDamage, ArcherDamageTaken;
+
+    public static void Reset()
+    {
+        Shots = AutoShots = ChargedShots = Taps = PostSwitches = Drowned = DrownedGold = CrewTotal = Landed = ArcherDeaths = 0;
+        ArcherDamage = 0f;
+        DamageByType.Clear();
+        System.Array.Clear(CastleDamageByBeach, 0, CastleDamageByBeach.Length);
+        ShieldBlocks = GolemArmorHits = BuildingsLost = 0;
+        BuildingDamage = ArcherDamageTaken = 0f;
+    }
+
+    /// <summary>Düşman vuruşu (EnemyController, yalnız ada): kale / bina / okçu hasarı türe ve kumsala göre toplanır.</summary>
+    public static void RecordEnemyHit(EnemyController enemy, Transform target, float damage)
+    {
+        if (enemy == null || target == null || damage <= 0f) return;
+        DamageByType.TryGetValue(enemy.Type, out float total);
+        DamageByType[enemy.Type] = total + damage;
+        if (target.GetComponent<IslandArcher>() != null) { ArcherDamageTaken += damage; return; }
+        var building = target.GetComponent<IslandBuilding>();
+        if (building == null) return;
+        if (building.IsCastle)
+        {
+            var island = enemy.GetComponent<IslandEnemy>();
+            if (island != null && island.BeachIndex >= 0 && island.BeachIndex < CastleDamageByBeach.Length)
+                CastleDamageByBeach[island.BeachIndex] += damage;
+        }
+        else BuildingDamage += damage;
+    }
 }
 
 /// <summary>Hedefe güdümlü ok (ıska yok); dolu atış 3 hedefi deler.</summary>
@@ -77,7 +109,7 @@ public sealed class IslandArrow : MonoBehaviour
 
     private void Impact()
     {
-        target.Hit(damage, charged);
+        target.Hit(damage, charged, origin);
         if (!charged) return;
         // Delme: hedefin ardındaki çizgide (≤0,7 u) en yakın 2 hedef daha.
         Vector2 dir = (target.Position - origin).normalized;
@@ -93,7 +125,7 @@ public sealed class IslandArrow : MonoBehaviour
         }
         others.Sort((a, b) => a.along.CompareTo(b.along));
         for (int i = 0; i < others.Count && i < Progression.Island.ChargedPierce - 1; i++)
-            others[i].t.Hit(damage, true);
+            others[i].t.Hit(damage, true, origin);
     }
 }
 

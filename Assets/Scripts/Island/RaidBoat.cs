@@ -224,6 +224,27 @@ public sealed class RaidBoat : MonoBehaviour
         var catalog = IslandVisualCatalog.Instance;
         var sprite = catalog != null ? catalog.Single("ship_" + (shipNumber + 6 * stage)) : null;
         if (sprite != null) sr.sprite = sprite;
+        if (stage == 2) AddDeckFire();
+    }
+
+    private GameObject deckFire;
+
+    /// <summary>Ağır hasarlı teknede güvertede yangın (Kenney Pirate Pack fire1/fire2, gerçek asset): batmak üzere olduğu okunur.</summary>
+    private void AddDeckFire()
+    {
+        if (deckFire != null) return;
+        var catalog = IslandVisualCatalog.Instance;
+        var fireSprite = catalog != null ? catalog.Single("kenney_fire" + UnityEngine.Random.Range(1, 3)) : null;
+        if (fireSprite == null) return;
+        deckFire = new GameObject("DeckFire");
+        deckFire.transform.SetParent(hull, false);
+        deckFire.transform.localPosition = new Vector3(0f, -0.05f, 0f);
+        deckFire.transform.localRotation = Quaternion.Inverse(Quaternion.Euler(0f, 0f, heading));   // tekne dönse de alev dikey kalır
+        var fireRenderer = deckFire.AddComponent<SpriteRenderer>();
+        fireRenderer.sprite = fireSprite;
+        fireRenderer.sortingOrder = IslandFx.FxSorting - 3;
+        deckFire.transform.localScale = Vector3.one * 1.1f;
+        deckFire.transform.DOScale(Vector3.one * 1.6f, 0.22f).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine).SetLink(deckFire);
     }
 
     private void Sink()
@@ -235,6 +256,8 @@ public sealed class RaidBoat : MonoBehaviour
         crew.Clear();
         Sunk?.Invoke(this, drowned, goldValue);
         IslandFx.Splash(transform.position, 2f);
+        if (shipNumber != 0) IslandFx.Pulse("kenney_explosion" + UnityEngine.Random.Range(1, 4), transform.position, 1.9f, 0.7f);
+        if (deckFire != null) Destroy(deckFire);
         if (drowned > 0)
             IslandFx.FloatText(transform.position + Vector3.up * 0.5f,
                 L.T($"+{drowned} boğuldu", $"+{drowned} drowned"), new Color(0.6f, 0.85f, 1f));

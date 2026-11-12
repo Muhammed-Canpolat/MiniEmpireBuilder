@@ -46,7 +46,13 @@ public enum EnemyType
     // Martı Adası (Docs/design/island_base.md §4): Kızıl Korsanlar.
     Deckhand,       // Tayfa — hızlı, sürü
     Raider,         // Akıncı — kaleye yürür
-    ShoreArcher     // Kıyı Okçusu — durup atış yerini / kaleyi vurur
+    ShoreArcher,    // Kıyı Okçusu — durup atış yerini / kaleyi vurur
+    // Martı Adası v2 Faz C (island_base_v2.md §7.3): Kademe I türleri; Kızıl insanlar + DungeonMonsters2D.
+    ShieldLancer,   // Kalkanlı Mızrakçı — Kızıl Lancer, önden gelen tek atış ×0,3
+    Rat,            // Fare — DM2D, hızlı, yarı tırmanır, üretim binasına gider
+    Bat,            // Yarasa — DM2D, uçan, teknesiz gelir, Okçu Kaptan'a dalar
+    WoodGolem,      // Ahşap Golem — DM2D, tank, ok/kule ×0,6
+    ButcherCaptain  // Kasap Kaptan — DM2D, 10. Akın boss'u
 }
 
 public static class EnemyTypeInfo
@@ -77,6 +83,11 @@ public static class EnemyTypeInfo
             case EnemyType.Deckhand: return L.T("Tayfa", "Deckhand");
             case EnemyType.Raider: return L.T("Akıncı", "Raider");
             case EnemyType.ShoreArcher: return L.T("Kıyı Okçusu", "Shore Archer");
+            case EnemyType.ShieldLancer: return L.T("Kalkanlı Mızrakçı", "Shield Lancer");
+            case EnemyType.Rat: return L.T("Fare", "Rat");
+            case EnemyType.Bat: return L.T("Yarasa", "Bat");
+            case EnemyType.WoodGolem: return L.T("Ahşap Golem", "Wood Golem");
+            case EnemyType.ButcherCaptain: return L.T("Kasap Kaptan", "Butcher Captain");
             default: return type.ToString();
         }
     }
@@ -388,7 +399,7 @@ public static class Progression
         public const int LongboatFromAkin = 5, BargeFromAkin = 15;
         public const float TutorialBoatSpeedMult = 0.6f;
         /// <summary>Boss Akın'ında son dalgadaki Kızıl Kaptan: etkin can çarpanı ve boyut.</summary>
-        public const float BossHpMult = 5f, BossScale = 1.5f;
+        public const float BossHpMult = 5f, BossScale = 1.3f;   // Faz C: Kasap Kaptan x1,3 (BossHpMult artık kullanılmaz: boss canı EnemyStats tablosundan)
         /// <summary>Düşman can çarpanı (EnemyStats.ScaleToLevel ile aynı eğri).</summary>
         public static float EnemyHealthMult(int level) => 1f + (Mathf.Max(1, level) - 1) * 0.085f;
 
@@ -401,12 +412,47 @@ public static class Progression
         public static int AkinRequiredCastle(int n) => Mathf.CeilToInt(Mathf.Max(1, n) / 3f);
         public const int BossEvery = 10;
         public static bool IsBossAkin(int n) => n > 0 && n % BossEvery == 0;
-        public static int AkinMeat(int n) => 25 + 8 * n;
+        /// <summary>v2 §14 karar 5: Et ödülü DÜŞÜK (5 + 2N), yalnız ilk zaferde; tekrarda 0. Akın Et çeşmesi olmamalı.</summary>
+        public static int AkinMeat(int n) => 5 + 2 * n;
+        public const int ReplayRewardsPerDay = 5;
         public static int AkinWood(int n) => 25 + 8 * n;
         public static int AkinGold(int n) => 20 + 5 * n;
         public const int GemsEvery = 5, GemsEveryAmount = 3, BossGems = 5;
         public static int AkinGems(int n) => (n % GemsEvery == 0 ? GemsEveryAmount : 0) + (IsBossAkin(n) ? BossGems : 0);
-        public const float ReplayRewardRate = 0.3f;
+        public const float ReplayRewardRate = 0.3f;   // Odun/altın tekrarda %30; Et 0
+
+        // ---- Faz C: düşman hedefleme, tırmanma, uçanlar, zırh (island_base_v2 §7.3, §7.5, §8) ----
+        public const float LaneAggroRadius = 1.5f, RangedAggro = 5f, RatClimbReach = 9f, ClimbSeconds = 1.2f;
+        public const float ShieldFrontTaken = 0.3f, ShieldFrontArc = 60f, GolemArrowTaken = 0.6f;
+        public const int FlyerSwarmMin = 3, FlyerSwarmMax = 5, FlyerFromAkin = 5;
+        public const float FlyerTelegraph = 2f;
+        public const float ButcherRoarEvery = 15f, ButcherRoarSpeed = 1.3f, ButcherRoarSeconds = 4f;
+        public const int GolemFromAkin = 8, ShieldFromAkin = 6, RatFromAkin = 3, ArcherFromAkin = 2;
+        public const float TowerRange = 6f;
+        /// <summary>Ada binasının savaş canı (§5): Kale CastleHp; Ev/Oduncu/Ağıl 80+20(L-1); Kule 80+30(L-1); Okçuluk 100+25(L-1).</summary>
+        public static float StructureHp(string kind, int level)
+        {
+            int l = Mathf.Max(1, level) - 1;
+            switch (kind)
+            {
+                case "Tower": return 80f + 30f * l;
+                case "Archery": return 100f + 25f * l;
+                default: return 80f + 20f * l;
+            }
+        }
+        // Onarım (§7.7): ücretsiz, yalnız bekleme; onarım sırasında üretim yavaş (üretim Faz B'de; burada yalnız çarpan).
+        public const float RepairBase = 20f, RepairPerLost = 100f, RepairDestroyed = 180f, RepairMonasteryMult = 0.5f, RepairProductionMult = 0.5f;
+        public static float RepairSeconds(float lostFraction, bool destroyed, bool monastery)
+        {
+            float seconds = destroyed ? RepairDestroyed : RepairBase + RepairPerLost * Mathf.Clamp01(lostFraction);
+            return seconds * (monastery ? RepairMonasteryMult : 1f);
+        }
+        /// <summary>
+        /// Hazır köyün sabit bina seviyesi (Faz B gerçek seviyeleri bağlayana kadar): adacık kuleleri yavaş yükselir
+        /// (1 + KK/2: iki adacık kulesi tekne yollarını tek başına kapatıp inişi ortadan kaldırmasın), Okçuluk Kıyı Kalesi'ni izler, diğerleri 1.
+        /// </summary>
+        public static int PrebuiltLevel(string kind, int keepLevel) =>
+            kind == "Tower" ? 1 + Mathf.Max(1, keepLevel) / 2 : kind == "Archery" ? Mathf.Max(1, keepLevel) : 1;
         /// <summary>Ada Ana Üs ilerlemesine bağlı: en yüksek Akın = 3 × Kıyı Kalesi.</summary>
         public static int MaxAkin(int keepLevel) => 3 * Mathf.Max(1, keepLevel);
 
@@ -705,6 +751,28 @@ public class EnemyStats
             case EnemyType.ShoreArcher:
                 stats.health = 30f; stats.damage = 6f; stats.moveSpeed = 1.4f;
                 stats.attackRange = 5f; stats.attackSpeed = 0.8f; stats.goldDrop = 14;
+                break;
+
+            // Martı Adası v2 Faz C: Kademe I (island_base_v2.md §7.3, sv 1 tabanı)
+            case EnemyType.ShieldLancer:
+                stats.health = 80f; stats.damage = 10f; stats.moveSpeed = 1.1f;
+                stats.attackRange = 1.6f; stats.attackSpeed = 0.8f; stats.goldDrop = 22;
+                break;
+            case EnemyType.Rat:
+                stats.health = 22f; stats.damage = 4f; stats.moveSpeed = 2.6f;
+                stats.attackRange = 1.0f; stats.attackSpeed = 1.2f; stats.goldDrop = 6;
+                break;
+            case EnemyType.Bat:
+                stats.health = 20f; stats.damage = 4f; stats.moveSpeed = 2.0f;
+                stats.attackRange = 1.0f; stats.attackSpeed = 1.1f; stats.goldDrop = 8;
+                break;
+            case EnemyType.WoodGolem:
+                stats.health = 160f; stats.damage = 12f; stats.moveSpeed = 0.7f;
+                stats.attackRange = 1.6f; stats.attackSpeed = 0.6f; stats.goldDrop = 30;
+                break;
+            case EnemyType.ButcherCaptain:
+                stats.health = 450f; stats.damage = 20f; stats.moveSpeed = 0.9f;
+                stats.attackRange = 1.8f; stats.attackSpeed = 0.7f; stats.goldDrop = 120;
                 break;
 
             case EnemyType.ForestWitch:
