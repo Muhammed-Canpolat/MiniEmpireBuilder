@@ -349,8 +349,8 @@ public static class IslandLayout
         if (c >= 1 && c <= 2 && r >= 29 && r <= 30) return 2;       // SW adacığı → Z2
         if (c >= 18 && c <= 19 && r >= 29 && r <= 30) return 4;     // SE adacığı → Z4
         if (c >= 15 && c <= 17 && r >= 2 && r <= 8) return 3;
-        if (r <= 14) return c >= 13 ? 1 : 0;
-        if (r <= 21) return c >= 10 ? 1 : 0;
+        // Hazır köy (Kale, evler, Okçuluk, Ağıl) Z0'da kalır: açılışta bulut yalnız kenar kuşağını örter.
+        if (r <= 22) return c >= 16 ? 1 : 0;
         if (c >= 9 && c <= 12) return 5;
         return c <= 8 ? 2 : 4;
     }

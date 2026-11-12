@@ -541,3 +541,6 @@ seçilenler `Docs/playtest/`):
 - Kodla çizilmiş SpriteRenderer yoktur; `IslandArt` yalnız arayüz ilkelleri (düğme dairesi, halka, dolgu) için kaldı.
 - Komutlar: `-executeMethod BuildIslandCatalog.BuildFromCommandLine`, `-executeMethod BakeIslandTerrain.BakeFromCommandLine [-force]`,
   test `-testFilter IslandReviewScreenshots` (çıktı `PlaytestOutput/island/`).
+- **Bölge sınırı (A.2 sonrası):** hazır köyün tamamı (Okçuluk, Ağıl, altın taşları dahil) Z0'dadır: Z1 yalnız doğu şeridi (c≥16, r≤22),
+  Z2/Z4/Z5 r≥23. Bölge bulutu Z0 binasının 4,3 birim yakınına konmaz; kenar bulutları ekran dışına taşar (köyü örtmesin).
+  Açılış görüntüsü: `Docs/playtest/island_v2_phaseA_default.png`.

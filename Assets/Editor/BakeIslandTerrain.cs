@@ -374,10 +374,11 @@ public static class BakeIslandTerrain
         var anchors = new[]
         {
             new Vector3(0.00f, 0.97f, 2.0f), new Vector3(0.14f, 1.00f, 1.6f), new Vector3(1.00f, 0.94f, 1.9f),
-            new Vector3(0.00f, 0.70f, 1.7f), new Vector3(1.02f, 0.58f, 1.8f), new Vector3(0.02f, 0.40f, 1.6f),
-            new Vector3(1.00f, 0.30f, 1.7f), new Vector3(0.00f, 0.08f, 2.1f), new Vector3(0.16f, 0.00f, 1.7f),
+            new Vector3(-0.07f, 0.70f, 1.7f), new Vector3(1.08f, 0.58f, 1.8f), new Vector3(-0.07f, 0.40f, 1.6f),
+            new Vector3(1.08f, 0.30f, 1.7f), new Vector3(0.00f, 0.08f, 2.1f), new Vector3(0.16f, 0.00f, 1.7f),
             new Vector3(1.00f, 0.04f, 2.2f), new Vector3(0.86f, -0.02f, 1.6f),
-            new Vector3(0.28f, 0.86f, 1.6f), new Vector3(0.72f, 0.20f, 1.6f), new Vector3(0.38f, 0.04f, 1.6f),
+            // Sürüklenenler de kenarda: ekrana sabit oldukları için ortada durursa kaleyi/araziyi örterler.
+            new Vector3(-0.07f, 0.55f, 1.6f), new Vector3(1.08f, 0.78f, 1.6f), new Vector3(0.55f, -0.03f, 1.6f),
         };
         for (int i = 0; i < anchors.Length; i++)
         {
@@ -406,6 +407,7 @@ public static class BakeIslandTerrain
                 int col = Mathf.Clamp(Mathf.FloorToInt(x + 1.6f), 0, IslandLayout.Width - 1);
                 int row = Mathf.Clamp(Mathf.FloorToInt(IslandLayout.Height - y - 1.1f), 0, IslandLayout.Height - 1);
                 if (IslandLayout.ZoneAt(col, row) != zone || !NearLand(col, row, 2)) continue;
+                if (NearOpenBuilding(new Vector2(x + 1.6f, y + 1.1f), 4.3f)) continue;   // hazır köy binasını örtmesin
                 var go = new GameObject($"ZoneCloud_{zone}_{count++}");
                 go.transform.SetParent(group, false);
                 var sr = go.AddComponent<SpriteRenderer>();
@@ -420,6 +422,16 @@ public static class BakeIslandTerrain
                 go.transform.position = cloud.anchor;
             }
         }
+    }
+
+    private static bool NearOpenBuilding(Vector2 world, float radius)
+    {
+        foreach (var spot in IslandLayout.Buildings)
+        {
+            var center = IslandLayout.World(spot.col + spot.w * 0.5f, spot.row + spot.h * 0.5f);
+            if (IslandLayout.ZoneAt(spot.col, spot.row) == 0 && Vector2.Distance(world, center) < radius) return true;
+        }
+        return false;
     }
 
     private static bool NearLand(int col, int row, int radius)
