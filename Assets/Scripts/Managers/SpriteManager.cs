@@ -179,6 +179,8 @@ public class SpriteManager : MonoBehaviour
             case BuildingType.GoldMine: return GoldMine;
             case BuildingType.Monastery: return BaseVisualCatalog.Instance?.GetLevels(BuildingType.Monastery)?[0]?.sprite;
             case BuildingType.CardWorkshop: return BaseVisualCatalog.Instance?.GetLevels(BuildingType.CardWorkshop)?[0]?.sprite;   // House2
+            case BuildingType.Barracks: return BaseVisualCatalog.Instance?.GetLevels(BuildingType.Barracks)?[0]?.sprite;           // Barracks
+            case BuildingType.House: return BaseVisualCatalog.Instance?.GetLevels(BuildingType.House)?[0]?.sprite;                 // House1
             default: return MainBase;
         }
     }

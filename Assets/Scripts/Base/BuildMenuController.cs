@@ -97,11 +97,15 @@ public class BuildMenuController : MonoBehaviour
 
         CreateTab("YAPI", 0, 0.05f, 0.43f);
         CreateTab("DEKOR", 1, 0.48f, 0.86f);
-        // 4 yapı: Kart Atölyesi (Ana Üs 5) dördüncü sütun.
-        CreateItem(BuildingType.ArcherTower, 0.015f, 0.26f, 50);
-        CreateItem(BuildingType.CannonTower, 0.265f, 0.505f, 80);
-        CreateItem(BuildingType.Monastery, 0.51f, 0.75f, 60);
-        CreateItem(BuildingType.CardWorkshop, 0.755f, 0.985f, Progression.Workshop.BuildCost);
+        // 6 yapı: Kart Atölyesi (Ana Üs 5), Köylü Evi (3) ve Kışla (7) (Faz F); sütunlar dar, yazılar küçülür.
+        const float cw = 0.158f, gap = 0.0048f;
+        float X(int column) => 0.006f + column * (cw + gap);
+        CreateItem(BuildingType.ArcherTower, X(0), X(0) + cw, 50);
+        CreateItem(BuildingType.CannonTower, X(1), X(1) + cw, 80);
+        CreateItem(BuildingType.Monastery, X(2), X(2) + cw, 60);
+        CreateItem(BuildingType.CardWorkshop, X(3), X(3) + cw, Progression.Workshop.BuildCost);
+        CreateItem(BuildingType.House, X(4), X(4) + cw, Progression.BuildCost(BuildingType.House));
+        CreateItem(BuildingType.Barracks, X(5), X(5) + cw, Progression.BuildCost(BuildingType.Barracks));
         var decor = DecorPlacementController.All;
         // Doğa → köy eşyaları → büyük yapılar; listede olmayan yeni dekorlar en sona, bedele göre.
         string[] decorOrder = { "tree", "bush", "rock", "flowers", "sheep", "stone_path",
@@ -201,7 +205,9 @@ public class BuildMenuController : MonoBehaviour
                 (GameManager.Instance.Buildings.TryGetValue(BuildingType.ArcherTower, out var archer) && !archer.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.CannonTower, out var cannon) && !cannon.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.Monastery, out var monastery) && !monastery.isUnlocked ||
-                 GameManager.Instance.Buildings.TryGetValue(BuildingType.CardWorkshop, out var workshop) && !workshop.isUnlocked);
+                 GameManager.Instance.Buildings.TryGetValue(BuildingType.CardWorkshop, out var workshop) && !workshop.isUnlocked ||
+                 GameManager.Instance.Buildings.TryGetValue(BuildingType.House, out var house) && !house.isUnlocked ||
+                 GameManager.Instance.Buildings.TryGetValue(BuildingType.Barracks, out var barracks) && !barracks.isUnlocked);
             hint.gameObject.SetActive(index == 1 || hasLocked);
             hint.text = index == 0 ? L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows.") :
                 L.T("Dekora uzun bas: taşı veya sil (%50 iade).", "Long-press decor: move or remove (50% refund).");
@@ -326,7 +332,7 @@ public class BuildMenuController : MonoBehaviour
         nameTmp.alignment = TextAlignmentOptions.Center;
         nameTmp.fontSize = 18f;
         nameTmp.enableAutoSizing = true;
-        nameTmp.fontSizeMin = 10f;
+        nameTmp.fontSizeMin = 7f;
         nameTmp.fontSizeMax = 18f;
         nameTmp.textWrappingMode = TextWrappingModes.NoWrap;
 
@@ -342,6 +348,10 @@ public class BuildMenuController : MonoBehaviour
         costTmp.color = new Color(1f, 0.85f, 0.2f);
         costTmp.alignment = TextAlignmentOptions.Center;
         costTmp.fontSize = 16f;
+        costTmp.enableAutoSizing = true;
+        costTmp.fontSizeMin = 8f;
+        costTmp.fontSizeMax = 16f;
+        costTmp.textWrappingMode = TextWrappingModes.NoWrap;
 
         var countGo = new GameObject("PlacedCount", typeof(RectTransform), typeof(TextMeshProUGUI));
         countGo.transform.SetParent(itemGO.transform, false);
@@ -351,6 +361,10 @@ public class BuildMenuController : MonoBehaviour
         countRect.offsetMin = countRect.offsetMax = Vector2.zero;
         var countText = countGo.GetComponent<TextMeshProUGUI>();
         countText.fontSize = 12f;
+        countText.enableAutoSizing = true;
+        countText.fontSizeMin = 7f;
+        countText.fontSizeMax = 12f;
+        countText.textWrappingMode = TextWrappingModes.NoWrap;
         countText.color = ReferenceUiVisuals.Muted;
         countText.alignment = TextAlignmentOptions.Center;
 
@@ -384,7 +398,7 @@ public class BuildMenuController : MonoBehaviour
                     Hide();
                     // Varsayılan 60 sn inşa süresi; Kart Atölyesi'nin süresi Progression/TimingConfig'ten.
                     PlacementController.Instance?.BeginPlacement(type,
-                        type == BuildingType.CardWorkshop ? Progression.Workshop.BuildSeconds : 60f, cost);
+                        type == BuildingType.CardWorkshop ? Progression.Workshop.BuildSeconds : 60f, cost);   // Kışla/Ev: 60 sn varsayılan
                 }
                 else
                 {
@@ -450,13 +464,14 @@ public class BuildMenuController : MonoBehaviour
             int limit = data != null && GameManager.Instance != null
                 ? data.MaxCountAtBaseLevel(GameManager.Instance.GetMainBaseLevel()) : 0;
             var count = btn.transform.Find("PlacedCount")?.GetComponent<TextMeshProUGUI>();
-            if (count != null) count.text = $"Kurulu {placed}/{limit}";
+            if (count != null) count.text = L.T($"Kurulu {placed}/{limit}", $"Built {placed}/{limit}");
             btn.interactable = builderAvailable && unlocked && placed < limit;
             if (cost != null)
             {
                 cost.text = unlocked ? (type == BuildingType.ArcherTower ? L.T("50 Altın", "50 Gold")
                     : type == BuildingType.CannonTower ? L.T("80 Altın", "80 Gold")
                     : type == BuildingType.CardWorkshop ? L.T($"{Progression.Workshop.BuildCost} Altın", $"{Progression.Workshop.BuildCost} Gold")
+                    : type == BuildingType.House || type == BuildingType.Barracks ? L.T($"{Progression.BuildCost(type)} Altın", $"{Progression.BuildCost(type)} Gold")
                     : L.T("60 Altın", "60 Gold"))
                     : L.T("Ana Üs Sev. ", "Main Base Lv. ") + (data?.GetRequiredMainBaseLevel() ?? 1);
                 cost.color = unlocked ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted;
@@ -465,7 +480,8 @@ public class BuildMenuController : MonoBehaviour
         var hint = _panelRoot?.transform.Find("BuildMenuHint");
         if (hint != null && _activeTab == 0 && GameManager.Instance != null)
             hint.gameObject.SetActive(System.Array.Exists(new[] { BuildingType.ArcherTower,
-                BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop }, type =>
+                BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop,
+                BuildingType.House, BuildingType.Barracks }, type =>
                 GameManager.Instance.Buildings.TryGetValue(type, out var item) && !item.isUnlocked));
         foreach (var btn in _decorButtons)
         {

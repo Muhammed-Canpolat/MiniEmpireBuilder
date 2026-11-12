@@ -1650,6 +1650,8 @@ public class BaseMapManager : MonoBehaviour
             case BuildingType.CannonTower: return L.T("Topçu", "Cannon");
             case BuildingType.Monastery: return L.T("Manastır", "Monastery");
             case BuildingType.CardWorkshop: return L.T("Kart Atölyesi", "Card Workshop");
+            case BuildingType.Barracks: return L.T("Kışla", "Barracks");
+            case BuildingType.House: return L.T("Köylü Evi", "Cottage");
             default: return type.ToString();
         }
     }
@@ -1672,6 +1674,8 @@ public class BaseMapManager : MonoBehaviour
             case BuildingType.CannonTower: return new Color(1f, 0.42f, 0.12f);
             case BuildingType.Monastery: return new Color(0.75f, 0.64f, 0.43f);
             case BuildingType.CardWorkshop: return new Color(0.85f, 0.55f, 0.3f);
+            case BuildingType.Barracks: return new Color(0.3f, 0.5f, 0.9f);
+            case BuildingType.House: return new Color(0.8f, 0.7f, 0.5f);
             default: return Color.white;
         }
     }

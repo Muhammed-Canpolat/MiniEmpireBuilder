@@ -633,6 +633,8 @@ public class BaseWorldUI : MonoBehaviour
             case BuildingType.GoldMine: return L.T("Altın Madeni", "Gold Mine");
             case BuildingType.Monastery: return L.T("Manastır", "Monastery");
             case BuildingType.CardWorkshop: return L.T("Kart Atölyesi", "Card Workshop");
+            case BuildingType.Barracks: return L.T("Kışla", "Barracks");
+            case BuildingType.House: return L.T("Köylü Evi", "Cottage");
             default: return type.ToString();
         }
     }
@@ -642,7 +644,8 @@ public class BaseWorldUI : MonoBehaviour
         int nextLevel = currentLevel + 1;
         if (nextLevel > Progression.MaxLevel) return "";
         var unlocked = new List<string>();
-        foreach (var type in new[] { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop })
+        foreach (var type in new[] { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop,
+            BuildingType.House, BuildingType.Barracks })
         {
             if (Progression.FirstUnlockLevel(type) == nextLevel) unlocked.Add(GetBuildingDisplayName(type));
             else if (Progression.SecondUnlockLevel(type) == nextLevel) unlocked.Add("2. " + GetBuildingDisplayName(type));
@@ -684,6 +687,15 @@ public class BaseWorldUI : MonoBehaviour
                 return L.T($"Üretim başına {uses} hak (1 savaş = 1 hak)\nKuyruk: {Progression.Workshop.QueueSlots(building.level)} · Özel kart yuvası: {Progression.Workshop.SpecialSlots(building.level)}\nNadir Sv {Progression.Workshop.RareUnlockLevel} · Destansı Sv {Progression.Workshop.EpicUnlockLevel}",
                     $"{uses} uses per craft (1 battle = 1 use)\nQueue: {Progression.Workshop.QueueSlots(building.level)} · Special card slots: {Progression.Workshop.SpecialSlots(building.level)}\nRare Lv {Progression.Workshop.RareUnlockLevel} · Epic Lv {Progression.Workshop.EpicUnlockLevel}");
 
+            case BuildingType.Barracks:
+                int lancers = Progression.AllyLancerCount(building.level);
+                return L.T($"Sefer savaşında {lancers} mavi Lancer Ana Üs'ü korur (Ana Üs çevresi {Progression.AllyGuardRadius:0.#} u)\nLancer Can: {Progression.AllyLancerHp(building.level):F0} · Hasar: {Progression.AllyLancerDamage(building.level):F0}\nÖlen Lancer {Progression.AllyRespawn:0} sn'de yeniden doğar",
+                    $"In campaign battles {lancers} blue Lancer(s) guard the Main Base (within {Progression.AllyGuardRadius:0.#} u)\nLancer Health: {Progression.AllyLancerHp(building.level):F0} · Damage: {Progression.AllyLancerDamage(building.level):F0}\nA fallen Lancer returns in {Progression.AllyRespawn:0} s");
+
+            case BuildingType.House:
+                int storagePct = Mathf.RoundToInt(Progression.HouseStorageBonus(building.level) * 100f);
+                return L.T($"Altın madeni deposu +%{storagePct}\nÜretim hızı değişmez; seyrek girenin madeni dolmasın",
+                    $"Gold mine storage +{storagePct}%\nProduction speed is unchanged; helps when you visit rarely");
 
             default:
                 return "";

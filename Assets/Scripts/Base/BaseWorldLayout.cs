@@ -64,7 +64,11 @@ public static class BaseWorldLayout
         new Slot("cannon_3", BuildingType.CannonTower, 2, 11, 3, 2),     // 1. Topçu, Ana Üs 4
         new Slot("archer_4", BuildingType.ArcherTower, 13, 13, 4, 4),    // 2. Okçu, Ana Üs 5
         new Slot("monastery_2", BuildingType.Monastery, 8, 20, 3, 3),    // 2. Manastır, Ana Üs 10
-        new Slot("workshop_1", BuildingType.CardWorkshop, 9, 10, 3, 3)   // Kart Atölyesi, Ana Üs 5 (House2)
+        new Slot("workshop_1", BuildingType.CardWorkshop, 9, 10, 3, 3),  // Kart Atölyesi, Ana Üs 5 (House2)
+        new Slot("barracks_1", BuildingType.Barracks, 5, 9, 3, 3),       // Kışla, Ana Üs 7 (Barracks)
+        new Slot("barracks_2", BuildingType.Barracks, 3, 3, 3, 3),       // 2. Kışla, Ana Üs 11
+        new Slot("house_1", BuildingType.House, 17, 9, 2, 3),            // Köylü Evi, Ana Üs 3 (House1, 128×192 px = 2×3 hücre)
+        new Slot("house_2", BuildingType.House, 17, 3, 2, 3)             // 2. Köylü Evi, Ana Üs 9
     };
 
     public static Slot Get(string id)

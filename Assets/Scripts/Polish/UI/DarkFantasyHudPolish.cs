@@ -191,13 +191,14 @@ public static class DarkFantasyHudPolish
             }
         }
 
-        BuildingType[] types = { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop };
+        BuildingType[] types = { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop,
+            BuildingType.House, BuildingType.Barracks };
         for (int i = 0; i < types.Length; i++)
         {
             var item = panel.Find("Item_" + types[i]);
             if (item == null) continue;
-            float left = 0.025f + i * 0.2438f;   // 4 sütun (Kart Atölyesi dördüncü)
-            SetAnchors(item as RectTransform, new Vector2(left, 0.14f), new Vector2(left + 0.227f, 0.65f));
+            float left = 0.012f + i * 0.1635f;   // 6 sütun (Kart Atölyesi 4., Köylü Evi 5., Kışla 6.); yazılar otomatik küçülür
+            SetAnchors(item as RectTransform, new Vector2(left, 0.14f), new Vector2(left + 0.158f, 0.65f));
             var itemBg = item.GetComponent<Image>();
             if (itemBg != null) itemBg.color = ReferenceUiVisuals.Background;
             var outline = item.GetComponent<Outline>();
