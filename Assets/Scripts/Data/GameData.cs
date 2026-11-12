@@ -422,6 +422,22 @@ public static class Progression
         /// <summary>v2 §14 karar 5: Et ödülü DÜŞÜK (5 + 2N), yalnız ilk zaferde; tekrarda 0. Akın Et çeşmesi olmamalı.</summary>
         public static int AkinMeat(int n) => 5 + 2 * n;
         public const int ReplayRewardsPerDay = 5;
+        // ---- Faz D: zamanlı baskın (island_base_v2 §7.8, §8 "Raid") ----
+        public const float RaidIntervalHours = 8f, RaidJitterMinutes = 45f;   // 8 sa ± 45 dk
+        public const int RaidFirstAkin = 5;                                   // ilki Akın 5 kazanılınca
+        public const float RaidWarnMinutes = 30f, RaidWindowHours = 2f;        // T−30 dk gösterilir, 2 sa canlı savunma penceresi
+        public const float RaidClockStopHours = 24f;                          // oyun 24 sa+ açılmazsa baskın saati durur
+        public const float RaidStockHours = 4f;                               // yalnız toplanmamış üretimin en çok 4 saati çalınır
+        public const int RaidPowerBelowHighest = 2, RaidWaves = 2;            // güç = en yüksek Akın − 2, 2 dalga
+        /// <summary>Hırsızlık tavanı (KULLANICI KARARI, v1 0,15 idi): hiçbir çözümde aşılmaz.</summary>
+        public const float TheftCap = 0.20f;
+        public const float CoverFull = 1f, CoverPartial = 0.5f, FlagOffRoute = 0.5f, RatTheft = 0.02f;
+        public const float RaidDefTower = 2f, RaidDefBarracks = 1.5f, RaidDefArcher = 1f, RaidDefKeep = 1f, RaidReqPerKeep = 6f;   // D ve R katsayıları
+        public const float RaidWinBonus = 0.10f;                              // canlı zafer: bekleyen üretime +%10
+        public const float RaidLossTheftMult = 0.5f;                          // canlı yenilgi: çevrimdışı çalıntı ×0,5
+        public static int RaidWinGold(int keep) => 10 + 2 * Mathf.Max(1, keep);
+        public static int RaidPower(int highestAkin) => Mathf.Max(1, highestAkin - RaidPowerBelowHighest);
+        public const float HorizonBoatScale = 0.9f;                           // §8: 0,45 (Faz A: Kenney sprite'ları yarım boyda, ×2)
         public static int AkinWood(int n) => 25 + 8 * n;
         public static int AkinGold(int n) => 20 + 5 * n;
         public const int GemsEvery = 5, GemsEveryAmount = 3, BossGems = 5;

@@ -24,6 +24,7 @@ public static class AwayReport
     public static void Begin(PlayerSaveData save, double awaySeconds)
     {
         if (save == null || awaySeconds < MinAwayMinutes * 60d) return;
+        IslandRaidScheduler.Tick(save.island, IslandRepair.Now);   // Faz D: pencere kapalıyken bittiyse çevrimdışı çözülür, rapor satırı hazır olur
         var data = new Data
         {
             seconds = awaySeconds,

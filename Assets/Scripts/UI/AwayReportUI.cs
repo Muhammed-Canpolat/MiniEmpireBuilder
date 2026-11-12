@@ -59,7 +59,8 @@ public sealed class AwayReportUI : MonoBehaviour
         int mined = Mathf.Max(0, gm.GoldMineStored - report.storedBefore);
         bool mineFull = gm.GoldMineStored >= gm.GetGoldMineStorageCapacity() && gm.GetGoldMineStorageCapacity() > 0;
         int livesGained = Mathf.Max(0, LivesSystem.Lives - report.livesBefore);
-        if (mined <= 0 && report.finished.Count == 0 && livesGained <= 0) { IsOpen = popup != null; return; }
+        string raidLine = IslandRaidScheduler.TakeReport(gm.PlayerData.island);   // Faz D: "Korsanlar B kumsalına çıktı, ..."
+        if (mined <= 0 && report.finished.Count == 0 && livesGained <= 0 && raidLine.Length == 0) { IsOpen = popup != null; return; }
 
         var lines = new StringBuilder();
         if (mined > 0)
@@ -70,6 +71,7 @@ public sealed class AwayReportUI : MonoBehaviour
         if (livesGained > 0)
             lines.AppendLine(L.T($"<b>Can:</b> +{livesGained} ({LivesSystem.Lives}/{LivesSystem.MaxLives})",
                 $"<b>Lives:</b> +{livesGained} ({LivesSystem.Lives}/{LivesSystem.MaxLives})"));
+        if (raidLine.Length > 0) lines.AppendLine(L.T("<b>Baskın:</b> ", "<b>Raid:</b> ") + raidLine);
         Build(Progression.FormatDuration(report.seconds), lines.ToString().TrimEnd(), gm.GoldMineStored > 0);
     }
 

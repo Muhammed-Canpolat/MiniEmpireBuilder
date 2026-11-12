@@ -717,6 +717,8 @@ public class GameManager : MonoBehaviour
         PlayerData.mineBoostUntilTicks = Shift(PlayerData.mineBoostUntilTicks);
         PlayerData.unlimitedLivesUntilTicks = Shift(PlayerData.unlimitedLivesUntilTicks);
         PlayerData.terrainLastGrowTicks = Shift(PlayerData.terrainLastGrowTicks);
+        IslandRaidScheduler.DevShift(PlayerData.island, t);   // Faz D: baskın zamanı ve ada üretim damgaları
+        IslandRaidScheduler.Tick(PlayerData.island, IslandRepair.Now);
         ApplyOfflineGoldMineProduction();
         CheckBuilderTask();
         SaveGame();
@@ -727,6 +729,7 @@ public class GameManager : MonoBehaviour
     {
         CheckBuilderTask();
         CardWorkshop.TickIfAny();   // biten atölye üretimleri stoğa girer (çevrimdışı dahil: GameClock)
+        IslandRaidScheduler.TickIfAny();   // Faz D: zamanlı baskın planı / biten pencerenin çevrimdışı çözümü
     }
 
     private void CheckBuilderTask()

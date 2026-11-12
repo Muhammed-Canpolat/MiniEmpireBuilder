@@ -89,6 +89,7 @@ public sealed class DevMenu : MonoBehaviour
             ("REKLAM HAKLARINI SIFIRLA", () => { if (gm != null) { var d = gm.PlayerData; d.adSpeedupDay = d.adMineDay = d.adChestDay = d.gemAdDay = d.adLivesDay = 0; if (d.workshop != null) d.workshop.adDay = 0; gm.SaveGame(); } }, false),
             ("+500 ET", () => { IslandEconomy.AddMeat(500); gm?.SaveGame(); }, false),
             ("ATÖLYEYİ BİTİR", CardWorkshop.DevFinishAll, false),
+            ("BASKINI GETİR", () => { if (gm != null) { IslandRaidScheduler.DevBring(gm.PlayerData.island, IslandRepair.Now); gm.SaveGame(); } }, false),
             ("SONSUZ SEFER +5 KAT", () => { if (gm != null) { gm.PlayerData.endlessBestFloor += 5; gm.SaveGame(); } }, true),
             ("İSTİLAYI AÇ/KAPAT", () => { DragonInvasion.ForceActive = !DragonInvasion.ForceActive; if (gm != null) { gm.PlayerData.invasionRewardWeek = 0; gm.SaveGame(); } }, true),
             ("TAKVİMİ SIFIRLA", () => { if (gm != null) { gm.PlayerData.dailyStreak = 0; gm.PlayerData.dailyLastClaimDay = 0; DailyRewards.TodayOverride = null; gm.SaveGame(); } }, true),

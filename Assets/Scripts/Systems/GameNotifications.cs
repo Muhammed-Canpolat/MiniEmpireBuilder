@@ -184,6 +184,13 @@ public static class NotificationPlanner
             }
         }
 
+        // Ada baskını (Faz D): T-30 dk'da "ufukta korsan yelkenleri"; gece kuralı Add içinde (22-09 arası 09:00'a kayar).
+        var raidIsland = data?.island;
+        if (raidIsland != null && raidIsland.nextRaidTicks > 0)
+            Add(600, L.T("Ufukta korsan yelkenleri!", "Pirate sails on the horizon!"),
+                L.T("Martı Adası'na baskın geliyor. Kuleleri yerleştir ya da savun.", "A raid is coming to Gull Isle. Position your towers or defend."),
+                new DateTime(IslandRaidScheduler.WarnStart(raidIsland), DateTimeKind.Utc).ToLocalTime());
+
         // Can: hepsi dolunca.
         if (!LivesSystem.Unlimited && LivesSystem.Lives < LivesSystem.MaxLives)
         {
