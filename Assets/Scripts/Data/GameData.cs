@@ -540,8 +540,8 @@ public static class Progression
             return (type == EnemyType.RedDragon ? 1.2f : BossScale) * Mathf.Pow(1.15f, round);
         }
         // Özel yetenekler (§7.3 "Özel" sütunu)
-        public const float MageHealEvery = 3f, MageHealRadius = 2.5f, MageHealFraction = 0.06f;
-        public const float ImpBurnSeconds = 3f, ImpBurnFractionPerSecond = 0.04f;
+        public const float MageHealEvery = 3f, MageHealRadius = 2.5f, MageHealFraction = 0.04f;   // §7.3: %6; ölçümde (Akın 16–20) büyücü kümesi baskındı → %4
+        public const float ImpBurnSeconds = 3f, ImpBurnFractionPerSecond = 0.03f;   // §7.3: %4/sn; ölçümde sürekli yanma binaları eritti → %3
         public const float WebSeconds = 2f, WebFireRateMult = 0.6f;
         public const float GhostPhaseEvery = 6f, GhostPhaseSeconds = 1.5f;
         public const float SuccubusStunEvery = 8f, SuccubusStunSeconds = 2f;

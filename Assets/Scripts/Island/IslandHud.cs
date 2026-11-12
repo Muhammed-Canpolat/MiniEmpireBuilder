@@ -415,13 +415,15 @@ public sealed class IslandHud : MonoBehaviour
             button.onClick.AddListener(() => { if (IslandAbilities.Instance != null) IslandAbilities.Instance.Use(kind); });
             abilityFace[i] = face;
             abilityFill[i] = RadialOverlay(face.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.55f));
-            string name = i == 0 ? L.T("YAĞMUR", "VOLLEY") : i == 1 ? L.T("ATEŞ OK", "FIRE") : L.T("AĞ", "NET");
-            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", name, 10, Color.white, TextAlignmentOptions.Center,
-                Vector2.zero, Vector2.one, new Vector2(2, 2), new Vector2(-2, -2), true);
+            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", AbilityShortName(i), 10, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, new Vector2(9, 9), new Vector2(-9, -9), true);   // dairenin içine sığsın
             abilityLabel[i].enableAutoSizing = true;
-            abilityLabel[i].fontSizeMin = 6; abilityLabel[i].fontSizeMax = 11;
+            abilityLabel[i].fontSizeMin = 5; abilityLabel[i].fontSizeMax = 9;
         }
     }
+
+    private static string AbilityShortName(int i) =>
+        i == 0 ? L.T("YAĞ\nMUR", "RAIN") : i == 1 ? L.T("ATEŞ\nOK", "FIRE") : L.T("AĞ", "NET");
 
     private void RefreshAbilities()
     {
@@ -434,7 +436,7 @@ public sealed class IslandHud : MonoBehaviour
             abilityFill[i].fillAmount = unlocked ? abilities.Remaining01(kind) : 1f;
             abilityFace[i].color = !unlocked ? new Color(0.55f, 0.55f, 0.6f)
                 : kind == IslandAbilities.Kind.FireArrow && abilities.FireShotsLeft > 0 ? new Color(1f, 0.7f, 0.4f) : Color.white;
-            string name = i == 0 ? L.T("YAĞMUR", "VOLLEY") : i == 1 ? L.T("ATEŞ OK", "FIRE") : L.T("AĞ", "NET");
+            string name = AbilityShortName(i);
             abilityLabel[i].text = !unlocked ? L.T("Sv", "Lv") + IslandAbilities.UnlockLevel(kind)
                 : kind == IslandAbilities.Kind.FireArrow && abilities.FireShotsLeft > 0 ? "×" + abilities.FireShotsLeft : name;
         }

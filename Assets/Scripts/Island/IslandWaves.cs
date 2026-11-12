@@ -78,12 +78,12 @@ public static class IslandWaves
             switch (crew[i])
             {
                 case EnemyType.Raider: case EnemyType.ShieldLancer:
-                    if (elite.Count > 0 && wave > 1 && !eliteUsed && i == 1 && crew.Count >= 4)
+                    if (elite.Count > 0 && wave > 1 && !eliteUsed && i == 1 && crew.Count >= 4 && (boatIndex + wave) % 2 == 1)   // ölçüm turu 2: her uygun teknede değil, ikisinden birinde
                     { crew[i] = PickWeighted(elite, seed + boatIndex); eliteUsed = true; }
                     else crew[i] = PickWeighted(melee, seed);
                     break;
                 case EnemyType.ShoreArcher:
-                    if (special.Count > 0 && wave > 1 && !specialUsed && crew.Count >= 4 && (boatIndex + wave) % 2 == 0)
+                    if (special.Count > 0 && wave > 1 && !specialUsed && crew.Count >= 4 && (boatIndex + wave) % 3 == 0)   // özel birim sıklığı (ölçüm turu 1: %50 → %33)
                     { crew[i] = PickWeighted(special, seed + wave); specialUsed = true; }
                     else crew[i] = PickWeighted(ranged, seed);
                     break;

@@ -146,7 +146,7 @@ public sealed class IslandSpecials : MonoBehaviour
         if (summoned || controller.HealthPercent > Progression.Island.KnightSummonAtHealth) return;
         summoned = true;
         Pulses++;
-        IslandFx.FloatText(enemy.Position + Vector2.up * 2f, L.T("İSKELETLER, KALKIN!", "RISE, SKELETONS!"), new Color(0.7f, 0.9f, 1f), 5f);
+        IslandFx.FloatText(enemy.Position + Vector2.up * 2f, L.T("KALKIN!", "RISE!"), new Color(0.7f, 0.9f, 1f), 4.5f);
         for (int i = 0; i < Progression.Island.KnightSummonCount; i++)
         {
             Vector2 at = enemy.Position + new Vector2((i - 1.5f) * 0.7f, Random.Range(-0.3f, 0.3f));
