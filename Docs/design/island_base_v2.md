@@ -527,3 +527,17 @@ seçilenler `Docs/playtest/`):
 3. Altın damarı Ana Üs'e günlük ~%8 ek altın: **evet** (görünür, küçük).
 4. "Kışla adadan sonra" = **Ana Üs Kışlası** (Faz F); ada Kışlası Faz E'de.
 5. Akın Et ödülü **5 + 2N**, tekrar oynamada 0 (kullanıcı "akından çok Et geliyor" dedi).
+
+## 15. Faz A uygulama notu (12 Kasım 2026): belgeden sapmalar
+- **Merdivenler yana dikilir.** Kit §4.3 merdivenleri plato YANINDA (SL/SR, 2 hücre) tanımlar; §4 haritasındaki ortadaki 2 geniş
+  `HH` merdiven karo kuralıyla çizilemez. S1 zirvenin doğu ucunda (c15, r7), S2 yaylanın batı (c3, r13), S3 doğu (c18, r13) alt köşesindedir.
+  Yürüyüş yolları buna göre yeniden çizildi (`IslandLayout.Beaches/PathBetween`). Yarlar türetilir (`IslandTerrainRules`), yazılmaz.
+- **Harita çentikleri:** yayla batı (r9–11, c4–5) ve doğu (r11–12, c16–17) çentik, koy (r14–15, c9–12) suya bakan yar gösterir.
+- **Kenney gemileri 66×113 / 20×38 px** (belgedeki boyların yarısı): son boy (Sandal 1,48 · Akıncı 2,47 · Mavna 3,53 u) korunarak ölçekler
+  `Progression.Island` içinde 2,5 / 1,4 / 2,0 oldu. Pruva aşağı bakar; dönüş = hız açısı + 90°.
+- **Okçu koşu hızı 4 → 9 u/sn:** harita 14×25'ten 22×36'ya büyüdü; atış yeri geçişleri 1–3 sn kalsın.
+- **Kamera:** Ana Üs kamerası (`BaseWorldLayout`) değiştirilmedi; ada için ayrı `IslandCameraController` (kaydırma/zum/savaş çerçevesi) var.
+- **Kenar bulutları ekrana sabittir** (kamera ile gelir, boyu zumla orantılı); bölge bulutları dünyaya sabittir ve bölge açılınca kaybolur.
+- Kodla çizilmiş SpriteRenderer yoktur; `IslandArt` yalnız arayüz ilkelleri (düğme dairesi, halka, dolgu) için kaldı.
+- Komutlar: `-executeMethod BuildIslandCatalog.BuildFromCommandLine`, `-executeMethod BakeIslandTerrain.BakeFromCommandLine [-force]`,
+  test `-testFilter IslandReviewScreenshots` (çıktı `PlaytestOutput/island/`).

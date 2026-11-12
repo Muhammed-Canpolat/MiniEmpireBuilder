@@ -123,35 +123,80 @@ public class IslandLadderTests
     }
 
     [Test]
-    public void LayoutHasFiveReachablePostsAndBeachRoutesOfDesignedLength()
+    public void LayoutV2HasThreeLevelsStairsAndRoutesOfDesignedLength()
     {
         var layout = Type("IslandLayout");
-        Assert.AreEqual(14, Const(layout, "Width"));
-        Assert.AreEqual(25, Const(layout, "Height"));
-        Assert.AreEqual('K', (char)Call(layout, "Cell", 8, 4), "kale zirvede");
-        Assert.AreEqual('H', (char)Call(layout, "Cell", 7, 6), "S1 orta merdiven");
+        Assert.AreEqual(22, Const(layout, "Width"));
+        Assert.AreEqual(36, Const(layout, "Height"));
+        var rows = (string[])layout.GetField("Rows").GetValue(null);
+        Assert.AreEqual(36, rows.Length);
+        foreach (var row in rows) Assert.AreEqual(22, row.Length);
         Assert.AreEqual('~', (char)Call(layout, "Cell", 0, 0));
+        Assert.AreEqual(2, Call(layout, "HeightAt", 10, 4), "kale zirvede (sv2)");
+        Assert.AreEqual(1, Call(layout, "HeightAt", 10, 10), "yayla sv1");
+        Assert.AreEqual(0, Call(layout, "HeightAt", 10, 18), "ova sv0");
+        Assert.AreEqual(-1, Call(layout, "HeightAt", 0, 0), "su");
+        Assert.IsTrue((bool)Call(layout, "IsCliff", 10, 8), "zirve yarı");
+        Assert.IsTrue((bool)Call(layout, "IsCliff", 5, 14), "yayla yarı");
+        Assert.IsTrue((bool)Call(layout, "IsStair", 15, 7), "S1");
+        Assert.IsTrue((bool)Call(layout, "IsStair", 3, 13), "S2");
+        Assert.IsTrue((bool)Call(layout, "IsStair", 18, 13), "S3");
 
         var posts = (Array)layout.GetField("Posts").GetValue(null);
         Assert.AreEqual(5, posts.Length);
         var beaches = (Array)layout.GetField("Beaches").GetValue(null);
         Assert.AreEqual(4, beaches.Length);
-        // Tekne varışı 6–10 sn (Sandal 1,0 u/s).
+        // Tekne görünür süresi (Sandal 1,0 u/s): A/B uzun kanal, C/D kısa güney yaklaşması (v2 §4).
+        int i = 0;
         foreach (var beach in beaches)
         {
             var path = (Vector2[])beach.GetType().GetField("boatPath").GetValue(beach);
             float length = (float)Call(layout, "PathLength", new object[] { path });
-            Assert.That(length, Is.InRange(6f, 10.5f), "tekne yolu uzunluğu (sn @1 u/s)");
-            Assert.GreaterOrEqual(((Vector2[])beach.GetType().GetField("walkPath").GetValue(beach)).Length, 4);
+            if (i < 2) Assert.That(length, Is.InRange(18f, 32f), "A/B tekne yolu (sn @1 u/s)");
+            else Assert.That(length, Is.InRange(4f, 9f), "C/D tekne yolu");
+            Assert.GreaterOrEqual(((Vector2[])beach.GetType().GetField("walkPath").GetValue(beach)).Length, 8);
+            i++;
         }
-        // Komşu atış yerleri arası koşu ≈1,5–3 sn.
+        // Komşu atış yerleri arası koşu (9 u/sn): yayla geçişleri 1–3 sn.
         foreach (var (a, b) in new[] { (0, 1), (0, 2), (2, 3), (2, 4), (3, 4) })
         {
             float seconds = (float)Call(layout, "PathSeconds", a, b);
-            Assert.That(seconds, Is.InRange(1.5f, 3.2f), $"P{a + 1}→P{b + 1}");
+            Assert.That(seconds, Is.InRange(0.6f, 3.5f), $"P{a + 1}→P{b + 1}");
         }
         var path01 = (List<Vector2>)Call(layout, "PathBetween", 0, 1);
         Assert.GreaterOrEqual(path01.Count, 3);
+    }
+
+    [Test]
+    public void TerrainRulesProduceNoWarningsAndFollowKitTileTables()
+    {
+        var rules = Type("IslandTerrainRules");
+        var layout = Type("IslandLayout");
+        var result = layout.GetProperty("Terrain").GetValue(null);
+        var warnings = (System.Collections.IList)result.GetType().GetField("warnings").GetValue(result);
+        Assert.AreEqual(0, warnings.Count, string.Join("; ", warnings.Cast<string>()));
+        var stairs = (System.Collections.IList)result.GetType().GetField("stairs").GetValue(result);
+        Assert.AreEqual(3, stairs.Count, "3 merdiven");
+        // Kit §4.1: tablo uzunlukları ve örnek maskeler (15 = merkez)
+        Assert.AreEqual(9, ((int[])rules.GetField("FlatByMask").GetValue(null))[15]);
+        Assert.AreEqual(13, ((int[])rules.GetField("ElevByMask").GetValue(null))[15]);
+        Assert.AreEqual(35, ((int[])rules.GetField("CliffGround").GetValue(null))[3], "yar ortası C18");
+        Assert.AreEqual(41, ((int[])rules.GetField("CliffWater").GetValue(null))[3], "suya bakan yar ortası C22");
+        // Küçük harita: 7 genişliğinde sv1 plato, altı su → suya bakan yar C21 · C22… · C23 (kit §4.2)
+        var small = (object)rules.GetMethod("Build").Invoke(null, new object[] { new[]
+        {
+            "~~~~~~~~~",
+            "~1111111~",
+            "~1111111~",
+            "~~~~~~~~~",
+        } });
+        var elev = (System.Collections.IList)small.GetType().GetField("elev").GetValue(small);
+        var level1 = (System.Collections.IDictionary)elev[1];
+        Assert.AreEqual(40, level1[new Vector2Int(1, 0)], "sol uç C21");
+        Assert.AreEqual(41, level1[new Vector2Int(4, 0)], "orta C22");
+        Assert.AreEqual(42, level1[new Vector2Int(7, 0)], "sağ uç C23");
+        Assert.AreEqual(4, level1[new Vector2Int(1, 2)], "sol-üst köşe E1");
+        Assert.AreEqual(5, level1[new Vector2Int(4, 2)], "üst kenar E2");
     }
 
     // ---- Oynanış: tekne batışı ve okçu (sahne nesneleriyle) ----
@@ -201,8 +246,8 @@ public class IslandLadderTests
         Assert.IsFalse((bool)archerType.GetProperty("Running").GetValue(archer));
 
         var boat = SpawnBoat(0);
-        // Tekneyi P3'ün menzilindeki kıyıya (A kumsalı) götür.
-        boat.transform.position = new Vector3(0.5f, 11f, 0f);
+        // Tekneyi P3'ün menzilindeki kıyıya (A kumsalı açığı) götür.
+        boat.transform.position = new Vector3(1.5f, 18f, 0f);
         yield return null;
         float before = (float)boat.GetType().GetProperty("Health").GetValue(boat);
         Assert.IsTrue((bool)archerType.GetMethod("DebugFireAtNearest").Invoke(archer, null), "menzilde hedef var");

@@ -70,7 +70,8 @@ public class IslandSaveTests
         save.GetType().GetField("gold").SetValue(save, 321);
         string json = JsonUtility.ToJson(save);
         // Eski kayıtta ada alanı yoktur ve sürüm 5'tir.
-        json = Regex.Replace(json, "\"island\":\\{[^{}]*\\},?", "");
+        // island artık JSON'un son alanı: önceki virgülle birlikte silinir (aksi hâlde ",}" geçersiz JSON olur).
+        json = Regex.Replace(json, "(,\"island\":\\{[^{}]*\\})|(\"island\":\\{[^{}]*\\},)", "");
         json = Regex.Replace(json, "\"saveVersion\":\\d+", "\"saveVersion\":5");
         StringAssert.DoesNotContain("\"island\"", json);
         PlayerPrefs.SetString(Key, json);
