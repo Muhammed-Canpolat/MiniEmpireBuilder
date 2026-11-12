@@ -370,10 +370,14 @@ public static class BakeIslandTerrain
 
         // Kenar bulutları: ekran kenarlarına sabit (kamera ile birlikte), yavaş süzülür.
         var edge = Group(root, "EdgeClouds");
+        // Köşelerde ve kenarlarda kümelenmiş iri bulutlar (referanstaki kabarık bulutlar) + 3 yavaş sürüklenen
         var anchors = new[]
         {
-            new Vector2(0.02f, 0.93f), new Vector2(0.96f, 0.86f), new Vector2(0.00f, 0.66f), new Vector2(1.00f, 0.52f),
-            new Vector2(0.03f, 0.36f), new Vector2(0.98f, 0.24f), new Vector2(0.10f, 0.05f), new Vector2(0.90f, 0.03f),
+            new Vector3(0.00f, 0.97f, 2.0f), new Vector3(0.14f, 1.00f, 1.6f), new Vector3(1.00f, 0.94f, 1.9f),
+            new Vector3(0.00f, 0.70f, 1.7f), new Vector3(1.02f, 0.58f, 1.8f), new Vector3(0.02f, 0.40f, 1.6f),
+            new Vector3(1.00f, 0.30f, 1.7f), new Vector3(0.00f, 0.08f, 2.1f), new Vector3(0.16f, 0.00f, 1.7f),
+            new Vector3(1.00f, 0.04f, 2.2f), new Vector3(0.86f, -0.02f, 1.6f),
+            new Vector3(0.28f, 0.86f, 1.6f), new Vector3(0.72f, 0.20f, 1.6f), new Vector3(0.38f, 0.04f, 1.6f),
         };
         for (int i = 0; i < anchors.Length; i++)
         {
@@ -383,10 +387,11 @@ public static class BakeIslandTerrain
             sr.sprite = sprites[(i * 3) % sprites.Length];
             sr.sortingOrder = OrderEdgeClouds + i;
             var cloud = go.AddComponent<IslandCloud>();
-            cloud.viewport = anchors[i];
-            cloud.baseScale = 0.8f + 0.25f * (float)rng.NextDouble();
+            cloud.viewport = new Vector2(anchors[i].x, anchors[i].y);
+            cloud.baseScale = anchors[i].z;
             cloud.phase = (float)rng.NextDouble() * 6f;
             cloud.baseAlpha = 1f;
+            if (i >= anchors.Length - 3) { cloud.swayX = 0.07f; cloud.swayY = 0.012f; cloud.speed = 0.06f; }   // yavaş süzülenler
         }
 
         // Kilitli bölge bulutları: bölgeyi örter; açılınca kaybolur.

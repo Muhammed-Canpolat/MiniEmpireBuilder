@@ -138,7 +138,9 @@ public class IslandLadderTests
         Assert.AreEqual(-1, Call(layout, "HeightAt", 0, 0), "su");
         Assert.IsTrue((bool)Call(layout, "IsCliff", 10, 8), "zirve yarı");
         Assert.IsTrue((bool)Call(layout, "IsCliff", 5, 14), "yayla yarı");
-        Assert.IsTrue((bool)Call(layout, "IsStair", 15, 7), "S1");
+        Assert.IsTrue((bool)Call(layout, "IsStair", 15, 6), "S1");
+        Assert.IsTrue((bool)Call(layout, "IsStair", 11, 23), "S4 (küçük yayla)");
+        Assert.IsTrue((bool)Call(layout, "IsCliff", 12, 24), "küçük yayla yarı");
         Assert.IsTrue((bool)Call(layout, "IsStair", 3, 13), "S2");
         Assert.IsTrue((bool)Call(layout, "IsStair", 18, 13), "S3");
 
@@ -176,7 +178,7 @@ public class IslandLadderTests
         var warnings = (System.Collections.IList)result.GetType().GetField("warnings").GetValue(result);
         Assert.AreEqual(0, warnings.Count, string.Join("; ", warnings.Cast<string>()));
         var stairs = (System.Collections.IList)result.GetType().GetField("stairs").GetValue(result);
-        Assert.AreEqual(3, stairs.Count, "3 merdiven");
+        Assert.AreEqual(4, stairs.Count, "3 ana merdiven + küçük yayla");
         // Kit §4.1: tablo uzunlukları ve örnek maskeler (15 = merkez)
         Assert.AreEqual(9, ((int[])rules.GetField("FlatByMask").GetValue(null))[15]);
         Assert.AreEqual(13, ((int[])rules.GetField("ElevByMask").GetValue(null))[15]);

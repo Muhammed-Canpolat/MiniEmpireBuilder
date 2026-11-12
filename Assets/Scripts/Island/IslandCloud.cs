@@ -9,6 +9,8 @@ public sealed class IslandCloud : MonoBehaviour
 {
     public Vector2 viewport;
     public float baseScale = 0.7f, phase, baseAlpha = 1f;
+    /// <summary>Görünüm alanı birimiyle salınım genliği (sürüklenen bulutlarda büyük).</summary>
+    public float swayX = 0.018f, swayY = 0.007f, speed = 0.12f;
     private SpriteRenderer sr;
     private float alphaMultiplier = 1f;
 
@@ -21,8 +23,8 @@ public sealed class IslandCloud : MonoBehaviour
         var cam = IslandSceneSetup.Instance != null && IslandSceneSetup.Instance.WorldCamera != null
             ? IslandSceneSetup.Instance.WorldCamera : Camera.main;
         if (cam == null) return;
-        float t = Time.time * 0.12f + phase;
-        var v = new Vector3(viewport.x + Mathf.Sin(t) * 0.018f, viewport.y + Mathf.Sin(t * 0.7f + 1.3f) * 0.007f, -cam.transform.position.z);
+        float t = Time.time * speed + phase;
+        var v = new Vector3(viewport.x + Mathf.Sin(t) * swayX, viewport.y + Mathf.Sin(t * 0.7f + 1.3f) * swayY, -cam.transform.position.z);
         var p = cam.ViewportToWorldPoint(v);
         transform.position = new Vector3(p.x, p.y, 0f);
         transform.localScale = Vector3.one * (baseScale * cam.orthographicSize / 19.5f);

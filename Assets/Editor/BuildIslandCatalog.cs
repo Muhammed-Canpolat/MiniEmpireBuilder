@@ -117,6 +117,7 @@ public static class BuildIslandCatalog
         Add("sheep_move", Frames($"{sheep}/Sheep_Move.png", missing));
         Add("sheep_grass", Frames($"{sheep}/Sheep_Grass.png", missing));
 
+        Add("gold_icon", new[] { First($"{Root}/Pawn and Resources/Gold/Gold Resource/Gold_Resource.png", missing) });
         Add("cursor_brackets", new[] { First($"{Root}/UI Elements/Cursors/Cursor_04.png", missing) });
         Add("arrow", new[] { First($"{Root}/Units/Extra/Arrow/Arrow.png", missing) });
 

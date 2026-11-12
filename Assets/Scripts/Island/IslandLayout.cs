@@ -18,41 +18,43 @@ public static class IslandLayout
     {
         "~~~~~~~~~~~~~~~~~~~~~~", // r00
         "~~~~~~~~~~~~~~~~~~~~~~", // r01
-        "~~~~~~~11111111~~~~~~~", // r02
-        "~~~~~112222222211~~~~~", // r03
-        "~..~11122222222111~~~~", // r04  NW adacığı c1-2
+        "~~~~~~~~111~11~~~~~~~~", // r02  N kıyı: kesik
+        "~~~~~~1122222221~~~~~~", // r03
+        "~..~~112222222211~~~~~", // r04  NW adacığı
         "~..~11122222222111~~~~", // r05
-        "~~~~11122222222111~~~~", // r06
-        "~~~~11122222222S11~~~~", // r07  S1 (SR) c15
-        "~~~~11111111111111~~~~", // r08  zirve yarı (türetilir)
-        "~~~~~~111111111111~~~~", // r09
-        "~~~~~~111111111111~..~", // r10  E adacığı c19-20
-        "~~~~~~1111111111~~~..~", // r11
-        "~~~~111111111111~~~~~~", // r12
-        "~~~S11111111111111S~~~", // r13  S2 (SL) c3 · S3 (SR) c18
-        "~~~......~~~~......~~~", // r14  yayla yarı (türetilir); koyda suya bakan yar c9-12
-        "~~~......~~~~......~~~", // r15
-        "~~~................~~~", // r16
-        "~~~................~~~", // r17
+        "~.~~11122222222S11~~~~", // r06  S1 (SR) c15 · zirve yarı r7/r8 kademeli
+        "~~~~1112222111111~~~~~", // r07
+        "~~~~~111111111111~~~~~", // r08
+        "~~~~~~111111111111~~.~", // r09  E adacığı c19-20
+        "~~~~~1111111111111~..~", // r10
+        "~~~~~111111111111~~..~", // r11
+        "~~~~11111..111111~~~~~", // r12
+        "~~~S11111......111S~~~", // r13  S2 (SL) c3 · S3 (SR) c18 · yayla yarı kademeli, c9-10 oyuk
+        "~~~................~~~", // r14
+        "~~~................~~~", // r15
+        "~~~~...............~~~", // r16
+        "~~~~..............~~~~", // r17
         "~~..................~~", // r18  A kumsalı c2 · B kumsalı c19
         "~~..................~~", // r19
         "~~..................~~", // r20
-        "~~~................~~~", // r21
-        "~~~................~~~", // r22
-        "~~~...............~~~~", // r23
-        "~~~~..............~~~~", // r24
+        "~~~~...............~~~", // r21
+        "~~~~~~~.....1111...~~~", // r22  küçük yayla c12-15 · S4 (SL) c11 (r23)
+        "~~~~~~~....S1111~~~~~~", // r23
+        "~~~~~~..........~~~~~~", // r24
         "~~~~~............~~~~~", // r25
         "~~~~~............~~~~~", // r26
-        "~~~~~~...........~~~~~", // r27  C kumsalı c7-9 · D kumsalı c14-16
-        "~~~~~~~~~~~~~~~~~~~~~~", // r28
-        "~..~~~~~~~~~~~~~~~..~~", // r29  SW adacığı c1-2 · SE adacığı c18-19
-        "~..~~~~~~~~~~~~~~~..~~", // r30
+        "~~~~~~....~......~~~~~", // r27  C kumsalı c6-9 · D kumsalı c14-16
+        "~~~~~~~~~~~...~~~~~~~~", // r28
+        "~..~~~~~~~~..~~~~~..~~", // r29  SW/SE adacıkları · yarımada c11-13
+        "~...~~~~~~~~~~~~~~...~", // r30
         "~~~~~~~~~~~~~~~~~~~~~~", // r31
         "~~~~~~~~~~~~~~~~~~~~~~", // r32
         "~~~~~~~~~~~~~~~~~~~~~~", // r33
         "~~~~~~~~~~~~~~~~~~~~~~", // r34
         "~~~~~~~~~~~~~~~~~~~~~~", // r35
     };
+
+
 
     private static IslandTerrainRules.Result terrain;
     /// <summary>Kurallardan türetilmiş arazi (yar, merdiven, yükseklik); tembel hesaplanır.</summary>
@@ -99,11 +101,11 @@ public static class IslandLayout
     public static readonly BuildingSpot[] Buildings =
     {
         new BuildingSpot { kind = BuildingKind.Castle, col = 8, row = 3, w = 5, h = 3 },
-        new BuildingSpot { kind = BuildingKind.House, col = 9, row = 11, w = 2, h = 2 },
+        new BuildingSpot { kind = BuildingKind.House, col = 9, row = 10, w = 2, h = 2 },
         new BuildingSpot { kind = BuildingKind.Lumber, col = 6, row = 11, w = 2, h = 2 },
-        new BuildingSpot { kind = BuildingKind.Archery, col = 13, row = 11, w = 3, h = 2 },
+        new BuildingSpot { kind = BuildingKind.Archery, col = 13, row = 10, w = 3, h = 2 },
         new BuildingSpot { kind = BuildingKind.Pasture, col = 12, row = 18, w = 2, h = 2 },
-        new BuildingSpot { kind = BuildingKind.Tower, col = 19, row = 10, w = 2, h = 2 },   // E adacığı
+        new BuildingSpot { kind = BuildingKind.Tower, col = 19, row = 10, w = 2, h = 2 },   // E adacığı (c20 r9 çıkıntı)
         new BuildingSpot { kind = BuildingKind.Tower, col = 1, row = 4, w = 2, h = 2 },     // NW adacığı
     };
 
@@ -122,46 +124,44 @@ public static class IslandLayout
 
     public static readonly Vector2Int[] Trees =
     {
-        new Vector2Int(7, 2), new Vector2Int(13, 2), new Vector2Int(14, 2),
-        new Vector2Int(5, 3), new Vector2Int(4, 5), new Vector2Int(5, 6), new Vector2Int(4, 7), new Vector2Int(5, 8),
-        new Vector2Int(6, 10), new Vector2Int(4, 12), new Vector2Int(5, 12),
-        new Vector2Int(16, 3), new Vector2Int(17, 4), new Vector2Int(16, 6), new Vector2Int(17, 7),
-        new Vector2Int(6, 17), new Vector2Int(5, 19), new Vector2Int(15, 17), new Vector2Int(16, 19), new Vector2Int(13, 21), new Vector2Int(6, 21),
-        new Vector2Int(3, 22), new Vector2Int(4, 22), new Vector2Int(3, 23), new Vector2Int(4, 24), new Vector2Int(5, 23), new Vector2Int(6, 24),
-        new Vector2Int(17, 22), new Vector2Int(16, 23), new Vector2Int(17, 23), new Vector2Int(16, 24), new Vector2Int(17, 24),
-        new Vector2Int(6, 3), new Vector2Int(15, 3), new Vector2Int(7, 22), new Vector2Int(14, 24), new Vector2Int(8, 25), new Vector2Int(15, 26),
-        new Vector2Int(7, 26), new Vector2Int(5, 25), new Vector2Int(14, 20), new Vector2Int(8, 21),
+        new Vector2Int(8, 2), new Vector2Int(13, 2), new Vector2Int(6, 3), new Vector2Int(7, 3), new Vector2Int(15, 3), new Vector2Int(16, 4),
+        new Vector2Int(17, 5), new Vector2Int(16, 6), new Vector2Int(5, 4), new Vector2Int(4, 5), new Vector2Int(4, 6), new Vector2Int(5, 7),
+        new Vector2Int(5, 8), new Vector2Int(6, 10), new Vector2Int(5, 11), new Vector2Int(4, 12), new Vector2Int(5, 12), new Vector2Int(6, 17),
+        new Vector2Int(5, 19), new Vector2Int(15, 17), new Vector2Int(16, 19), new Vector2Int(13, 21), new Vector2Int(6, 21), new Vector2Int(7, 22),
+        new Vector2Int(8, 23), new Vector2Int(7, 24), new Vector2Int(6, 24), new Vector2Int(5, 25), new Vector2Int(6, 26), new Vector2Int(7, 27),
+        new Vector2Int(17, 22), new Vector2Int(16, 22), new Vector2Int(16, 25), new Vector2Int(15, 26), new Vector2Int(16, 26), new Vector2Int(14, 22),
+        new Vector2Int(8, 21), new Vector2Int(14, 20), new Vector2Int(13, 25), new Vector2Int(11, 26), new Vector2Int(12, 16), new Vector2Int(13, 16),
+        new Vector2Int(9, 22), new Vector2Int(11, 21),
     };
 
     public static readonly Vector2Int[] Bushes =
     {
-        new Vector2Int(8, 9), new Vector2Int(11, 9), new Vector2Int(13, 9), new Vector2Int(6, 4), new Vector2Int(15, 5),
-        new Vector2Int(6, 15), new Vector2Int(8, 15), new Vector2Int(14, 15), new Vector2Int(17, 15),
-        new Vector2Int(12, 20), new Vector2Int(8, 24), new Vector2Int(14, 25),
-        new Vector2Int(7, 4), new Vector2Int(14, 4), new Vector2Int(14, 6), new Vector2Int(5, 16), new Vector2Int(16, 17),
-        new Vector2Int(7, 18), new Vector2Int(15, 21), new Vector2Int(9, 21), new Vector2Int(13, 23), new Vector2Int(10, 26), new Vector2Int(7, 27),
-        new Vector2Int(1, 30), new Vector2Int(19, 30),
+        new Vector2Int(8, 9), new Vector2Int(12, 8), new Vector2Int(14, 8), new Vector2Int(6, 4), new Vector2Int(7, 4), new Vector2Int(14, 4),
+        new Vector2Int(14, 6), new Vector2Int(15, 5), new Vector2Int(6, 15), new Vector2Int(8, 15), new Vector2Int(14, 15), new Vector2Int(17, 15),
+        new Vector2Int(5, 16), new Vector2Int(16, 17), new Vector2Int(7, 18), new Vector2Int(12, 20), new Vector2Int(9, 21), new Vector2Int(15, 21),
+        new Vector2Int(13, 23), new Vector2Int(10, 26), new Vector2Int(7, 27), new Vector2Int(8, 24), new Vector2Int(14, 25), new Vector2Int(10, 13),
+        new Vector2Int(1, 6), new Vector2Int(20, 9), new Vector2Int(3, 30), new Vector2Int(20, 30), new Vector2Int(12, 29),
     };
 
     public static readonly Vector2Int[] Rocks =
     {
-        new Vector2Int(9, 13), new Vector2Int(12, 12), new Vector2Int(5, 4), new Vector2Int(14, 16), new Vector2Int(4, 20),
-        new Vector2Int(17, 20), new Vector2Int(6, 25), new Vector2Int(13, 26), new Vector2Int(8, 22), new Vector2Int(15, 24),
-        new Vector2Int(7, 5), new Vector2Int(10, 10), new Vector2Int(6, 9), new Vector2Int(7, 19), new Vector2Int(11, 24),
+        new Vector2Int(9, 13), new Vector2Int(12, 11), new Vector2Int(7, 5), new Vector2Int(10, 9), new Vector2Int(6, 9), new Vector2Int(14, 16),
+        new Vector2Int(4, 20), new Vector2Int(17, 20), new Vector2Int(6, 25), new Vector2Int(13, 26), new Vector2Int(8, 22), new Vector2Int(15, 25),
+        new Vector2Int(7, 19), new Vector2Int(10, 25), new Vector2Int(12, 28),
     };
 
     /// <summary>Altın taşları: hücre ve Gold Stone numarası (1–6).</summary>
     public static readonly Vector3Int[] GoldStones =
     {
-        new Vector3Int(16, 8, 4), new Vector3Int(17, 9, 1), new Vector3Int(15, 10, 2),
+        new Vector3Int(16, 8, 4), new Vector3Int(17, 9, 1), new Vector3Int(17, 10, 2),
     };
 
     /// <summary>Suda kayalar (kıyıdan 1–3 hücre açıkta; tekne kanallarından uzak).</summary>
     public static readonly Vector2Int[] WaterRocks =
     {
-        new Vector2Int(10, 1), new Vector2Int(1, 7), new Vector2Int(21, 3), new Vector2Int(20, 7), new Vector2Int(1, 23),
-        new Vector2Int(2, 26), new Vector2Int(19, 24), new Vector2Int(20, 27), new Vector2Int(10, 29), new Vector2Int(7, 31),
-        new Vector2Int(14, 30), new Vector2Int(4, 30),
+        new Vector2Int(10, 1), new Vector2Int(1, 8), new Vector2Int(21, 3), new Vector2Int(20, 6), new Vector2Int(21, 12), new Vector2Int(4, 23),
+        new Vector2Int(18, 24), new Vector2Int(20, 26), new Vector2Int(1, 24), new Vector2Int(2, 27), new Vector2Int(10, 29), new Vector2Int(7, 31),
+        new Vector2Int(14, 30), new Vector2Int(4, 29), new Vector2Int(17, 31), new Vector2Int(21, 28),
     };
 
     public static readonly Vector2Int RubberDuck = new Vector2Int(5, 28);
@@ -189,7 +189,7 @@ public static class IslandLayout
         new Post { index = 1, cell = new Vector2(13.5f, 6.5f), height = 2 },   // P2 zirve doğu
         new Post { index = 2, cell = new Vector2(5.5f, 13.5f), height = 1 },   // P3 batı yar başı
         new Post { index = 3, cell = new Vector2(16.5f, 13.5f), height = 1 },  // P4 doğu yar başı
-        new Post { index = 4, cell = new Vector2(10.5f, 24.5f), height = 0 },  // P5 güney çayırı
+        new Post { index = 4, cell = new Vector2(9.5f, 24.5f), height = 0 },   // P5 güney çayırı
     };
 
     /// <summary>Bu Kıyı Kalesi seviyesinde açık mı.</summary>
@@ -222,28 +222,28 @@ public static class IslandLayout
         return result;
     }
 
-    // Ortak son kısım: yayla yolu → S1 (merdiven) → kale önü. S2/S3 üstünden (3.5,13.5) / (18.5,13.5) başlar.
-    private static readonly Vector2[] FromWestStairTop = W(11.5f, 13.5f, 11.5f, 9.5f, 15.5f, 9.5f, 15.5f, 8.5f, 15.5f, 7.5f, 13.5f, 6.8f, 10.5f, 6.6f);
-    private static readonly Vector2[] FromEastStairTop = W(12.5f, 13.5f, 12.5f, 9.5f, 15.5f, 9.5f, 15.5f, 8.5f, 15.5f, 7.5f, 13.5f, 6.8f, 10.5f, 6.6f);
+    // Ortak son kısım: yayla şeritleri → S1 (c15) → kale önü. Yayla güney yarı kademeli olduğundan şeritler c8 ve c16 boyunca kuzeye çıkar.
+    private static readonly Vector2[] FromWestStairTop = W(8.5f, 13.5f, 8.5f, 9.5f, 15.5f, 9.5f, 15.5f, 7.5f, 15.5f, 6.5f, 13.5f, 6.5f, 10.5f, 6.6f);
+    private static readonly Vector2[] FromEastStairTop = W(16.5f, 13.5f, 16.5f, 9.5f, 15.5f, 9.5f, 15.5f, 7.5f, 15.5f, 6.5f, 13.5f, 6.5f, 10.5f, 6.6f);
 
     public static readonly Beach[] Beaches =
     {
         // A batı: kuzeybatıdan batı kanalıyla iner (NW adacığının doğusundan), r19'da kumsala yanaşır
         new Beach { index = 0, name = 'A',
-            boatPath = W(3.5f, -1f, 3.5f, 12.8f, 1.0f, 14.2f, 1.0f, 19.5f), landing = World(2.5f, 19.5f),
-            walkPath = Join(W(2.5f, 19.5f, 3.5f, 17f, 3.5f, 14.5f, 3.5f, 13.5f), FromWestStairTop) },
+            boatPath = W(3.5f, -1f, 3.5f, 11.5f, 1.2f, 12.8f, 1.2f, 19.5f), landing = World(2.5f, 19.5f),
+            walkPath = Join(W(2.5f, 19.5f, 4.5f, 17.5f, 3.5f, 15.5f, 3.5f, 14.5f, 3.5f, 13.5f), FromWestStairTop) },
         // B doğu: kuzeydoğudan doğu kanalıyla iner (E adacığının batısından)
         new Beach { index = 1, name = 'B',
             boatPath = W(18.5f, -1f, 18.5f, 12.8f, 20.5f, 14.2f, 20.5f, 19.5f), landing = World(19.5f, 19.5f),
-            walkPath = Join(W(19.5f, 19.5f, 18.5f, 17f, 18.5f, 14.5f, 18.5f, 13.5f), FromEastStairTop) },
+            walkPath = Join(W(19.5f, 19.5f, 17.5f, 17.5f, 18.5f, 15.5f, 18.5f, 14.5f, 18.5f, 13.5f), FromEastStairTop) },
         // C güneybatı: güney denizinden kuzeye çıkar (kısa görünür süre)
         new Beach { index = 2, name = 'C',
             boatPath = W(8f, 34f, 8f, 28.6f), landing = World(8f, 27.5f),
-            walkPath = Join(W(8f, 27.5f, 7.5f, 20f, 5.5f, 16.5f, 3.5f, 15.5f, 3.5f, 14.5f, 3.5f, 13.5f), FromWestStairTop) },
-        // D güneydoğu
+            walkPath = Join(W(8f, 27.5f, 7.5f, 24f, 7.5f, 21f, 5.5f, 17.5f, 3.5f, 15.5f, 3.5f, 14.5f, 3.5f, 13.5f), FromWestStairTop) },
+        // D güneydoğu: batı lagününü dolanır (doğu girinti r23-24 geçilmez)
         new Beach { index = 3, name = 'D',
             boatPath = W(15f, 34f, 15f, 28.6f), landing = World(15f, 27.5f),
-            walkPath = Join(W(15f, 27.5f, 15f, 22f, 16f, 17f, 18.5f, 15.5f, 18.5f, 14.5f, 18.5f, 13.5f), FromEastStairTop) },
+            walkPath = Join(W(15f, 27.5f, 12f, 26f, 9.5f, 23.5f, 10.5f, 20.5f, 15.5f, 17.5f, 18.5f, 15.5f, 18.5f, 14.5f, 18.5f, 13.5f), FromEastStairTop) },
     };
 
     public static float PathLength(Vector2[] path)
@@ -262,25 +262,26 @@ public static class IslandLayout
         new Vector2(13.5f, 6.5f),  // 1 P2
         new Vector2(5.5f, 13.5f),  // 2 P3
         new Vector2(16.5f, 13.5f), // 3 P4
-        new Vector2(10.5f, 24.5f), // 4 P5
+        new Vector2(9.5f, 24.5f),  // 4 P5
         new Vector2(10.5f, 6.8f),  // 5 kale önü
-        new Vector2(15.5f, 7.5f),  // 6 S1 üst
-        new Vector2(15.5f, 8.5f),  // 7 S1 alt
+        new Vector2(15.5f, 6.5f),  // 6 S1 üst
+        new Vector2(15.5f, 7.5f),  // 7 S1 alt
         new Vector2(15.5f, 9.5f),  // 8 yayla kavşağı doğu
-        new Vector2(11.5f, 9.5f),  // 9 yayla kavşağı orta
-        new Vector2(11.5f, 13.5f), // 10 yayla güney şeridi
+        new Vector2(8.5f, 9.5f),   // 9 yayla kavşağı batı
+        new Vector2(8.5f, 13.5f),  // 10 yayla güney şeridi (batı)
         new Vector2(3.5f, 13.5f),  // 11 S2 üst
         new Vector2(3.5f, 14.5f),  // 12 S2 alt
         new Vector2(18.5f, 13.5f), // 13 S3 üst
         new Vector2(18.5f, 14.5f), // 14 S3 alt
-        new Vector2(3.5f, 16.5f),  // 15 S2 inişi
-        new Vector2(18.5f, 16.5f), // 16 S3 inişi
+        new Vector2(3.5f, 15.5f),  // 15 S2 inişi
+        new Vector2(18.5f, 15.5f), // 16 S3 inişi
+        new Vector2(13.5f, 19.5f), // 17 ova ara noktası (küçük yaylayı dolanır)
     };
 
     private static readonly int[,] Edges =
     {
-        { 0, 5 }, { 5, 1 }, { 1, 6 }, { 6, 7 }, { 7, 8 }, { 8, 9 }, { 9, 10 }, { 10, 2 }, { 10, 3 },
-        { 2, 11 }, { 11, 12 }, { 12, 15 }, { 3, 13 }, { 13, 14 }, { 14, 16 }, { 15, 4 }, { 16, 4 },
+        { 0, 5 }, { 5, 1 }, { 1, 6 }, { 6, 7 }, { 7, 8 }, { 8, 9 }, { 9, 10 }, { 10, 2 }, { 8, 3 },
+        { 2, 11 }, { 11, 12 }, { 12, 15 }, { 3, 13 }, { 13, 14 }, { 14, 16 }, { 15, 4 }, { 16, 17 }, { 17, 4 },
     };
 
     /// <summary>İki atış yeri arasındaki en kısa koşu yolu (dünya noktaları; başlangıç ve bitiş dahil).</summary>

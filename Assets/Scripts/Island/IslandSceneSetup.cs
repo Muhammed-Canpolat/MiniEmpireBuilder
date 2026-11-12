@@ -266,8 +266,8 @@ public sealed class IslandSceneSetup : MonoBehaviour
         var stone = IslandLayout.GoldStones[0];
         var route = new[]
         {
-            IslandLayout.World(15.5f, 9.5f), IslandLayout.World(15.5f, 8.5f), IslandLayout.World(15.5f, 7.5f),
-            IslandLayout.World(13.5f, 6.8f), IslandLayout.World(11.6f, 6.7f),
+            IslandLayout.World(15.5f, 9.5f), IslandLayout.World(15.5f, 7.5f), IslandLayout.World(15.5f, 6.5f),
+            IslandLayout.World(13.5f, 6.5f), IslandLayout.World(11.6f, 6.6f),
         };
         IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Miner, IslandLayout.World(stone.x - 0.25f, stone.y + 1.15f), route);
         IslandPawn.Create(pawnsRoot, catalog, IslandPawn.Job.Idler, IslandLayout.World(9.4f, 6.7f));
