@@ -32,7 +32,7 @@ public sealed class IslandHud : MonoBehaviour
     private IslandArcher archer;
 
     private RectTransform safe;
-    private TextMeshProUGUI titleText, resText, castleText, hintText, respawnText, prepTitle, prepInfo, autoLabel, homeLabel;
+    private TextMeshProUGUI titleText, meatText, woodText, goldText, castleText, hintText, respawnText, prepTitle, prepInfo, autoLabel, homeLabel;
     private Image castleFill, hintBg, chargeRing, fireFace;
     private GameObject prepPanel, fireRoot, resultPanel, autoRoot, dock, castleBar;
     private bool prepOpen;
@@ -91,10 +91,13 @@ public sealed class IslandHud : MonoBehaviour
             new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, -16), new Vector2(96, 16), 12);
         homeLabel = homeButton.GetComponentInChildren<TextMeshProUGUI>();
         homeButton.onClick.AddListener(OnHome);
-        titleText = ReferenceUiVisuals.Text(bar.transform, "Title", "", 15, Gold, TextAlignmentOptions.Center,
-            new Vector2(0.24f, 0), new Vector2(0.60f, 1), Vector2.zero, Vector2.zero, true);
-        resText = ReferenceUiVisuals.Text(bar.transform, "Resources", "", 12, ReferenceUiVisuals.Light, TextAlignmentOptions.Right,
-            new Vector2(0.58f, 0), new Vector2(0.86f, 1), Vector2.zero, new Vector2(-4, 0), false, true);
+        titleText = ReferenceUiVisuals.Text(bar.transform, "Title", "", 13, Gold, TextAlignmentOptions.Center,
+            new Vector2(0.21f, 0), new Vector2(0.45f, 1), Vector2.zero, Vector2.zero, true);
+        // Kaynaklar: Tiny Swords simgeleri (Et, Odun, Ana Üs altını) + sayı
+        var catalog = IslandVisualCatalog.Instance;
+        meatText = ResourceChip(bar.transform, 0, catalog != null ? catalog.meatIcon : null);
+        woodText = ResourceChip(bar.transform, 1, catalog != null ? catalog.woodIcon : null);
+        goldText = ResourceChip(bar.transform, 2, catalog != null ? catalog.Single("gold_icon") : null);
 
         var barBg = ReferenceUiVisuals.Image(safe, "CastleBar", new Vector2(0.18f, 1), new Vector2(0.82f, 1),
             new Vector2(0, -74), new Vector2(0, -58), new Color(0.05f, 0.04f, 0.03f, 0.85f));
@@ -109,6 +112,24 @@ public sealed class IslandHud : MonoBehaviour
     }
 
     /// <summary>Alt dock (görünüm modu): AKIN düğmesi. Akın yalnız buradan başlar; ada girişte üs görünümü açılır (v2 §3).</summary>
+    private TextMeshProUGUI ResourceChip(Transform bar, int index, Sprite icon)
+    {
+        float x0 = 0.45f + index * 0.125f;
+        var group = ReferenceUiVisuals.Image(bar, "Res" + index, new Vector2(x0, 0), new Vector2(x0 + 0.12f, 1),
+            Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0f));
+        group.raycastTarget = false;
+        var image = ReferenceUiVisuals.Image(group.transform, "Icon", new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(0, -20), new Vector2(40, 20), Color.white);
+        image.sprite = icon;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        var value = ReferenceUiVisuals.Text(group.transform, "Value", "0", 14, ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
+            new Vector2(0, 0), Vector2.one, new Vector2(42, 0), new Vector2(40, 0), true);
+        value.textWrappingMode = TextWrappingModes.NoWrap;
+        value.overflowMode = TextOverflowModes.Overflow;
+        return value;
+    }
+
     private void BuildDock()
     {
         var root = new GameObject("Dock", typeof(RectTransform));
@@ -386,7 +407,10 @@ public sealed class IslandHud : MonoBehaviour
                 $"Coastal Keep {Mathf.CeilToInt(c.CurrentHealth)}/{Mathf.CeilToInt(c.MaxHealth)}");
         }
         var save = IslandSession.Save;
-        resText.text = save != null ? L.T($"Et {save.meat}  Odun {save.wood}", $"Meat {save.meat}  Wood {save.wood}") : "";
+        meatText.text = save != null ? save.meat.ToString() : "0";
+        woodText.text = save != null ? save.wood.ToString() : "0";
+        var player = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
+        goldText.text = player != null ? player.gold.ToString() : "0";
         titleText.text = raid.Phase == IslandRaidManager.State.Running
             ? L.T($"AKIN {raid.Akin} · DALGA {raid.Wave}/{raid.TotalWaves}", $"RAID {raid.Akin} · WAVE {raid.Wave}/{raid.TotalWaves}")
             : L.T("MARTI ADASI", "GULL ISLE");
