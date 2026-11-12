@@ -453,6 +453,93 @@ public static class Progression
         /// </summary>
         public static int PrebuiltLevel(string kind, int keepLevel) =>
             kind == "Tower" ? 1 + Mathf.Max(1, keepLevel) / 2 : kind == "Archery" ? Mathf.Max(1, keepLevel) : 1;
+        // ---- Faz B: inşa ve ekonomi (island_base_v2 §5, §6, §8): bina bedelleri, süreler, üretim, tavanlar, bölge keşfi ----
+        /// <summary>Yükseltme bedeli tabanı W (index = HEDEF seviye 2..15; §6).</summary>
+        public static readonly int[] UpgradeBaseCost = { 0, 0, 80, 150, 250, 380, 550, 760, 1000, 1300, 1650, 2050, 2500, 3000, 3600, 4300 };
+        /// <summary>Yükseltme çarpanı (Odun, Et) bina türüne göre (§5).</summary>
+        public static (float wood, float meat) UpgradeFactor(IslandLayout.BuildingKind kind)
+        {
+            switch (kind)
+            {
+                case IslandLayout.BuildingKind.House: return (0.25f, 0f);
+                case IslandLayout.BuildingKind.Lumber: return (0.15f, 0.2f);
+                case IslandLayout.BuildingKind.Pasture: return (0.45f, 0f);
+                case IslandLayout.BuildingKind.Tower: return (0.5f, 0.1f);
+                default: return (1f, 0.3f);   // Kale (KK Ana Üs'ü izlediği sürece kullanılmaz)
+            }
+        }
+        private static int Round10(float value) => Mathf.Max(0, Mathf.RoundToInt(value / 10f) * 10);
+        public static int UpgradeWood(IslandLayout.BuildingKind kind, int targetLevel)
+        {
+            var factor = UpgradeFactor(kind);
+            return factor.wood <= 0f ? 0 : Mathf.Max(10, Round10(UpgradeBaseCost[Mathf.Clamp(targetLevel, 2, MaxLevel)] * factor.wood));
+        }
+        public static int UpgradeMeat(IslandLayout.BuildingKind kind, int targetLevel)
+        {
+            var factor = UpgradeFactor(kind);
+            return factor.meat <= 0f ? 0 : Mathf.Max(10, Round10(UpgradeBaseCost[Mathf.Clamp(targetLevel, 2, MaxLevel)] * factor.meat));
+        }
+        /// <summary>Ada Ustası süresi: Ana Üs süre tablosu (TimingConfig) × <see cref="TimeFactor"/>; yeni bina (sv1) <see cref="PlaceSeconds"/>.</summary>
+        public const float TimeFactor = 0.5f;
+        public const int PlaceSeconds = 5;
+        public static int BuildSeconds(int targetLevel) => targetLevel <= 1 ? PlaceSeconds
+            : Mathf.Max(1, Mathf.RoundToInt(UpgradeSecondsTo(targetLevel) * TimeFactor));
+        /// <summary>Yeni bina kurulum bedeli (Odun, Et): Ev 40/0, Kule 60/10, 2. Oduncu 300/60, 2. Ağıl 600/0. Okçuluk yerleştirilemez.</summary>
+        public static (int wood, int meat) PlaceCost(IslandLayout.BuildingKind kind)
+        {
+            switch (kind)
+            {
+                case IslandLayout.BuildingKind.House: return (40, 0);
+                case IslandLayout.BuildingKind.Tower: return (60, 10);
+                case IslandLayout.BuildingKind.Lumber: return (300, 60);
+                case IslandLayout.BuildingKind.Pasture: return (600, 0);
+                default: return (0, 0);
+            }
+        }
+        /// <summary>Kıyı Kalesi seviyesine göre bina adedi tavanı (§8: Ev {1:1,3:2,6:3,9:4}, Kule {1:1,2:2,4:3,6:4,9:5}, Oduncu 7'de 2, Ağıl 10'da 2).</summary>
+        public static int MaxCount(IslandLayout.BuildingKind kind, int keep)
+        {
+            switch (kind)
+            {
+                case IslandLayout.BuildingKind.House: return keep >= 9 ? 4 : keep >= 6 ? 3 : keep >= 3 ? 2 : 1;
+                case IslandLayout.BuildingKind.Tower: return keep >= 9 ? 5 : keep >= 6 ? 4 : keep >= 4 ? 3 : keep >= 2 ? 2 : 1;
+                case IslandLayout.BuildingKind.Lumber: return keep >= SecondLumberKeep ? 2 : 1;
+                case IslandLayout.BuildingKind.Pasture: return keep >= SecondPastureKeep ? 2 : 1;
+                case IslandLayout.BuildingKind.Archery: return 1;
+                default: return 1;
+            }
+        }
+        public const int SecondLumberKeep = 7, SecondPastureKeep = 10;
+        public static int HousePawns(int level) => 2 + (level >= 5 ? 1 : 0) + (level >= 10 ? 1 : 0);
+        public static int LumberSlots(int level) => 2 + (level >= 5 ? 1 : 0) + (level >= 10 ? 1 : 0);
+        public static int PastureSlots(int level) => 1 + (level >= 5 ? 1 : 0) + (level >= 10 ? 1 : 0);
+        public const int CastlePawns = 2;
+        public static int Slots(IslandLayout.BuildingKind kind, int level) =>
+            kind == IslandLayout.BuildingKind.Lumber ? LumberSlots(level) : kind == IslandLayout.BuildingKind.Pasture ? PastureSlots(level) : 0;
+        /// <summary>Tam kadro saatlik üretim: Odun 30 + 15(L−1); Et 15 + 8(L−1).</summary>
+        public static float WoodPerHour(int level) => 30f + 15f * (Mathf.Max(1, level) - 1);
+        public static float MeatPerHour(int level) => 15f + 8f * (Mathf.Max(1, level) - 1);
+        public const float ProducerStorageHours = 8f, SecondPastureMult = 1f, MeadowBonus = 0.15f;
+        /// <summary>Doğa kısıtı (§5): ağaç yarıçapı/yuva başına ağaç, çayır hücresi sayısı/yarıçapı, kısa çayır çarpanı.</summary>
+        public const int TreesPerSlot = 2, MeadowCells = 6;
+        public const float TreeRadius = 4f, MeadowRadius = 3f, MeadowShortMult = 0.5f;
+        /// <summary>Cüzdan tavanı: Odun 600 + 400(k−1), Et 300 + 200(k−1) (kale taşır).</summary>
+        public static int WalletWood(int keep) => 600 + 400 * (Mathf.Max(1, keep) - 1);
+        public static int WalletMeat(int keep) => 300 + 200 * (Mathf.Max(1, keep) - 1);
+        /// <summary>Okçu yükseltmesi (Et, anında; L → L+1): 35 × 1,28^(L−1), 5'e yuvarlanır.</summary>
+        public static int ArcherUpgradeMeat(int level) => Mathf.RoundToInt(35f * Mathf.Pow(1.28f, Mathf.Max(1, level) - 1) / 5f) * 5;
+        /// <summary>Bina saldırıya/üretime hazır tamamlanan en yüksek seviye = Kıyı Kalesi.</summary>
+        public static int MaxBuildingLevel(int keep) => Mathf.Clamp(keep, 1, MaxLevel);
+
+        // Bölge keşfi (§4, §8): Z1–Z2 Faz B'de açılır (Z3–Z5 Faz E). Bedel Odun/Et, süre sn (Usta).
+        public const int LastRevealableZone = 2;
+        public static readonly int[] ZoneKeep = { 1, 2, 3, 4, 5, 6 };
+        public static readonly int[] ZoneWood = { 0, 150, 300, 500, 800, 1500 };
+        public static readonly int[] ZoneMeat = { 0, 0, 30, 50, 80, 150 };
+        public static readonly int[] ZoneSeconds = { 0, 30, 180, 300, 900, 3600 };
+        public static bool ZoneRevealable(int zone) => zone >= 1 && zone <= LastRevealableZone;
+        public const float ZoneDispersalSeconds = 1.5f;
+
         /// <summary>Ada Ana Üs ilerlemesine bağlı: en yüksek Akın = 3 × Kıyı Kalesi.</summary>
         public static int MaxAkin(int keepLevel) => 3 * Mathf.Max(1, keepLevel);
 

@@ -195,7 +195,7 @@ public class PlayerSaveData
         return data;
     }
 
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
 }
 
 /// <summary>
@@ -220,6 +220,37 @@ public class IslandSaveData
     public List<IslandBuildingSave> buildings = new List<IslandBuildingSave>();
     public string replayDay = "";   // yyyy-MM-dd (UTC)
     public int replaysToday;        // bugün verilen tekrar ödülü sayısı (Progression.Island.ReplayRewardsPerDay tavanı)
+    // v7 / Faz B (island_base_v2 §9, §17): yerleştirilmiş binalar, bölge maskesi, Usta görevi. Eski kayıtta boş/varsayılan: hazır köy tohumlanır.
+    public bool villageSeeded;      // hazır köy placed listesine yazıldı mı (v6'dan geçişte ilk açılışta yapılır)
+    public List<IslandPlacedBuilding> placed = new List<IslandPlacedBuilding>();
+    public int nextBuildingSerial = 1;
+    public int zoneMask = 1;        // bit i = bölge Zi açık (Z0 hep açık)
+    public IslandBuilderTask task = new IslandBuilderTask();
+}
+
+/// <summary>Yerleştirilmiş ada binası (Kale hariç; sabit). level 0 = inşaatta (yeni bina). Üretim: stok + son tick (UTC).</summary>
+[Serializable]
+public class IslandPlacedBuilding
+{
+    public string id;               // kararlı kimlik (hazır köy: "Tower@19,10"; yeni: "House#3")
+    public string kind;             // IslandLayout.BuildingKind adı
+    public int level = 1;
+    public int col, row;            // sol-üst hücre
+    public float stock;             // toplanmamış üretim (Odun/Et)
+    public long lastTick;           // stok en son bu an güncellendi (UTC tick)
+    public int workers = -1;        // elle işçi sayısı; -1 = otomatik
+}
+
+/// <summary>Ada Ustası'nın tek görevi (UTC tick). kind: "" yok · "build" yeni bina · "upgrade" seviye · "zone" bölge keşfi.</summary>
+[Serializable]
+public class IslandBuilderTask
+{
+    public string kind = "";
+    public string buildingId = "";
+    public int zone;
+    public int targetLevel;
+    public long startTicks, endTicks;
+    public bool Active => !string.IsNullOrEmpty(kind);
 }
 
 /// <summary>Ada binasının kalıcı savaş durumu: can oranı ve onarımın biteceği an (UTC tick; 0: onarım yok).</summary>
@@ -599,6 +630,17 @@ public static class SaveSystem
             if (data.saveVersion < 6)
             {
                 data.saveVersion = 6;
+                Save(data);
+            }
+            // v7 (Faz B): yerleştirilmiş binalar/bölge maskesi/Usta görevi. v5/v6'dan gelen kayıtta alanlar boştur;
+            // hazır köy ilk açılışta placed listesine tohumlanır (seviyeler Faz C ile aynı: kayıp yok).
+            if (data.island.placed == null) data.island.placed = new List<IslandPlacedBuilding>();
+            if (data.island.task == null) data.island.task = new IslandBuilderTask();
+            data.island.zoneMask |= 1;
+            data.island.nextBuildingSerial = Mathf.Max(1, data.island.nextBuildingSerial);
+            if (data.saveVersion < 7)
+            {
+                data.saveVersion = 7;
                 Save(data);
             }
             MigrateTimings(data);

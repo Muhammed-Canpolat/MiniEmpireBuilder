@@ -179,12 +179,24 @@ public sealed class IslandPawn : MonoBehaviour
         }
     }
 
+    /// <summary>Ada Ustası: görev varsa şantiyeye koşup çekiç vurur (Faz B), yoksa kalenin yanında bekler.</summary>
+    public void SetSite(Vector2? feet) => site = feet;
+    private Vector2? site;
+
     private IEnumerator BuilderLoop()
     {
         while (true)
         {
-            yield return Work("pawn_interact_hammer", Random.Range(2.4f, 3.6f), 1f);
-            yield return Work("pawn_idle_hammer", Random.Range(0.8f, 1.5f), 0f);
+            if (site.HasValue)
+            {
+                if (Vector2.Distance(transform.position, site.Value) > 0.1f) yield return Walk(site.Value, "pawn_run_hammer");
+                yield return Work("pawn_interact_hammer", Random.Range(1.6f, 2.4f), 1f);
+                yield return Work("pawn_idle_hammer", 0.4f, 0f);
+                continue;
+            }
+            if (Vector2.Distance(transform.position, home) > 0.1f) yield return Walk(home, "pawn_run");
+            Play("pawn_idle_hammer");
+            yield return new WaitForSeconds(Random.Range(1.2f, 2.2f));
         }
     }
 

@@ -39,19 +39,31 @@ public sealed class IslandBuilding : MonoBehaviour
     private IslandPawn repairPawn;
     private Color baseColor = Color.white;
 
-    /// <summary>Faz B seam'i: bina seviyesi. Şimdilik sabit hazır köy (kule/okçuluk Kıyı Kalesi'ni izler, diğerleri 1).</summary>
-    public static int LevelOf(IslandLayout.BuildingKind kind, int keepLevel) =>
-        kind == IslandLayout.BuildingKind.Castle ? keepLevel : Progression.Island.PrebuiltLevel(kind.ToString(), keepLevel);
+    /// <summary>
+    /// Bina seviyesi (Faz B: kayıttan). Kale = Kıyı Kalesi; Okçuluk = Okçu Kaptan (Kıyı Kalesi'ni izler); diğerleri yerleştirilmiş
+    /// bina kaydındaki seviye. Kayıt/kimlik yoksa Faz C hazır köy seviyesi (yedek).
+    /// </summary>
+    public static int LevelOf(IslandLayout.BuildingKind kind, int keepLevel, string id = null)
+    {
+        if (kind == IslandLayout.BuildingKind.Castle) return keepLevel;
+        if (kind == IslandLayout.BuildingKind.Archery) return Mathf.Max(1, IslandSession.ArcherLevel());
+        var entry = id != null ? IslandEconomy.Find(id) : null;
+        if (entry != null && entry.level >= 1) return entry.level;
+        return Progression.Island.PrebuiltLevel(kind.ToString(), keepLevel);
+    }
 
-    public static IslandBuilding Attach(SpriteRenderer renderer, IslandLayout.BuildingSpot buildingSpot, int keepLevel)
+    public Bounds Bounds => sr != null ? sr.bounds : new Bounds(Center, Vector3.one);
+    public IslandLayout.BuildingSpot Spot => spot;
+
+    public static IslandBuilding Attach(SpriteRenderer renderer, IslandLayout.BuildingSpot buildingSpot, int keepLevel, string id = null)
     {
         var go = renderer.gameObject;
         var building = go.AddComponent<IslandBuilding>();
         building.sr = renderer;
         building.spot = buildingSpot;
         building.Kind = buildingSpot.kind;
-        building.Level = LevelOf(buildingSpot.kind, keepLevel);
-        building.Id = $"{buildingSpot.kind}@{buildingSpot.col},{buildingSpot.row}";
+        building.Id = id ?? $"{buildingSpot.kind}@{buildingSpot.col},{buildingSpot.row}";
+        building.Level = LevelOf(buildingSpot.kind, keepLevel, building.Id);
         building.baseColor = renderer.color;
 
         float hp;
@@ -203,6 +215,7 @@ public sealed class IslandBuilding : MonoBehaviour
             var catalog = IslandVisualCatalog.Instance;
             Vector2 door = IslandLayout.World(spot.DoorCell) + new Vector2(IsCastle ? 1.4f : 0.9f, -0.15f);
             repairPawn = IslandPawn.Create(PawnsParent, catalog, IslandPawn.Job.Builder, door);
+            repairPawn.SetSite(door);   // onarım çekici vuran Usta
         }
     }
 }
@@ -253,8 +266,27 @@ public sealed class IslandTower : MonoBehaviour
 /// <summary>Onarım kaydı (§7.7): savaş sonrası süre yazar, sahne kurulumunda uygular. Zaman kaynağı testlerde değiştirilebilir.</summary>
 public static class IslandRepair
 {
-    public static Func<long> Clock = () => DateTime.UtcNow.Ticks;
+    public static Func<long> Clock = () => GameClock.UtcNow.Ticks;   // Faz B: telefon saatini geri alma hilesi üretimi bozmaz
     public static long Now => Clock();
+
+    /// <summary>
+    /// [from, to] arası "etkin üretim saniyesi": onarım süren pencerede (en geç biten onarıma kadar) üretim
+    /// <see cref="Progression.Island.RepairProductionMult"/> ile çarpılır (§7.7). Kayıttaki ve canlı onarımlara bakar.
+    /// </summary>
+    public static double EffectiveSeconds(IslandSaveData save, long from, long to)
+    {
+        if (to <= from) return 0d;
+        long repairUntil = 0;
+        if (save != null)
+            foreach (var entry in save.buildings) if (entry != null) repairUntil = Math.Max(repairUntil, entry.repairEndTicks);
+        foreach (var building in IslandBuilding.All)
+            if (building != null && building.UnderRepair) repairUntil = Math.Max(repairUntil, building.RepairEndTicks);
+        double total = (to - from) / (double)TimeSpan.TicksPerSecond;
+        if (repairUntil <= from) return total;
+        long slowTo = Math.Min(to, repairUntil);
+        double slow = (slowTo - from) / (double)TimeSpan.TicksPerSecond;
+        return total - slow * (1.0 - Progression.Island.RepairProductionMult);
+    }
 
     /// <summary>Faz B üretimi bu çarpanla yavaşlatır: onarım sürerken ×0,5 (üretim yoksa yalnız durum/zamanlayıcı görünür).</summary>
     public static float ProductionMultiplier()

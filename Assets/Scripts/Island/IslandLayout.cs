@@ -243,7 +243,7 @@ public static class IslandLayout
         // D güneydoğu: batı lagününü dolanır (doğu girinti r23-24 geçilmez)
         new Beach { index = 3, name = 'D',
             boatPath = W(15f, 34f, 15f, 28.6f), landing = World(15f, 27.5f),
-            walkPath = Join(W(15f, 27.5f, 12f, 26f, 9.5f, 23.5f, 10.5f, 20.5f, 15.5f, 17.5f, 18.5f, 15.5f, 18.5f, 14.5f, 18.5f, 13.5f), FromEastStairTop) },
+            walkPath = Join(W(15f, 27.5f, 12f, 26f, 9.5f, 23.5f, 10.5f, 20.5f, 14.5f, 20.5f, 15.5f, 17.5f, 18.5f, 15.5f, 18.5f, 14.5f, 18.5f, 13.5f), FromEastStairTop) },   // Faz B: Ağıl (12-13 × 18-19) şeritte kalmasın diye r20 boyunca
     };
 
     public static float PathLength(Vector2[] path)

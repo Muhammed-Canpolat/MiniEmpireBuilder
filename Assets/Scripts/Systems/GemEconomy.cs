@@ -69,6 +69,19 @@ public static class GemEconomy
     public static int GoldTopUpCost(int missingGold) =>
         missingGold <= 0 ? 0 : Mathf.CeilToInt(missingGold / (float)GoldPerGem);
 
+    // ==================== ADA (island_base_v2 §6): Et ve Odun ====================
+    /// <summary>1 elmas = 8 Et (GoldPerGem / 5; Et kıt tutulur). 1 elmas = 25 Odun.</summary>
+    public const int MeatPerGem = GoldPerGem / 5;
+    public const int WoodPerGem = 25;
+
+    /// <summary>Eksik Et'i tamamlamanın elmas bedeli (yukarı yuvarlanır).</summary>
+    public static int MeatTopUpCost(int missingMeat) =>
+        missingMeat <= 0 ? 0 : Mathf.CeilToInt(missingMeat / (float)MeatPerGem);
+
+    /// <summary>Eksik Odun'u tamamlamanın elmas bedeli (yukarı yuvarlanır).</summary>
+    public static int WoodTopUpCost(int missingWood) =>
+        missingWood <= 0 ? 0 : Mathf.CeilToInt(missingWood / (float)WoodPerGem);
+
     /// <summary>
     /// İksir penceresi içinde kalan iş: pencere boyunca <see cref="PotionSpeed"/> kat hızlı ilerler.
     /// İş pencere içinde biterse kalan/hız, bitmezse kalan − (hız−1) × pencere.

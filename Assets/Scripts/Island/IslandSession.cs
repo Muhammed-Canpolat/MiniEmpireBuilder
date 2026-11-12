@@ -83,8 +83,8 @@ public static class IslandSession
                 save.replaysToday++;
             }
         }
-        save.meat += reward.meat;
-        save.wood += reward.wood;
+        IslandEconomy.AddMeat(reward.meat);   // Faz B: Et/Odun cüzdanı tek API (Kart Atölyesi aynı yoldan harcar)
+        IslandEconomy.AddWood(reward.wood);
         save.highestAkin = Mathf.Max(save.highestAkin, akin);
         save.lastAkin = akin;
         var gm = GameManager.Instance;
