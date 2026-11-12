@@ -29,6 +29,9 @@ public class IslandVisualCatalog : ScriptableObject
     [Header("v2: adlandırılmış kare dizileri (piyonlar, binalar, Lancer, Kenney tekneleri, koyun, arayüz)")]
     public List<NamedFrames> named = new List<NamedFrames>();
 
+    [Header("Faz C: DungeonMonsters2D (PSB + 2D Animation) prefabları; yol dizgesiyle Resources.Load yok, katalog referansı")]
+    public List<MonsterEntry> monsters = new List<MonsterEntry>();
+
     [Header("Yapılar ve simgeler")]
     public Sprite castle;
     public Sprite tower;
@@ -71,6 +74,14 @@ public class IslandVisualCatalog : ScriptableObject
         return namedLookup.TryGetValue(name, out var frames) ? frames : null;
     }
 
+    /// <summary>DM2D canavar kaydı (anahtar = EnemyType adı; yoksa null).</summary>
+    public MonsterEntry Monster(string key)
+    {
+        if (monsters == null) return null;
+        foreach (var entry in monsters) if (entry != null && entry.key == key) return entry;
+        return null;
+    }
+
     /// <summary>Tek kareli adlandırılmış sprite (yoksa null).</summary>
     public Sprite Single(string name)
     {
@@ -79,6 +90,24 @@ public class IslandVisualCatalog : ScriptableObject
     }
 
     public static bool Has(Sprite[] frames) => frames != null && frames.Length > 0 && frames[0] != null;
+}
+
+/// <summary>
+/// DM2D canavar kaydı. <see cref="bodyHeight"/> prefabın kendi ölçeğindeki gövde yüksekliğidir (editörde ölçülür);
+/// çalışma anında ölçek = <see cref="targetHeight"/> / bodyHeight (Kızıl Warrior gövdesi ≈ 1,0 u; boss hariç ≤1,6×).
+/// </summary>
+[Serializable]
+public class MonsterEntry
+{
+    public string key;
+    public GameObject prefab;
+    public float bodyHeight = 1f;
+    public float targetHeight = 1f;
+    [Tooltip("Prefab sağa mı bakıyor (false: sola bakar; yön localScale.x ile çevrilir)")]
+    public bool facesRight = true;
+    public Sprite portrait;
+    [Tooltip("Prefab kökünden gövdenin en alt noktasına y farkı (prefab ölçeğinde; negatif = kök gövdenin üstünde)")]
+    public float feetOffsetY;
 }
 
 [Serializable]

@@ -111,6 +111,8 @@ public static class BuildIslandCatalog
         Add("lancer_idle", Frames($"{lancer}/Lancer_Idle.png", missing));
         Add("lancer_run", Frames($"{lancer}/Lancer_Run.png", missing));
         Add("lancer_attack", Frames($"{lancer}/Lancer_Right_Attack.png", missing));
+        Add("lancer_defence", Frames($"{lancer}/Lancer_Right_Defence.png", missing));
+        Add("unit_shadow", new[] { First($"{Root}/Terrain/Tileset/Shadow.png", missing) });
 
         string sheep = $"{Root}/Pawn and Resources/Meat/Sheep";
         Add("sheep_idle", Frames($"{sheep}/Sheep_Idle.png", missing));
@@ -124,7 +126,89 @@ public static class BuildIslandCatalog
         // Kenney Pirate Pack gemileri (CC0): 64 PPU, Bilinear (vektör stil), sıkıştırmasız, mipmap yok.
         for (int i = 1; i <= 3; i++) Add("dinghy" + i, new[] { BoatSprite($"{Kenney}/dinghyLarge{i}.png", missing) });
         for (int i = 1; i <= 24; i++) Add("ship_" + i, new[] { BoatSprite($"{Kenney}/ship ({i}).png", missing) });
+        // Faz C: efektler (Tiny Swords Dust/Explosion/Fire), arayüz simgeleri ve kâğıt/kurdele
+        Add("dust_1", Frames($"{Root}/Particle FX/Dust_01.png", missing));
+        Add("dust_2", Frames($"{Root}/Particle FX/Dust_02.png", missing));
+        Add("explosion_1", Frames($"{Root}/Particle FX/Explosion_01.png", missing));
+        Add("explosion_2", Frames($"{Root}/Particle FX/Explosion_02.png", missing));
+        for (int i = 1; i <= 3; i++) Add("fire_" + i, Frames($"{Root}/Particle FX/Fire_0{i}.png", missing));
+        Add("icon_hammer", new[] { First($"{Root}/UI Elements/Icons/Icon_01.png", missing) });
+        Add("icon_sword", new[] { First($"{Root}/UI Elements/Icons/Icon_05.png", missing) });
+        Add("ui_paper", new[] { First($"{Root}/UI Elements/Papers/RegularPaper.png", missing) });
+        Add("ui_ribbon", new[] { First($"{Root}/UI Elements/Ribbons/BigRibbons 1.png", missing) });
+        Add("ui_paper_special", new[] { First($"{Root}/UI Elements/Papers/SpecialPaper.png", missing) });
+        Add("ui_button_blue", new[] { First($"{Root}/UI Elements/Buttons/BigBlueButton_Regular.png", missing) });
+        Add("ui_button_red", new[] { First($"{Root}/UI Elements/Buttons/BigRedButton_Regular.png", missing) });
+        // Kenney Pirate Pack efektleri (CC0): batan teknede patlama, hasarlı teknede ateş, top mermisi
+        const string kenneyFx = "Assets/kenney_piratePack/PNG/Retina/Effects";
+        for (int i = 1; i <= 3; i++) Add("kenney_explosion" + i, new[] { BoatSprite($"{kenneyFx}/explosion{i}.png", missing) });
+        for (int i = 1; i <= 2; i++) Add("kenney_fire" + i, new[] { BoatSprite($"{kenneyFx}/fire{i}.png", missing) });
+        Add("kenney_cannonball", new[] { BoatSprite("Assets/kenney_piratePack/PNG/Retina/Ship parts/cannonBall.png", missing) });
         catalog.named = list;
+        BuildMonsters(catalog, missing);
+    }
+
+    // ---- Faz C: DungeonMonsters2D prefabları (PSB + 2D Animation, PPU 100). Anahtar = EnemyType adı ----
+    private const string Dm2d = "Assets/DungeonMonsters2D/Characters";
+
+    private static void BuildMonsters(IslandVisualCatalog catalog, List<string> missing)
+    {
+        // (anahtar, prefab, hedef gövde yüksekliği u). Kızıl Warrior gövdesi ≈ 1,0 u; canavarlar ≤1,6× (boss ×BossScale ayrıca).
+        var specs = new (string key, string prefab, float height)[]
+        {
+            ("Rat", "Rat", 0.5f), ("Bat", "Bat", 0.75f), ("WoodGolem", "WoodGolem", 1.5f), ("ButcherCaptain", "Butcher", 1.3f),
+        };
+        var old = catalog.monsters ?? new List<MonsterEntry>();
+        var list = new List<MonsterEntry>();
+        foreach (var spec in specs)
+        {
+            string path = $"{Dm2d}/{spec.prefab}.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) { missing.Add(path); continue; }
+            var previous = old.FirstOrDefault(e => e != null && e.key == spec.key);
+            var entry = new MonsterEntry
+            {
+                key = spec.key, prefab = prefab, targetHeight = spec.height,
+                facesRight = false,   // DM2D prefabları varsayılan olarak SOLA bakar (ekran görüntüsüyle doğrulandı)
+            };
+            Measure(prefab, out entry.bodyHeight, out entry.feetOffsetY);
+            entry.portrait = Portrait(prefab);
+            list.Add(entry);
+            Debug.Log($"[IslandCatalog] DM2D {spec.key}: gövde {entry.bodyHeight:0.00} u (prefab ölçeğinde), ayak ofseti {entry.feetOffsetY:0.00}");
+        }
+        catalog.monsters = list;
+    }
+
+    /// <summary>Prefabın etkin SpriteRenderer'larının birleşik gövde yüksekliği ve en alt noktası (kök yerel uzayı, prefab ölçeğinde).</summary>
+    private static void Measure(GameObject prefab, out float height, out float feetOffset)
+    {
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        instance.transform.position = Vector3.zero;
+        instance.transform.rotation = Quaternion.identity;
+        Bounds bounds = default;
+        bool any = false;
+        foreach (var renderer in instance.GetComponentsInChildren<SpriteRenderer>(false))
+        {
+            if (!renderer.enabled || renderer.sprite == null || renderer.name.Contains("Effect")) continue;
+            if (!any) { bounds = renderer.bounds; any = true; } else bounds.Encapsulate(renderer.bounds);
+        }
+        height = any ? Mathf.Max(0.05f, bounds.size.y) : 1f;
+        feetOffset = any ? bounds.min.y : 0f;
+        UnityEngine.Object.DestroyImmediate(instance);
+    }
+
+    /// <summary>Pano portresi: "Head" parçası, yoksa en büyük parça sprite'ı.</summary>
+    private static Sprite Portrait(GameObject prefab)
+    {
+        Sprite best = null; float area = 0f;
+        foreach (var renderer in prefab.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (renderer.sprite == null || renderer.name.Contains("Effect")) continue;
+            if (renderer.name.IndexOf("head", StringComparison.OrdinalIgnoreCase) >= 0) return renderer.sprite;
+            float a = renderer.sprite.rect.width * renderer.sprite.rect.height;
+            if (a > area) { area = a; best = renderer.sprite; }
+        }
+        return best;
     }
 
     private static Sprite BoatSprite(string path, List<string> missing)
