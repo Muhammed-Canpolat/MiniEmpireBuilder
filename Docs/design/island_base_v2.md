@@ -653,3 +653,66 @@ E2 (Kademe II–IV düşmanlar, siyah/sarı tekneler, bosslar 20/30, yetenekler)
   uçan ve uzak düşman tutulmaz; Manastır şifası (%8, 3 u dışı etkilenmez, zamanlı vuruş, onarım ≈35 sn); damar toplama + yığın + madenci; Z3–Z5 bedel/süre/bulut/KK şartı/kilit), `IslandRaidTests` +3 (bayrak-yol matrisi, Kışla terimi D/çalıntı, çevrimdışı çözüm kayıttan okur), `IslandReviewScreenshotsE1` (4 test).
 - **Görüntüler** (`PlaytestOutput/island/E1_*.png`; seçilenler `Docs/playtest/island_v2_phaseE1_*.png`): 01/01b Kışla ve S1 bayrağı, 02 Kışla paneli, 03 bayrak S2'de, 04 İNŞA ET menüsü (Kışla, Manastır), 05/06 Manastır + Monk, 07 Z3–Z5 kapalı, 08 Z3 paneli, 09/10 Z3 keşfi ve dağılma, 11 altın yığını, 12/13 Z4–Z5 açık, 14/15 savaşta Lancer'lar bayrakta, 16 Manastır şifası.
 - **Bilinen eksikler:** bayrak sürüklenmiyor (dokunarak dönüyor); Kışla/Manastır için bot ölçümü yok (profiller Kışla kurmaz; yalnız birim testleri); Lancer'lar düz çizgiyle yürür (yar/merdiven yol bulma yok); Z3/Z4 yeni bina yeri vermiyor.
+
+## §21 Faz E2 uygulama notu (12 Kasım 2026): Kademe II–IV, bosslar 20/30, yetenekler, baskında boss yok, bot 16–30
+E2 ile Faz E tamamlandı (Kışla/Manastır/Damar/Z3–Z5 §20'de). Commit'ler: DM2D varlıkları `4fbadf3`, kod `e05ef96`, ayar + testler + belge sonraki commit'ler.
+- **Düşmanlar (`EnemyType` sonuna 15 tür; Zombi mevcut `Zombie`'yi yeniden kullanır):** §7.3 tablosu birebir (can/hasar/hız/menzil/altın, `GameData.cs` `EnemyStats`); ilk görünüş Akın'ları `Progression.Island.FirstAkinOf`
+  (İskelet Savaşçı/Okçu 11 · İmp 12 · Kemik Büyücü 13 · Örümcek 15 · Zombi 16 · Taş Golem 17 · Hayalet 18 · Zombi Savaşçı 21 · Sukkubus 23 · Kristal Golem 25 · Vampir 27 · İblis 29 · Magma Golem 32; bosslar 10/20/30).
+  Roller (`IslandTargeting.RoleOf`): menzilli = Okçu/Kemik Büyücü/Örümcek/Sukkubus; hızlı = Fare/İmp; uçan = Yarasa/Hayalet/Ejder; tank = dört Golem; diğerleri yakın.
+  **Kadro (`IslandWaves`):** Akın ≤10 eski kural aynen; 11+ yakın slotlar {Akıncı, Mızrakçı, İskelet, Zombi}, menzili {Kıyı Okçusu, İskelet Okçu}, hızlı {Fare, İmp}, tank {4 Golem} havuzundan; "son açılan tür daha sık" = en yeni ×3, bir önceki ×2.
+  Tekne başına ≤1 tank, ≤1 özel (Büyücü/Örümcek/Sukkubus), ≤1 elit (Zombi Savaşçı/Vampir/İblis); 1. dalgada tank/özel/elit yok; Sandalda tank yok (testli: Akın 1–45 × 3 tekne türü × 7 tekne × 4 dalga).
+  Uçan sürüde Akın 18'den itibaren her ikinci üye Hayalet. Pano portreleri en yeni 6 türü gösterir; YENİ DÜŞMAN afişi her yeni türde (Kasap Kaptan 10, Batık Şövalye 20, Kızıl Ejder 30 dahil).
+- **Tür yetenekleri (`Island/IslandSpecials.cs`, sayılar `Progression.Island`):** Kemik Büyücü 3 sn'de bir 2,5 u içine azami canın %4'ü (belgede %6, aşağıdaki ayar) · Hayalet 6 sn'de bir 1,5 sn dokunulmaz (`Invulnerable`, saydam) · Vampir vuruşunun %30'u kadar can ·
+  İmp vurduğu binayı 3 sn %3/sn yakar (belgede %4) · Örümcek vurduğu kule/okçunun atış hızını 2 sn −%40 · Sukkubus 8 sn'de bir menzilindeki Lancer'ı 2 sn durdurur · Magma Golem ölünce 1,5 u içindeki binalar 3 sn yanar (%5/sn; belgede yalnız "yanma") ·
+  Taş/Kristal Golem oku ×0,5, Kristal'e dolu atış ×1,5 (zayıf nokta; Magma zırhsız). Zırh kule oklarına da uygulanır (hepsi `IslandEnemy.ArrowDamage`).
+  Yeni etiket `mage_heal` (≥150 can şifa); `golem_armor` dört Golem'in toplamıyla, `flyer_unanswered` Yarasa+Hayalet+Ejder toplamıyla, `boss_unbroken` üç bossun toplamıyla ve boss adıyla.
+- **Bosslar (`Progression.Island.BossFor/BossScaleFor`):** 10 Kasap Kaptan · **20 Batık Şövalye** (GhostKnight ×1,3, siyah Mavnayla, %50 canda 4 İskelet çağırır; çağrılanlar yürüyüş rotasının kendi noktasından devam eder) ·
+  **30 Kızıl Ejder** (DragonRed ×1,2, uçan: tekneye binmez, son dalgada kenardan telegraph okuyla gelir; 10 sn'de bir 3 u'luk 35° konide kule/okçuya 2 × vuruş hasarı, okçu 4,5 u içindeyse ona, değilse en yakın kuleye) · sonra sırayla döner, her tam turda ×1,15 (40 Kasap ×1,495).
+  Boss boyu savaş seviyesinden türetilir (`AkinOfLevel`: 10'un katlarında ve kademe sınırlarında kesin; 0,8 eğimi düşük Akın'larda iki Akın'ı aynı seviyeye verdiğinden tersi her yerde tam değildir; tek kullanım yeri boss çarpanı ve tekne rengi).
+- **Tekneler (`BoatShipNumber`):** Kademe I kırmızı-haç (ship 3) · II–III siyah-kafatası (ship 2) · IV sarı (ship 6); hasar/batık karesi +6/+12/+18 eskisi gibi; mavi/yeşil yok. Kod Faz C'de renkleri zaten seçiyordu, E2 yalnız tek fonksiyona topladı ve görsel doğruladı (`E2_04`, `E2_09`).
+  **Yapılmadı:** Mavna yanına `cannon.png` ×2 süs (belgede "yanına"; Faz C'de de yoktu).
+- **Baskında boss yok (D'nin bilinen eksiği):** `RaidPower` en yüksek Akın − 2 boss Akın'ına (10/20/30…) denk gelirse bir alta düşer (en yüksek 12 → 9, 22 → 19, 32 → 29); `IslandRaidManager` baskında boss teknesi ve Ejder üretmez (testli: birim + sahnede canlı baskın).
+- **Okçu yetenekleri (`Island/IslandAbilities.cs`):** v2 §7.4 "Yetenekler v1 tablosu" der; asıl tanım `island_base.md` §3 (satır 146–152). Ok Yağmuru Sv2 (1,8 u daire, 1,5 sn'de 3 vuruş × ok hasarı = "3 × ok hasarı", teknelere ×1, 18 sn) ·
+  Ateşli Ok Sv4 (sonraki 3 atış tutuşturur: tekne 5 sn %6/sn azami can, birlik 3 sn 0,5 × ok hasarı/sn, 22 sn) · Ağ Oku Sv6 (1,5 u: birlik 2,5 sn kökleşir + 3 sn %40 yavaş, tekne 4 sn %50 yavaş, 20 sn). Okçu seviyesi = KK (`KeepFollowsMainBase`) olduğundan KK 2/4/6'da açılır.
+  Hedef = okçunun kilidi / otomatik nişanı (hedef yoksa kullanılamaz, bekleme harcanmaz; Ateşli Ok hedefsiz de). HUD: ATEŞ'in üstünde 3 yuvarlak düğme (Tiny Swords mavi daire), dolum halkası, kilitliyse "Sv N", Ateşli Ok'ta kalan atış "×3". Bot (`IslandBot.UseAbilities`): Yağmur ≥3 hedefte, Ateşli Ok + Ağ zırhlı/boss/Golem/elit hedefte.
+  Belgedeki "Hayalet Gemi kalkanını açar" v1'e ait bir etkinlik düşmanıdır, v2'de yok (yapılmadı).
+- **Ayar (ölçüm turları, `Progression.Island`/`IslandWaves`):** Tur 0 (hepsi belge sayısı): iyi bot Akın 16–30, KK−1 kule + Kışla + Manastır, 2 koşu: **21/30** (16–19: 3/8). Etiketler `mage_heal`, `multi_beach`, `shield_front`; bina kaybı 10/10.
+  Tur 1: Büyücü şifası %6→**%4**, İmp yangını %4→**%3**/sn, özel birim sıklığı (tekne+dalga)%2→%3 → 16/18/21: 3/6. Tur 2: elit yalnız uygun teknelerin yarısında ((tekne+dalga)%2==1) → 19/21/24: 5/6.
+  Tüm ayar `Progression.Island` ve `IslandWaves` içindedir; belgedeki asıl değerler (%6, %4/sn) yorumda durur. Ham satırlar: `ladder_E2_good_round0/diag1_round0/diag2_round1/diag3_round2/good_final.txt`.
+- **Bot ölçümü (`IslandPhaseE2Tests.MeasureLadder`, `ISLAND_LADDER=profil,başla,bitir,tekrar,etiket`; çıktı `PlaytestOutput/island/ladder_E2_*.txt`):**
+  düzen = tüm bölgeler açık, KK = ⌈N/3⌉, okçu = KK, kule tavanına kadar kule (hazır 2 adacık kulesi dahil; KK6–8: 4, KK9+: 5) açık kumsallara sırayla, Manastır (KK≥6) ve Kışla KK seviyesinde (bayrak S1), hız ×6. **Her Akın için yalnız 2 koşu** (tasarım 20 tohum der; 30 koşu ≈ 25 dk).
+  **İyi bot, son hâl: 29/30 (%97).** 16–19: 8/8 · 20 (boss): 2/2 · 21–29: 17/18 · 30 (boss): 2/2. (Hedefler: 11–19 ≥%85, 20 ≥%70, 21–29 ≥%78, 30+ ≥%70.)
+
+| Akın | KK | kazanma (2 koşu) | süre (oyun sn) | yıkılan bina | boğulan % | yetenek kullanımı | yenilgi etiketi |
+|---|---|---|---|---|---|---|---|
+| 16 | 6 | 2/2 | 184/193 | 5/5 | 31 | 15/14 | - |
+| 17 | 6 | 2/2 | 187/204 | 4/6 | 29 | 16/17 | - |
+| 18 | 6 | 2/2 | 201/227 | 6/9 | 24 | 18/21 | - |
+| 19 | 7 | 2/2 | 191/190 | 7/6 | 27 | 18/15 | - |
+| 20 (boss) | 7 | 2/2 | 224/219 | 6/6 | 27 | 19/21 | - |
+| 21 | 7 | 1/2 | 193/185 | 10/4 | 25 | 19/19 | multi_beach |
+| 22 | 8 | 2/2 | 180/165 | 6/4 | 32 | 16/14 | - |
+| 23 | 8 | 2/2 | 174/170 | 4/4 | 32 | 15/14 | - |
+| 24 | 8 | 2/2 | 185/193 | 5/7 | 32 | 17/18 | - |
+| 25 | 9 | 2/2 | 190/247 | 3/5 | 36 | 13/21 | - |
+| 26 | 9 | 2/2 | 251/187 | 5/2 | 36 | 23/14 | - |
+| 27 | 9 | 2/2 | 188/187 | 2/3 | 44 | 13/14 | - |
+| 28 | 10 | 2/2 | 173/175 | 1/1 | 44 | 11/11 | - |
+| 29 | 10 | 2/2 | 179/175 | 2/2 | 45 | 13/12 | - |
+| 30 (boss) | 10 | 2/2 | 207/209 | 3/2 | 38 | 18/18 | - |
+
+  Özet: medyan süre 189 oyun sn (≈3,1 dk; hedef 2–4 dk) · boğulan tayfa %34 (hedef %25–55) · iyi bot atış hızı ort. 0,89/sn (≤3) · yetenek ort. 16,2 kullanım/savaş · okçu ort. 2,1 kez düşer.
+  Düşmana göre hasar payı: Kıyı Okçusu %21–48 ilk sırada (Kademe I okçusu her havuzda kalıyor), Akın 30'da Kızıl Ejder %49–52.
+  **Sıradan bot** (yalnız oto-ateş, dolu atış/yetenek yok) 16–30, 1 koşu: **3/15** (23, 28, 29 kazanıldı; yenilgi etiketleri `shield_front` 8, `beach_unwatched` 2, `multi_beach` 1, `flyer_unanswered` 1 (30); hedef %50–70) —
+  Faz C'de de aynıydı (sıradan bot 5–10 kaybediyordu): Kalkanlı Mızrakçı'nın ×0,3'ü dolu atışsız aşılmıyor, E2 bunu çözmedi. **Yalnız kuleler** (okçu yok) 16/17/20/25/30: 0/5 (hedef ≤%30 ✓). Golem yenilgisi çıkmadı (`golem_armor` ≥%50 ölçütü sınanamadı).
+  **Hedeflerden sapma (düzeltilmedi, §11 yeni ölçütleri):** "medyan zaferde yıkılan bina 0" **sağlanmıyor**: zaferlerde medyan 4 bina (hazır köyün 10 yapısından) yıkılıyor, her yıkık bina 180 sn onarım demektir → "Akın başına onarım beklemesi medyanı ≤60 sn" de **sağlanmıyor**
+  (Faz C ölçümünde de 2–4 bina vardı). Denge kolu (kule/yapı canı, İmp/Magma yangını, Ejder) bir sonraki dengede ele alınmalı. Ölçülmeyenler: okçu hasar payı %45–70, yer değiştirme medyanı, p10 ≥45 fps (cihaz yok).
+- **Kayıt:** yeni kayıt alanı yok (sürüm 8 aynen); yetenek durumu yalnız çalışma anında; `IslandSaveTests` değişmedi. Eski kayıtta yetenekler Okçu seviyesine (KK'den) göre doğrudan açılır.
+- **Katalog/varlık:** `BuildIslandCatalog` 16 yeni `MonsterEntry`: yalnız kullanılan DM2D dosyaları commit'lendi (16 prefab + 16 PSB + 16 controller + klipler + `VampireBat0–4`); `Scene`, `UserInterface`, `Arrow/StoneProjectile/BatFly` commit'lenmedi.
+  `SkeletonMage 1.prefab` (paketin adı) kullanıldığı için commit'lendi. **Varlık değişikliği:** `SkeletonArcher` Attack/SpecialAttack klipleri işlevsiz, adsız bir `AnimationEvent` taşıyordu (her atışta "no function name" hata günlüğü, testi düşürüyordu): olay kaldırıldı.
+  Golem denetleyicilerinde durum adları karışık (`IdleGolem`/`Idle`/`MoveGolem`): `IslandEnemy.Play` üç adı da dener.
+- **Testler:** `IslandPhaseE2Tests` (13 + explicit ölçüm): kademe/ilk görünüş/gemi rengi/boss/baskın gücü tabloları, taban istatistikler, kadro kuralları, 16 canavar katalogdan doğar/Move/Death/boy, zırh çarpanları + boss çarpanı, Büyücü/Hayalet/Şövalye, İmp/Vampir/Örümcek/Magma, Sukkubus/Ejder, okçu yetenekleri (seviye kapısı, Yağmur 3 × ok, Ağ kök+yavaş, Ateşli Ok yanma), baskında boss yok.
+  `IslandReviewScreenshotsE2` (5 test, 13 görüntü). Sonuç: `^Island` **102/102**, `^CardWorkshopTests|^LumberShipmentTests` **16/16** (ayrı koşular; ikisi tek koşuda birleştirilince `IslandEconomySimTests` bir kez sıra etkisiyle düştü, tek başına ve ayrı koşuda geçer).
+- **Görüntüler** (`PlaytestOutput/island/E2_*.png`; seçilenler `Docs/playtest/island_v2_phaseE2_*.png`): 01 Kademe II dizilişi, 02 Kademe III, 03 bosslar (Kasap/Şövalye/Ejder yan yana), 04 Akın 12 siyah tekne + yetenek düğmeleri, 05 Kademe II dalgası kumsalda, 06–08 Akın 20 Batık Şövalye (savaş/yakın/iskelet çağırışı),
+  09 Akın 30 sarı tekne, 10–11 Kızıl Ejder (savaş/yakın), 12–13 Akın Panosu 30/20.
+- **Bilinen eksikler:** Mavna süs topları yok; Sıradan bot hedefleri tutmuyor (Faz C'den kalma); yetenek düğmeleri simgesiz (yalnız yazı); Ejder'in koni ateşi Tiny Swords `Fire` karelerinden dizilir (özel koni sprite'ı yok); ağ ve yanma için ayrı durum simgesi yok; ölçüm her Akın için 2 koşu.
