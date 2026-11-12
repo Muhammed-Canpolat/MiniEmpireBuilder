@@ -61,7 +61,7 @@ public class IslandLadderTests
     [Test]
     public void RewardsMatchDesignAndBalanceChecks()
     {
-        Assert.AreEqual(33, Int("AkinMeat", 1));
+        Assert.AreEqual(7, Int("AkinMeat", 1), "v2: Et 5 + 2N");
         Assert.AreEqual(105, Int("AkinWood", 10));
         Assert.AreEqual(25, Int("AkinGold", 1));
         // Denge kontrolü: Akın 1–15 ilk zafer altını toplamı 900 (= MB 5→6 yükseltmesi).

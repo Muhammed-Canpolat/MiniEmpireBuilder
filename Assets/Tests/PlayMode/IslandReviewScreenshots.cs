@@ -15,7 +15,7 @@ using UnityEngine.TestTools;
 /// <c>PlaytestOutput/island/*.png</c> içine yazılır (UIReviewScreenshots'a yazmaz). Ayrıca "kodla çizilmiş sprite yok" denetimi.
 /// Kayıt PlayerPrefs/dosya yedeklenir ve geri yüklenir.
 /// </summary>
-public class IslandReviewScreenshots
+public partial class IslandReviewScreenshots
 {
     private const string Key = "MiniEmpireBuilder_SaveData";
     private const string BackupKey = "MiniEmpireBuilder_SaveData_Backup";
@@ -48,11 +48,13 @@ public class IslandReviewScreenshots
         var dev = Type("DevSettings").GetProperty("Enabled");
         dev.SetValue(null, devWas);
         Type("IslandSession").GetMethod("Clear").Invoke(null, null);
+        Time.timeScale = 1f;
+        Type("IslandRepair").GetField("Clock").SetValue(null, (Func<long>)(() => DateTime.UtcNow.Ticks));
     }
 
     private static object Prop(object target, string name) => target.GetType().GetProperty(name).GetValue(target);
 
-    private IEnumerator LoadIsland()
+    private IEnumerator LoadIsland(int keep = 0, int highest = 0)
     {
         var dev = Type("DevSettings").GetProperty("Enabled");
         devWas = (bool)dev.GetValue(null);
@@ -62,6 +64,15 @@ public class IslandReviewScreenshots
         if (manager == null) manager = new GameObject("TestGameManager").AddComponent(managerType);
         yield return null;
         var save = Type("PlayerSaveData").GetMethod("CreateNew").Invoke(null, new[] { Enum.Parse(Type("WeaponType"), "Axe") });
+        if (keep > 0)
+        {
+            // Savunma ölçümleri: Kıyı Kalesi ve Akın ilerlemesi kayıtla belirlenir (öğretici bitmiş sayılır).
+            var island = save.GetType().GetField("island").GetValue(save) ?? Activator.CreateInstance(Type("IslandSaveData"));
+            island.GetType().GetField("keepLevel").SetValue(island, keep);
+            island.GetType().GetField("highestAkin").SetValue(island, highest);
+            island.GetType().GetField("tutorialStep").SetValue(island, 4);
+            save.GetType().GetField("island").SetValue(save, island);
+        }
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(manager, null);
         Type("IslandSession").GetMethod("Begin").Invoke(null, null);
