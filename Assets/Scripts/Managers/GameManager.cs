@@ -153,7 +153,18 @@ public class GameManager : MonoBehaviour
         if (!mine.isUnlocked || mine.level <= 0)
             return 0;
 
-        return 200 + (mine.level - 1) * 150;
+        return Mathf.RoundToInt((200 + (mine.level - 1) * 150) * (1f + HouseStorageBonus()));
+    }
+
+    /// <summary>Kurulu Köylü Evleri'nin maden deposuna toplam katkısı (Progression.HouseStorageBonus, ev başına seviyeye göre; üretim hızı değişmez).</summary>
+    public float HouseStorageBonus()
+    {
+        float bonus = 0f;
+        if (PlayerData?.placedBuildings == null) return 0f;
+        foreach (var placed in PlayerData.placedBuildings)
+            if (placed != null && placed.level > 0 && placed.buildingType == nameof(BuildingType.House))
+                bonus += Progression.HouseStorageBonus(placed.level);
+        return bonus;
     }
 
     public void AddGoldToMineStorage(int amount, bool saveAfter = false)
@@ -288,6 +299,7 @@ public class GameManager : MonoBehaviour
     {
         Buildings.Clear();
         PlayerSaveData.EnsureWorkshopEntry(PlayerData);   // Kart Atölyesi türü eski/elle kurulan kayıtta da bulunsun
+        PlayerSaveData.EnsureBaseBondEntries(PlayerData); // Kışla + Köylü Evi (Faz F) aynı şekilde
         if (PlayerData.workshop == null) PlayerData.workshop = new WorkshopSaveData();
         PlayerData.workshop.Repair();
 

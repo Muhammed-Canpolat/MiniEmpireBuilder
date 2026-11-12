@@ -198,11 +198,26 @@ public class PlayerSaveData
         data.island = new IslandSaveData();
         data.workshop = new WorkshopSaveData();
         EnsureWorkshopEntry(data);
+        EnsureBaseBondEntries(data);
 
         return data;
     }
 
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
+
+    /// <summary>Kışla ve Köylü Evi türleri kayıtta yoksa ekler (v9; eski kayıt göçü ve yeni oyun): açılış seviyesindeyse açık, yoksa kilitli.</summary>
+    public static void EnsureBaseBondEntries(PlayerSaveData data)
+    {
+        if (data == null) return;
+        if (data.buildings == null) data.buildings = new List<BuildingSaveEntry>();
+        var main = data.buildings.Find(entry => entry.buildingType == BuildingType.MainBase);
+        foreach (var type in new[] { BuildingType.Barracks, BuildingType.House })
+        {
+            if (data.buildings.Exists(entry => entry.buildingType == type)) continue;
+            bool open = main != null && main.level >= Progression.FirstUnlockLevel(type);
+            data.buildings.Add(new BuildingSaveEntry { buildingType = type, level = open ? 1 : 0, isUnlocked = open });
+        }
+    }
 
     /// <summary>Kart Atölyesi türü kayıtta yoksa ekler (eski kayıt göçü ve yeni oyun): Ana Üs 5'te açık, yoksa kilitli.</summary>
     public static void EnsureWorkshopEntry(PlayerSaveData data)
@@ -716,6 +731,13 @@ public static class SaveSystem
             if (data.saveVersion < 8)
             {
                 data.saveVersion = 8;
+                Save(data);
+            }
+            // v9: Kışla + Köylü Evi. Eski kayıtta tür girdisi yoktur; Ana Üs seviyesine göre eklenir, mevcut veriye dokunulmaz.
+            PlayerSaveData.EnsureBaseBondEntries(data);
+            if (data.saveVersion < 9)
+            {
+                data.saveVersion = 9;
                 Save(data);
             }
             MigrateTimings(data);

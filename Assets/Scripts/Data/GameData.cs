@@ -25,7 +25,9 @@ public enum BuildingType
     GoldMine,       // Altın Madeni
     Monastery,      // Manastır — dost birimleri iyileştirir
     // Yeni türler hep sona eklenir (kayıtlar enum'u sayı/ad olarak saklar).
-    CardWorkshop    // Kart Atölyesi — Et + altınla savaş kartı üretir (savaşa girmez)
+    CardWorkshop,   // Kart Atölyesi — Et + altınla savaş kartı üretir (savaşa girmez)
+    Barracks,       // Kışla (Faz F) — sefer savaşında Ana Üs'ü koruyan mavi Lancer'lar
+    House           // Köylü Evi (Faz F) — altın madeni deposunu büyütür
 }
 
 /// <summary>
@@ -267,6 +269,18 @@ public class BuildingData
                 break;
 
             case BuildingType.CardWorkshop:   // savaşa girmez; yalnız seviye (hak sayısı) anlamlı
+                maxHealth = 100f;
+                currentHealth = maxHealth;
+                break;
+
+            case BuildingType.Barracks:       // savaşa yapı olarak girmez; Lancer'lar Ana Üs'ü korur (Progression.Ally*)
+                maxHealth = 100f;
+                currentHealth = maxHealth;
+                damage = Progression.AllyLancerDamage(level);
+                unitCount = Progression.AllyLancerCount(level);
+                break;
+
+            case BuildingType.House:          // savaşa girmez; yalnız maden deposu bonusu
                 maxHealth = 100f;
                 currentHealth = maxHealth;
                 break;
@@ -717,6 +731,25 @@ public static class Progression
             n >= 1 && n <= highestAkin + 1 && keepLevel >= AkinRequiredCastle(n);
     }
 
+    // ---- Ana Üs Kışlası + Köylü Evi (Docs/design/island_base.md §7-8, island_base_v2 Faz F): sayılar yalnız burada ----
+    /// <summary>Kışla açılışı: 1. bina Ana Üs 7, 2. bina Ana Üs 11 (Bölge 3 = MB6 ilk planlama bölgesi; daha erken gelirse Bölge 1-2 önemsizleşir).</summary>
+    public static readonly int[] BarracksUnlock = { 7, 11 };
+    public const float BarracksCostFactor = 0.65f;
+    /// <summary>Kışla Lancer'ı: can 70·(1+0,15(L−1)), hasar 6·(…), 1 vuruş/sn.</summary>
+    public static float AllyLancerHp(int level) => 70f * (1f + 0.15f * (Mathf.Max(1, level) - 1));
+    public static float AllyLancerDamage(int level) => 6f * (1f + 0.15f * (Mathf.Max(1, level) - 1));
+    /// <summary>Kışla seviyesine göre mavi Lancer sayısı: 1 + ⌊L/5⌋.</summary>
+    public static int AllyLancerCount(int level) => 1 + Mathf.Max(1, level) / 5;
+    public const float AllyHitInterval = 1f, AllyRespawn = 15f, AllyLancerSpeed = 3.2f, AllyLancerReach = 1.1f;
+    /// <summary>Lancer yalnız Ana Üs'ün bu yarıçapındaki düşmana gider (avlanmaz); bekleme noktası kıyıdadır.</summary>
+    public const float AllyGuardRadius = 3.5f, AllyHomeRadius = 2.1f;
+    /// <summary>Köylü Evi: 1. ev Ana Üs 3, 2. ev Ana Üs 9. Maden deposu +%(5 + 0,5(L−1)); üretim hızı değişmez.</summary>
+    public static readonly int[] HouseUnlock = { 3, 9 };
+    public const float HouseCostFactor = 0.4f;
+    public static float HouseStorageBonus(int level) => 0.05f + 0.005f * (Mathf.Max(1, level) - 1);
+    /// <summary>Yeni Kışla/Ev kurma bedeli (altın; elmasla alınmaz): 1. seviyeye yükseltme bedeli kadar.</summary>
+    public static int BuildCost(BuildingType type) => UpgradeCost(type, 2);
+
     // ---- Kart Atölyesi (Docs/design/card_workshop.md): bina, bedel, süre, hak ve yuva sayıları yalnız burada ----
     public static class Workshop
     {
@@ -877,6 +910,8 @@ public static class Progression
             : type == BuildingType.Monastery ? 0.6f
             : type == BuildingType.GoldMine ? 0.55f
             : type == BuildingType.CardWorkshop ? Workshop.UpgradeFactor
+            : type == BuildingType.Barracks ? BarracksCostFactor
+            : type == BuildingType.House ? HouseCostFactor
             : 0.5f; // Okçu
         return Mathf.Max(10, Mathf.RoundToInt(baseCost * factor / 10f) * 10);
     }
@@ -889,6 +924,8 @@ public static class Progression
             case BuildingType.CannonTower: return 4;
             case BuildingType.Monastery: return 6;
             case BuildingType.CardWorkshop: return Workshop.UnlockMainBaseLevel;
+            case BuildingType.Barracks: return BarracksUnlock[0];
+            case BuildingType.House: return HouseUnlock[0];
             default: return 1;
         }
     }
@@ -900,6 +937,8 @@ public static class Progression
             case BuildingType.ArcherTower: return 5;
             case BuildingType.CannonTower: return 8;
             case BuildingType.Monastery: return 10;
+            case BuildingType.Barracks: return BarracksUnlock[1];
+            case BuildingType.House: return HouseUnlock[1];
             default: return int.MaxValue;
         }
     }
@@ -1159,7 +1198,7 @@ public class EnemySpawnInfo
 }
 
 /// <summary>Hasarın kaynağı (karşı düşmanların hasar çarpanları ve telemetri için).</summary>
-public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env, IslandArcher, IslandLancer }
+public enum DamageSource { Hero, Apprentice, Archer, Cannon, Env, IslandArcher, IslandLancer, Ally }
 
 /// <summary>Mevcut gövdeler üzerinde karşı düşman çeşitleri (round2 C).</summary>
 public enum EnemyVariant { None, Armored, Flying, Saboteur }
