@@ -96,6 +96,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
         BuildVillage(keep);
         Archer = IslandArcher.Create(archerLevel, keep, 0);
         Archer.AutoFire = IslandSession.AutoFireUnlocked(keep) && (IslandSession.Save?.autoFire ?? false);
+        IslandAbilities.Attach(Archer);
         BuildPostMarkers();
 
         Raid = gameObject.AddComponent<IslandRaidManager>();

@@ -370,6 +370,7 @@ public sealed class IslandHud : MonoBehaviour
         ReferenceUiVisuals.Text(fire.transform, "Label", L.T("ATEŞ", "FIRE"), 26, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
 
+        BuildAbilityButtons(rootRt);
         autoButton = SquareButton(rootRt, "AutoButton", L.T("OTO", "AUTO"), new Vector2(-266, 40), out autoLabel);
         autoRoot = autoButton.gameObject;
         autoButton.onClick.AddListener(OnAutoToggle);
@@ -385,6 +386,58 @@ public sealed class IslandHud : MonoBehaviour
         bannerText = ReferenceUiVisuals.Text(bannerBg.transform, "Text", "", 15, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, new Vector2(44, 6), new Vector2(-44, -6), true);
         bannerBg.gameObject.SetActive(false);
+    }
+
+    // ---- Faz E2: Okçu yetenekleri (Ok Yağmuru Sv 2 · Ateşli Ok Sv 4 · Ağ Oku Sv 6), ATEŞ'in üstünde 3 küçük düğme ----
+    private readonly Image[] abilityFace = new Image[3], abilityFill = new Image[3];
+    private readonly TextMeshProUGUI[] abilityLabel = new TextMeshProUGUI[3];
+    private GameObject abilityRoot;
+
+    private void BuildAbilityButtons(RectTransform rootRt)
+    {
+        abilityRoot = new GameObject("AbilityButtons", typeof(RectTransform));
+        abilityRoot.transform.SetParent(rootRt, false);
+        var rt = (RectTransform)abilityRoot.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(1, 0);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        var round = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("ui_round_blue") : null;
+        for (int i = 0; i < 3; i++)
+        {
+            var kind = (IslandAbilities.Kind)i;
+            var face = ReferenceUiVisuals.Image(rt, "Ability" + kind, new Vector2(1, 0), new Vector2(1, 0),
+                new Vector2(-176 + i * 60, 196), new Vector2(-176 + i * 60 + 54, 250), Color.white);
+            face.sprite = round;
+            face.raycastTarget = true;
+            var button = face.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            button.transition = Selectable.Transition.None;
+            face.gameObject.AddComponent<ReferenceButtonPress>();
+            button.onClick.AddListener(() => { if (IslandAbilities.Instance != null) IslandAbilities.Instance.Use(kind); });
+            abilityFace[i] = face;
+            abilityFill[i] = RadialOverlay(face.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.55f));
+            string name = i == 0 ? L.T("YAĞMUR", "VOLLEY") : i == 1 ? L.T("ATEŞ OK", "FIRE") : L.T("AĞ", "NET");
+            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", name, 10, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, new Vector2(2, 2), new Vector2(-2, -2), true);
+            abilityLabel[i].enableAutoSizing = true;
+            abilityLabel[i].fontSizeMin = 6; abilityLabel[i].fontSizeMax = 11;
+        }
+    }
+
+    private void RefreshAbilities()
+    {
+        var abilities = IslandAbilities.Instance;
+        for (int i = 0; i < 3; i++)
+        {
+            if (abilityFace[i] == null) continue;
+            var kind = (IslandAbilities.Kind)i;
+            bool unlocked = abilities != null && abilities.Unlocked(kind);
+            abilityFill[i].fillAmount = unlocked ? abilities.Remaining01(kind) : 1f;
+            abilityFace[i].color = !unlocked ? new Color(0.55f, 0.55f, 0.6f)
+                : kind == IslandAbilities.Kind.FireArrow && abilities.FireShotsLeft > 0 ? new Color(1f, 0.7f, 0.4f) : Color.white;
+            string name = i == 0 ? L.T("YAĞMUR", "VOLLEY") : i == 1 ? L.T("ATEŞ OK", "FIRE") : L.T("AĞ", "NET");
+            abilityLabel[i].text = !unlocked ? L.T("Sv", "Lv") + IslandAbilities.UnlockLevel(kind)
+                : kind == IslandAbilities.Kind.FireArrow && abilities.FireShotsLeft > 0 ? "×" + abilities.FireShotsLeft : name;
+        }
     }
 
     private static Image RadialOverlay(Transform parent, string name, Sprite sprite, Color color)
@@ -743,6 +796,7 @@ public sealed class IslandHud : MonoBehaviour
         }
         UpdateEdgeArrows();
         RefreshAuto();
+        RefreshAbilities();
         if (bannerBg != null && bannerBg.gameObject.activeSelf && Time.unscaledTime > toastUntil) bannerBg.gameObject.SetActive(false);
     }
 }

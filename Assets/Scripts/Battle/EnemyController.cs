@@ -43,6 +43,7 @@ public class EnemyController : MonoBehaviour
     public float MaxHealth => maxHealth;
     public float HealthPercent => currentHealth / maxHealth;
     public float Damage => damage;
+    public float AttackRange => attackRange;
     public float MoveSpeed => moveSpeed;
     public Transform CurrentTarget => currentTarget;
 

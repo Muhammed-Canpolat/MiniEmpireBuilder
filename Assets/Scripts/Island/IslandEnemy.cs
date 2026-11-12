@@ -29,6 +29,14 @@ public sealed class IslandEnemy : MonoBehaviour
     /// <summary>Bakış yönü sağa mı (DM2D: localScale.x işareti + prefab bakışı).</summary>
     public bool FacingRight { get; private set; } = true;
     public Vector2 MoveDirection { get; private set; } = Vector2.up;
+    /// <summary>Faz E2: çağrılan düşmanlar (Batık Şövalye) ve yetenekler için doğuş bilgisi.</summary>
+    public int Level { get; private set; } = 1;
+    public Vector2[] Route { get; private set; }
+    public Transform CastleTransform { get; private set; }
+    /// <summary>Boss boy çarpanı (1: boss değil); türe ve turlara göre <see cref="Progression.Island.BossScaleFor"/>.</summary>
+    public float BossFactor { get; private set; } = 1f;
+    /// <summary>Hayalet "dokunulmaz" evresinde gövde saydamlığı.</summary>
+    public float TintAlpha { get; set; } = 1f;
 
     private SpriteRenderer sr;
     private IslandSpriteAnimator anim;
@@ -67,7 +75,7 @@ public sealed class IslandEnemy : MonoBehaviour
         var entry = catalog != null ? catalog.Monster(type.ToString()) : null;
         bool monsterLook = entry != null && entry.prefab != null;
         // Konum ve rota ayak noktalarıdır. Tiny Swords: kök sprite merkezinde (merkez yüksekliği eklenir); DM2D: kök ayaktadır.
-        float lift = monsterLook ? 0f : CenterLift(type, boss);
+        float lift = monsterLook ? 0f : CenterLift(type, boss, battleLevel);
         position += Vector2.up * lift;
         if (route != null)
         {
@@ -93,6 +101,10 @@ public sealed class IslandEnemy : MonoBehaviour
         enemy.sr = sr;
         enemy.BeachIndex = beachIndex;
         enemy.IsBoss = boss;
+        enemy.Level = battleLevel;
+        enemy.Route = route;
+        enemy.CastleTransform = castle;
+        enemy.BossFactor = boss ? Progression.Island.BossScaleFor(type, Progression.Island.AkinOfLevel(battleLevel)) : 1f;
         if (monsterLook) enemy.ApplyMonsterLook(entry, boss);
         else enemy.ApplyLook(type, boss);
         if (wet) enemy.wetUntil = Time.time + Progression.Island.WetSeconds;
@@ -100,6 +112,7 @@ public sealed class IslandEnemy : MonoBehaviour
         if (monsterLook) go.AddComponent<SortingGroup>();   // YSort Awake'ten önce: grup varsa onu sürer
         go.AddComponent<IslandYSort>().footOffset = lift;
         controller.Died += enemy.OnDied;
+        if (IslandSpecials.Has(type)) IslandSpecials.Attach(enemy);
         return enemy;
     }
 
@@ -108,8 +121,8 @@ public sealed class IslandEnemy : MonoBehaviour
         type == EnemyType.ShoreArcher ? 40f : type == EnemyType.ShieldLancer ? 38f : 41f;
 
     /// <summary>Birim ayakta durduğu noktadan merkeze kaç dünya birimi yukarıdadır (kök = sprite merkezi).</summary>
-    public static float CenterLift(EnemyType type, bool boss) =>
-        FeetPixels(type) / 64f * Progression.Island.UnitScale * (boss ? Progression.Island.BossScale : 1f);
+    public static float CenterLift(EnemyType type, bool boss, int battleLevel = 1) =>
+        FeetPixels(type) / 64f * Progression.Island.UnitScale * (boss ? Progression.Island.BossScaleFor(type, Progression.Island.AkinOfLevel(battleLevel)) : 1f);
 
     // ==================== TINY SWORDS GÖRSELİ ====================
 
@@ -131,7 +144,7 @@ public sealed class IslandEnemy : MonoBehaviour
                     frames.idle = catalog.raiderIdle; frames.run = catalog.raiderRun; frames.attack = catalog.raiderAttack; break;
             }
         }
-        float scale = Progression.Island.UnitScale * (boss ? Progression.Island.BossScale : 1f);
+        float scale = Progression.Island.UnitScale * BossFactor;
         if (frames.HasArt) sr.sprite = IslandVisualCatalog.Has(frames.idle) ? frames.idle[0] : frames.run[0];
         transform.localScale = new Vector3(scale, scale, 1f);
         sr.color = Color.white;
@@ -147,14 +160,14 @@ public sealed class IslandEnemy : MonoBehaviour
     private void ApplyMonsterLook(MonsterEntry monsterEntry, bool boss)
     {
         entry = monsterEntry;
-        suffix = Type == EnemyType.WoodGolem ? "Golem" : "";
+        suffix = IslandTargeting.IsGolem(Type) ? "Golem" : "";   // Golem denetleyicilerinde durum adları "IdleGolem/MoveGolem..." (Magma'da yalnız "Idle"): Play ikisini de dener
         var instance = Instantiate(entry.prefab, transform);
         instance.name = "Monster_" + entry.key;
         monster = instance.transform;
         // Boyut: gövde yüksekliği hedefe normalize edilir (Kızıl Warrior ≈ 1 u); boss ayrıca BossScale.
-        float k = entry.targetHeight / Mathf.Max(0.05f, entry.bodyHeight) * (boss ? Progression.Island.BossScale : 1f);
+        float k = entry.targetHeight / Mathf.Max(0.05f, entry.bodyHeight) * BossFactor;
         baseVisualScale = monster.localScale * k;
-        visualHeight = entry.targetHeight * (boss ? Progression.Island.BossScale : 1f);
+        visualHeight = entry.targetHeight * BossFactor;
         bool flier = IslandTargeting.RoleOf(Type) == IslandTargeting.Role.Flyer;
         flierLook = flier;
         centerX = entry.centerOffsetX * k;
@@ -197,16 +210,22 @@ public sealed class IslandEnemy : MonoBehaviour
         ApplyFacing(true);
     }
 
+    private readonly Dictionary<string, string> resolvedStates = new Dictionary<string, string>();
     private string StateName(string baseName) => baseName + suffix;
 
     /// <summary>Parametresiz animasyon: doğrudan durum adıyla (Idle/Move/Attack/SpecialAttack/Stuned/Death/Climb).</summary>
     public void Play(string baseName, bool force = false)
     {
         if (animator == null) return;
-        string state = StateName(baseName);
+        if (!resolvedStates.TryGetValue(baseName, out string state))
+        {
+            foreach (var candidate in new[] { StateName(baseName), baseName, baseName + "Golem" })
+                if (animator.HasState(0, Animator.StringToHash(candidate))) { state = candidate; break; }
+            resolvedStates[baseName] = state;   // yoksa null
+        }
+        if (state == null) return;
         if (!force && CurrentState == state) return;
         int hash = Animator.StringToHash(state);
-        if (!animator.HasState(0, hash)) return;
         CurrentState = state;
         animator.Play(hash, 0, 0f);
     }
@@ -257,7 +276,17 @@ public sealed class IslandEnemy : MonoBehaviour
     /// <summary>Okun gerçek hasarı: Kalkanlı Mızrakçı önden gelen tek atışı ×0,3, Ahşap Golem dolu olmayan oku ×0,6 alır (§7.3).</summary>
     public float ArrowDamage(float damage, bool charged, Vector2? from)
     {
+        if (Type == EnemyType.CrystalGolem && charged)
+        {
+            IslandStats.CrystalWeakHits++;
+            return damage * Progression.Island.CrystalGolemChargedTaken;   // zayıf nokta
+        }
         if (charged) return damage;
+        if (Type == EnemyType.StoneGolem || Type == EnemyType.CrystalGolem)
+        {
+            IslandStats.GolemArmorHits++;
+            return damage * (Type == EnemyType.StoneGolem ? Progression.Island.StoneGolemArrowTaken : Progression.Island.CrystalGolemArrowTaken);
+        }
         if (Type == EnemyType.WoodGolem)
         {
             IslandStats.GolemArmorHits++;
@@ -277,12 +306,63 @@ public sealed class IslandEnemy : MonoBehaviour
     }
 
     private bool wasWet = true;
+    private float roarMult = 1f, rootUntil, slowUntil, slowMult = 1f, burnUntil, burnDps, burnTick;
+
+    // ==================== YETENEK ETKİLERİ (Faz E2: Ağ Oku, Ateşli Ok) ====================
+
+    /// <summary>Ağ Oku: <paramref name="rootSeconds"/> sn kökleşir, sonra <paramref name="slowSeconds"/> sn hızı ×<paramref name="mult"/>.</summary>
+    public void Net(float rootSeconds, float slowSeconds, float mult)
+    {
+        if (!Alive) return;
+        rootUntil = Time.time + rootSeconds;
+        slowUntil = rootUntil + slowSeconds;
+        slowMult = mult;
+        Play("Stuned", true);
+        specialUntil = Time.time + rootSeconds;
+    }
+
+    /// <summary>Yürüyüş rotasının <paramref name="at"/> noktasına en yakın dalından sonrası (çağrılan birlik geriye yürümesin).</summary>
+    public Vector2[] RouteFromHere(Vector2 at)
+    {
+        if (Route == null || Route.Length == 0) return Route;
+        int best = 0;
+        for (int i = 1; i < Route.Length; i++)
+            if (Vector2.Distance(Route[i], at) < Vector2.Distance(Route[best], at)) best = i;
+        var rest = new Vector2[Route.Length - best];
+        System.Array.Copy(Route, best, rest, 0, rest.Length);
+        return rest;
+    }
+
+    public bool Rooted => Time.time < rootUntil;
+    public bool Slowed => Time.time < slowUntil;
+    public bool Burning => Alive && Time.time < burnUntil;
+
+    /// <summary>Ateşli Ok: <paramref name="seconds"/> sn boyunca saniyede <paramref name="dps"/> hasar.</summary>
+    public void Ignite(float seconds, float dps)
+    {
+        if (!Alive) return;
+        burnUntil = Time.time + seconds;
+        burnDps = dps;
+        burnTick = Time.time + 0.5f;
+        IslandFx.Play("fire_1", AimPoint + Vector2.up * 0.2f, 0.9f, 14f, false, transform);
+    }
+
+    private void TickEffects()
+    {
+        Controller.SpeedMultiplier = roarMult * (Time.time < rootUntil ? 0f : Time.time < slowUntil ? slowMult : 1f);
+        if (Alive && Time.time < burnUntil && Time.time >= burnTick)
+        {
+            burnTick = Time.time + 0.5f;
+            Controller.TakeDamage(burnDps * 0.5f, DamageSource.IslandArcher);
+        }
+    }
 
     private void Update()
     {
         if (Controller == null) return;
         Vector2 delta = transform.position - lastPosition;
         if (delta.sqrMagnitude > 0.000001f && Alive) MoveDirection = delta.normalized;
+        TickEffects();
         bool wet = IsWet;
         if (wet != wasWet) { wasWet = wet; ApplyWet(wet); }
         if (Controller.LastAttackTime != lastSeenAttack)
@@ -315,7 +395,7 @@ public sealed class IslandEnemy : MonoBehaviour
                 IslandFx.FloatText(transform.position + Vector3.up * (visualHeight + 0.9f), L.T("NARA!", "ROAR!"), new Color(1f, 0.55f, 0.3f), 5f);
                 specialUntil = Time.time + 0.6f;
             }
-            Controller.SpeedMultiplier = Time.time < roarUntil ? Progression.Island.ButcherRoarSpeed : 1f;
+            roarMult = Time.time < roarUntil ? Progression.Island.ButcherRoarSpeed : 1f;
         }
         if (Controller.LastHitTime != lastSeenHit)
         {
@@ -326,7 +406,8 @@ public sealed class IslandEnemy : MonoBehaviour
         if (flash) TintMonster(new Color(1f, 0.45f, 0.4f));
         else if (monsterRenderers != null && monsterRenderers.Length > 0 && monsterRenderers[0] != null && monsterRenderers[0].color != CurrentTint()) TintMonster(CurrentTint());
 
-        if (Time.time < specialUntil) Play("SpecialAttack");
+        if (Rooted) Play("Stuned");
+        else if (Time.time < specialUntil) Play("SpecialAttack");
         else if (Time.time < attackUntil) Play("Attack");
         else if (moving) Play(Type == EnemyType.Rat && IslandLayout.IsCliff(Mathf.FloorToInt(transform.position.x),
             IslandLayout.Height - 1 - Mathf.FloorToInt(transform.position.y)) ? "Climb" : "Move");
@@ -335,7 +416,12 @@ public sealed class IslandEnemy : MonoBehaviour
             monster.localPosition = baseVisualPosition + Vector3.up * (Mathf.Sin(Time.time * 6f + transform.position.x) * 0.08f);
     }
 
-    private Color CurrentTint() => IsWet ? new Color(dryTint.r * WetTint.r, dryTint.g * WetTint.g, dryTint.b * WetTint.b) : dryTint;
+    private Color CurrentTint()
+    {
+        Color c = IsWet ? new Color(dryTint.r * WetTint.r, dryTint.g * WetTint.g, dryTint.b * WetTint.b) : dryTint;
+        c.a *= TintAlpha;
+        return c;
+    }
 
     private void TintMonster(Color color)
     {

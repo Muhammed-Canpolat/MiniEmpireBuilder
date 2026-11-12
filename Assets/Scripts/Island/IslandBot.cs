@@ -44,7 +44,9 @@ public sealed class IslandBot : MonoBehaviour
         }
         var target = Archer.Resolve();
         bool armored = target != null && target.enemy != null &&
-            (target.enemy.Type == EnemyType.ShieldLancer || target.enemy.Type == EnemyType.WoodGolem || target.enemy.Type == EnemyType.ButcherCaptain);
+            (target.enemy.Type == EnemyType.ShieldLancer || IslandTargeting.IsGolem(target.enemy.Type) || Progression.Island.IsBossType(target.enemy.Type)
+             || target.enemy.Type == EnemyType.Demon || target.enemy.Type == EnemyType.ZombieWarrior);
+        UseAbilities(target, armored);
         if (armored)
         {
             // Zırhlı/kalkanlı/boss: dolu atış (basılı tut, ≥1,2 sn sonra bırak); oto-ateş basılıyken susar.
@@ -64,6 +66,17 @@ public sealed class IslandBot : MonoBehaviour
             Archer.PressFire();
             Archer.ReleaseFire();
         }
+    }
+
+    /// <summary>İyi bot yetenekleri: Ok Yağmuru ≥3 hedef kümesinde, Ateşli Ok zırhlı/boss hedefte, Ağ Oku boss/golem/elit hedefte.</summary>
+    private void UseAbilities(IslandTarget target, bool armored)
+    {
+        var abilities = IslandAbilities.Instance;
+        if (abilities == null || target == null) return;
+        if (abilities.CanUse(IslandAbilities.Kind.Volley) && IslandAbilities.InCircle(target.Position, Progression.Island.VolleyRadius).Count >= 3)
+            abilities.Use(IslandAbilities.Kind.Volley);
+        if (armored && abilities.CanUse(IslandAbilities.Kind.FireArrow)) abilities.Use(IslandAbilities.Kind.FireArrow);
+        if (armored && target.enemy != null && !target.enemy.Rooted && abilities.CanUse(IslandAbilities.Kind.Net)) abilities.Use(IslandAbilities.Kind.Net);
     }
 
     /// <summary>Hedef sayısı (kaleye yakın olanlar 3×) en yüksek atış yerine geçer; mevcut yerde hedef varsa kalır.</summary>

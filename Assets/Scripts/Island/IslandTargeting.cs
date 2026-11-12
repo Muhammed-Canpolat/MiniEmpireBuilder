@@ -21,13 +21,18 @@ public static class IslandTargeting
     {
         switch (type)
         {
-            case EnemyType.ShoreArcher: return Role.Ranged;
-            case EnemyType.Rat: return Role.Fast;
-            case EnemyType.Bat: return Role.Flyer;
-            case EnemyType.WoodGolem: return Role.Tank;
+            case EnemyType.ShoreArcher: case EnemyType.SkeletonArcher: case EnemyType.BoneMage:
+            case EnemyType.Spider: case EnemyType.Succubus: return Role.Ranged;
+            case EnemyType.Rat: case EnemyType.Imp: return Role.Fast;
+            case EnemyType.Bat: case EnemyType.Ghost: case EnemyType.RedDragon: return Role.Flyer;
+            case EnemyType.WoodGolem: case EnemyType.StoneGolem: case EnemyType.CrystalGolem: case EnemyType.MagmaGolem: return Role.Tank;
             default: return Role.Melee;
         }
     }
+
+    /// <summary>Golem ailesi (Ahşap/Taş/Kristal/Magma): zırhlı tank, dolu atış ister.</summary>
+    public static bool IsGolem(EnemyType type) =>
+        type == EnemyType.WoodGolem || type == EnemyType.StoneGolem || type == EnemyType.CrystalGolem || type == EnemyType.MagmaGolem;
 
     private static Result Of(IslandBuilding building) =>
         new Result { target = building.transform, point = building.Center, radius = building.Radius };
@@ -136,12 +141,19 @@ public static class IslandDefeat
             return new IslandDefeatLabel { tag = Unexplained, text = L.T("Kale düştü.", "The keep fell."), explained = false };
         float Share(EnemyType t) => damageByType.TryGetValue(t, out float v) ? v / total : 0f;
 
-        if (Share(EnemyType.Bat) >= 0.30f)
+        if (Share(EnemyType.Bat) + Share(EnemyType.Ghost) + Share(EnemyType.RedDragon) >= 0.30f)
             return Label("flyer_unanswered", L.T("Yarasaları yalnız kuleler ve okçu vurabilir.", "Only towers and the archer can hit bats."));
-        if (Share(EnemyType.WoodGolem) >= 0.30f)
-            return Label("golem_armor", L.T("Golemlere dolu atış kullan.", "Use charged shots on golems."));
-        if (Share(EnemyType.ButcherCaptain) >= 0.40f)
-            return Label("boss_unbroken", L.T("Kasap Kaptan kaleyi ezdi: önce onu dolu atışla düşür.", "The Butcher crushed the keep: take him down first with charged shots."));
+        if (Share(EnemyType.WoodGolem) + Share(EnemyType.StoneGolem) + Share(EnemyType.CrystalGolem) + Share(EnemyType.MagmaGolem) >= 0.30f)
+            return Label("golem_armor", L.T("Golemlere dolu atış kullan (Kristal Golem'in zayıf noktası dolu atıştır).", "Use charged shots on golems (the Crystal Golem is weak to them)."));
+        float bossShare = Share(EnemyType.ButcherCaptain) + Share(EnemyType.SunkenKnight) + Share(EnemyType.RedDragon);
+        if (bossShare >= 0.40f)
+        {
+            string boss = Share(EnemyType.SunkenKnight) >= Share(EnemyType.ButcherCaptain) && Share(EnemyType.SunkenKnight) >= Share(EnemyType.RedDragon) ? EnemyTypeInfo.DisplayName(EnemyType.SunkenKnight)
+                : Share(EnemyType.RedDragon) >= Share(EnemyType.ButcherCaptain) ? EnemyTypeInfo.DisplayName(EnemyType.RedDragon) : EnemyTypeInfo.DisplayName(EnemyType.ButcherCaptain);
+            return Label("boss_unbroken", L.T($"{boss} kaleyi ezdi: önce onu dolu atışla düşür.", $"{boss} crushed the keep: take it down first with charged shots."));
+        }
+        if (IslandStats.MageHealed >= 150f)
+            return Label("mage_heal", L.T("Kemik Büyücüler düşmanları iyileştirdi: önce büyücüleri vur.", "Bone Mages kept healing the horde: shoot the mages first."));
         if (Share(EnemyType.Rat) >= 0.25f)
             return Label("climber_shortcut", L.T("Fareler yardan tırmandı: yar başına kule koy.", "Rats climbed the cliffs: put a tower at the cliff top."));
         if (Share(EnemyType.ShieldLancer) >= 0.30f || (shieldBlocks >= 6 && Share(EnemyType.ShieldLancer) >= 0.15f))

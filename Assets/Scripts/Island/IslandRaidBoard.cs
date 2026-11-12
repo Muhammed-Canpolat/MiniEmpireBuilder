@@ -255,13 +255,15 @@ public sealed class IslandRaidBoard
             card.waves.text = L.T($"{Progression.Island.AkinWaves(n)} dalga · {Progression.Island.AkinBoats(n)} tekne{boss}",
                 $"{Progression.Island.AkinWaves(n)} waves · {Progression.Island.AkinBoats(n)} boats{boss}");
             var roster = IslandWaves.RosterFor(n);
+            int skip = Mathf.Max(0, roster.Count - card.portraits.Count);   // Kademe II+: en yeni türler görünür (kadro 6'dan uzun)
             for (int p = 0; p < card.portraits.Count; p++)
             {
-                bool has = p < roster.Count;
+                bool has = p + skip < roster.Count;
                 card.portraits[p].gameObject.SetActive(has);
                 if (!has) continue;
-                card.portraits[p].sprite = PortraitOf(roster[p]);
-                card.portraits[p].rectTransform.localScale = Vector3.one * PortraitScale(roster[p]);
+                var shown = roster[p + skip];
+                card.portraits[p].sprite = PortraitOf(shown);
+                card.portraits[p].rectTransform.localScale = Vector3.one * PortraitScale(shown);
                 card.portraits[p].color = n > highestAkin + 1 ? new Color(0.45f, 0.45f, 0.45f) : Color.white;
             }
             int beaches = Mathf.Min(Progression.Island.BeachesOpen(n), IslandLayout.Beaches.Length);

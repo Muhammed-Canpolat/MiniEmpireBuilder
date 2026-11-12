@@ -161,9 +161,20 @@ public sealed class IslandLancer : MonoBehaviour
         return best;
     }
 
-    private void Update()
+    private float stunUntil;
+    public bool Stunned => Time.time < stunUntil;
+    /// <summary>Sukkubus büyüsü: Lancer <paramref name="seconds"/> sn boyunca durur, vuramaz.</summary>
+    public void Stun(float seconds)
     {
         if (!Alive) return;
+        stunUntil = Mathf.Max(stunUntil, Time.time + seconds);
+        sr.color = new Color(0.8f, 0.6f, 1f);
+        sr.DOColor(Color.white, seconds).SetLink(sr.gameObject);
+    }
+
+    private void Update()
+    {
+        if (!Alive || Time.time < stunUntil) return;
         var setup = IslandSceneSetup.Instance;
         bool fighting = setup == null || setup.Raid == null || setup.Raid.Phase == IslandRaidManager.State.Running;
         Vector2 home = HomePoint();

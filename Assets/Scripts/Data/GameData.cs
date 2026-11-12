@@ -54,7 +54,23 @@ public enum EnemyType
     Rat,            // Fare — DM2D, hızlı, yarı tırmanır, üretim binasına gider
     Bat,            // Yarasa — DM2D, uçan, teknesiz gelir, Okçu Kaptan'a dalar
     WoodGolem,      // Ahşap Golem — DM2D, tank, ok/kule ×0,6
-    ButcherCaptain  // Kasap Kaptan — DM2D, 10. Akın boss'u
+    ButcherCaptain, // Kasap Kaptan — DM2D, 10. Akın boss'u
+    // Martı Adası v2 Faz E2 (§7.3): Kademe II–IV. Zombi mevcut Zombie değerini kullanır (ada modunda DM2D görünümü).
+    SkeletonWarrior, // İskelet Savaşçı — yakın sürü
+    SkeletonArcher,  // İskelet Okçu — menzilli
+    BoneMage,        // Kemik Büyücü — şifacı
+    Imp,             // İmp — sabotaj (yangın)
+    Spider,          // Örümcek — ağ atar
+    StoneGolem,      // Taş Golem — tank, zırh ×0,5
+    Ghost,           // Hayalet — uçan, aralıklı dokunulmaz
+    ZombieWarrior,   // Zombi Savaşçı — elit yakın
+    Succubus,        // Sukkubus — menzilli büyü, Lancer'ı durdurur
+    CrystalGolem,    // Kristal Golem — tank, zırh ×0,5, dolu atış ×1,5
+    Vampire,         // Vampir — elit, can çalar
+    Demon,           // İblis — elit ağır
+    MagmaGolem,      // Magma Golem — tank, ölünce yanma
+    SunkenKnight,    // Batık Şövalye — Akın 20 boss'u
+    RedDragon        // Kızıl Ejder — Akın 30 boss'u (uçan)
 }
 
 public static class EnemyTypeInfo
@@ -90,6 +106,21 @@ public static class EnemyTypeInfo
             case EnemyType.Bat: return L.T("Yarasa", "Bat");
             case EnemyType.WoodGolem: return L.T("Ahşap Golem", "Wood Golem");
             case EnemyType.ButcherCaptain: return L.T("Kasap Kaptan", "Butcher Captain");
+            case EnemyType.SkeletonWarrior: return L.T("İskelet Savaşçı", "Skeleton Warrior");
+            case EnemyType.SkeletonArcher: return L.T("İskelet Okçu", "Skeleton Archer");
+            case EnemyType.BoneMage: return L.T("Kemik Büyücü", "Bone Mage");
+            case EnemyType.Imp: return L.T("İmp", "Imp");
+            case EnemyType.Spider: return L.T("Örümcek", "Spider");
+            case EnemyType.StoneGolem: return L.T("Taş Golem", "Stone Golem");
+            case EnemyType.Ghost: return L.T("Hayalet", "Ghost");
+            case EnemyType.ZombieWarrior: return L.T("Zombi Savaşçı", "Zombie Warrior");
+            case EnemyType.Succubus: return L.T("Sukkubus", "Succubus");
+            case EnemyType.CrystalGolem: return L.T("Kristal Golem", "Crystal Golem");
+            case EnemyType.Vampire: return L.T("Vampir", "Vampire");
+            case EnemyType.Demon: return L.T("İblis", "Demon");
+            case EnemyType.MagmaGolem: return L.T("Magma Golem", "Magma Golem");
+            case EnemyType.SunkenKnight: return L.T("Batık Şövalye", "Sunken Knight");
+            case EnemyType.RedDragon: return L.T("Kızıl Ejder", "Red Dragon");
             default: return type.ToString();
         }
     }
@@ -412,6 +443,8 @@ public static class Progression
 
         // Akın merdiveni (§5)
         public static int AkinBattleLevel(int n) => 1 + Mathf.RoundToInt(0.8f * Mathf.Max(1, n));
+        /// <summary>AkinBattleLevel'in tersi (savaş seviyesinden Akın numarası; boss boyu ve tekne rengi için).</summary>
+        public static int AkinOfLevel(int level) => Mathf.Max(1, Mathf.RoundToInt((Mathf.Max(1, level) - 1) / 0.8f));
         public static int AkinWaves(int n) => n <= 2 ? 1 : n <= 9 ? 2 : n <= 24 ? 3 : 4;
         public static int AkinBoats(int n) => Mathf.Min(1 + Mathf.CeilToInt(Mathf.Max(1, n) / 3f), 7);
         /// <summary>Kumsal açılışı (A, B, C, D sırasıyla): A 1, B 4, C 9, D 15.</summary>
@@ -436,7 +469,12 @@ public static class Progression
         public const float RaidWinBonus = 0.10f;                              // canlı zafer: bekleyen üretime +%10
         public const float RaidLossTheftMult = 0.5f;                          // canlı yenilgi: çevrimdışı çalıntı ×0,5
         public static int RaidWinGold(int keep) => 10 + 2 * Mathf.Max(1, keep);
-        public static int RaidPower(int highestAkin) => Mathf.Max(1, highestAkin - RaidPowerBelowHighest);
+        /// <summary>Baskın gücü = en yüksek Akın − 2; boss Akın'ına denk gelirse (10, 20, 30...) baskında boss olmasın diye bir alta düşer.</summary>
+        public static int RaidPower(int highestAkin)
+        {
+            int power = Mathf.Max(1, highestAkin - RaidPowerBelowHighest);
+            return IsBossAkin(power) ? power - 1 : power;
+        }
         public const float HorizonBoatScale = 0.9f;                           // §8: 0,45 (Faz A: Kenney sprite'ları yarım boyda, ×2)
         public static int AkinWood(int n) => 25 + 8 * n;
         public static int AkinGold(int n) => 20 + 5 * n;
@@ -450,6 +488,74 @@ public static class Progression
         public const int FlyerSwarmMin = 3, FlyerSwarmMax = 5, FlyerFromAkin = 5;
         public const float FlyerTelegraph = 2f;
         public const float ButcherRoarEvery = 15f, ButcherRoarSpeed = 1.3f, ButcherRoarSeconds = 4f;
+
+        // ---- Faz E2: Kademe II–IV, bosslar, tekne renkleri, yetenekler (island_base_v2 §7.2, §7.3; island_base.md §3 yetenekler) ----
+        /// <summary>Kademe sınırları: I 1–9 Kızıl Korsanlar · II 10–19 Lanetli Tayfa · III 20–29 Batık Lejyon · IV 30+ Ejder Armadası.</summary>
+        public const int Tier2FromAkin = 10, Tier3FromAkin = 20, Tier4FromAkin = 30;
+        public static int TierOf(int akin) => akin >= Tier4FromAkin ? 4 : akin >= Tier3FromAkin ? 3 : akin >= Tier2FromAkin ? 2 : 1;
+        /// <summary>Kenney gemi rengi (§7.2): Kademe I kırmızı-haç (3) · II–III siyah-kafatası (2) · IV sarı (6); mavi düşmanda yok.</summary>
+        public static int BoatShipNumber(int akin) => akin >= Tier4FromAkin ? 6 : akin >= Tier2FromAkin ? 2 : 3;
+        /// <summary>Türlerin ilk görünüş Akın'ı (YENİ DÜŞMAN afişi, panodaki portre sırası, kadro). Boss türleri BossFor ile gelir.</summary>
+        public static int FirstAkinOf(EnemyType type)
+        {
+            switch (type)
+            {
+                case EnemyType.Raider: return 1;
+                case EnemyType.ShoreArcher: return ArcherFromAkin;
+                case EnemyType.Rat: return RatFromAkin;
+                case EnemyType.Bat: return FlyerFromAkin;
+                case EnemyType.ShieldLancer: return ShieldFromAkin;
+                case EnemyType.WoodGolem: return GolemFromAkin;
+                case EnemyType.ButcherCaptain: return BossEvery;
+                case EnemyType.SkeletonWarrior: case EnemyType.SkeletonArcher: return 11;
+                case EnemyType.Imp: return 12;
+                case EnemyType.BoneMage: return 13;
+                case EnemyType.Spider: return 15;
+                case EnemyType.Zombie: return 16;
+                case EnemyType.StoneGolem: return 17;
+                case EnemyType.Ghost: return 18;
+                case EnemyType.SunkenKnight: return 2 * BossEvery;
+                case EnemyType.ZombieWarrior: return 21;
+                case EnemyType.Succubus: return 23;
+                case EnemyType.CrystalGolem: return 25;
+                case EnemyType.Vampire: return 27;
+                case EnemyType.Demon: return 29;
+                case EnemyType.RedDragon: return 3 * BossEvery;
+                case EnemyType.MagmaGolem: return 32;
+                default: return int.MaxValue;
+            }
+        }
+        /// <summary>Boss Akın'ının bossu: 10 Kasap Kaptan · 20 Batık Şövalye · 30 Kızıl Ejder, sonra sırayla döner (40 Kasap ×1,15 ...).</summary>
+        public static EnemyType BossFor(int akin)
+        {
+            int k = Mathf.Max(1, akin / BossEvery);
+            switch ((k - 1) % 3) { case 0: return EnemyType.ButcherCaptain; case 1: return EnemyType.SunkenKnight; default: return EnemyType.RedDragon; }
+        }
+        public static bool IsBossType(EnemyType type) =>
+            type == EnemyType.ButcherCaptain || type == EnemyType.SunkenKnight || type == EnemyType.RedDragon;
+        /// <summary>Boss boy çarpanı: tasarım ×1,3 (Ejder ×1,2); her tamamlanan turda ×1,15 (§7.3 Kademe IV satırı).</summary>
+        public static float BossScaleFor(EnemyType type, int akin)
+        {
+            int round = Mathf.Max(0, (Mathf.Max(1, akin / BossEvery) - 1) / 3);
+            return (type == EnemyType.RedDragon ? 1.2f : BossScale) * Mathf.Pow(1.15f, round);
+        }
+        // Özel yetenekler (§7.3 "Özel" sütunu)
+        public const float MageHealEvery = 3f, MageHealRadius = 2.5f, MageHealFraction = 0.06f;
+        public const float ImpBurnSeconds = 3f, ImpBurnFractionPerSecond = 0.04f;
+        public const float WebSeconds = 2f, WebFireRateMult = 0.6f;
+        public const float GhostPhaseEvery = 6f, GhostPhaseSeconds = 1.5f;
+        public const float SuccubusStunEvery = 8f, SuccubusStunSeconds = 2f;
+        public const float VampireLifesteal = 0.30f;
+        public const float StoneGolemArrowTaken = 0.5f, CrystalGolemArrowTaken = 0.5f, CrystalGolemChargedTaken = 1.5f;
+        public const float MagmaBurnRadius = 1.5f, MagmaBurnSeconds = 3f, MagmaBurnFractionPerSecond = 0.05f;
+        public const float KnightSummonAtHealth = 0.5f; public const int KnightSummonCount = 4;
+        public const float DragonFireEvery = 10f, DragonFireLength = 3f, DragonFireDamageMult = 2f;
+        // Okçu yetenekleri (island_base.md §3): Ok Yağmuru L2, Ateşli Ok L4, Ağ Oku L6
+        public const int VolleyLevel = 2, FireArrowLevel = 4, NetLevel = 6;
+        public const float VolleyRadius = 1.8f, VolleySeconds = 1.5f, VolleyCooldown = 18f; public const int VolleyHits = 3;
+        public const int FireArrowShots = 3; public const float FireArrowCooldown = 22f;
+        public const float FireBoatSeconds = 5f, FireBoatFractionPerSecond = 0.06f, FireUnitSeconds = 3f, FireUnitArrowFractionPerSecond = 0.5f;
+        public const float NetRadius = 1.5f, NetCooldown = 20f, NetRootSeconds = 2.5f, NetSlowSeconds = 3f, NetSlowMult = 0.6f, NetBoatSeconds = 4f, NetBoatSlowMult = 0.5f;
         public const int GolemFromAkin = 8, ShieldFromAkin = 6, RatFromAkin = 3, ArcherFromAkin = 2;
         public const float TowerRange = 6f;
         /// <summary>Ada binasının savaş canı (§5): Kale CastleHp; Ev/Oduncu/Ağıl 80+20(L-1); Kule 80+30(L-1); Okçuluk 100+25(L-1).</summary>
@@ -950,6 +1056,68 @@ public class EnemyStats
             case EnemyType.ButcherCaptain:
                 stats.health = 450f; stats.damage = 20f; stats.moveSpeed = 0.9f;
                 stats.attackRange = 1.8f; stats.attackSpeed = 0.7f; stats.goldDrop = 120;
+                break;
+
+            // Martı Adası v2 Faz E2: Kademe II–IV (island_base_v2.md §7.3, sv 1 tabanı)
+            case EnemyType.SkeletonWarrior:
+                stats.health = 45f; stats.damage = 7f; stats.moveSpeed = 1.3f;
+                stats.attackRange = 1.3f; stats.attackSpeed = 0.9f; stats.goldDrop = 10;
+                break;
+            case EnemyType.SkeletonArcher:
+                stats.health = 26f; stats.damage = 6f; stats.moveSpeed = 1.3f;
+                stats.attackRange = 5.5f; stats.attackSpeed = 0.8f; stats.goldDrop = 12;
+                break;
+            case EnemyType.BoneMage:
+                stats.health = 40f; stats.damage = 5f; stats.moveSpeed = 1.1f;
+                stats.attackRange = 4f; stats.attackSpeed = 0.6f; stats.goldDrop = 18;
+                break;
+            case EnemyType.Imp:
+                stats.health = 26f; stats.damage = 5f; stats.moveSpeed = 2.4f;
+                stats.attackRange = 1.0f; stats.attackSpeed = 1.1f; stats.goldDrop = 10;
+                break;
+            case EnemyType.Spider:
+                stats.health = 40f; stats.damage = 6f; stats.moveSpeed = 1.8f;
+                stats.attackRange = 3f; stats.attackSpeed = 0.8f; stats.goldDrop = 14;
+                break;
+            case EnemyType.StoneGolem:
+                stats.health = 220f; stats.damage = 15f; stats.moveSpeed = 0.65f;
+                stats.attackRange = 1.6f; stats.attackSpeed = 0.55f; stats.goldDrop = 40;
+                break;
+            case EnemyType.Ghost:
+                stats.health = 35f; stats.damage = 6f; stats.moveSpeed = 1.6f;
+                stats.attackRange = 1.0f; stats.attackSpeed = 0.9f; stats.goldDrop = 14;
+                break;
+            case EnemyType.ZombieWarrior:
+                stats.health = 110f; stats.damage = 14f; stats.moveSpeed = 1.0f;
+                stats.attackRange = 1.5f; stats.attackSpeed = 0.7f; stats.goldDrop = 26;
+                break;
+            case EnemyType.Succubus:
+                stats.health = 70f; stats.damage = 9f; stats.moveSpeed = 1.3f;
+                stats.attackRange = 4.5f; stats.attackSpeed = 0.7f; stats.goldDrop = 28;
+                break;
+            case EnemyType.CrystalGolem:
+                stats.health = 260f; stats.damage = 16f; stats.moveSpeed = 0.65f;
+                stats.attackRange = 1.6f; stats.attackSpeed = 0.55f; stats.goldDrop = 45;
+                break;
+            case EnemyType.Vampire:
+                stats.health = 120f; stats.damage = 12f; stats.moveSpeed = 1.4f;
+                stats.attackRange = 1.4f; stats.attackSpeed = 0.9f; stats.goldDrop = 35;
+                break;
+            case EnemyType.Demon:
+                stats.health = 240f; stats.damage = 20f; stats.moveSpeed = 1.0f;
+                stats.attackRange = 1.8f; stats.attackSpeed = 0.6f; stats.goldDrop = 60;
+                break;
+            case EnemyType.MagmaGolem:
+                stats.health = 300f; stats.damage = 18f; stats.moveSpeed = 0.6f;
+                stats.attackRange = 1.6f; stats.attackSpeed = 0.5f; stats.goldDrop = 55;
+                break;
+            case EnemyType.SunkenKnight:
+                stats.health = 520f; stats.damage = 22f; stats.moveSpeed = 0.9f;
+                stats.attackRange = 1.8f; stats.attackSpeed = 0.7f; stats.goldDrop = 140;
+                break;
+            case EnemyType.RedDragon:
+                stats.health = 600f; stats.damage = 24f; stats.moveSpeed = 1.0f;
+                stats.attackRange = 3f; stats.attackSpeed = 0.6f; stats.goldDrop = 160;
                 break;
 
             case EnemyType.ForestWitch:

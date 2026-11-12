@@ -170,7 +170,8 @@ public sealed class IslandRaidManager : MonoBehaviour
         if (tutorialRun && Akin == 1) boats = 2;
         int openBeaches = Mathf.Min(Progression.Island.BeachesOpen(Akin), IslandLayout.Beaches.Length);
         bool lastWave = wave == TotalWaves;
-        if (IslandWaves.FlyerSwarmSize(Akin, wave) > 0) { pendingFlyers++; StartCoroutine(SpawnFlyers(wave)); }
+        bool dragonWave = !IsRaid && lastWave && Progression.Island.IsBossAkin(Akin) && Progression.Island.BossFor(Akin) == EnemyType.RedDragon;
+        if (IslandWaves.FlyerSwarmSize(Akin, wave) > 0 || dragonWave) { pendingFlyers++; StartCoroutine(SpawnFlyers(wave, dragonWave)); }
         for (int i = 0; i < boats; i++)
         {
             if (Phase != State.Running) yield break;
@@ -178,7 +179,7 @@ public sealed class IslandRaidManager : MonoBehaviour
             // Öğretici: ikinci tekne doğu kumsalından gelir (atış yeri değiştirmeyi öğretir).
             if (tutorialRun && Akin == 1 && i == 1) beach = 1;
             var kind = BoatKindFor(i);
-            bool isBossBoat = Progression.Island.IsBossAkin(Akin) && lastWave && i == boats - 1;
+            bool isBossBoat = !IsRaid && Progression.Island.IsBossAkin(Akin) && lastWave && i == boats - 1;   // baskında boss yok (RaidPower boss Akın'ına düşmez)
             if (isBossBoat) kind = Progression.Island.BoatKind.Barge;
             var crew = IslandWaves.CrewFor(kind, i, isBossBoat, Akin, wave);
             float speedMult = tutorialRun && Akin == 1 && i == 0 ? Progression.Island.TutorialBoatSpeedMult : 1f;
@@ -201,7 +202,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     }
 
     /// <summary>Uçanlar teknesiz gelir (§7.1): kenardan 3–5'lik sürü, 2 sn önce yön okuyla haber verilir.</summary>
-    private IEnumerator SpawnFlyers(int wave)
+    private IEnumerator SpawnFlyers(int wave, bool dragon = false)
     {
         int size = IslandWaves.FlyerSwarmSize(Akin, wave);
         Vector2 edge = IslandWaves.FlyerEdgePoint(Akin + wave);
@@ -215,9 +216,16 @@ public sealed class IslandRaidManager : MonoBehaviour
             if (Phase != State.Running) break;
             Vector2 at = edge + new Vector2(Mathf.Abs(inward.x) > Mathf.Abs(inward.y) ? 0f : (k - size * 0.5f) * 0.9f,
                 Mathf.Abs(inward.x) > Mathf.Abs(inward.y) ? (k - size * 0.5f) * 0.9f : 0f);
-            IslandEnemy.Spawn(EnemyType.Bat, BattleLevel, castle != null ? castle.transform : null, at, new Vector2[0], -1, false, false);
+            IslandEnemy.Spawn(IslandWaves.FlyerTypeAt(Akin, k), BattleLevel, castle != null ? castle.transform : null, at, new Vector2[0], -1, false, false);
             IslandStats.CrewTotal++; IslandStats.Landed++;
             yield return new WaitForSeconds(0.2f);
+        }
+        if (dragon && Phase == State.Running)
+        {
+            // Akın 30 bossu: Kızıl Ejder teknesiz, kenardan gelir (uçan boss)
+            IslandEnemy.Spawn(EnemyType.RedDragon, BattleLevel, castle != null ? castle.transform : null, edge + inward * 0.5f, new Vector2[0], -1, true, false);
+            IslandStats.CrewTotal++; IslandStats.Landed++;
+            bossSpawned = true;
         }
         pendingFlyers--;
     }
@@ -228,7 +236,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     {
         if (Phase != State.Running) return;
         var beach = IslandLayout.Beaches[boat.BeachIndex];
-        bool boss = type == EnemyType.ButcherCaptain;
+        bool boss = Progression.Island.IsBossType(type);
         if (boss) bossSpawned = true;
         var route = (Vector2[])beach.walkPath.Clone();
         IslandEnemy.Spawn(type, BattleLevel, castle != null ? castle.transform : null,

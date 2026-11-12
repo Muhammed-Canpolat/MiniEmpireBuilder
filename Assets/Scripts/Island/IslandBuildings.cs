@@ -232,7 +232,10 @@ public sealed class IslandTower : MonoBehaviour
 {
     public const float FireRate = 1.25f;   // ArcherTower: attackSpeed (BuildingData.ApplyLevelStats)
     private IslandBuilding building;
-    private float nextShot;
+    private float nextShot, webbedUntil;
+    public bool Webbed => Time.time < webbedUntil;
+    /// <summary>Örümcek ağı: <paramref name="seconds"/> sn atış hızı −%40.</summary>
+    public void Web(float seconds) { webbedUntil = Mathf.Max(webbedUntil, Time.time + seconds); IslandStats.WebHits++; }
     public float Range { get; private set; }
     public float Damage { get; private set; }
     public int Shots { get; private set; }
@@ -259,7 +262,7 @@ public sealed class IslandTower : MonoBehaviour
             if (d < bestDistance) { bestDistance = d; best = target; }
         }
         if (best == null) return;
-        nextShot = Time.time + 1f / FireRate;
+        nextShot = Time.time + 1f / FireRate / (Time.time < webbedUntil ? Progression.Island.WebFireRateMult : 1f);
         Shots++;
         IslandArrow.Fire(origin + Vector2.up * 1.3f, best, Damage, false);
         transform.DOComplete();

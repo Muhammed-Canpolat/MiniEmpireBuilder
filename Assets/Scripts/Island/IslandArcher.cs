@@ -23,6 +23,15 @@ public sealed class IslandTarget
         else boat.TakeArrow(damage, charged);
     }
 
+    /// <summary>Ateşli Ok isabeti (§ yetenekler): tekne %6/sn × 5 sn; birlik 0,5 × ok hasarı/sn × 3 sn.</summary>
+    public void Ignite(float arrowDamage)
+    {
+        if (!Valid) return;
+        IslandStats.Ignitions++;
+        if (enemy != null) enemy.Ignite(Progression.Island.FireUnitSeconds, arrowDamage * Progression.Island.FireUnitArrowFractionPerSecond);
+        else boat.Ignite(Progression.Island.FireBoatSeconds, Progression.Island.FireBoatFractionPerSecond);
+    }
+
     public bool Is(IslandTarget other) => other != null && other.Transform == Transform && Transform != null;
 
     /// <summary>Canlı tüm hedefler (düşmanlar + tekneler).</summary>
@@ -43,7 +52,8 @@ public static class IslandStats
     // Faz C: kime ne kadar hasar verildi (yenilgi etiketleri, §7.6)
     public static readonly Dictionary<EnemyType, float> DamageByType = new Dictionary<EnemyType, float>();
     public static readonly float[] CastleDamageByBeach = new float[4];
-    public static int ShieldBlocks, GolemArmorHits, BuildingsLost;
+    public static int ShieldBlocks, GolemArmorHits, BuildingsLost, CrystalWeakHits, WebHits, Ignitions, AbilityUses;
+    public static float MageHealed, VampireHealed;
     public static float BuildingDamage, ArcherDamageTaken, LancerDamageTaken, LancerDamageDealt;
 
     public static void Reset()
@@ -52,7 +62,8 @@ public static class IslandStats
         ArcherDamage = 0f;
         DamageByType.Clear();
         System.Array.Clear(CastleDamageByBeach, 0, CastleDamageByBeach.Length);
-        ShieldBlocks = GolemArmorHits = BuildingsLost = 0;
+        ShieldBlocks = GolemArmorHits = BuildingsLost = CrystalWeakHits = WebHits = Ignitions = AbilityUses = 0;
+        MageHealed = VampireHealed = 0f;
         BuildingDamage = ArcherDamageTaken = LancerDamageTaken = LancerDamageDealt = 0f;
     }
 
@@ -88,11 +99,11 @@ public sealed class IslandArrow : MonoBehaviour
     private IslandTarget target;
     private Vector2 lastKnown, origin;
     private float damage;
-    private bool charged;
+    private bool charged, fire;
 
-    public static void Fire(Vector2 from, IslandTarget target, float damage, bool charged)
+    public static void Fire(Vector2 from, IslandTarget target, float damage, bool charged, bool fire = false)
     {
-        var go = IslandFx.NewArrow(charged ? new Color(1f, 0.85f, 0.35f) : Color.white, from);
+        var go = IslandFx.NewArrow(fire ? new Color(1f, 0.5f, 0.15f) : charged ? new Color(1f, 0.85f, 0.35f) : Color.white, from);
         if (charged) go.transform.localScale = new Vector3(1.4f, 2f, 1f);
         var arrow = go.AddComponent<IslandArrow>();
         arrow.target = target;
@@ -100,6 +111,7 @@ public sealed class IslandArrow : MonoBehaviour
         arrow.lastKnown = target.Position;
         arrow.damage = damage;
         arrow.charged = charged;
+        arrow.fire = fire;
     }
 
     private void Update()
@@ -117,6 +129,7 @@ public sealed class IslandArrow : MonoBehaviour
     private void Impact()
     {
         target.Hit(damage, charged, origin);
+        if (fire) target.Ignite(damage);
         if (!charged) return;
         // Delme: hedefin ardındaki çizgide (≤0,7 u) en yakın 2 hedef daha.
         Vector2 dir = (target.Position - origin).normalized;
@@ -391,8 +404,9 @@ public sealed class IslandArcher : MonoBehaviour
     {
         var target = Resolve();
         if (target == null) return;
-        nextShot = Time.time + Progression.Island.FireCooldown;
-        if (auto) nextAuto = Time.time + Progression.Island.FireCooldown / Progression.Island.AutoFireRateMult;
+        float webbed = Time.time < webbedUntil ? Progression.Island.WebFireRateMult : 1f;   // Örümcek ağı: atış hızı −%40
+        nextShot = Time.time + Progression.Island.FireCooldown / webbed;
+        if (auto) nextAuto = Time.time + Progression.Island.FireCooldown / Progression.Island.AutoFireRateMult / webbed;
         float damage = Progression.Island.ArcherDamage(Level);
         if (charged) damage *= Progression.Island.ChargedMult;
         else if (UnityEngine.Random.value < Progression.Island.CritChance) damage *= Progression.Island.CritMult;
@@ -401,7 +415,8 @@ public sealed class IslandArcher : MonoBehaviour
         if (charged) IslandStats.ChargedShots++;
         IslandStats.ArcherDamage += damage;
         Vector2 from = (Vector2)transform.position + Vector2.up * 0.7f;
-        IslandArrow.Fire(from, target, damage, charged);
+        bool fireShot = IslandAbilities.TakeFireShot();
+        IslandArrow.Fire(from, target, damage, charged, fireShot);
         if (anim != null)
         {
             anim.Attack();
@@ -412,6 +427,16 @@ public sealed class IslandArcher : MonoBehaviour
     }
 
     // ==================== HASAR / ÖLÜM ====================
+
+    private float webbedUntil;
+    public bool Webbed => Time.time < webbedUntil;
+
+    /// <summary>Örümcek ağı: <paramref name="seconds"/> sn atış hızı −%40.</summary>
+    public void Web(float seconds)
+    {
+        webbedUntil = Mathf.Max(webbedUntil, Time.time + seconds);
+        IslandStats.WebHits++;
+    }
 
     public void TakeDamage(float amount)
     {

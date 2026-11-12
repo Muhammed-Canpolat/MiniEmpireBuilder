@@ -83,8 +83,8 @@ public sealed class RaidBoat : MonoBehaviour
         hull = hullObject.transform;
         sr = hullObject.AddComponent<SpriteRenderer>();
         int akin = Mathf.Max(1, Mathf.RoundToInt((battleLevel - 1) / 0.8f));
-        // Kademe I kırmızı (ship 3) · II–III siyah (ship 2) · IV sarı (ship 6); mavi kullanılmaz.
-        int tier = akin >= 30 ? 6 : akin >= 10 ? 2 : 3;
+        // Kademe I kırmızı (ship 3) · II–III siyah (ship 2) · IV sarı (ship 6); mavi kullanılmaz (§7.2).
+        int tier = Progression.Island.BoatShipNumber(akin);
         float scale;
         if (kind == Progression.Island.BoatKind.Rowboat)
         {
@@ -146,6 +146,47 @@ public sealed class RaidBoat : MonoBehaviour
             hull.localRotation = Quaternion.Euler(0f, 0f, heading + bob);
         }
         if (crewBadge != null && crew.Count > 0 && crewBadge.text != "×" + crew.Count) crewBadge.text = "×" + crew.Count;
+        TickBurn();
+    }
+
+    // ---- Faz E2: okçu yetenekleri (Ağ Oku yavaşlatır, Ateşli Ok tutuşturur) ----
+    private float slowUntil, slowMult = 1f, burnUntil, burnFraction, burnTick;
+
+    /// <summary>Ağ Oku: tekne <paramref name="seconds"/> sn boyunca hızı <paramref name="mult"/> ile çarpılır.</summary>
+    public void Slow(float mult, float seconds)
+    {
+        if (!Alive) return;
+        slowMult = Mathf.Min(slowMult < 1f && Time.time < slowUntil ? slowMult : 1f, mult);
+        slowUntil = Mathf.Max(slowUntil, Time.time + seconds);
+    }
+
+    /// <summary>Ateşli Ok: tekne <paramref name="seconds"/> sn boyunca azami canın <paramref name="fractionPerSecond"/> oranını saniyede yitirir.</summary>
+    public void Ignite(float seconds, float fractionPerSecond)
+    {
+        if (!Alive) return;
+        burnUntil = Time.time + seconds;
+        burnFraction = fractionPerSecond;
+        burnTick = Time.time + 0.5f;
+        IslandFx.Play("fire_2", transform.position, 0.9f, 14f, false, transform);
+    }
+
+    public bool Burning => Alive && Time.time < burnUntil;
+
+    private void TickBurn()
+    {
+        if (!Alive || Time.time >= burnUntil || Time.time < burnTick) return;
+        burnTick = Time.time + 0.5f;
+        TakeFire(MaxHealth * burnFraction * 0.5f);
+    }
+
+    /// <summary>Çarpansız hasar (yangın): teknenin hasar karesi ve batışı normal çalışır.</summary>
+    public void TakeFire(float damage)
+    {
+        if (!Alive) return;
+        Health = Mathf.Max(0f, Health - damage);
+        if (healthBar != null) healthBar.UpdateHealth(Health);
+        UpdateDamageSprite();
+        if (Health <= 0f) Sink();
     }
 
     private void Sail()
@@ -153,7 +194,7 @@ public sealed class RaidBoat : MonoBehaviour
         if (segment >= path.Length) { State = Phase.Landing; nextDisembark = Time.time + 0.5f; return; }
         Vector2 target = path[segment];
         Vector2 position = transform.position;
-        Vector2 next = Vector2.MoveTowards(position, target, speed * Time.deltaTime);
+        Vector2 next = Vector2.MoveTowards(position, target, speed * (Time.time < slowUntil ? slowMult : 1f) * Time.deltaTime);
         transform.position = next;
         Face(next - position);
         if (Vector2.Distance(next, target) < 0.02f) segment++;
