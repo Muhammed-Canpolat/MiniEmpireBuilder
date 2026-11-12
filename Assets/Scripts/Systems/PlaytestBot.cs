@@ -43,6 +43,8 @@ public static class PlaytestBot
         public List<string> errors = new List<string>();
         public List<string> stallDump = new List<string>(); // kilitlenmede canlı düşmanlar
         public float heroDamageShare;   // kahraman + Çırak hasarının toplam hasara oranı
+        public float allyDamageShare;   // Kışla Lancer'larının toplam hasara oranı (Faz F)
+        public int barracks, lancersSpawned, lancerDeaths;   // kurulu Kışla sayısı; savaşta doğan / ölen Lancer
         public List<string> damageBySource = new List<string>();
         public int wardBreaks;          // boss kalkanı kaç kez kırıldı
         public List<string> saboteurs = new List<string>(); // hero/tower/detonated sayıları
@@ -83,6 +85,11 @@ public static class PlaytestBot
             if (entry.isUnlocked && entry.level > 0)
                 save.placedBuildings.Add(new PlacedBuildingData
                     { slotId = "bot_" + slot++, buildingType = entry.buildingType.ToString(), level = entry.level });
+        // Faz F: 2. Kışla / 2. Köylü Evi açıldıysa beklenen oyuncu onu da kurar (bir seviye geride: yeni bina yetişmeye çalışır).
+        foreach (var type in new[] { BuildingType.Barracks, BuildingType.House })
+            if (baseLevel >= Progression.SecondUnlockLevel(type))
+                save.placedBuildings.Add(new PlacedBuildingData
+                    { slotId = "bot_" + slot++, buildingType = type.ToString(), level = Mathf.Max(1, baseLevel - 2) });
         return save;
     }
 
@@ -227,6 +234,11 @@ public static class PlaytestBot
             t.damageBySource.Add($"{pair.Key}:{pair.Value:0}");
         }
         t.heroDamageShare = totalDamage > 0f ? heroDamage / totalDamage : 0f;
+        EnemyController.DamageBySource.TryGetValue(DamageSource.Ally, out float allyDamage);
+        t.allyDamageShare = totalDamage > 0f ? allyDamage / totalDamage : 0f;
+        t.barracks = AllyBarracks.BarracksLevels(GameManager.Instance?.PlayerData).Count;
+        t.lancersSpawned = AllyBarracks.Spawned;
+        t.lancerDeaths = AllyBarracks.Deaths;
         foreach (var pair in EnemyController.SaboteurOutcomes) t.saboteurs.Add($"{pair.Key}:{pair.Value}");
         t.wardBreaks = maxWardBreaks;
         t.structuresDestroyed = destroyedSeen.Count;

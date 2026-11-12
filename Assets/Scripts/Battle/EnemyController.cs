@@ -507,6 +507,7 @@ public class EnemyController : MonoBehaviour
     private const float BreakerReach = 5.5f;   // Yıkıcı: kuleleri arama
     private const float ProvokeSeconds = 3f;   // Kahraman vurunca ona dönme süresi
     private const float RetargetInterval = 0.25f;
+    private const float AllyLancerAggroMaxRange = 2.5f;   // bundan uzun menzilli düşman Lancer'ı hedeflemez
     private const float BaseRadius = 1.2f;     // Ana Üs görseli geniş: kenarından vurulur
     private const float StructureRadius = 0.55f;
 
@@ -532,6 +533,8 @@ public class EnemyController : MonoBehaviour
         if (heroTarget != null) return heroTarget.CurrentHealth > 0f;
         var apprentice = currentTarget.GetComponent<BattleApprentice>();
         if (apprentice != null) return apprentice.CurrentHealth > 0f;
+        var allyTarget = currentTarget.GetComponent<AllyLancer>();
+        if (allyTarget != null) return allyTarget.Alive;
         return true;
     }
 
@@ -563,6 +566,12 @@ public class EnemyController : MonoBehaviour
         {
             SetTarget(hero.transform, hero.transform.position, 0f);
             return;
+        }
+        // Kışla Lancer'ı (Faz F): yakın dövüşçü, vuruş menzilindeki Lancer'a vurur (menzilliler ve uçanlar Ana Üs'e devam eder).
+        if (attackRange <= AllyLancerAggroMaxRange && !IsFlying)
+        {
+            var ally = AllyLancer.NearestTo(position, attackRange + 0.3f);
+            if (ally != null) { SetTarget(ally.transform, ally.Position, 0f); return; }
         }
 
         switch (EnemyRole)
@@ -714,6 +723,8 @@ public class EnemyController : MonoBehaviour
         if (heroCtrl != null) { heroCtrl.TakeDamage(damage); return; }
         var apprentice = currentTarget.GetComponent<BattleApprentice>();
         if (apprentice != null) { apprentice.TakeDamage(damage); return; }
+        var allyLancer = currentTarget.GetComponent<AllyLancer>();
+        if (allyLancer != null) { allyLancer.TakeDamage(damage); return; }
         var wallCtrl = currentTarget.GetComponent<WallController>();
         if (wallCtrl != null) wallCtrl.TakeDamage(damage);
     }

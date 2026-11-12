@@ -121,6 +121,8 @@ public class BattleManager : MonoBehaviour
 
         // Sahneyi oluştur (eğer otomatik kurulum istiyorsak)
         SetupBattleScene();
+        AllyBarracks.Spawned = AllyBarracks.Deaths = 0;
+        if (BattleSession.IsCampaign) AllyBarracks.Install(mainBaseTransform, this);   // Faz F: Ana Üs Kışlası Lancer'ları
         EnsureBattleVfxManager();
         OnGoldEarnedChanged?.Invoke(totalGoldEarned);
 
