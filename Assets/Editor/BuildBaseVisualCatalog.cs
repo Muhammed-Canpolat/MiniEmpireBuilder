@@ -134,6 +134,33 @@ public static class BuildBaseVisualCatalog
         Debug.Log($"[BaseVisual] Kart Atölyesi görselleri eklendi: {set.levels.Count(l => l.sprite != null)}/5 sprite.");
     }
 
+    /// <summary>
+    /// Kışla (Barracks.png) ve Köylü Evi (House1.png) görsellerini (5 renk) mevcut kataloğa ekler; diğer girdilere ve atlasa dokunmaz.
+    /// Batchmode: -executeMethod BuildBaseVisualCatalog.AddBaseBondVisuals.
+    /// </summary>
+    [MenuItem("Tools/Base Review/Add Barracks + House Visuals")]
+    public static void AddBaseBondVisuals()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<BaseVisualCatalog>(Output);
+        if (catalog == null) { Debug.LogError("[BaseVisual] Katalog yok: önce Build Visual Assets."); return; }
+        var list = (catalog.buildings ?? new BaseVisualCatalog.BuildingSet[0]).ToList();
+        foreach (var (type, file) in new[] { (BuildingType.Barracks, "Barracks"), (BuildingType.House, "House1") })
+        {
+            var set = new BaseVisualCatalog.BuildingSet { type = type };
+            for (int level = 0; level < 5; level++)
+            {
+                Sprite sprite = FirstSprite($"{Root}/Buildings/{Colors[level]} Buildings/{file}.png");
+                set.levels[level] = new BuildingLevelVisual { color = LevelColor(level), sprite = sprite };
+            }
+            list.RemoveAll(b => b != null && b.type == type);
+            list.Add(set);
+            Debug.Log($"[BaseVisual] {type} görselleri eklendi: {set.levels.Count(l => l.sprite != null)}/5 sprite ({file}).");
+        }
+        catalog.buildings = list.ToArray();
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+    }
+
     private static RuntimeAnimatorController[] UnitControllers(string folder, string subfolder, string prefix)
     {
         var result = new RuntimeAnimatorController[5];
