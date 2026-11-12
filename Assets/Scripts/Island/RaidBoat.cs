@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Korsan teknesi (Docs/design/island_base.md §3): kenardan kumsala sabit hızla gider. Batarsa içindeki herkes boğulur;
-/// kumsala varırsa tayfa 0,4 sn arayla iner, boş tekne geri çekilip kaybolur. Görsel kodla çizilir (gövde + yelken).
+/// Korsan teknesi (Docs/design/island_base_v2.md §7.2): kenardan kumsala sabit hızla gider. Batarsa içindeki herkes boğulur;
+/// kumsala varırsa tayfa 0,4 sn arayla iner, boş tekne geri çekilip kaybolur. Görsel: Kenney Pirate Pack gemileri
+/// (üstten, pruva aşağı bakar; dönüş = hız yönü + 90°). Hasarla sprite +6 / +12 kareye geçer, batışta +18 (gri batık).
+/// Düşman teknesi hiçbir zaman mavi değil (mavi oyuncunun rengi).
 /// </summary>
 public sealed class RaidBoat : MonoBehaviour
 {
@@ -22,6 +25,9 @@ public sealed class RaidBoat : MonoBehaviour
     public bool Alive => State == Phase.Sailing || State == Phase.Landing;
     public Vector2 Position => transform.position;
     public int CrewLeft => crew.Count;
+    /// <summary>Gövde sprite'ının dünya boyu (testler ve rozet yeri).</summary>
+    public float HullLength => hullLength;
+    public SpriteRenderer HullRenderer => sr;
 
     /// <summary>Tekne battı: (tekne, boğulan tayfa sayısı, boğulan tayfanın altın değeri).</summary>
     public event Action<RaidBoat, int, int> Sunk;
@@ -36,11 +42,15 @@ public sealed class RaidBoat : MonoBehaviour
     private float speed;
     private float nextDisembark;
     private SpriteRenderer sr;
+    private Transform hull;
     private HealthBar healthBar;
     private Vector2 landing;
-    private Vector3 baseScale;
     private float bobSeed;
-    private Vector2 lastPosition;
+    private int shipNumber;                 // 0: Sandal (hasar karesi yok)
+    private int damageStage;
+    private float heading;                  // derece (sprite pruvası aşağı: heading = hız açısı + 90)
+    private TextMeshPro crewBadge;
+    private float hullLength;
 
     public static RaidBoat Spawn(Progression.Island.BoatKind kind, int battleLevel, int beachIndex,
         IList<EnemyType> crewTypes, float speedMultiplier = 1f)
@@ -66,16 +76,51 @@ public sealed class RaidBoat : MonoBehaviour
         landing = beach.landing;
         transform.position = path[0];
         segment = 1;
-        sr = gameObject.AddComponent<SpriteRenderer>();
-        sr.sprite = IslandArt.Boat(kind);
-        float s = kind == Progression.Island.BoatKind.Barge ? 1.7f : kind == Progression.Island.BoatKind.Longboat ? 1.35f : 1.05f;
-        baseScale = new Vector3(s, s, 1f);
-        transform.localScale = baseScale;
+
+        var catalog = IslandVisualCatalog.Instance;
+        var hullObject = new GameObject("Hull");
+        hullObject.transform.SetParent(transform, false);
+        hull = hullObject.transform;
+        sr = hullObject.AddComponent<SpriteRenderer>();
+        int akin = Mathf.Max(1, Mathf.RoundToInt((battleLevel - 1) / 0.8f));
+        // Kademe I kırmızı (ship 3) · II–III siyah (ship 2) · IV sarı (ship 6); mavi kullanılmaz.
+        int tier = akin >= 30 ? 6 : akin >= 10 ? 2 : 3;
+        float scale;
+        if (kind == Progression.Island.BoatKind.Rowboat)
+        {
+            shipNumber = 0;
+            sr.sprite = catalog != null ? catalog.Single("dinghy" + (1 + UnityEngine.Random.Range(0, 3))) : null;
+            scale = Progression.Island.RowboatScale;
+        }
+        else
+        {
+            shipNumber = tier;
+            sr.sprite = catalog != null ? catalog.Single("ship_" + tier) : null;
+            scale = kind == Progression.Island.BoatKind.Barge ? Progression.Island.BargeScale : Progression.Island.LongboatScale;
+        }
+        hull.localScale = new Vector3(scale, scale, 1f);
+        hullLength = sr.sprite != null ? sr.sprite.bounds.size.y * scale : 1.5f;
         bobSeed = UnityEngine.Random.value * 6f;
         gameObject.AddComponent<IslandYSort>().bias = -20; // suda: karadaki birimlerin altında
-        healthBar = HealthBar.Create(transform, MaxHealth, new Vector3(0f, 1.0f * s, 0f), new Color(0.9f, 0.35f, 0.25f));
-        lastPosition = path[0];
+        healthBar = HealthBar.Create(transform, MaxHealth, new Vector3(0f, hullLength * 0.5f + 0.25f, 0f), new Color(0.9f, 0.35f, 0.25f));
+        Vector2 first = path.Length > 1 ? path[1] - path[0] : Vector2.down;
+        heading = Mathf.Atan2(first.y, first.x) * Mathf.Rad2Deg + 90f;
+        BuildCrewBadge();
         all.Add(this);
+    }
+
+    private void BuildCrewBadge()
+    {
+        var go = new GameObject("CrewBadge");
+        go.transform.SetParent(transform, false);
+        go.transform.localPosition = new Vector3(0f, -hullLength * 0.5f - 0.15f, 0f);
+        crewBadge = go.AddComponent<TextMeshPro>();
+        crewBadge.fontSize = 3.2f;
+        crewBadge.alignment = TextAlignmentOptions.Center;
+        crewBadge.color = new Color(1f, 0.95f, 0.85f);
+        crewBadge.fontStyle = FontStyles.Bold;
+        crewBadge.sortingOrder = IslandFx.FxSorting;
+        crewBadge.text = "×" + crew.Count;
     }
 
     private void OnDestroy()
@@ -92,9 +137,14 @@ public sealed class RaidBoat : MonoBehaviour
             case Phase.Landing: Land(); break;
             case Phase.Leaving: Leave(); break;
         }
-        // Hafif dalgalanma: yalnız görsel.
-        if (State != Phase.Sinking)
-            sr.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 2.2f + bobSeed) * 2.5f);
+        // Pruva hız yönüne döner; hafif dalgalanma yalnız görsel (Sandal %50 canın altında yalpalar).
+        if (State != Phase.Sinking && hull != null)
+        {
+            bool wobbly = shipNumber == 0 && Health < MaxHealth * 0.5f;
+            float bob = Mathf.Sin(Time.time * (wobbly ? 5f : 2.2f) + bobSeed) * (wobbly ? 7f : 2.5f);
+            hull.localRotation = Quaternion.Euler(0f, 0f, heading + bob);
+        }
+        if (crewBadge != null && crew.Count > 0 && crewBadge.text != "×" + crew.Count) crewBadge.text = "×" + crew.Count;
     }
 
     private void Sail()
@@ -110,16 +160,19 @@ public sealed class RaidBoat : MonoBehaviour
 
     private void Face(Vector2 delta)
     {
-        // Sprite sola bakar: sağa gidiyorsa çevir.
-        if (Mathf.Abs(delta.x) > 0.0005f) sr.flipX = delta.x > 0f;
+        if (delta.sqrMagnitude < 0.000001f) return;
+        float target = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg + 90f;
+        heading = Mathf.MoveTowardsAngle(heading, target, 240f * Time.deltaTime);
     }
 
     private void Land()
     {
+        Face(landing - (Vector2)transform.position);   // pruvayla kumsala yanaşır
         if (Time.time < nextDisembark) return;
         if (crew.Count == 0)
         {
             State = Phase.Leaving;
+            if (crewBadge != null) crewBadge.gameObject.SetActive(false);
             Finished?.Invoke(this);
             return;
         }
@@ -156,7 +209,21 @@ public sealed class RaidBoat : MonoBehaviour
         sr.DOKill();
         sr.color = new Color(1f, 0.6f, 0.55f);
         sr.DOColor(Color.white, 0.15f).SetLink(gameObject);
+        UpdateDamageSprite();
         if (Health <= 0f) Sink();
+    }
+
+    /// <summary>Can %66'nın altında +6, %33'ün altında +12 kare (kırmızı 3 → 9 → 15); Sandalın hasar karesi yok.</summary>
+    private void UpdateDamageSprite()
+    {
+        if (shipNumber == 0 || Health <= 0f) return;
+        float fraction = Health / Mathf.Max(1f, MaxHealth);
+        int stage = fraction < Progression.Island.BoatDamageAt[1] ? 2 : fraction < Progression.Island.BoatDamageAt[0] ? 1 : 0;
+        if (stage == damageStage) return;
+        damageStage = stage;
+        var catalog = IslandVisualCatalog.Instance;
+        var sprite = catalog != null ? catalog.Single("ship_" + (shipNumber + 6 * stage)) : null;
+        if (sprite != null) sr.sprite = sprite;
     }
 
     private void Sink()
@@ -172,9 +239,17 @@ public sealed class RaidBoat : MonoBehaviour
             IslandFx.FloatText(transform.position + Vector3.up * 0.5f,
                 L.T($"+{drowned} boğuldu", $"+{drowned} drowned"), new Color(0.6f, 0.85f, 1f));
         if (healthBar != null) healthBar.gameObject.SetActive(false);
+        if (crewBadge != null) crewBadge.gameObject.SetActive(false);
         float d = Progression.Island.BoatSinkSeconds;
-        transform.DORotate(new Vector3(0f, 0f, UnityEngine.Random.value < 0.5f ? 28f : -28f), d).SetLink(gameObject);
-        transform.DOMoveY(transform.position.y - 0.5f, d).SetLink(gameObject);
+        // Batık kare (+18, gri); %70 ölçeğe küçülür ve saydamlaşır. Sandal yalnız yatar ve kaybolur.
+        var catalog = IslandVisualCatalog.Instance;
+        if (shipNumber != 0 && catalog != null)
+        {
+            var wreck = catalog.Single("ship_" + (shipNumber + 18));
+            if (wreck != null) sr.sprite = wreck;
+        }
+        hull.DOScale(hull.localScale * 0.7f, d).SetLink(gameObject);
+        hull.DOLocalRotate(new Vector3(0f, 0f, heading + (UnityEngine.Random.value < 0.5f ? 28f : -28f)), d).SetLink(gameObject);
         sr.DOFade(0f, d).SetDelay(0.1f).OnComplete(() => Destroy(gameObject)).SetLink(gameObject);
     }
 

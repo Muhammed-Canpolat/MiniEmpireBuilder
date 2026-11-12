@@ -137,7 +137,8 @@ public sealed class IslandArcher : MonoBehaviour
     private int pathIndex;
     private float pathSpeed;
     private int pendingPost = -1;
-    private float archerScale = 0.9f;
+    private float archerScale = Progression.Island.UnitScale;
+    private const float FeetPixels = 40f;   // Tiny Swords Archer: ayak çizgisi merkezden 40 px aşağıda
 
     public static IslandArcher Create(int level, int keepLevel, int startPost = 0)
     {
@@ -159,45 +160,35 @@ public sealed class IslandArcher : MonoBehaviour
 
         var visual = new GameObject("Visual");
         visual.transform.SetParent(transform, false);
+        visual.transform.localPosition = new Vector3(0f, FeetPixels / 64f * archerScale, 0f);
         sr = visual.AddComponent<SpriteRenderer>();
         var catalog = IslandVisualCatalog.Instance;
         var frames = new IslandUnitFrames();
         if (catalog != null) { frames.idle = catalog.archerIdle; frames.run = catalog.archerRun; frames.attack = catalog.archerShoot; }
-        if (frames.HasArt)
-        {
-            sr.sprite = IslandVisualCatalog.Has(frames.idle) ? frames.idle[0] : frames.run[0];
-            visual.transform.localScale = Vector3.one * archerScale;
-        }
-        else
-        {
-            sr.sprite = IslandArt.Person;
-            sr.color = new Color(0.35f, 0.62f, 1f);
-            visual.transform.localScale = Vector3.one * 1.05f;
-        }
+        if (frames.HasArt) sr.sprite = IslandVisualCatalog.Has(frames.idle) ? frames.idle[0] : frames.run[0];
+        visual.transform.localScale = Vector3.one * archerScale;
         anim = visual.AddComponent<IslandSpriteAnimator>();
         anim.Setup(sr, frames);
         anim.AttackSeconds = 0.4f;
-        visual.AddComponent<IslandYSort>().bias = 8;
+        // Ayak çizgisi köktedir: sıralama kök y'sinden (görsel çocuk ayaktan yukarıda durur).
+        gameObject.AddComponent<IslandYSort>().bias = 8;
 
+        // Menzil halkası çizilmez (v2: halka yok); yalnız açık/kapalı durumunu taşıyan boş düğüm kalır.
         var ring = new GameObject("RangeRing");
         ring.transform.SetParent(transform, false);
-        var ringRenderer = ring.AddComponent<SpriteRenderer>();
-        ringRenderer.sprite = IslandArt.Ring;
-        ringRenderer.color = new Color(0.6f, 0.85f, 1f, 0.16f);
-        ringRenderer.sortingOrder = -10;
         rangeRing = ring.transform;
-        rangeRing.localScale = Vector3.one * Range * 2f;
 
+        // Hedef işareti: Tiny Swords imleç köşeleri (UI Elements/Cursors).
         var marker = new GameObject("LockMarker");
         var markerRenderer = marker.AddComponent<SpriteRenderer>();
-        markerRenderer.sprite = IslandArt.Crosshair;
-        markerRenderer.color = new Color(1f, 0.25f, 0.2f, 0.95f);
+        markerRenderer.sprite = catalog != null ? catalog.Single("cursor_brackets") : null;
+        markerRenderer.color = new Color(1f, 0.35f, 0.3f, 0.95f);
         markerRenderer.sortingOrder = IslandFx.FxSorting + 2;
         lockMarker = marker.transform;
-        lockMarker.localScale = Vector3.one * 0.9f;
+        lockMarker.localScale = Vector3.one * 0.6f;
         marker.SetActive(false);
 
-        healthBar = HealthBar.Create(transform, MaxHp, new Vector3(0f, 0.85f, 0f), new Color(0.35f, 0.65f, 1f));
+        healthBar = HealthBar.Create(transform, MaxHp, new Vector3(0f, 1.5f, 0f), new Color(0.35f, 0.65f, 1f));
     }
 
     private void OnDestroy()
@@ -310,7 +301,6 @@ public sealed class IslandArcher : MonoBehaviour
         transform.position = IslandLayout.Posts[CurrentPost].World;
         if (anim != null) anim.ForceRunning = false;
         rangeRing.gameObject.SetActive(true);
-        rangeRing.localScale = Vector3.one * Range * 2f;
         PostChanged?.Invoke(CurrentPost);
         if (pendingPost >= 0 && pendingPost != CurrentPost) MoveToPost(pendingPost);
     }
@@ -327,7 +317,7 @@ public sealed class IslandArcher : MonoBehaviour
         if (lockMarker.gameObject.activeSelf != show) lockMarker.gameObject.SetActive(show);
         if (!show) return;
         lockMarker.position = Locked.Position;
-        lockMarker.Rotate(0f, 0f, 90f * Time.deltaTime);
+        lockMarker.localScale = Vector3.one * (0.55f + 0.06f * Mathf.Sin(Time.time * 8f));
     }
 
     // ==================== HEDEF ====================
@@ -369,7 +359,7 @@ public sealed class IslandArcher : MonoBehaviour
         if (auto) IslandStats.AutoShots++;
         if (charged) IslandStats.ChargedShots++;
         IslandStats.ArcherDamage += damage;
-        Vector2 from = (Vector2)transform.position + Vector2.up * 0.25f;
+        Vector2 from = (Vector2)transform.position + Vector2.up * 0.7f;
         IslandArrow.Fire(from, target, damage, charged);
         if (anim != null)
         {
@@ -420,7 +410,6 @@ public sealed class IslandArcher : MonoBehaviour
         sr.enabled = true;
         sr.color = Color.white;
         rangeRing.gameObject.SetActive(true);
-        rangeRing.localScale = Vector3.one * Range * 2f;
         if (healthBar != null) { healthBar.gameObject.SetActive(true); healthBar.SetMax(MaxHp); }
         PostChanged?.Invoke(0);
     }

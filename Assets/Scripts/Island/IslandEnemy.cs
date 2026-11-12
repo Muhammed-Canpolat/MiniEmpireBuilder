@@ -32,6 +32,14 @@ public sealed class IslandEnemy : MonoBehaviour
     public static IslandEnemy Spawn(EnemyType type, int battleLevel, Transform castle, Vector2 position,
         Vector2[] route, int beachIndex, bool boss = false, bool wet = true)
     {
+        // Konum ve rota ayak noktalarıdır; kök sprite merkezinde durduğu için merkez yüksekliği eklenir.
+        float lift = CenterLift(type, boss);
+        position += Vector2.up * lift;
+        if (route != null)
+        {
+            route = (Vector2[])route.Clone();
+            for (int i = 0; i < route.Length; i++) route[i] += Vector2.up * lift;
+        }
         var go = new GameObject("Island_" + type);
         go.transform.position = position;
         var sr = go.AddComponent<SpriteRenderer>();
@@ -53,45 +61,41 @@ public sealed class IslandEnemy : MonoBehaviour
         if (boss) enemy.baseTakenMultiplier = 1f / Progression.Island.BossHpMult;
         if (wet) enemy.wetUntil = Time.time + Progression.Island.WetSeconds;
         enemy.ApplyWet(true);
-        go.AddComponent<IslandYSort>();
+        go.AddComponent<IslandYSort>().footOffset = lift;
         return enemy;
     }
 
+    /// <summary>Tiny Swords Kızıl birimlerde ayak çizgisi merkezden aşağı (px): Warrior 41, Archer 40, Lancer 38.</summary>
+    private static float FeetPixels(EnemyType type) =>
+        type == EnemyType.ShoreArcher ? 40f : type == EnemyType.Raider ? 38f : 41f;
+
+    /// <summary>Birim ayakta durduğu noktadan merkeze kaç dünya birimi yukarıdadır (kök = sprite merkezi).</summary>
+    public static float CenterLift(EnemyType type, bool boss) =>
+        FeetPixels(type) / 64f * Progression.Island.UnitScale * (boss ? Progression.Island.BossScale : 1f);
+
     private void ApplyLook(EnemyType type, bool boss)
     {
+        // v2 Faz A: Kızıl Warrior (Tayfa/Akıncı), Kızıl Lancer (Akıncı), Kızıl Archer (Kıyı Okçusu); hepsi Tiny Swords 1:1.
         var catalog = IslandVisualCatalog.Instance;
         var frames = new IslandUnitFrames();
-        Color tint = Color.white;
-        float scale = 0.8f;
         if (catalog != null)
         {
             switch (type)
             {
-                case EnemyType.Deckhand:
-                    frames.idle = catalog.deckhandIdle; frames.run = catalog.deckhandRun; frames.attack = catalog.deckhandAttack; break;
                 case EnemyType.ShoreArcher:
                     frames.idle = catalog.shoreArcherIdle; frames.run = catalog.shoreArcherRun; frames.attack = catalog.shoreArcherShoot; break;
+                case EnemyType.Raider:
+                    frames.idle = catalog.Frames("lancer_idle"); frames.run = catalog.Frames("lancer_run"); frames.attack = catalog.Frames("lancer_attack"); break;
                 default:
                     frames.idle = catalog.raiderIdle; frames.run = catalog.raiderRun; frames.attack = catalog.raiderAttack; break;
             }
         }
-        if (frames.HasArt)
-        {
-            sr.sprite = IslandVisualCatalog.Has(frames.idle) ? frames.idle[0] : frames.run[0];
-        }
-        else
-        {
-            // Yedek: renkli insan siluetleri (kırmızı tonları).
-            sr.sprite = IslandArt.Person;
-            tint = type == EnemyType.Deckhand ? new Color(0.95f, 0.45f, 0.4f)
-                : type == EnemyType.ShoreArcher ? new Color(0.95f, 0.7f, 0.3f) : new Color(0.75f, 0.2f, 0.2f);
-            scale = 0.9f;
-        }
-        if (boss) scale *= Progression.Island.BossScale;
+        float scale = Progression.Island.UnitScale * (boss ? Progression.Island.BossScale : 1f);
+        if (frames.HasArt) sr.sprite = IslandVisualCatalog.Has(frames.idle) ? frames.idle[0] : frames.run[0];
         transform.localScale = new Vector3(scale, scale, 1f);
-        sr.color = tint;
-        dryTint = tint;
-        Controller.BaseTint = tint;
+        sr.color = Color.white;
+        dryTint = Color.white;
+        Controller.BaseTint = Color.white;
         anim = gameObject.AddComponent<IslandSpriteAnimator>();
         anim.Setup(sr, frames);
         lastSeenAttack = Controller.LastAttackTime;

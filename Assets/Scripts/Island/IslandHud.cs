@@ -34,7 +34,9 @@ public sealed class IslandHud : MonoBehaviour
     private RectTransform safe;
     private TextMeshProUGUI titleText, resText, castleText, hintText, respawnText, prepTitle, prepInfo, autoLabel, homeLabel;
     private Image castleFill, hintBg, chargeRing, fireFace;
-    private GameObject prepPanel, fireRoot, resultPanel, autoRoot;
+    private GameObject prepPanel, fireRoot, resultPanel, autoRoot, dock, castleBar;
+    private bool prepOpen;
+    private TextMeshProUGUI akinDockLabel;
     private Button startButton, prevButton, nextButton, homeButton, autoButton;
     private TextMeshProUGUI startLabel;
     private int selectedAkin = 1;
@@ -67,6 +69,7 @@ public sealed class IslandHud : MonoBehaviour
         touch.Tapped = screen => setup.HandleScreenTap(screen);
 
         BuildTopBar();
+        BuildDock();
         BuildPrepPanel();
         BuildFireControls();
         BuildHint();
@@ -89,12 +92,13 @@ public sealed class IslandHud : MonoBehaviour
         homeLabel = homeButton.GetComponentInChildren<TextMeshProUGUI>();
         homeButton.onClick.AddListener(OnHome);
         titleText = ReferenceUiVisuals.Text(bar.transform, "Title", "", 15, Gold, TextAlignmentOptions.Center,
-            new Vector2(0.27f, 0), new Vector2(0.73f, 1), Vector2.zero, Vector2.zero, true);
+            new Vector2(0.24f, 0), new Vector2(0.60f, 1), Vector2.zero, Vector2.zero, true);
         resText = ReferenceUiVisuals.Text(bar.transform, "Resources", "", 12, ReferenceUiVisuals.Light, TextAlignmentOptions.Right,
-            new Vector2(0.68f, 0), Vector2.one, Vector2.zero, new Vector2(-8, 0), false, true);
+            new Vector2(0.58f, 0), new Vector2(0.86f, 1), Vector2.zero, new Vector2(-4, 0), false, true);
 
         var barBg = ReferenceUiVisuals.Image(safe, "CastleBar", new Vector2(0.18f, 1), new Vector2(0.82f, 1),
             new Vector2(0, -74), new Vector2(0, -58), new Color(0.05f, 0.04f, 0.03f, 0.85f));
+        castleBar = barBg.gameObject;
         castleFill = ReferenceUiVisuals.Image(barBg.transform, "Fill", Vector2.zero, Vector2.one, new Vector2(2, 2), new Vector2(-2, -2),
             new Color(0.35f, 0.7f, 0.95f));
         castleFill.sprite = IslandArt.Square;
@@ -102,6 +106,21 @@ public sealed class IslandHud : MonoBehaviour
         castleFill.fillMethod = Image.FillMethod.Horizontal;
         castleText = ReferenceUiVisuals.Text(barBg.transform, "Text", "", 11, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, false, true);
+    }
+
+    /// <summary>Alt dock (görünüm modu): AKIN düğmesi. Akın yalnız buradan başlar; ada girişte üs görünümü açılır (v2 §3).</summary>
+    private void BuildDock()
+    {
+        var root = new GameObject("Dock", typeof(RectTransform));
+        root.transform.SetParent(safe, false);
+        var rt = (RectTransform)root.transform;
+        rt.anchorMin = new Vector2(0.5f, 0); rt.anchorMax = new Vector2(0.5f, 0);
+        rt.offsetMin = new Vector2(-120, 26); rt.offsetMax = new Vector2(120, 92);
+        dock = root;
+        var button = ReferenceUiVisuals.Button(rt, "AkinButton", L.T("AKIN", "RAID"), true, Vector2.zero, Vector2.one,
+            Vector2.zero, Vector2.zero, 24);
+        akinDockLabel = button.GetComponentInChildren<TextMeshProUGUI>();
+        button.onClick.AddListener(() => { prepOpen = true; Refresh(); });
     }
 
     private void BuildPrepPanel()
@@ -129,6 +148,9 @@ public sealed class IslandHud : MonoBehaviour
             Refresh();
         });
         startButton.onClick.AddListener(OnStart);
+        var close = ReferenceUiVisuals.Button(panel.transform, "Close", "X", false, new Vector2(1, 1), new Vector2(1, 1),
+            new Vector2(-40, -10), new Vector2(-6, 24), 14);
+        close.onClick.AddListener(() => { prepOpen = false; Refresh(); });
     }
 
     private void BuildFireControls()
@@ -199,8 +221,8 @@ public sealed class IslandHud : MonoBehaviour
             new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 42), new Vector2(0, 72), 14);
         resultHome = ReferenceUiVisuals.Button(card.transform, "Home", L.T("ANA ÜS", "BASE"), false,
             new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 8), new Vector2(0, 38), 14);
-        resultNext.onClick.AddListener(() => { raid.ReturnToIdle(); selectedAkin = Mathf.Min(MaxSelectable(), raid.Akin + 1); Refresh(); });
-        resultAgain.onClick.AddListener(() => { raid.ReturnToIdle(); selectedAkin = raid.Akin; Refresh(); });
+        resultNext.onClick.AddListener(() => { raid.ReturnToIdle(); prepOpen = true; selectedAkin = Mathf.Min(MaxSelectable(), raid.Akin + 1); Refresh(); });
+        resultAgain.onClick.AddListener(() => { raid.ReturnToIdle(); prepOpen = true; selectedAkin = raid.Akin; Refresh(); });
         resultHome.onClick.AddListener(GoHome);
         resultPanel.SetActive(false);
     }
@@ -227,6 +249,7 @@ public sealed class IslandHud : MonoBehaviour
             Toast(GateText(selectedAkin));
             return;
         }
+        prepOpen = false;
         raid.StartAkin(selectedAkin);
         Refresh();
     }
@@ -283,14 +306,18 @@ public sealed class IslandHud : MonoBehaviour
         var state = raid.Phase;
         bool running = state == IslandRaidManager.State.Running;
         bool idle = state == IslandRaidManager.State.Idle;
-        prepPanel.SetActive(idle);
-        fireRoot.SetActive(running || idle);
+        if (!idle) prepOpen = false;
+        prepPanel.SetActive(idle && prepOpen);
+        dock.SetActive(idle && !prepOpen);
+        castleBar.SetActive(!idle);
+        fireRoot.SetActive(running);
         resultPanel.SetActive(state == IslandRaidManager.State.Won || state == IslandRaidManager.State.Lost);
         SnapSelection();
 
         if (idle)
         {
             int n = selectedAkin;
+            akinDockLabel.text = L.T($"AKIN {Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin))}", $"RAID {Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin))}");
             int keep = IslandSession.KeepLevel();
             bool can = raid.CanStart(n);
             var reward = IslandSession.RewardFor(n, IslandSession.Save?.highestAkin ?? 0);
