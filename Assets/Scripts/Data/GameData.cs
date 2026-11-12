@@ -362,8 +362,19 @@ public static class Progression
         public const float ChargeStart = 0.35f, ChargeFull = 1.2f, ChargedMult = 2.5f, ChargedHullMult = 1.5f;
         public const int ChargedPierce = 3;
         public const float ArcherRange = 7f, HighGroundRangeBonus = 1.5f, ArrowSpeed = 14f;
-        public const float ArcherRunSpeed = 4f, MinPostSwitch = 0.6f, ArcherRespawn = 8f;
+        public const float ArcherRunSpeed = 9f, MinPostSwitch = 0.6f, ArcherRespawn = 8f; // v2: 22x36 harita, koşu 9 u/sn
         public const float CastleDangerRadius = 3f;
+
+        // Ada görünümü ve harita (island_base_v2 §3, §4, §10 Faz A): sayılar yalnız burada
+        public const int MapWidth = 22, MapHeight = 36;
+        public const float CameraDefaultZoom = 0.70f, CameraMinZoom = 0.45f, BattleFrameWidth = 22f, BattleCameraSeconds = 0.8f;
+        /// <summary>Tiny Swords 1:1 (64 px/birim): kale 5, ev 2 hücre; birimler ölçeklenmez.</summary>
+        public const float UnitScale = 1f;
+        public const float EdgeCloudBattleAlpha = 0.4f, EdgeCloudCount = 7f;
+        public const float PawnRunSpeed = 2.4f, TreeRegrowSeconds = 180f, ChopsPerTree = 3f, TreeStumpEveryVisit = 3f;
+        /// <summary>Kenney gemileri 66x113 / 20x38 px (64 PPU); son boy: Sandal 1,48 · Akıncı 2,47 · Mavna 3,53 u.</summary>
+        public const float RowboatScale = 2.5f, LongboatScale = 1.4f, BargeScale = 2.0f;
+        public static readonly float[] BoatDamageAt = { 0.66f, 0.33f };
 
         // Tekne / iniş
         public const float WetSeconds = 1.5f, WetDamageTaken = 1.25f, DisembarkInterval = 0.4f;

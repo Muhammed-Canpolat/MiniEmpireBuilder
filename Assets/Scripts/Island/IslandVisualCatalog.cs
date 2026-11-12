@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,9 @@ public class IslandVisualCatalog : ScriptableObject
     public Sprite[] deckhandIdle, deckhandRun, deckhandAttack;   // Kırmızı Pawn bıçak
     public Sprite[] raiderIdle, raiderRun, raiderAttack;         // Kırmızı Warrior
     public Sprite[] shoreArcherIdle, shoreArcherRun, shoreArcherShoot; // Kırmızı Archer
+
+    [Header("v2: adlandırılmış kare dizileri (piyonlar, binalar, Lancer, Kenney tekneleri, koyun, arayüz)")]
+    public List<NamedFrames> named = new List<NamedFrames>();
 
     [Header("Yapılar ve simgeler")]
     public Sprite castle;
@@ -54,7 +58,34 @@ public class IslandVisualCatalog : ScriptableObject
         return index < tileset.Length ? tileset[index] : null;
     }
 
+    private Dictionary<string, Sprite[]> namedLookup;
+
+    /// <summary>Adlandırılmış kare dizisi (yoksa null). Adlar BuildIslandCatalog'da tanımlıdır.</summary>
+    public Sprite[] Frames(string name)
+    {
+        if (namedLookup == null)
+        {
+            namedLookup = new Dictionary<string, Sprite[]>();
+            foreach (var entry in named) if (entry != null && !string.IsNullOrEmpty(entry.name)) namedLookup[entry.name] = entry.frames;
+        }
+        return namedLookup.TryGetValue(name, out var frames) ? frames : null;
+    }
+
+    /// <summary>Tek kareli adlandırılmış sprite (yoksa null).</summary>
+    public Sprite Single(string name)
+    {
+        var frames = Frames(name);
+        return frames != null && frames.Length > 0 ? frames[0] : null;
+    }
+
     public static bool Has(Sprite[] frames) => frames != null && frames.Length > 0 && frames[0] != null;
+}
+
+[Serializable]
+public class NamedFrames
+{
+    public string name;
+    public Sprite[] frames;
 }
 
 /// <summary>Bir birimin kare kümesi (boşta / koşu / saldırı).</summary>

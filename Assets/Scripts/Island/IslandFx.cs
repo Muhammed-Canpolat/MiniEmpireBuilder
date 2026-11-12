@@ -2,7 +2,7 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 
-/// <summary>Ada efektleri: ok, su sıçraması, yüzen yazı. Katalog yoksa kodla çizilen yedekler.</summary>
+/// <summary>Ada efektleri: ok, su sıçraması, yüzen yazı (hepsi Tiny Swords varlıkları; katalog yoksa efekt çizilmez).</summary>
 public static class IslandFx
 {
     public const int FxSorting = 900;
@@ -22,7 +22,8 @@ public static class IslandFx
         var go = new GameObject("IslandArrow");
         go.transform.position = position;
         var renderer = go.AddComponent<SpriteRenderer>();
-        renderer.sprite = IslandArt.Arrow;
+        var catalog = IslandVisualCatalog.Instance;
+        renderer.sprite = catalog != null ? catalog.Single("arrow") : null;   // Tiny Swords Arrow.png (sağa bakar)
         renderer.color = color;
         renderer.sortingOrder = FxSorting;
         return go;
@@ -34,7 +35,7 @@ public static class IslandFx
         arrow.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
     }
 
-    /// <summary>Tekne batışı / ok düşüşü: su sıçraması. Katalogda kare yoksa genişleyen beyaz halka.</summary>
+    /// <summary>Tekne batışı / ok düşüşü: Tiny Swords su sıçraması.</summary>
     public static void Splash(Vector2 position, float size = 1.6f)
     {
         var catalog = IslandVisualCatalog.Instance;
@@ -51,11 +52,7 @@ public static class IslandFx
             Object.Destroy(go, catalog.splash.Length / 14f + 0.1f);
             return;
         }
-        renderer.sprite = IslandArt.Ring;
-        renderer.color = new Color(1f, 1f, 1f, 0.9f);
-        go.transform.localScale = Vector3.one * size * 0.3f;
-        go.transform.DOScale(size, 0.5f).SetEase(Ease.OutQuad).SetLink(go);
-        renderer.DOFade(0f, 0.5f).OnComplete(() => Object.Destroy(go)).SetLink(go);
+        Object.Destroy(go);   // katalog yoksa efekt yok (kodla çizilmiş yedek kaldırıldı)
     }
 
     /// <summary>Yükselerek sönen dünya yazısı ("+3 boğuldu").</summary>
@@ -135,14 +132,26 @@ public sealed class IslandSpriteAnimator : MonoBehaviour
     }
 }
 
-/// <summary>Sprite sıralaması y'ye göre (aşağıdaki öndedir).</summary>
+/// <summary>
+/// Sprite sıralaması ayak y'sine göre (aşağıdaki öndedir): <c>400 - round(feetY*10) + bias</c>; arazi katmanları (kit §7.4)
+/// bunun altındadır. Ayak, bileşenin bulunduğu nesnenin konumudur (görsel çocukta ise ayakta durur); sprite kök merkezliyse
+/// <see cref="footOffset"/> ayağın merkezden aşağı uzaklığıdır.
+/// </summary>
 public sealed class IslandYSort : MonoBehaviour
 {
+    public const int Base = 400;
     public int bias;
-    private SpriteRenderer sr;
-    private void Awake() => sr = GetComponent<SpriteRenderer>();
+    public float footOffset;
+    private SpriteRenderer[] renderers;
+
+    public static int OrderFor(float feetY, int bias = 0) => Base - Mathf.RoundToInt(feetY * 10f) + bias;
+
+    private void Awake() => renderers = GetComponentsInChildren<SpriteRenderer>(true);
+
     private void LateUpdate()
     {
-        if (sr != null) sr.sortingOrder = 400 - Mathf.RoundToInt(transform.position.y * 10f) + bias;
+        int order = OrderFor(transform.position.y - footOffset, bias);
+        for (int i = 0; i < renderers.Length; i++)
+            if (renderers[i] != null) renderers[i].sortingOrder = order;
     }
 }

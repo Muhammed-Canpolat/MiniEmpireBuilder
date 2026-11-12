@@ -187,6 +187,344 @@ MonoBehaviour:
   - {fileID: -2689744893154487746, guid: 750bc14c1e537452486c5efb15da4654, type: 3}
   - {fileID: 500622343033487627, guid: 750bc14c1e537452486c5efb15da4654, type: 3}
   - {fileID: 7309834836266252465, guid: 750bc14c1e537452486c5efb15da4654, type: 3}
+  named:
+  - name: pawn_idle
+    frames:
+    - {fileID: -5948806968594788206, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: -3890830800090718979, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: 5745166470278179504, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: -6422090140873712968, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: 7767364186329714561, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: -5623599378145798578, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: -5368615170522500559, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+    - {fileID: 5475363174786605065, guid: 4c87a6310f87c47f1b785669e6191f00, type: 3}
+  - name: pawn_run
+    frames:
+    - {fileID: 3948441758208983171, guid: 4f48e4ab7a963447da8d6a57e0d3fb72, type: 3}
+    - {fileID: 2305471599192555470, guid: 4f48e4ab7a963447da8d6a57e0d3fb72, type: 3}
+    - {fileID: -7094969777387991619, guid: 4f48e4ab7a963447da8d6a57e0d3fb72, type: 3}
+    - {fileID: -4352081444224747174, guid: 4f48e4ab7a963447da8d6a57e0d3fb72, type: 3}
+    - {fileID: 9036425764018463110, guid: 4f48e4ab7a963447da8d6a57e0d3fb72, type: 3}
+    - {fileID: -5774403828569277791, guid: 4f48e4ab7a963447da8d6a57e0d3fb72, type: 3}
+  - name: pawn_idle_axe
+    frames:
+    - {fileID: -1267550136445687439, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: 6151619871726895459, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: -6327378166219303843, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: 5373139676217456927, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: 4097080491917255687, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: 2928054160323077273, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: 5492190999761597152, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+    - {fileID: 7587918059113247910, guid: dfb7f37ce161b4a46b501b8d53d6a83a, type: 3}
+  - name: pawn_run_axe
+    frames:
+    - {fileID: -958176161520186388, guid: 7fabb4e4fbf404a4ca51c2b955974aaa, type: 3}
+    - {fileID: 6045000162924369486, guid: 7fabb4e4fbf404a4ca51c2b955974aaa, type: 3}
+    - {fileID: 3947637296732879053, guid: 7fabb4e4fbf404a4ca51c2b955974aaa, type: 3}
+    - {fileID: 8699398848657469395, guid: 7fabb4e4fbf404a4ca51c2b955974aaa, type: 3}
+    - {fileID: -691361357135129492, guid: 7fabb4e4fbf404a4ca51c2b955974aaa, type: 3}
+    - {fileID: -2113163453966986137, guid: 7fabb4e4fbf404a4ca51c2b955974aaa, type: 3}
+  - name: pawn_idle_wood
+    frames:
+    - {fileID: -5085043012632821289, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: -5994379859638548071, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: -823819071035115226, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: -833154056232300151, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: 108493789643531465, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: -5847663375154164504, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: 6887791974147412032, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+    - {fileID: 5880147983386880918, guid: cc848744b510a43769ea7c75daeff95c, type: 3}
+  - name: pawn_run_wood
+    frames:
+    - {fileID: -5097743339310255245, guid: a6e24f6ffcabb4334b16631a345b3b20, type: 3}
+    - {fileID: -3302185561732527826, guid: a6e24f6ffcabb4334b16631a345b3b20, type: 3}
+    - {fileID: -4551020046694785269, guid: a6e24f6ffcabb4334b16631a345b3b20, type: 3}
+    - {fileID: 380357489539277280, guid: a6e24f6ffcabb4334b16631a345b3b20, type: 3}
+    - {fileID: 7805829573303494951, guid: a6e24f6ffcabb4334b16631a345b3b20, type: 3}
+    - {fileID: -2686608414429815781, guid: a6e24f6ffcabb4334b16631a345b3b20, type: 3}
+  - name: pawn_idle_knife
+    frames:
+    - {fileID: -8426932590203072280, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: -7229173609508137377, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: -7005977519903919691, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: -6993651681036626996, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: 6905167437935120088, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: -9195265649778357946, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: 1213044548952237618, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+    - {fileID: 5529155541571196464, guid: c47a96ea76a32479fadb0e867cd08899, type: 3}
+  - name: pawn_run_knife
+    frames:
+    - {fileID: 4710687688261626355, guid: 3628ef28021454519934c163299826f6, type: 3}
+    - {fileID: -4087458063697255612, guid: 3628ef28021454519934c163299826f6, type: 3}
+    - {fileID: -1524242275452403800, guid: 3628ef28021454519934c163299826f6, type: 3}
+    - {fileID: -4016700092613472598, guid: 3628ef28021454519934c163299826f6, type: 3}
+    - {fileID: -1800003385275919816, guid: 3628ef28021454519934c163299826f6, type: 3}
+    - {fileID: -914304951817690999, guid: 3628ef28021454519934c163299826f6, type: 3}
+  - name: pawn_idle_meat
+    frames:
+    - {fileID: -6204943402206193772, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: -3129909716869165955, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: -7235056554443838409, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: -4440482267132465948, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: -1033137359544254729, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: 4081414510747251323, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: 735826692581283802, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+    - {fileID: -4296820450808306973, guid: 7d2bf3d76e4ef4acfbb226190dca1544, type: 3}
+  - name: pawn_run_meat
+    frames:
+    - {fileID: 5799779341347459245, guid: e9a634202eade4771bc4e747ccb45200, type: 3}
+    - {fileID: 1253374708327996498, guid: e9a634202eade4771bc4e747ccb45200, type: 3}
+    - {fileID: 1984608769305701924, guid: e9a634202eade4771bc4e747ccb45200, type: 3}
+    - {fileID: -3474626165232038075, guid: e9a634202eade4771bc4e747ccb45200, type: 3}
+    - {fileID: 4511737243138824817, guid: e9a634202eade4771bc4e747ccb45200, type: 3}
+    - {fileID: 5941728732924915974, guid: e9a634202eade4771bc4e747ccb45200, type: 3}
+  - name: pawn_idle_pickaxe
+    frames:
+    - {fileID: 222377792815555279, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: 4063784870428184418, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: 7764703495603305711, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: -4767586467243673879, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: 4554453384812065433, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: 2959871830974456573, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: 9052662415938520062, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+    - {fileID: -3749376832578831336, guid: 89cdb6d504f254ad3909459b83e98a6b, type: 3}
+  - name: pawn_run_pickaxe
+    frames:
+    - {fileID: -1348428937980183284, guid: 0e4bc3f71c0ef41b7871c381f88b2c86, type: 3}
+    - {fileID: -7533202399423498502, guid: 0e4bc3f71c0ef41b7871c381f88b2c86, type: 3}
+    - {fileID: -3305531190619353509, guid: 0e4bc3f71c0ef41b7871c381f88b2c86, type: 3}
+    - {fileID: 7770006171748745673, guid: 0e4bc3f71c0ef41b7871c381f88b2c86, type: 3}
+    - {fileID: -2373823074695700615, guid: 0e4bc3f71c0ef41b7871c381f88b2c86, type: 3}
+    - {fileID: 309191157347331178, guid: 0e4bc3f71c0ef41b7871c381f88b2c86, type: 3}
+  - name: pawn_idle_gold
+    frames:
+    - {fileID: -1118780227154915261, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: 6775793388062278142, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: -7136424255578481246, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: -5655606796119736812, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: -7834617139221469286, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: 8638547008626868264, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: -6996343520481393701, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+    - {fileID: 7421266744083835555, guid: 0ded4e71abe454e3ba6fe73f74f24e0b, type: 3}
+  - name: pawn_run_gold
+    frames:
+    - {fileID: 2932321786322880735, guid: 7252edec0f69847718a6bca076e76130, type: 3}
+    - {fileID: 7068027714915083470, guid: 7252edec0f69847718a6bca076e76130, type: 3}
+    - {fileID: 8904474459742203427, guid: 7252edec0f69847718a6bca076e76130, type: 3}
+    - {fileID: 1725903354682961715, guid: 7252edec0f69847718a6bca076e76130, type: 3}
+    - {fileID: -1169541222142315381, guid: 7252edec0f69847718a6bca076e76130, type: 3}
+    - {fileID: 3329887467678335695, guid: 7252edec0f69847718a6bca076e76130, type: 3}
+  - name: pawn_idle_hammer
+    frames:
+    - {fileID: -1438690674706414118, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: -6769589693572739235, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: 7671773035475251030, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: -3585113143308330294, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: -8036923346196360993, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: -2835223209331938337, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: 6479204062385371767, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+    - {fileID: -8804233758041304971, guid: 1a7a89a06ac8b4cfe9d873208bffe54d, type: 3}
+  - name: pawn_run_hammer
+    frames:
+    - {fileID: 412502240495993343, guid: 67c795b079b314b10b09a0860addf4e6, type: 3}
+    - {fileID: 1823362498776647365, guid: 67c795b079b314b10b09a0860addf4e6, type: 3}
+    - {fileID: 4504378021881162980, guid: 67c795b079b314b10b09a0860addf4e6, type: 3}
+    - {fileID: 462247125334077918, guid: 67c795b079b314b10b09a0860addf4e6, type: 3}
+    - {fileID: -6695372163347326071, guid: 67c795b079b314b10b09a0860addf4e6, type: 3}
+    - {fileID: 6584106843579084176, guid: 67c795b079b314b10b09a0860addf4e6, type: 3}
+  - name: pawn_interact_axe
+    frames:
+    - {fileID: 4690516624981630074, guid: 0df49cd343f6c45efaa2c0194f0c502f, type: 3}
+    - {fileID: 4820607410664315775, guid: 0df49cd343f6c45efaa2c0194f0c502f, type: 3}
+    - {fileID: 499994813579836661, guid: 0df49cd343f6c45efaa2c0194f0c502f, type: 3}
+    - {fileID: 5281750946635039065, guid: 0df49cd343f6c45efaa2c0194f0c502f, type: 3}
+    - {fileID: 6324080537177615244, guid: 0df49cd343f6c45efaa2c0194f0c502f, type: 3}
+    - {fileID: 3960961710712497688, guid: 0df49cd343f6c45efaa2c0194f0c502f, type: 3}
+  - name: pawn_interact_hammer
+    frames:
+    - {fileID: -1241957522165214808, guid: 8114b621d8ab44ee7bea7dd71516c390, type: 3}
+    - {fileID: -4152304209030961917, guid: 8114b621d8ab44ee7bea7dd71516c390, type: 3}
+    - {fileID: -7438993905676777009, guid: 8114b621d8ab44ee7bea7dd71516c390, type: 3}
+  - name: pawn_interact_knife
+    frames:
+    - {fileID: -7630237011073246913, guid: 9b8c21015ffe64c5d94a39b3bf01dd16, type: 3}
+    - {fileID: 1537740210692759063, guid: 9b8c21015ffe64c5d94a39b3bf01dd16, type: 3}
+    - {fileID: 8846431254335609180, guid: 9b8c21015ffe64c5d94a39b3bf01dd16, type: 3}
+    - {fileID: -2719170756685289180, guid: 9b8c21015ffe64c5d94a39b3bf01dd16, type: 3}
+  - name: pawn_interact_pickaxe
+    frames:
+    - {fileID: 3610887024250832725, guid: efb113e254cec49928b296f124022e8d, type: 3}
+    - {fileID: 3041927701802748533, guid: efb113e254cec49928b296f124022e8d, type: 3}
+    - {fileID: -7342292582612877463, guid: efb113e254cec49928b296f124022e8d, type: 3}
+    - {fileID: -7587094757669406146, guid: efb113e254cec49928b296f124022e8d, type: 3}
+    - {fileID: 8139064838421837713, guid: efb113e254cec49928b296f124022e8d, type: 3}
+    - {fileID: 4547151455874041825, guid: efb113e254cec49928b296f124022e8d, type: 3}
+  - name: building_castle
+    frames:
+    - {fileID: 21300000, guid: 5fef2d88b09824faba4be40a870c347e, type: 3}
+  - name: building_house1
+    frames:
+    - {fileID: 21300000, guid: f64d3993d34d4410e83e766d40059c1b, type: 3}
+  - name: building_house2
+    frames:
+    - {fileID: 21300000, guid: c3dedc0ecab4047cc891892591447655, type: 3}
+  - name: building_house3
+    frames:
+    - {fileID: 21300000, guid: 96ad664d87f2f48b7babf2f621531ae5, type: 3}
+  - name: building_tower
+    frames:
+    - {fileID: 21300000, guid: 9150ff9a3f88646ddaf1ed327afa1315, type: 3}
+  - name: building_archery
+    frames:
+    - {fileID: 21300000, guid: 2bb7266a2b9e4494db34c60ba04a19a4, type: 3}
+  - name: building_barracks
+    frames:
+    - {fileID: 21300000, guid: 4140465d2d71b4a6a83a1be32f0a9880, type: 3}
+  - name: building_monastery
+    frames:
+    - {fileID: 21300000, guid: a45aff6aa2c5d4d5f879c10f0231ba12, type: 3}
+  - name: lancer_idle
+    frames:
+    - {fileID: -594197781322936934, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: 455444515322244926, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: 517828865657036009, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: -3032027852008287605, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: -5574184733968180747, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: -1753309511941541117, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: 4863313082578348910, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: -5592250592134132327, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: 2319514263577396720, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: -4102534018874827341, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: 9164178780147294991, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+    - {fileID: 8611835898225032345, guid: fba04cf817a7246ec99f9c85cf9ef600, type: 3}
+  - name: lancer_run
+    frames:
+    - {fileID: -8580444238127179786, guid: 32f41e1fac48141ec95ad92c83bff512, type: 3}
+    - {fileID: 828278362111410375, guid: 32f41e1fac48141ec95ad92c83bff512, type: 3}
+    - {fileID: -4153816518293905039, guid: 32f41e1fac48141ec95ad92c83bff512, type: 3}
+    - {fileID: 1456675321045083290, guid: 32f41e1fac48141ec95ad92c83bff512, type: 3}
+    - {fileID: -3942745417268178275, guid: 32f41e1fac48141ec95ad92c83bff512, type: 3}
+    - {fileID: -1776823346852784203, guid: 32f41e1fac48141ec95ad92c83bff512, type: 3}
+  - name: lancer_attack
+    frames:
+    - {fileID: 6331980819534964110, guid: 976f26335a5f44facb1b8abf1fc7f25e, type: 3}
+    - {fileID: 7232042838751349278, guid: 976f26335a5f44facb1b8abf1fc7f25e, type: 3}
+    - {fileID: -4157329051755591257, guid: 976f26335a5f44facb1b8abf1fc7f25e, type: 3}
+  - name: sheep_idle
+    frames:
+    - {fileID: -6879290243380990860, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}
+    - {fileID: 6416055995298698269, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}
+    - {fileID: -1385137418063276101, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}
+    - {fileID: -6629803274111058658, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}
+    - {fileID: -8493763510348472219, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}
+    - {fileID: 6094259631630437551, guid: efdf568727e0b4919a5e88e2e9d1f93b, type: 3}
+  - name: sheep_move
+    frames:
+    - {fileID: 4671501159646219437, guid: 856b7dfa4baa342ae8083080d963531b, type: 3}
+    - {fileID: -6465609930013442711, guid: 856b7dfa4baa342ae8083080d963531b, type: 3}
+    - {fileID: 8883252912783768555, guid: 856b7dfa4baa342ae8083080d963531b, type: 3}
+    - {fileID: -6556170278312625396, guid: 856b7dfa4baa342ae8083080d963531b, type: 3}
+  - name: sheep_grass
+    frames:
+    - {fileID: 2319856288088244163, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -3562576923617104382, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -7349116212589438002, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -4662078214707794950, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -6617081139439527395, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -6189691028752884913, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: 7296908222152865420, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -2352777100355612254, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -3659949348702606643, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: 5630160346097760845, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: 5439255145328125195, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+    - {fileID: -8736350461500244166, guid: 56645d102e97241eeb6d01ca2987467d, type: 3}
+  - name: cursor_brackets
+    frames:
+    - {fileID: 6574313578489692094, guid: 148e1ab80b2b14ce5858df57aeae24e0, type: 3}
+  - name: arrow
+    frames:
+    - {fileID: 21300000, guid: c272e6d3dde6e4ad58af98df64cbaf46, type: 3}
+  - name: dinghy1
+    frames:
+    - {fileID: 21300000, guid: 82a8549fb75930041a7e3b79890a9d0e, type: 3}
+  - name: dinghy2
+    frames:
+    - {fileID: 21300000, guid: b1977297557669f4494fab9fba442c50, type: 3}
+  - name: dinghy3
+    frames:
+    - {fileID: 21300000, guid: 47bbe5acad80e4345b06ba5fd3c03530, type: 3}
+  - name: ship_1
+    frames:
+    - {fileID: 21300000, guid: 751bf13aa73965c4092a43480a3848a1, type: 3}
+  - name: ship_2
+    frames:
+    - {fileID: 21300000, guid: 1dd0fd22ba7155343bedf43d6fdcc4a3, type: 3}
+  - name: ship_3
+    frames:
+    - {fileID: 21300000, guid: c32ed2de54034054eb7664a7a0f8ee6d, type: 3}
+  - name: ship_4
+    frames:
+    - {fileID: 21300000, guid: b5e6d5d69e4339f40bd61364f91c7f07, type: 3}
+  - name: ship_5
+    frames:
+    - {fileID: 21300000, guid: 3af63235920c8544d8310093bc81a1d5, type: 3}
+  - name: ship_6
+    frames:
+    - {fileID: 21300000, guid: 0ba423ac6e77809428e22bb134621652, type: 3}
+  - name: ship_7
+    frames:
+    - {fileID: 21300000, guid: af52eb6f52f98ff4fad7bee8ace902ed, type: 3}
+  - name: ship_8
+    frames:
+    - {fileID: 21300000, guid: bde96e911cef09447bc168b6f5c2918a, type: 3}
+  - name: ship_9
+    frames:
+    - {fileID: 21300000, guid: 8af8d143692065041bd4401caaffc838, type: 3}
+  - name: ship_10
+    frames:
+    - {fileID: 21300000, guid: ea71db4f3ada755478492dde2c53a8f0, type: 3}
+  - name: ship_11
+    frames:
+    - {fileID: 21300000, guid: 27492abe9ecfa2548bcac4bb5c0964ec, type: 3}
+  - name: ship_12
+    frames:
+    - {fileID: 21300000, guid: fb21018f730a5b34e8b6906292f31e0d, type: 3}
+  - name: ship_13
+    frames:
+    - {fileID: 21300000, guid: bedd8625f8bb81c499994e11b743caaf, type: 3}
+  - name: ship_14
+    frames:
+    - {fileID: 21300000, guid: 4a0e00092e87c90468cf6761d884c867, type: 3}
+  - name: ship_15
+    frames:
+    - {fileID: 21300000, guid: e92d7a7386c63e34c8e7218664ef7e1b, type: 3}
+  - name: ship_16
+    frames:
+    - {fileID: 21300000, guid: baf42a2c13782cd4a8a4a7810ea06765, type: 3}
+  - name: ship_17
+    frames:
+    - {fileID: 21300000, guid: ff2b51905a260bb40bd6bf5968046018, type: 3}
+  - name: ship_18
+    frames:
+    - {fileID: 21300000, guid: 3bdd9aed11d38a245a1079fb8792bbb4, type: 3}
+  - name: ship_19
+    frames:
+    - {fileID: 21300000, guid: e0b9a0244d94b5347b936e33d7210900, type: 3}
+  - name: ship_20
+    frames:
+    - {fileID: 21300000, guid: 09c3b1e3e7cc0b445ac39a5a71a823aa, type: 3}
+  - name: ship_21
+    frames:
+    - {fileID: 21300000, guid: 9165d22f03b88fa49bf709ed927a4253, type: 3}
+  - name: ship_22
+    frames:
+    - {fileID: 21300000, guid: 0050d15ec98516a4c8c151ace390d5a5, type: 3}
+  - name: ship_23
+    frames:
+    - {fileID: 21300000, guid: a795dd9ee828c9b48bc1d298c173ff37, type: 3}
+  - name: ship_24
+    frames:
+    - {fileID: 21300000, guid: c9011cdf5374dfb4da705603f7ae6454, type: 3}
   castle: {fileID: 21300000, guid: 5fef2d88b09824faba4be40a870c347e, type: 3}
   tower: {fileID: 21300000, guid: 9150ff9a3f88646ddaf1ed327afa1315, type: 3}
   meatIcon: {fileID: 21300000, guid: 7ae60e0e3b7fd419aa2a0b999da0fb07, type: 3}

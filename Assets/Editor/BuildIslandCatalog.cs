@@ -15,6 +15,11 @@ public static class BuildIslandCatalog
     private const string Root = "Assets/Tiny Swords";
     private const string Output = "Assets/Resources/IslandVisualCatalog.asset";
 
+    /// <summary>Batchmode girişi: <c>-executeMethod BuildIslandCatalog.BuildFromCommandLine</c>.</summary>
+    public static void BuildFromCommandLine() => Build();
+
+    private const string Kenney = "Assets/kenney_piratePack/PNG/Retina/Ships";
+
     [MenuItem("Tools/Island/Build Island Catalog")]
     public static void Build()
     {
@@ -71,6 +76,8 @@ public static class BuildIslandCatalog
         catalog.woodIcon = First($"{Root}/Pawn and Resources/Wood/Wood Resource/Wood Resource.png", missing);
         catalog.sheepIdle = Frames($"{Root}/Pawn and Resources/Meat/Sheep/Sheep_Idle.png", missing);
 
+        BuildNamed(catalog, missing);
+
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -78,6 +85,67 @@ public static class BuildIslandCatalog
         Debug.Log(missing.Count == 0
             ? "[IslandCatalog] Katalog üretildi: " + Output
             : "[IslandCatalog] Katalog üretildi; eksik varlıklar (yedek görsel kullanılır): " + string.Join(", ", missing));
+    }
+
+    // ---- v2: adlandırılmış kümeler (piyonlar, binalar, Lancer, koyun, Kenney tekneleri, arayüz) ----
+    private static void BuildNamed(IslandVisualCatalog catalog, List<string> missing)
+    {
+        var list = new List<NamedFrames>();
+        void Add(string name, Sprite[] frames) { if (frames != null && frames.Length > 0) list.Add(new NamedFrames { name = name, frames = frames }); }
+
+        string pawn = $"{Root}/Pawn and Resources/Pawn/Blue Pawn";
+        Add("pawn_idle", Frames($"{pawn}/Pawn_Idle.png", missing));
+        Add("pawn_run", Frames($"{pawn}/Pawn_Run.png", missing));
+        foreach (var tool in new[] { "Axe", "Wood", "Knife", "Meat", "Pickaxe", "Gold", "Hammer" })
+        {
+            Add("pawn_idle_" + tool.ToLowerInvariant(), Frames($"{pawn}/Pawn_Idle {tool}.png", missing));
+            Add("pawn_run_" + tool.ToLowerInvariant(), Frames($"{pawn}/Pawn_Run {tool}.png", missing));
+        }
+        foreach (var tool in new[] { "Axe", "Hammer", "Knife", "Pickaxe" })
+            Add("pawn_interact_" + tool.ToLowerInvariant(), Frames($"{pawn}/Pawn_Interact {tool}.png", missing));
+
+        foreach (var building in new[] { "Castle", "House1", "House2", "House3", "Tower", "Archery", "Barracks", "Monastery" })
+            Add("building_" + building.ToLowerInvariant(), new[] { First($"{Root}/Buildings/Blue Buildings/{building}.png", missing) });
+
+        string lancer = $"{Root}/Units/Red Units/Lancer";
+        Add("lancer_idle", Frames($"{lancer}/Lancer_Idle.png", missing));
+        Add("lancer_run", Frames($"{lancer}/Lancer_Run.png", missing));
+        Add("lancer_attack", Frames($"{lancer}/Lancer_Right_Attack.png", missing));
+
+        string sheep = $"{Root}/Pawn and Resources/Meat/Sheep";
+        Add("sheep_idle", Frames($"{sheep}/Sheep_Idle.png", missing));
+        Add("sheep_move", Frames($"{sheep}/Sheep_Move.png", missing));
+        Add("sheep_grass", Frames($"{sheep}/Sheep_Grass.png", missing));
+
+        Add("cursor_brackets", new[] { First($"{Root}/UI Elements/Cursors/Cursor_04.png", missing) });
+        Add("arrow", new[] { First($"{Root}/Units/Extra/Arrow/Arrow.png", missing) });
+
+        // Kenney Pirate Pack gemileri (CC0): 64 PPU, Bilinear (vektör stil), sıkıştırmasız, mipmap yok.
+        for (int i = 1; i <= 3; i++) Add("dinghy" + i, new[] { BoatSprite($"{Kenney}/dinghyLarge{i}.png", missing) });
+        for (int i = 1; i <= 24; i++) Add("ship_" + i, new[] { BoatSprite($"{Kenney}/ship ({i}).png", missing) });
+        catalog.named = list;
+    }
+
+    private static Sprite BoatSprite(string path, List<string> missing)
+    {
+        var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer == null) { missing.Add(path); return null; }
+        bool dirty = importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single
+            || !Mathf.Approximately(importer.spritePixelsPerUnit, 64f) || importer.filterMode != FilterMode.Bilinear
+            || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
+            || !importer.alphaIsTransparency;
+        if (dirty)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 64f;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+        }
+        return First(path, missing);
     }
 
     private static Sprite First(string path, List<string> missing)
