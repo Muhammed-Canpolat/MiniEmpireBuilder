@@ -41,7 +41,7 @@ public sealed class IslandHud : MonoBehaviour
     private Image castleFill, hintBg, chargeRing, fireFace, cooldownFill, bannerBg;
     private Button mapButton;
     private readonly System.Collections.Generic.List<Image> edgeArrows = new System.Collections.Generic.List<Image>();
-    private GameObject fireRoot, resultPanel, autoRoot, dock, castleBar;
+    private GameObject fireRoot, resultPanel, autoRoot, dock, castleBar, staffButton;
     private IslandRaidBoard board;
     private bool prepOpen;
     private TextMeshProUGUI akinDockLabel;
@@ -88,6 +88,7 @@ public sealed class IslandHud : MonoBehaviour
         BuildTopBar();
         BuildRaidBadge();
         BuildDock();
+        BuildStaffButton();
         BuildPrepPanel();
         BuildBuildUi();
         BuildFireControls();
@@ -277,6 +278,35 @@ public sealed class IslandHud : MonoBehaviour
         button.onClick.AddListener(() => { buildUi?.Close(); prepOpen = true; Refresh(); });
     }
 
+    /// <summary>AŞAMA 2 §2: sol kenarda, üst çubuğun altında küçük yuvarlak KADRO düğmesi (adayı örtmez); kadro panelini açar.</summary>
+    private void BuildStaffButton()
+    {
+        var bg = ReferenceUiVisuals.Image(safe, "StaffButton", new Vector2(0, 1), new Vector2(0, 1), new Vector2(8, -134), new Vector2(68, -74),
+            new Color(0.12f, 0.3f, 0.36f, 0.92f));
+        bg.sprite = ReferenceUiVisuals.SolidPillSprite();
+        bg.type = Image.Type.Sliced;
+        bg.raycastTarget = true;
+        var button = bg.gameObject.AddComponent<Button>();
+        button.targetGraphic = bg;
+        button.onClick.AddListener(OpenStaff);
+        var icon = ReferenceUiVisuals.Image(bg.transform, "Icon", Vector2.zero, Vector2.one, new Vector2(8, 14), new Vector2(-8, -4), Color.white);
+        icon.sprite = SpriteManager.Instance != null ? SpriteManager.Instance.GetSprite("ui_builder_avatar") : null;
+        icon.preserveAspect = true;
+        icon.enabled = icon.sprite != null;
+        var label = ReferenceUiVisuals.Text(bg.transform, "Label", L.T("KADRO", "STAFF"), 10, Color.white, TextAlignmentOptions.Center,
+            new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 0), new Vector2(0, 16), true);
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        staffButton = bg.gameObject;
+    }
+
+    public void OpenStaff()
+    {
+        if (raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        prepOpen = false;
+        board.SetVisible(false);
+        buildUi.ShowStaff();
+    }
+
     // ==================== İNŞA (Faz B) ====================
 
     private void BuildBuildUi()
@@ -295,6 +325,7 @@ public sealed class IslandHud : MonoBehaviour
             village.BuildingTapped = id => { buildUi.ShowBuilding(id); FocusBuilding(id); };
             village.CastleTapped = () => { buildUi.ShowCastle(); setup.CameraController.FocusUpper(IslandLayout.CastleCenter); };
             village.ZoneTapped = zone => { buildUi.ShowZone(zone); setup.CameraController.FocusUpper(setup.ZoneCenter(zone)); };
+            village.TreeTapped = cell => buildUi.ShowTree(cell);   // AŞAMA 2 §3
         }
     }
 
@@ -765,6 +796,11 @@ public sealed class IslandHud : MonoBehaviour
         {
             bool dockOn = !prepOpen && !placing && !(buildUi != null && buildUi.Open);
             if (dock.activeSelf != dockOn) dock.SetActive(dockOn);
+        }
+        if (staffButton != null)
+        {
+            bool staffOn = raid.Phase == IslandRaidManager.State.Idle && !placing && !prepOpen;
+            if (staffButton.activeSelf != staffOn) staffButton.SetActive(staffOn);
         }
         woodText.text = save != null ? save.wood.ToString() : "0";
         var player = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;

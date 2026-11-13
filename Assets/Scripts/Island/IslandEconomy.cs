@@ -152,13 +152,93 @@ public static class IslandEconomy
             });
         }
         save.villageSeeded = true;
+        save.legacyVillage = false;
+        save.freeBuildMask |= OwnedKindsMask(save.placed);   // hazır köy = eski oyuncu: sahip olunan türlerin bedava hakkı yok
     }
+
+    // ==================== BOŞ BAŞLANGIÇ + İLK YAPIM BEDAVA (AŞAMA 2 §1) ====================
+
+    public static FeatureConfig Config => FeatureConfig.Instance;
+
+    /// <summary>
+    /// Adanın ilk açılışı: bayrak açıksa yeni ada yalnız kaleyle başlar (placed boş, başlangıç Odun/Et); bayrak kapalıysa ya da
+    /// v10 öncesi ilerlemesi olan kayıtsa (legacyVillage) hazır köy tohumlanır. İdempotent (villageSeeded).
+    /// </summary>
+    public static void EnsureStarted(IslandSaveData save, int keep)
+    {
+        if (save == null || save.villageSeeded) return;
+        if (!Config.islandStartFresh || save.legacyVillage) { EnsureSeeded(save, keep); return; }
+        save.placed.Clear();
+        save.villageSeeded = true;
+        save.freshStart = true;
+        save.wood = Mathf.Max(save.wood, Config.islandStartWood);
+        save.meat = Mathf.Max(save.meat, Config.islandStartMeat);
+        save.freeBuildMask |= KindBit(IslandLayout.BuildingKind.Castle);
+    }
+
+    public static int KindBit(IslandLayout.BuildingKind kind) => 1 << (int)kind;
+
+    /// <summary>Kayıttaki türlerin (ve hep Kale'nin) bit maskesi: v10 göçü ve hazır köy bunu "ilk yapım kullanıldı" sayar.</summary>
+    public static int OwnedKindsMask(IList<IslandPlacedBuilding> placed)
+    {
+        int mask = KindBit(IslandLayout.BuildingKind.Castle);
+        if (placed != null)
+            foreach (var b in placed)
+                if (b != null && Enum.TryParse(b.kind, out IslandLayout.BuildingKind kind)) mask |= KindBit(kind);
+        return mask;
+    }
+
+    /// <summary>Bu türün ilk yapımı hâlâ bedava mı (bayrak açık ve bit yazılmamış).</summary>
+    public static bool IsFirstBuildFree(IslandLayout.BuildingKind kind, IslandSaveData save = null)
+    {
+        save = save ?? Save;
+        return save != null && Config.islandStartFresh && kind != IslandLayout.BuildingKind.Castle && (save.freeBuildMask & KindBit(kind)) == 0;
+    }
+
+    /// <summary>Liste bedeli: <see cref="Progression.Island.PlaceCost"/>; Okçuluk Alanı (bayrak açıkken) FeatureConfig'ten.</summary>
+    public static (int wood, int meat) ListPrice(IslandLayout.BuildingKind kind)
+    {
+        if (kind == IslandLayout.BuildingKind.Archery && Config.islandStartFresh) return (Config.archeryPlaceWood, Config.archeryPlaceMeat);
+        return Progression.Island.PlaceCost(kind);
+    }
+
+    /// <summary>Şu anki kurulum bedeli: ilk yapım bedavaysa (0, 0), değilse liste bedeli.</summary>
+    public static (int wood, int meat) BuildCost(IslandLayout.BuildingKind kind, IslandSaveData save = null) =>
+        IsFirstBuildFree(kind, save) ? (0, 0) : ListPrice(kind);
+
+    /// <summary>Menüden kurulabilen tür mü (Kale hiç; Okçuluk yalnız boş başlangıç bayrağıyla).</summary>
+    public static bool Buildable(IslandLayout.BuildingKind kind) =>
+        kind != IslandLayout.BuildingKind.Castle && (kind != IslandLayout.BuildingKind.Archery || Config.islandStartFresh);
 
     // ==================== İŞÇİ DAĞILIMI (§5) ====================
 
-    /// <summary>Piyon sayısı = 2 (kale) + tamamlanmış Ev başına 2/3/4.</summary>
+    public static bool StaffV2 => Config.islandStaffV2;
+
+    /// <summary>Ev kapasitesi: tamamlanmış Ev başına 2/3/4 işçi (kadro v2'de ek yuvaları doldurur).</summary>
+    public static int HouseCapacity(IList<IslandPlacedBuilding> placed)
+    {
+        int pool = 0;
+        foreach (var b in placed)
+            if (b != null && b.level >= 1 && b.kind == IslandLayout.BuildingKind.House.ToString()) pool += Progression.Island.HousePawns(b.level);
+        return pool;
+    }
+
+    /// <summary>Kadro v2: tamamlanmış üretim binasının kendi işçisi (yuvaya sayılır, yuvayı aşmaz).</summary>
+    public static int OwnWorkers(IslandPlacedBuilding b)
+    {
+        if (!StaffV2 || b == null || b.level < 1 || !IsProducer(KindOf(b))) return 0;
+        return Mathf.Clamp(Config.staffOwnWorkers, 0, Progression.Island.Slots(KindOf(b), b.level));
+    }
+
+    /// <summary>Piyon sayısı. Eski: 2 (kale) + tamamlanmış Ev başına 2/3/4. Kadro v2: üretim binalarının kendi işçileri + Ev kapasitesi.</summary>
     public static int PawnPool(IList<IslandPlacedBuilding> placed)
     {
+        if (StaffV2)
+        {
+            int own = 0;
+            foreach (var b in placed) own += OwnWorkers(b);
+            return own + HouseCapacity(placed);
+        }
         int pool = Progression.Island.CastlePawns;
         foreach (var b in placed)
             if (b != null && b.level >= 1 && b.kind == IslandLayout.BuildingKind.House.ToString()) pool += Progression.Island.HousePawns(b.level);
@@ -171,6 +251,7 @@ public static class IslandEconomy
     /// </summary>
     public static Dictionary<string, int> AssignWorkers(IList<IslandPlacedBuilding> placed)
     {
+        if (StaffV2) return AssignWorkersV2(placed);
         var result = new Dictionary<string, int>();
         int pool = PawnPool(placed);
         var auto = new List<IslandPlacedBuilding>();
@@ -209,12 +290,103 @@ public static class IslandEconomy
         return result;
     }
 
-    /// <summary>Elle işçi ayarı (−1: otomatik). Yuva ve havuza göre sınırlanır; ayarlar yuvaya göre sıkıştırılır.</summary>
+    /// <summary>
+    /// Kadro v2: her üretim binası kendi işçisiyle (yuvaya sayılır) başlar; ek yuvalar Ev kapasitesinden dolar: önce elle ayarlananlar
+    /// (toplam = kendi + ek; yuva ve kapasiteyle sınırlı), kalanlar en düşük doluluk oranlı üreticiye (eşitlikte Ağıl).
+    /// </summary>
+    private static Dictionary<string, int> AssignWorkersV2(IList<IslandPlacedBuilding> placed)
+    {
+        var result = new Dictionary<string, int>();
+        int pool = HouseCapacity(placed);
+        var auto = new List<IslandPlacedBuilding>();
+        foreach (var b in placed)
+        {
+            if (b == null || b.level < 1) continue;
+            var kind = KindOf(b);
+            if (!IsProducer(kind)) continue;
+            int own = OwnWorkers(b);
+            result[b.id] = own;
+            if (b.workers >= 0)
+            {
+                int extra = Mathf.Min(Mathf.Max(0, Mathf.Min(b.workers, Progression.Island.Slots(kind, b.level)) - own), pool);
+                result[b.id] = own + extra;
+                pool -= extra;
+            }
+            else auto.Add(b);
+        }
+        while (pool > 0)
+        {
+            IslandPlacedBuilding best = null;
+            float bestRatio = float.MaxValue;
+            foreach (var b in auto)
+            {
+                var kind = KindOf(b);
+                int slots = Progression.Island.Slots(kind, b.level);
+                if (result[b.id] >= slots) continue;
+                float ratio = result[b.id] / (float)slots;
+                bool better = ratio < bestRatio - 1e-4f
+                    || Mathf.Abs(ratio - bestRatio) <= 1e-4f && kind == IslandLayout.BuildingKind.Pasture && KindOf(best) != IslandLayout.BuildingKind.Pasture;
+                if (better) { best = b; bestRatio = ratio; }
+            }
+            if (best == null) break;
+            result[best.id]++;
+            pool--;
+        }
+        return result;
+    }
+
+    /// <summary>Kadro ekranının bir satırı: işçi numarası, evi (binanın kendisi ya da Ev) ve çalıştığı bina (boşta: null).</summary>
+    public struct StaffRow
+    {
+        public int number;
+        public string homeId;        // kendi işçisi: üretim binası; Ev işçisi: Ev kimliği
+        public bool own;             // binanın kendi işçisi mi
+        public string workId;        // çalıştığı üretim binası (boşta: null)
+    }
+
+    /// <summary>
+    /// Kadro listesi: önce üretim binalarının kendi işçileri, sonra Ev'lerin işçileri sırayla ek yuvalara dağıtılır; artanlar boşta (Ev'de).
+    /// Kadro v2'de satır sayısı = <see cref="PawnPool"/>; çalışan = atanmış işçi toplamı.
+    /// </summary>
+    public static List<StaffRow> StaffRoster(IList<IslandPlacedBuilding> placed)
+    {
+        var rows = new List<StaffRow>();
+        var assign = AssignWorkers(placed);
+        var extraNeeds = new List<KeyValuePair<string, int>>();
+        foreach (var b in placed)
+        {
+            if (b == null || !assign.TryGetValue(b.id, out int crew)) continue;
+            int own = Mathf.Min(OwnWorkers(b), crew);
+            for (int i = 0; i < own; i++) rows.Add(new StaffRow { homeId = b.id, own = true, workId = b.id });
+            if (crew > own) extraNeeds.Add(new KeyValuePair<string, int>(b.id, crew - own));
+        }
+        int need = 0;
+        foreach (var b in placed)
+        {
+            if (b == null || b.level < 1 || b.kind != IslandLayout.BuildingKind.House.ToString()) continue;
+            int cap = Progression.Island.HousePawns(b.level);
+            for (int i = 0; i < cap; i++)
+            {
+                while (need < extraNeeds.Count && extraNeeds[need].Value <= 0) need++;
+                string work = null;
+                if (need < extraNeeds.Count)
+                {
+                    work = extraNeeds[need].Key;
+                    extraNeeds[need] = new KeyValuePair<string, int>(work, extraNeeds[need].Value - 1);
+                }
+                rows.Add(new StaffRow { homeId = b.id, own = false, workId = work });
+            }
+        }
+        for (int i = 0; i < rows.Count; i++) { var r = rows[i]; r.number = i + 1; rows[i] = r; }
+        return rows;
+    }
+
+    /// <summary>Elle işçi ayarı (−1: otomatik). Yuva ve havuza göre sınırlanır; ayarlar yuvaya göre sıkıştırılır (v2: kendi işçisinin altına inmez).</summary>
     public static bool SetWorkers(string id, int workers)
     {
         var b = Find(id);
         if (b == null || b.level < 1 || !IsProducer(KindOf(b))) return false;
-        b.workers = workers < 0 ? -1 : Mathf.Clamp(workers, 0, Progression.Island.Slots(KindOf(b), b.level));
+        b.workers = workers < 0 ? -1 : Mathf.Clamp(workers, OwnWorkers(b), Progression.Island.Slots(KindOf(b), b.level));
         GameManager.Instance?.SaveGame();
         return true;
     }
@@ -362,6 +534,85 @@ public static class IslandEconomy
         return amount;
     }
 
+    // ==================== AĞAÇ KESME (AŞAMA 2 §3) ====================
+
+    public static string TreeKey(int col, int row) => col + "," + row;
+
+    public static bool IsTreeCell(int col, int row)
+    {
+        foreach (var t in IslandLayout.Trees) if (t.x == col && t.y == row) return true;
+        return false;
+    }
+
+    /// <summary>Ağaç kesilmiş mi (kayıtta; bir daha büyümez). Kayıt yoksa ya da bayrak kapalıysa false.</summary>
+    public static bool IsTreeCleared(IslandSaveData save, int col, int row) =>
+        save != null && save.clearedTrees != null && Config.islandClearableTrees && save.clearedTrees.Contains(TreeKey(col, row));
+
+    /// <summary>Üretim ağacı: herhangi bir Oduncu Kampı'nın (inşaattaki dahil) merkezinden <see cref="Progression.Island.TreeRadius"/> içinde.</summary>
+    public static bool IsProductionTree(IslandSaveData save, int col, int row)
+    {
+        if (save == null) return false;
+        var cell = new Vector2(col + 0.5f, row + 0.5f);
+        foreach (var b in save.placed)
+        {
+            if (b == null || b.kind != IslandLayout.BuildingKind.Lumber.ToString()) continue;
+            if (Vector2.Distance(IslandGrid.CenterCell(IslandLayout.BuildingKind.Lumber, b.col, b.row), cell) <= Progression.Island.TreeRadius) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Ağaç kesilebilir mi; değilse neden (null: kesilebilir).</summary>
+    public static string ClearTreeBlockedReason(int col, int row)
+    {
+        var save = Save;
+        if (save == null) return L.T("Kayıt yok", "No save");
+        if (!Config.islandClearableTrees) return L.T("Ağaçlar kesilemez", "Trees cannot be cleared");
+        if (!IsTreeCell(col, row) || IsTreeCleared(save, col, row)) return L.T("Ağaç yok", "No tree");
+        if (InDefense) return L.T("Savaşta ağaç kesilmez", "Cannot clear trees during defense");
+        if (!IslandGrid.ZoneOpen(IslandLayout.ZoneAt(col, row), save.zoneMask)) return L.T("Bölge bulutların altında", "Zone is hidden under clouds");
+        if (IsProductionTree(save, col, row)) return L.T("Oduncu Kampı'nın üretim ağacı", "A production tree of the Lumber Camp");
+        var gm = GameManager.Instance;
+        if (gm == null || gm.Gold < Config.clearTreeGold) return L.T("Altın yetersiz", "Not enough gold");
+        return null;
+    }
+
+    /// <summary>Ağacı keser: Ana Üs altını harcanır, Odun eklenir (cüzdan tavanını aşabilir), hücre yerleşime açılır, kayda yazılır.</summary>
+    public static bool TryClearTree(int col, int row, out string reason)
+    {
+        reason = ClearTreeBlockedReason(col, row);
+        if (reason != null) return false;
+        if (!GameManager.Instance.SpendGold(Config.clearTreeGold)) { reason = L.T("Altın yetersiz", "Not enough gold"); return false; }
+        Accumulate(Save, Now);   // üretim eski ağaç sayısıyla bu ana kadar işlenir
+        Save.clearedTrees.Add(TreeKey(col, row));
+        AddWood(Config.clearTreeWood);
+        GameManager.Instance.SaveGame();
+        return true;
+    }
+
+    // ==================== AKIN ÖLÇEĞİ (AŞAMA 2 §4) ====================
+
+    /// <summary>Tamamlanmış Gözcü Kulelerinin seviye toplamı.</summary>
+    public static int TowerLevelSum(IList<IslandPlacedBuilding> placed)
+    {
+        int sum = 0;
+        if (placed != null)
+            foreach (var b in placed)
+                if (b != null && b.level >= 1 && b.kind == IslandLayout.BuildingKind.Tower.ToString()) sum += b.level;
+        return sum;
+    }
+
+    /// <summary>
+    /// Elle Akın düşman can/hasar çarpanı: clamp(taban + kule sv toplamı × k + (KK − KKtaban) × m, min, max). Bayrak kapalıysa 1.
+    /// Kulesiz yeni ada daha kolay; eski kayıttaki yüksek seviyeli hazır kuleler Akın'ı oranında zorlaştırır.
+    /// </summary>
+    public static float AkinScale(IList<IslandPlacedBuilding> placed, int keep)
+    {
+        var c = Config;
+        if (!c.islandTowerScaling) return 1f;
+        float scale = c.akinScaleBase + c.akinScalePerTowerLevel * TowerLevelSum(placed) + c.akinScalePerKeep * (keep - c.akinScaleKeepBase);
+        return Mathf.Clamp(scale, c.akinScaleMin, c.akinScaleMax);
+    }
+
     // ==================== ADA USTASI (§5) ====================
 
     public static bool BuilderBusy => Save != null && Save.task != null && Save.task.Active;
@@ -428,10 +679,12 @@ public static class IslandEconomy
         if (reason != null) return null;
         var check = IslandGrid.Check(kind, col, row, Save.placed, Save.zoneMask, null, Keep);
         if (check != IslandGrid.Reason.None) { reason = IslandGrid.ReasonText(check); return null; }
-        var cost = Progression.Island.PlaceCost(kind);
-        if (kind == IslandLayout.BuildingKind.Archery || cost.wood + cost.meat <= 0 && kind != IslandLayout.BuildingKind.House)
+        var list = ListPrice(kind);
+        if (!Buildable(kind) || list.wood + list.meat <= 0 && kind != IslandLayout.BuildingKind.House)
         { reason = L.T("Bu bina kurulamaz", "This building cannot be built"); return null; }
+        var cost = BuildCost(kind);
         if (!TrySpendWithGems(cost.wood, cost.meat, useGems)) { reason = L.T("Kaynak yetersiz", "Not enough resources"); return null; }
+        if (Config.islandStartFresh) Save.freeBuildMask |= KindBit(kind);   // ilk yapım hakkı inşaat başlarken kullanılır
         var entry = new IslandPlacedBuilding
         {
             id = $"{kind}#{Save.nextBuildingSerial++}", kind = kind.ToString(), level = 0, col = col, row = row, lastTick = Now, workers = -1,

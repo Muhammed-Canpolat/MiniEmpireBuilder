@@ -17,35 +17,53 @@ public sealed class IslandBuildUi
     public Action<string> Toast;
 
     private RectTransform safe;
-    private GameObject menuRoot, panelRoot;
+    private GameObject menuRoot, panelRoot, staffRoot;
     private Mode mode = Mode.None;
     private string targetId;
     private int targetZone;
+    private Vector2Int targetTree;
     private float nextRefresh;
 
-    private enum Mode { None, Menu, Building, Castle, Zone }
+    private enum Mode { None, Menu, Building, Castle, Zone, Tree, Staff }
 
     // Menü
     private sealed class MenuCard
     {
         public IslandLayout.BuildingKind kind;
-        public Image paper, icon, woodIcon, meatIcon;
-        public TextMeshProUGUI title, info, wood, meat, state;
+        public Image paper, icon, woodIcon, meatIcon, role;
+        public TextMeshProUGUI title, info, wood, meat, state, free;
         public Button button;
     }
     private readonly List<MenuCard> cards = new List<MenuCard>();
     private TextMeshProUGUI zoneTitle, zoneInfo, zoneState;
     private Button zoneButton;
 
+    // Kadro (AŞAMA 2 §2)
+    private TextMeshProUGUI staffTotals, staffList;
+
     // Panel
-    private Image panelIcon, panelWoodIcon, panelMeatIcon;
+    private Image panelIcon, panelWoodIcon, panelMeatIcon, panelRole;
     private TextMeshProUGUI panelTitle, panelBody, panelWood, panelMeat, panelTime, panelNote, workersLabel;
     private Button primary, secondary, tertiary, workerMinus, workerPlus;
     private TextMeshProUGUI primaryLabel, secondaryLabel, tertiaryLabel;
 
     public bool Open => mode != Mode.None;
     public bool MenuOpen => mode == Mode.Menu;
+    public bool StaffOpen => mode == Mode.Staff;
+    public bool TreeOpen => mode == Mode.Tree;
     public string OpenTargetId => targetId;
+    /// <summary>Testler okur: kadro listesinin satırları ve toplam satırı; panel gövde metni.</summary>
+    public string StaffText => staffList != null ? staffList.text : "";
+    public string StaffTotalsText => staffTotals != null ? staffTotals.text : "";
+    public string PanelBodyText => panelBody != null ? panelBody.text : "";
+    public string PrimaryText => primaryLabel != null && primary.gameObject.activeSelf ? primaryLabel.text : null;
+    public string MenuCardCostText(IslandLayout.BuildingKind kind)
+    {
+        var card = cards.Find(c => c.kind == kind);
+        if (card == null) return null;
+        return card.free.gameObject.activeSelf ? card.free.text.Replace("\n", " ") : card.wood.text + "/" + card.meat.text;
+    }
+    public string MenuCardInfoText(IslandLayout.BuildingKind kind) => cards.Find(c => c.kind == kind)?.info.text;
 
     private static Sprite Ui(string name)
     {
@@ -82,8 +100,10 @@ public sealed class IslandBuildUi
         safe = safeArea;
         BuildMenu();
         BuildPanel();
+        BuildStaff();
         menuRoot.SetActive(false);
         panelRoot.SetActive(false);
+        staffRoot.SetActive(false);
     }
 
     // ==================== İNŞA ET MENÜSÜ ====================
@@ -126,8 +146,18 @@ public sealed class IslandBuildUi
             var light = new Color(1f, 0.95f, 0.78f);
             card.title = ReferenceUiVisuals.Text(rect, "Title", IslandVillage.KindName(card.kind), 16, light, TextAlignmentOptions.Left,
                 new Vector2(0, 0.5f), new Vector2(0.72f, 1), new Vector2(92, 0), new Vector2(0, -4), true);
+            // AŞAMA 2 §1: rol simgesi (ürettiği kaynak / savunma / şifa) + tek cümle ne işe yaradığı
+            card.role = ReferenceUiVisuals.Image(rect, "Role", new Vector2(0, 0.28f), new Vector2(0, 0.28f), new Vector2(92, -11), new Vector2(114, 11), Color.white);
+            card.role.sprite = RoleIcon(card.kind);
+            card.role.preserveAspect = true;
             card.info = ReferenceUiVisuals.Text(rect, "Info", "", 11, light, TextAlignmentOptions.Left,
-                new Vector2(0, 0), new Vector2(0.62f, 0.52f), new Vector2(92, 4), new Vector2(0, 0), false, true);
+                new Vector2(0, 0.02f), new Vector2(0.64f, 0.56f), new Vector2(118, 0), new Vector2(0, 0), false, true);
+            card.info.textWrappingMode = TextWrappingModes.Normal;
+            card.info.fontSizeMin = 7f;
+            card.free = ReferenceUiVisuals.Text(rect, "Free", L.T("İLK YAPIM\nBEDAVA", "FIRST BUILD\nFREE"), 11, new Color(0.55f, 1f, 0.55f), TextAlignmentOptions.Center,
+                new Vector2(0.64f, 0.12f), new Vector2(0.84f, 0.88f), new Vector2(0, 0), new Vector2(0, 0), true);
+            card.free.fontSizeMin = 7f;
+            card.free.gameObject.SetActive(false);
             card.woodIcon = ReferenceUiVisuals.Image(rect, "WoodIcon", new Vector2(0.62f, 0.5f), new Vector2(0.62f, 0.5f), new Vector2(0, 2), new Vector2(26, 28), Color.white);
             card.woodIcon.sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.woodIcon : null;
             card.woodIcon.preserveAspect = true;
@@ -199,7 +229,7 @@ public sealed class IslandBuildUi
     {
         var save = IslandSession.Save;
         if (save == null) return L.T("Kayıt yok", "No save");
-        if (kind == IslandLayout.BuildingKind.Archery) return L.T("Okçuluk Alanı hazır kurulu; taşınabilir", "The archery range is ready; it can be moved");
+        if (kind == IslandLayout.BuildingKind.Archery && !IslandEconomy.Buildable(kind)) return L.T("Okçuluk Alanı hazır kurulu; taşınabilir", "The archery range is ready; it can be moved");
         if (kind == IslandLayout.BuildingKind.Barracks && IslandEconomy.Keep < Progression.Island.BarracksKeep)
             return L.T($"Kışla Kıyı Kalesi {Progression.Island.BarracksKeep}'te açılır", $"Barracks unlock at Keep {Progression.Island.BarracksKeep}");
         if (kind == IslandLayout.BuildingKind.Monastery && IslandEconomy.Keep < Progression.Island.MonasteryKeep)
@@ -216,13 +246,18 @@ public sealed class IslandBuildUi
         var save = IslandSession.Save;
         foreach (var card in cards)
         {
-            var cost = Progression.Island.PlaceCost(card.kind);
+            var cost = IslandEconomy.BuildCost(card.kind);
             int have = IslandEconomy.CountOf(card.kind), max = Progression.Island.MaxCount(card.kind, IslandEconomy.Keep);
-            card.wood.text = card.kind == IslandLayout.BuildingKind.Archery ? "-" : cost.wood.ToString();
-            card.meat.text = card.kind == IslandLayout.BuildingKind.Archery ? "-" : cost.meat.ToString();
+            bool buildable = IslandEconomy.Buildable(card.kind);
+            bool free = buildable && IslandEconomy.IsFirstBuildFree(card.kind);
+            card.free.gameObject.SetActive(free);   // AŞAMA 2 §1: bedel yerine "İLK YAPIM BEDAVA"
+            card.wood.gameObject.SetActive(!free); card.meat.gameObject.SetActive(!free);
+            card.woodIcon.gameObject.SetActive(!free); card.meatIcon.gameObject.SetActive(!free);
+            card.wood.text = !buildable ? "-" : cost.wood.ToString();
+            card.meat.text = !buildable ? "-" : cost.meat.ToString();
             card.wood.color = save != null && save.wood < cost.wood ? new Color(1f, 0.5f, 0.4f) : new Color(1f, 0.95f, 0.78f);
             card.meat.color = save != null && save.meat < cost.meat ? new Color(1f, 0.5f, 0.4f) : new Color(1f, 0.95f, 0.78f);
-            card.info.text = KindInfo(card.kind);
+            card.info.text = KindPurpose(card.kind);
             string blocked = KindBlockedReason(card.kind);
             card.state.text = $"{have}/{max}";
             card.paper.color = blocked == null ? Color.white : new Color(0.7f, 0.7f, 0.7f);
@@ -246,17 +281,37 @@ public sealed class IslandBuildUi
         }
     }
 
-    private static string KindInfo(IslandLayout.BuildingKind kind)
+    /// <summary>AŞAMA 2 §1: türün ne ürettiği / ne işe yaradığı (tek cümle; menü kartı ve bina paneli).</summary>
+    public static string KindPurpose(IslandLayout.BuildingKind kind)
     {
         switch (kind)
         {
-            case IslandLayout.BuildingKind.House: return L.T("+2 piyon (Sv5'te 3, Sv10'da 4)", "+2 pawns (3 at L5, 4 at L10)");
-            case IslandLayout.BuildingKind.Lumber: return L.T("Odun üretir; yakında ağaç ister", "Makes Wood; needs trees nearby");
-            case IslandLayout.BuildingKind.Pasture: return L.T("Et üretir (kıt); çayır ister", "Makes Meat (scarce); needs meadow");
-            case IslandLayout.BuildingKind.Tower: return L.T("Savunma; adacığa da kurulur", "Defense; also fits on islets");
-            case IslandLayout.BuildingKind.Barracks: return L.T("Lancer'lar bayrağı korur", "Lancers guard the flag");
-            case IslandLayout.BuildingKind.Monastery: return L.T("Şifa verir; onarım ×0,5", "Heals allies; repairs x0.5");
-            default: return L.T("Hazır kurulu", "Ready-made");
+            case IslandLayout.BuildingKind.House:
+                return L.T($"İşçi kapasitesini artırır (+{Progression.Island.HousePawns(1)} işçi).", $"Raises worker capacity (+{Progression.Island.HousePawns(1)} workers).");
+            case IslandLayout.BuildingKind.Lumber: return L.T("Odun üretir: işçisi yakındaki ağaçları keser.", "Produces Wood: its worker chops nearby trees.");
+            case IslandLayout.BuildingKind.Pasture: return L.T("Et üretir: işçisi koyunları güder.", "Produces Meat: its worker herds the sheep.");
+            case IslandLayout.BuildingKind.Tower: return L.T("Akınlarda yaklaşan düşmanlara ok atar.", "Shoots arrows at approaching raiders.");
+            case IslandLayout.BuildingKind.Archery: return L.T("Okçu Kaptan'ı yükseltir; atış yeridir.", "Trains the Archer Captain; a shooting post.");
+            case IslandLayout.BuildingKind.Barracks: return L.T("Lancer'lar bayrağı korur.", "Lancers guard the flag.");
+            case IslandLayout.BuildingKind.Monastery: return L.T("Binaları iyileştirir, onarımı hızlandırır.", "Heals buildings and speeds up repairs.");
+            default: return L.T("Adanın kalbi: düşerse Akın kaybedilir.", "The heart of the island: if it falls, the raid is lost.");
+        }
+    }
+
+    /// <summary>Rol simgesi: üretilen kaynak (Odun/Et) ya da işlev (kalkan, kılıç, kalp, çekiç).</summary>
+    public static Sprite RoleIcon(IslandLayout.BuildingKind kind)
+    {
+        var catalog = IslandVisualCatalog.Instance;
+        switch (kind)
+        {
+            case IslandLayout.BuildingKind.Lumber: return catalog != null ? catalog.woodIcon : null;
+            case IslandLayout.BuildingKind.Pasture: return catalog != null ? catalog.meatIcon : null;
+            case IslandLayout.BuildingKind.Tower: return CampaignSceneSetup.Art("ui_icon_shield");
+            case IslandLayout.BuildingKind.Castle: return CampaignSceneSetup.Art("ui_icon_shield");
+            case IslandLayout.BuildingKind.Archery:
+            case IslandLayout.BuildingKind.Barracks: return CampaignSceneSetup.Art("ui_icon_sword");
+            case IslandLayout.BuildingKind.Monastery: return CampaignSceneSetup.Art("ui_icon_heart");
+            default: return CampaignSceneSetup.Art("ui_icon_hammer");
         }
     }
 
@@ -275,6 +330,8 @@ public sealed class IslandBuildUi
 
         panelIcon = ReferenceUiVisuals.Image(panel.transform, "Icon", new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -150), new Vector2(128, -42), Color.white);
         panelIcon.preserveAspect = true;
+        panelRole = ReferenceUiVisuals.Image(panel.transform, "Role", new Vector2(0, 1), new Vector2(0, 1), new Vector2(98, -152), new Vector2(132, -118), Color.white);
+        panelRole.preserveAspect = true;
         panelBody = ReferenceUiVisuals.Text(panel.transform, "Body", "", 19, Ink, TextAlignmentOptions.TopLeft,
             new Vector2(0, 0.38f), new Vector2(1, 1), new Vector2(138, 0), new Vector2(-18, -48), false, true);
         panelBody.textWrappingMode = TextWrappingModes.Normal;
@@ -318,7 +375,7 @@ public sealed class IslandBuildUi
     public void ShowMenu()
     {
         mode = Mode.Menu; targetId = null;
-        menuRoot.SetActive(true); panelRoot.SetActive(false);
+        menuRoot.SetActive(true); panelRoot.SetActive(false); staffRoot.SetActive(false);
         RefreshMenu();
     }
 
@@ -327,39 +384,94 @@ public sealed class IslandBuildUi
         mode = Mode.None; targetId = null;
         if (menuRoot != null) menuRoot.SetActive(false);
         if (panelRoot != null) panelRoot.SetActive(false);
+        if (staffRoot != null) staffRoot.SetActive(false);
     }
 
-    public void ShowBuilding(string id)
+    private void ShowPanel()
     {
-        mode = Mode.Building; targetId = id;
-        menuRoot.SetActive(false); panelRoot.SetActive(true);
+        menuRoot.SetActive(false); staffRoot.SetActive(false); panelRoot.SetActive(true);
         RefreshPanel();
     }
 
-    public void ShowCastle()
-    {
-        mode = Mode.Castle; targetId = null;
-        menuRoot.SetActive(false); panelRoot.SetActive(true);
-        RefreshPanel();
-    }
+    public void ShowBuilding(string id) { mode = Mode.Building; targetId = id; ShowPanel(); }
 
-    public void ShowZone(int zone)
+    public void ShowCastle() { mode = Mode.Castle; targetId = null; ShowPanel(); }
+
+    public void ShowZone(int zone) { mode = Mode.Zone; targetZone = zone; targetId = null; ShowPanel(); }
+
+    /// <summary>AŞAMA 2 §3: ağaç paneli (kes onayı ya da "üretim ağacı" bilgisi).</summary>
+    public void ShowTree(Vector2Int cell) { mode = Mode.Tree; targetTree = cell; targetId = null; ShowPanel(); }
+
+    /// <summary>AŞAMA 2 §2: KADRO paneli (her işçi bir satır + çalışan/kapasite).</summary>
+    public void ShowStaff()
     {
-        mode = Mode.Zone; targetZone = zone; targetId = null;
-        menuRoot.SetActive(false); panelRoot.SetActive(true);
-        RefreshPanel();
+        mode = Mode.Staff; targetId = null;
+        menuRoot.SetActive(false); panelRoot.SetActive(false); staffRoot.SetActive(true);
+        RefreshStaff();
     }
 
     public void Tick()
     {
         if (!Open || Time.unscaledTime < nextRefresh) return;
         nextRefresh = Time.unscaledTime + 0.25f;
-        if (mode == Mode.Menu) RefreshMenu(); else RefreshPanel();
+        if (mode == Mode.Menu) RefreshMenu(); else if (mode == Mode.Staff) RefreshStaff(); else RefreshPanel();
+    }
+
+    // ==================== KADRO (AŞAMA 2 §2) ====================
+
+    private void BuildStaff()
+    {
+        var panel = NineSlice(safe, "StaffPanel", new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.40f), Vector2.zero, Vector2.zero, "ui_paper", Color.white, 2.4f);
+        panel.raycastTarget = true;
+        staffRoot = panel.gameObject;
+        var ribbon = NineSlice(panel.transform, "Ribbon", new Vector2(0.1f, 1f), new Vector2(0.9f, 1f), new Vector2(0, -34), new Vector2(0, 20), "ui_ribbon", Color.white, 3f);
+        ReferenceUiVisuals.Text(ribbon.transform, "Title", L.T("KADRO", "STAFF"), 20, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(40, 8), new Vector2(-40, -4), true);
+        var close = ReferenceUiVisuals.Button(panel.transform, "Close", "X", false, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-42, -40), new Vector2(-12, -12), 14);
+        close.onClick.AddListener(Close);
+        staffTotals = ReferenceUiVisuals.Text(panel.transform, "Totals", "", 17, Ink, TextAlignmentOptions.Center,
+            new Vector2(0, 1), new Vector2(1, 1), new Vector2(18, -80), new Vector2(-18, -46), true);
+        staffList = ReferenceUiVisuals.Text(panel.transform, "List", "", 15, Ink, TextAlignmentOptions.TopLeft,
+            Vector2.zero, Vector2.one, new Vector2(22, 16), new Vector2(-18, -84), false, true);
+        staffList.textWrappingMode = TextWrappingModes.Normal;
+        staffList.fontSizeMin = 9f;
+    }
+
+    /// <summary>Kadro satırı metni (testler de kullanır): "İşçi 1 · Oduncu Kampı · kendi işçisi" / "İşçi 3 · Ev'den · Ağıl'da çalışıyor" / "İşçi 5 · Boşta (Ev)".</summary>
+    public static string StaffRowText(IslandEconomy.StaffRow row)
+    {
+        var home = IslandEconomy.Find(row.homeId);
+        string homeName = home != null ? IslandVillage.KindName(IslandEconomy.KindOf(home)) : "?";
+        if (row.own) return L.T($"İşçi {row.number} · {homeName} · kendi işçisi", $"Worker {row.number} · {homeName} · own worker");
+        if (row.workId == null) return L.T($"İşçi {row.number} · Boşta ({homeName})", $"Worker {row.number} · Idle ({homeName})");
+        var work = IslandEconomy.Find(row.workId);
+        var workKind = work != null ? IslandEconomy.KindOf(work) : IslandLayout.BuildingKind.Lumber;
+        string at = workKind == IslandLayout.BuildingKind.Pasture ? "Ağıl'da" : "Oduncu Kampı'nda";
+        return L.T($"İşçi {row.number} · {homeName}'den · {at} çalışıyor", $"Worker {row.number} · from {homeName} · works at {IslandVillage.KindName(workKind)}");
+    }
+
+    private void RefreshStaff()
+    {
+        var save = IslandSession.Save;
+        if (save == null) { Close(); return; }
+        var rows = IslandEconomy.StaffRoster(save.placed);
+        int working = 0;
+        var text = new System.Text.StringBuilder();
+        foreach (var row in rows)
+        {
+            if (row.workId != null) working++;
+            text.AppendLine(StaffRowText(row));
+        }
+        if (rows.Count == 0)
+            text.AppendLine(L.T("Henüz işçi yok. Oduncu Kampı ya da Ağıl kendi işçisiyle gelir; Ev ek işçi verir.",
+                "No workers yet. A Lumber Camp or Pasture comes with its own worker; a House adds more."));
+        staffTotals.text = L.T($"Çalışan {working} / Kapasite {rows.Count}", $"Working {working} / Capacity {rows.Count}");
+        staffList.text = text.ToString();
     }
 
     // ==================== PANEL İÇERİĞİ ====================
 
-    private enum PrimaryAction { None, Upgrade, Explore, Akin }
+    private enum PrimaryAction { None, Upgrade, Explore, Akin, ClearTree }
     private PrimaryAction primaryAction;
     private enum TertiaryAction { None, Collect, FinishNow, Flag }
     private TertiaryAction tertiaryAction;
@@ -390,8 +502,10 @@ public sealed class IslandBuildUi
 
     private void RefreshPanel()
     {
+        panelRole.gameObject.SetActive(false);
         if (mode == Mode.Zone) { RefreshZonePanel(); return; }
         if (mode == Mode.Castle) { RefreshCastlePanel(); return; }
+        if (mode == Mode.Tree) { RefreshTreePanel(); return; }
         var entry = IslandEconomy.Find(targetId);
         if (entry == null) { Close(); return; }
         var kind = IslandEconomy.KindOf(entry);
@@ -406,6 +520,9 @@ public sealed class IslandBuildUi
         var task = save != null ? save.task : null;
         bool taskHere = task != null && task.Active && task.buildingId == entry.id;
 
+        panelRole.sprite = RoleIcon(kind);
+        panelRole.gameObject.SetActive(panelRole.sprite != null);
+        body.AppendLine("<i>" + KindPurpose(kind) + "</i>");   // AŞAMA 2 §1: ne işe yaradığı
         if (building)
         {
             body.AppendLine(L.T("İnşaat sürüyor. Ada Ustası çekiçle çalışıyor.", "Under construction. The Island Builder is hammering."));
@@ -541,7 +658,7 @@ public sealed class IslandBuildUi
         int slots = Progression.Island.Slots(kind, entry.level);
         workersLabel.text = L.T($"İşçi {crew}/{slots}" + (entry.workers >= 0 ? " (elle)" : ""), $"Workers {crew}/{slots}" + (entry.workers >= 0 ? " (manual)" : ""));
         workerMinus.gameObject.SetActive(true); workerPlus.gameObject.SetActive(true);
-        workerMinus.interactable = crew > 0;
+        workerMinus.interactable = crew > IslandEconomy.OwnWorkers(entry);   // v2: kendi işçisi hep çalışır
         workerPlus.interactable = crew < slots && IslandEconomy.PawnPool(save.placed) > TotalAssigned(assign);
     }
 
@@ -579,6 +696,35 @@ public sealed class IslandBuildUi
         primaryAction = PrimaryAction.Akin; tertiaryAction = TertiaryAction.None;
         SetButtons(L.T("AKIN PANOSU", "RAID BOARD"), true, null, false, null, false);
         secondaryIsMove = false;
+    }
+
+    /// <summary>AŞAMA 2 §3: ağaç paneli. Üretim ağacı kesilemez; diğerleri altınla kesilir (Odun verir, yer açar, bir daha büyümez).</summary>
+    private void RefreshTreePanel()
+    {
+        var save = IslandSession.Save;
+        var tree = IslandTree.At(targetTree);
+        if (save == null || tree == null || tree.Cleared) { Close(); return; }
+        panelIcon.sprite = tree.Renderer != null ? tree.Renderer.sprite : null;
+        panelRole.sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.woodIcon : null;
+        panelRole.gameObject.SetActive(panelRole.sprite != null);
+        panelTitle.text = L.T("Ağaç", "Tree");
+        workerMinus.gameObject.SetActive(false); workerPlus.gameObject.SetActive(false); workersLabel.text = "";
+        SetCost(0, 0, null, false);
+        primaryAction = PrimaryAction.None; tertiaryAction = TertiaryAction.None; secondaryIsMove = false;
+        var cfg = IslandEconomy.Config;
+        if (IslandEconomy.IsProductionTree(save, targetTree.x, targetTree.y))
+        {
+            panelBody.text = L.T("Oduncu Kampı'nın üretim ağacı.\nKesilemez: Odun üretimini besler.", "A production tree of the Lumber Camp.\nCannot be cleared: it feeds Wood production.");
+            panelNote.text = "";
+            SetButtons(null, false, null, false, null, false);
+            return;
+        }
+        panelBody.text = L.T($"Ağacı kes: {cfg.clearTreeGold} altın → +{cfg.clearTreeWood} odun\nYer açılır; kesilen ağaç bir daha büyümez.",
+            $"Clear the tree: {cfg.clearTreeGold} gold → +{cfg.clearTreeWood} wood\nFrees the spot; a cleared tree never grows back.");
+        string blocked = IslandEconomy.ClearTreeBlockedReason(targetTree.x, targetTree.y);
+        panelNote.text = blocked ?? "";
+        primaryAction = PrimaryAction.ClearTree;
+        SetButtons(L.T($"KES · {cfg.clearTreeGold} altın", $"CLEAR · {cfg.clearTreeGold} gold"), blocked == null, null, false, null, false);
     }
 
     private void RefreshZonePanel()
@@ -647,6 +793,14 @@ public sealed class IslandBuildUi
                 Close();
                 AkinRequested?.Invoke();
                 break;
+            case PrimaryAction.ClearTree:
+            {
+                var village = IslandVillage.Instance;
+                if (village == null) return;
+                if (!village.ClearTree(targetTree, out reason)) { Toast?.Invoke(reason); RefreshPanel(); return; }
+                Close();
+                break;
+            }
         }
     }
 

@@ -21,10 +21,12 @@ public sealed class IslandVillage : MonoBehaviour
     public Action<string> BuildingTapped;
     public Action CastleTapped;
     public Action<int> ZoneTapped;
+    /// <summary>AŞAMA 2 §3: ağaca dokunuş (hücre).</summary>
+    public Action<Vector2Int> TreeTapped;
     public Action<string> Toast;
 
     private IslandSceneSetup setup;
-    private Transform villageRoot, workersRoot, pilesRoot;
+    private Transform villageRoot, workersRoot, pilesRoot, sheepRoot;
     private int keep;
     private readonly Dictionary<string, IslandBuilding> live = new Dictionary<string, IslandBuilding>();
     private readonly Dictionary<string, Site> sites = new Dictionary<string, Site>();
@@ -129,7 +131,7 @@ public sealed class IslandVillage : MonoBehaviour
         setup = owner;
         keep = keepLevel;
         var save = IslandSession.Save;
-        IslandEconomy.EnsureSeeded(save, keep);
+        IslandEconomy.EnsureStarted(save, keep);   // AŞAMA 2 §1: yeni ada yalnız kaleyle; eski kayıt hazır köyü korur
         IslandEconomy.Tick(IslandRepair.Now, true);   // çevrimdışı üretim ve biten görev (onarım kaydı henüz silinmeden)
 
         villageRoot = new GameObject("Village").transform;
@@ -148,10 +150,53 @@ public sealed class IslandVillage : MonoBehaviour
             foreach (var entry in save.placed.ToArray())
                 if (entry != null) SpawnEntry(entry);
 
-        BuildSheep();
+        ApplyClearedTrees();
+        RebuildSheep();
         RebuildPawns();
         RefreshFlag();
         RefreshPiles(true);
+    }
+
+    // ==================== KESİLEN AĞAÇLAR (AŞAMA 2 §3) ====================
+
+    /// <summary>Kayıtta kesilmiş ağaçları gizler (kurulumda; bir daha büyümez).</summary>
+    private void ApplyClearedTrees()
+    {
+        var save = IslandSession.Save;
+        if (save == null || save.clearedTrees == null || save.clearedTrees.Count == 0) return;
+        foreach (var tree in IslandTree.All.ToArray())
+            if (tree != null && IslandEconomy.IsTreeCleared(save, tree.Cell.x, tree.Cell.y)) tree.Clear(false);
+    }
+
+    /// <summary>Ağaç kesme işlemi: ekonomi + görsel (kütük solar). Başarısızsa nedeni döndürür.</summary>
+    public bool ClearTree(Vector2Int cell, out string reason)
+    {
+        if (!IslandEconomy.TryClearTree(cell.x, cell.y, out reason)) return false;
+        var tree = IslandTree.At(cell);
+        if (tree != null)
+        {
+            IslandFx.Play("dust_1", tree.Feet + Vector2.up * 0.3f, 1.4f, 14f);
+            tree.Clear(true);
+        }
+        Toast?.Invoke(L.T($"Ağaç kesildi: +{IslandEconomy.Config.clearTreeWood} Odun", $"Tree cleared: +{IslandEconomy.Config.clearTreeWood} Wood"));
+        return true;
+    }
+
+    /// <summary>Dokunulan noktadaki (görünür) ağaç; yoksa null.</summary>
+    private IslandTree TreeAt(Vector2 world)
+    {
+        IslandTree best = null;
+        float bestDistance = float.MaxValue;
+        foreach (var tree in IslandTree.All)
+        {
+            if (tree == null || tree.Cleared) continue;
+            var sr = tree.Renderer;
+            bool hit = sr != null ? sr.bounds.Contains(new Vector3(world.x, world.y, sr.bounds.center.z)) : Vector2.Distance(world, tree.Feet) < 0.6f;
+            if (!hit) continue;
+            float d = Vector2.Distance(world, tree.Feet);
+            if (d < bestDistance) { bestDistance = d; best = tree; }
+        }
+        return best;
     }
 
     // ==================== KIŞLA BAYRAĞI (Faz E1) ====================
@@ -213,6 +258,36 @@ public sealed class IslandVillage : MonoBehaviour
         sites[entry.id] = new Site { go = sr.gameObject, sr = sr, spot = spot };
     }
 
+    /// <summary>Koyunlar: bayrak açıkken yalnız tamamlanmış Ağıl çevresinde (Ağıl başına N, yarıçap R); kapalıyken eski sabit çayır.</summary>
+    public void RebuildSheep()
+    {
+        if (villageRoot == null) return;
+        if (sheepRoot != null) Destroy(sheepRoot.gameObject);
+        sheepRoot = new GameObject("Sheep").transform;
+        sheepRoot.SetParent(villageRoot, false);
+        var catalog = IslandVisualCatalog.Instance;
+        var save = IslandSession.Save;
+        if (!IslandEconomy.Config.islandClearableTrees) { BuildSheep(); return; }
+        if (catalog == null || save == null) return;
+        float radius = IslandEconomy.Config.sheepRadius;
+        int count = Mathf.Max(0, IslandEconomy.Config.sheepPerPasture);
+        foreach (var entry in save.placed)
+        {
+            if (entry == null || entry.level < 1 || IslandEconomy.KindOf(entry) != IslandLayout.BuildingKind.Pasture) continue;
+            var center = IslandLayout.World(IslandGrid.CenterCell(IslandLayout.BuildingKind.Pasture, entry.col, entry.row));
+            var rect = Rect.MinMaxRect(center.x - radius, center.y - radius, center.x + radius, center.y + radius);
+            for (int i = 0; i < count; i++)
+            {
+                // Ağıl çevresinde bir halka üzerinde (binanın üstüne değil): açı eşit aralıklı, uzaklık yarıçapın %55–90'ı
+                float angle = (i + UnityEngine.Random.value * 0.6f) / Mathf.Max(1, count) * Mathf.PI * 2f;
+                float dist = radius * UnityEngine.Random.Range(0.55f, 0.9f);
+                var feet = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * dist;
+                IslandSheep.Create(sheepRoot, rect, feet, catalog.Frames("sheep_grass"), catalog.Frames("sheep_idle"),
+                    catalog.Frames("sheep_move"), 20f);
+            }
+        }
+    }
+
     private void BuildSheep()
     {
         var catalog = IslandVisualCatalog.Instance;
@@ -222,7 +297,7 @@ public sealed class IslandVillage : MonoBehaviour
         for (int i = 0; i < IslandLayout.SheepCount && catalog != null; i++)
         {
             var feet = new Vector2(UnityEngine.Random.Range(rect.xMin, rect.xMax), UnityEngine.Random.Range(rect.yMin, rect.yMax));
-            IslandSheep.Create(villageRoot, rect, feet, catalog.Frames("sheep_grass"), catalog.Frames("sheep_idle"),
+            IslandSheep.Create(sheepRoot != null ? sheepRoot : villageRoot, rect, feet, catalog.Frames("sheep_grass"), catalog.Frames("sheep_idle"),
                 catalog.Frames("sheep_move"), 20f);
         }
     }
@@ -238,6 +313,7 @@ public sealed class IslandVillage : MonoBehaviour
         for (int i = workersRoot.childCount - 1; i >= 0; i--) Destroy(workersRoot.GetChild(i).gameObject);
         var catalog = IslandVisualCatalog.Instance;
         var assignment = IslandEconomy.AssignWorkers(save.placed);
+        if (IslandEconomy.StaffV2) { RebuildPawnsV2(save, catalog, assignment, builderAt); return; }
         int used = 0;
         foreach (var entry in save.placed)
         {
@@ -255,6 +331,52 @@ public sealed class IslandVillage : MonoBehaviour
         int idle = Mathf.Min(3, Mathf.Max(0, IslandEconomy.PawnPool(save.placed) - used));
         for (int i = 0; i < idle; i++)
             IslandPawn.Create(workersRoot, catalog, IslandPawn.Job.Idler, keepDoor + new Vector2(1.2f + i * 0.9f, -0.1f));
+        SpawnMiner(save, catalog);
+        UpdateTaskVisuals(true);
+    }
+
+    /// <summary>
+    /// Kadro v2 (AŞAMA 2 §2): görünen işçi piyonu = atanmış işçi. Her işçi kendi binasına bağlıdır: oduncu üretim ağaçlarını keser,
+    /// çoban Ağıl koyunlarına gider; boştaki Ev işçileri Ev önünde durur. Usta kalede kalır (kale işçileri üretime sayılmaz).
+    /// </summary>
+    private void RebuildPawnsV2(IslandSaveData save, IslandVisualCatalog catalog, Dictionary<string, int> assignment, Vector3? builderAt)
+    {
+        foreach (var entry in save.placed)
+        {
+            if (entry == null || entry.level < 1 || !assignment.TryGetValue(entry.id, out int crew)) continue;
+            var kind = IslandEconomy.KindOf(entry);
+            var door = IslandLayout.World(SpotFor(entry).DoorCell);
+            var center = IslandLayout.World(IslandGrid.CenterCell(kind, entry.col, entry.row));
+            bool lumber = kind == IslandLayout.BuildingKind.Lumber;
+            float radius = lumber ? Progression.Island.TreeRadius : IslandEconomy.Config.sheepRadius + 0.5f;
+            for (int i = 0; i < crew; i++)
+            {
+                var pawn = IslandPawn.Create(workersRoot, catalog, lumber ? IslandPawn.Job.Lumberjack : IslandPawn.Job.Shepherd,
+                    door + new Vector2((i - (crew - 1) * 0.5f) * 0.45f, 0f));
+                pawn.BindTo(entry.id, center, radius);
+            }
+        }
+        var keepDoor = IslandLayout.World(IslandLayout.Building(IslandLayout.BuildingKind.Castle).DoorCell);
+        builderPawn = IslandPawn.Create(workersRoot, catalog, IslandPawn.Job.Builder, keepDoor + new Vector2(-1.4f, -0.1f));
+        if (builderAt.HasValue) builderPawn.transform.position = builderAt.Value;
+        var idleByHouse = new Dictionary<string, int>();
+        foreach (var row in IslandEconomy.StaffRoster(save.placed))
+        {
+            if (row.workId != null) continue;
+            var house = IslandEconomy.Find(row.homeId);
+            if (house == null) continue;
+            idleByHouse.TryGetValue(row.homeId, out int n);
+            idleByHouse[row.homeId] = n + 1;
+            var houseDoor = IslandLayout.World(SpotFor(house).DoorCell);
+            var pawn = IslandPawn.Create(workersRoot, catalog, IslandPawn.Job.Idler, houseDoor + new Vector2(-0.5f + n * 0.5f, -0.1f));
+            pawn.BindTo(house.id, houseDoor, 0f);
+        }
+        SpawnMiner(save, catalog);
+        UpdateTaskVisuals(true);
+    }
+
+    private void SpawnMiner(IslandSaveData save, IslandVisualCatalog catalog)
+    {
         if (setup != null && setup.KeepOverride > 0 || IslandEconomy.VeinOpen(save))
         {
             // Altın Damarı (Z3, Faz E1) açıkken madenci altın taşını kazar (havuzdan düşmez); "tüm bölgeler açık" görünümünde de görünür.
@@ -266,7 +388,6 @@ public sealed class IslandVillage : MonoBehaviour
             };
             IslandPawn.Create(workersRoot, catalog, IslandPawn.Job.Miner, IslandLayout.World(stone.x - 0.25f, stone.y + 1.15f), route);
         }
-        UpdateTaskVisuals(true);
     }
 
     // ==================== YIĞINLAR ====================
@@ -464,6 +585,12 @@ public sealed class IslandVillage : MonoBehaviour
         }
         if (best != null) { BuildingTapped?.Invoke(best); return true; }
         if (Castle != null && Castle.Bounds.Contains(new Vector3(world.x, world.y, Castle.Bounds.center.z))) { CastleTapped?.Invoke(); return true; }
+        if (IslandEconomy.Config.islandClearableTrees && TreeTapped != null)
+        {
+            var tree = TreeAt(world);
+            if (tree != null && IslandGrid.ZoneOpen(IslandLayout.ZoneAt(tree.Cell.x, tree.Cell.y), IslandSession.Save != null ? IslandSession.Save.zoneMask : 1))
+            { TreeTapped(tree.Cell); return true; }
+        }
         int zone = setup != null ? setup.ZoneCloudAt(world) : -1;
         if (zone > 0) { ZoneTapped?.Invoke(zone); return true; }
         return false;
@@ -488,6 +615,7 @@ public sealed class IslandVillage : MonoBehaviour
         if (live.TryGetValue(entry.id, out var old) && old != null) { live.Remove(entry.id); Destroy(old.gameObject); }
         SpawnEntry(entry);
         IslandFx.Play("dust_1", SpotFor(entry).FeetWorld + Vector2.up * 0.3f, 1.6f, 14f);
+        RebuildSheep();
         RebuildPawns();
         RefreshPiles(true);
     }
@@ -613,6 +741,7 @@ public sealed class IslandVillage : MonoBehaviour
                 Toast?.Invoke(task.kind == "build" ? L.T($"{name} tamamlandı", $"{name} complete")
                     : L.T($"{name} Sv {entry.level}", $"{name} Lv {entry.level}"));
             }
+            RebuildSheep();
             RebuildPawns();
             RefreshFlag();
         }

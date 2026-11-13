@@ -26,6 +26,17 @@ public sealed class IslandPawn : MonoBehaviour
     private float clipStart;
     private int treeVisits;
     private bool started;
+    /// <summary>Kadro v2 (AŞAMA 2 §2): işçinin bağlı olduğu bina kimliği ve iş alanı (oduncu: üretim ağaçları; çoban: Ağıl koyunları).</summary>
+    public string BuildingId { get; private set; }
+    private Vector2? workCenter;
+    private float workRadius;
+
+    public void BindTo(string buildingId, Vector2 centerWorld, float radius)
+    {
+        BuildingId = buildingId;
+        workCenter = centerWorld;
+        workRadius = radius;
+    }
 
     public static IslandPawn Create(Transform parent, IslandVisualCatalog catalog, Job job, Vector2 homeFeet,
         Vector2[] carryRoute = null)
@@ -140,7 +151,12 @@ public sealed class IslandPawn : MonoBehaviour
     {
         var candidates = new List<IslandTree>();
         foreach (var tree in IslandTree.All)
-            if (!tree.Chopped && Vector2.Distance(tree.Feet, home) < 7f) candidates.Add(tree);
+        {
+            if (tree.Chopped || tree.Cleared) continue;
+            bool near = workCenter.HasValue ? Vector2.Distance(tree.Feet, workCenter.Value) <= workRadius + 0.75f
+                : Vector2.Distance(tree.Feet, home) < 7f;
+            if (near) candidates.Add(tree);
+        }
         if (candidates.Count == 0) return null;
         candidates.Sort((a, b) => Vector2.Distance(a.Feet, home).CompareTo(Vector2.Distance(b.Feet, home)));
         return candidates[Random.Range(0, Mathf.Min(3, candidates.Count))];
@@ -152,7 +168,7 @@ public sealed class IslandPawn : MonoBehaviour
         {
             Play("pawn_idle");
             yield return new WaitForSeconds(Random.Range(1f, 2.2f));
-            var sheep = IslandSheep.Nearest(home);
+            var sheep = IslandSheep.Nearest(workCenter ?? home);
             if (sheep == null) { yield return new WaitForSeconds(2f); continue; }
             Vector2 spot = sheep.Feet + new Vector2(-0.75f, -0.05f);
             yield return Walk(spot, "pawn_run_knife");

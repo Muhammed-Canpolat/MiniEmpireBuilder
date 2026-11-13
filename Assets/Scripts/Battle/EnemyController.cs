@@ -235,6 +235,16 @@ public class EnemyController : MonoBehaviour
     public int GoldValue => goldReward;
     /// <summary>Sabit ara noktalar: düşman sırayla bu noktalara yürür, kale menzile girince durur.</summary>
     public void SetRoute(Vector2[] points) { route = points; routeIndex = 0; }
+
+    /// <summary>Can ve hasarı çarpanla ölçekler (ada Akın ölçeği, AŞAMA 2 §4); can dolu başlar.</summary>
+    public void ScaleStats(float hpMult, float damageMult)
+    {
+        if (Mathf.Approximately(hpMult, 1f) && Mathf.Approximately(damageMult, 1f)) return;
+        maxHealth = Mathf.Max(1f, maxHealth * hpMult);
+        currentHealth = maxHealth;
+        damage *= damageMult;
+        if (healthBar != null) healthBar.SetMax(maxHealth);
+    }
     public bool HasRoute => route != null;
     /// <summary>Alınan hasar çarpanı (ör. Kale Muhafızı'nın Kalkan Duvarı 0.3).</summary>
     public float DamageTakenMultiplier { get; set; } = 1f;

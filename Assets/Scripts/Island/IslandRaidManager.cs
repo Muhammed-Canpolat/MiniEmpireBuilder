@@ -60,6 +60,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     private void OnDestroy()
     {
         IslandRaidScheduler.LiveFightActive = false;
+        IslandEnemy.StatScale = 1f;
         if (castle != null) castle.Destroyed -= OnCastleDestroyed;
         if (archer != null) archer.PostChanged -= OnPostChanged;
     }
@@ -79,6 +80,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         IslandRaidScheduler.LiveFightActive = false;
         Akin = Mathf.Max(1, akin);
         BattleLevel = Progression.Island.AkinBattleLevel(Akin);
+        IslandEnemy.StatScale = IslandEconomy.AkinScale(IslandSession.Save?.placed, IslandSession.KeepLevel());
         TotalWaves = Progression.Island.AkinWaves(Akin);
         Wave = 0;
         Elapsed = 0f;
@@ -110,6 +112,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         RaidBeach = Mathf.Clamp(save.raidBeach, 0, IslandLayout.Beaches.Length - 1);
         Akin = Progression.Island.RaidPower(save.highestAkin);
         BattleLevel = Progression.Island.AkinBattleLevel(Akin);
+        IslandEnemy.StatScale = 1f;   // zamanlı baskın: D/R formülü korunur (kuleler D'ye zaten katılır)
         TotalWaves = Progression.Island.RaidWaves;
         Wave = 0;
         Elapsed = 0f;

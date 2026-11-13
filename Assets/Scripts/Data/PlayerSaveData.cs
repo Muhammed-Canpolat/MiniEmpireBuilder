@@ -203,7 +203,7 @@ public class PlayerSaveData
         return data;
     }
 
-    public const int CurrentVersion = 9;
+    public const int CurrentVersion = 10;
 
     /// <summary>Kışla ve Köylü Evi türleri kayıtta yoksa ekler (v9; eski kayıt göçü ve yeni oyun): açılış seviyesindeyse açık, yoksa kilitli.</summary>
     public static void EnsureBaseBondEntries(PlayerSaveData data)
@@ -300,6 +300,12 @@ public class IslandSaveData
     public List<IslandBuildingSave> buildings = new List<IslandBuildingSave>();
     public string replayDay = "";   // yyyy-MM-dd (UTC)
     public int replaysToday;        // bugün verilen tekrar ödülü sayısı (Progression.Island.ReplayRewardsPerDay tavanı)
+    // v10 (AŞAMA 2): boş başlangıç, ilk yapım bedava, kesilen ağaçlar. Konum: villageSeeded'den ÖNCE (eski sürüm testleri
+    // villageSeeded…task bloğunu regex'le keser). Eski kayıtta göç: sahip olunan türlerin biti yazılır, freshStart=false.
+    public bool freshStart;         // ada boş başlangıçla (yalnız kale) kuruldu
+    public int freeBuildMask;       // bit (int)BuildingKind = o türün ilk yapımı kullanıldı (bedava hakkı bitti)
+    public List<string> clearedTrees = new List<string>();   // kesilen ağaçlar "sütun,satır" (bir daha büyümez)
+    public bool legacyVillage;      // v10 öncesi ilerlemesi olan ama köyü tohumlanmamış kayıt: ilk açılışta hazır köy kurulur
     // v7 / Faz B (island_base_v2 §9, §17): yerleştirilmiş binalar, bölge maskesi, Usta görevi. Eski kayıtta boş/varsayılan: hazır köy tohumlanır.
     public bool villageSeeded;      // hazır köy placed listesine yazıldı mı (v6'dan geçişte ilk açılışta yapılır)
     public List<IslandPlacedBuilding> placed = new List<IslandPlacedBuilding>();
@@ -738,6 +744,19 @@ public static class SaveSystem
             if (data.saveVersion < 9)
             {
                 data.saveVersion = 9;
+                Save(data);
+            }
+            // v10 (AŞAMA 2): boş başlangıç + ilk yapım bedava + kesilen ağaçlar. Eski kayıtta hiçbir şey alınmaz: sahip olunan
+            // türlerin (ve Kale'nin) bedava hakkı kullanılmış sayılır; ilerlemesi olup köyü henüz tohumlanmamış kayıt hazır köyü alır.
+            if (data.island.clearedTrees == null) data.island.clearedTrees = new List<string>();
+            if (data.saveVersion < 10)
+            {
+                var isl = data.island;
+                isl.freshStart = false;
+                isl.clearedTrees.Clear();
+                isl.freeBuildMask = isl.villageSeeded ? IslandEconomy.OwnedKindsMask(isl.placed) : 0;
+                isl.legacyVillage = !isl.villageSeeded && (isl.highestAkin > 0 || isl.tutorialStep > 0 || (isl.buildings != null && isl.buildings.Count > 0));
+                data.saveVersion = 10;
                 Save(data);
             }
             MigrateTimings(data);

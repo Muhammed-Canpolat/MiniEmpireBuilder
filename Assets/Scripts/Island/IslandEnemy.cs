@@ -67,6 +67,9 @@ public sealed class IslandEnemy : MonoBehaviour
     private void OnEnable() => all.Add(this);
     private void OnDisable() => all.Remove(this);
 
+    /// <summary>Elle Akın ölçeği (AŞAMA 2 §4): Akın başlarken <see cref="IslandRaidManager"/> yazar; zamanlı baskında 1.</summary>
+    public static float StatScale = 1f;
+
     /// <summary>Kıyıya inen bir düşman doğurur ve rotasını verir.</summary>
     public static IslandEnemy Spawn(EnemyType type, int battleLevel, Transform castle, Vector2 position,
         Vector2[] route, int beachIndex, bool boss = false, bool wet = true)
@@ -88,6 +91,7 @@ public sealed class IslandEnemy : MonoBehaviour
         var controller = go.AddComponent<EnemyController>();
         controller.SuppressDeathEffect = true;
         controller.Initialize(type, battleLevel, castle);
+        controller.ScaleStats(StatScale, StatScale);
         controller.SetRoute(route);
         // Genel savaştan gelen kuruntular (kurt sprite'ı, gölge, hareket animasyonu) ada görselinin yerini almasın.
         var motion = go.GetComponent<EnemyMotion>();

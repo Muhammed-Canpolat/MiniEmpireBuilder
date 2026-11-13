@@ -153,9 +153,12 @@ public static class IslandGrid
         int count = 0;
         foreach (var t in IslandLayout.Trees)
             if (Vector2.Distance(centerCell, new Vector2(t.x + 0.5f, t.y + 0.5f)) <= Progression.Island.TreeRadius
-                && ZoneOpen(IslandLayout.ZoneAt(t.x, t.y), zoneMask)) count++;
+                && ZoneOpen(IslandLayout.ZoneAt(t.x, t.y), zoneMask) && !ClearedTreeAt(t.x, t.y)) count++;
         return count;
     }
+
+    /// <summary>Kesilmiş ağaç hücresi (AŞAMA 2 §3; etkin ada kaydından): doğa engeli kalkar, üretime sayılmaz.</summary>
+    public static bool ClearedTreeAt(int c, int r) => IslandEconomy.IsTreeCleared(IslandSession.Save, c, r);
 
     /// <summary>Merkezden <see cref="Progression.Island.MeadowRadius"/> içindeki çayır hücresi sayısı.</summary>
     public static int MeadowNear(Vector2 centerCell)
@@ -196,7 +199,7 @@ public static class IslandGrid
                 if (!ZoneOpen(IslandLayout.ZoneAt(c, r), zoneMask)) return Reason.Locked;
                 if (s == Reason.Stairs) return Reason.Stairs;
                 if (s == Reason.Lane) return Reason.Lane;
-                if (s == Reason.Nature) return Reason.Nature;
+                if (s == Reason.Nature && !ClearedTreeAt(c, r)) return Reason.Nature;
                 if (!mainland[c, r]) onMainland = false;
             }
         if (!onMainland && kind != IslandLayout.BuildingKind.Tower) return Reason.TowerOnly;

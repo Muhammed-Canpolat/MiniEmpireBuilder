@@ -14,7 +14,7 @@ public sealed class IslandPlacementHost : IPlacementHost
     public string MovingId { get; private set; }
     public Vector2Int StartCell { get; set; }
     public Vector2Int Footprint => IslandGrid.Size(Kind);
-    public (int wood, int meat) Cost => MovingId != null ? (0, 0) : Progression.Island.PlaceCost(Kind);
+    public (int wood, int meat) Cost => MovingId != null ? (0, 0) : IslandEconomy.BuildCost(Kind);   // AŞAMA 2: ilk yapım bedava
     public Sprite GhostSprite
     {
         get

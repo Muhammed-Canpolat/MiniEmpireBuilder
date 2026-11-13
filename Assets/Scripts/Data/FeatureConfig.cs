@@ -35,6 +35,42 @@ public sealed class FeatureConfig : ScriptableObject
     /// <summary>Güvenlik: bu süreden uzun yüklemede bulutlar yine de açılır (sn).</summary>
     public float cloudMaxWaitSeconds = 8f;
 
+    [Header("Ada yapısı: boş başlangıç + ilk yapım bedava (AŞAMA 2 §1)")]
+    /// <summary>Yeni ada yalnız kaleyle başlar; her türün ilk yapımı bedava; Okçuluk Alanı menüden kurulur.</summary>
+    public bool islandStartFresh = true;
+    /// <summary>Yeni adanın başlangıç Odun/Et stoku (eski v6 başlangıcıyla büyük olanı alınır).</summary>
+    public int islandStartWood = 60;
+    public int islandStartMeat = 0;
+    /// <summary>Okçuluk Alanı kurulum bedeli (ilk yapım bedava; adet 1).</summary>
+    public int archeryPlaceWood = 80;
+    public int archeryPlaceMeat = 0;
+
+    [Header("Ada kadrosu (AŞAMA 2 §2)")]
+    /// <summary>Üretim binası kendi işçisiyle gelir; ek yuvalar Ev kapasitesinden dolar; görünen işçi = atanmış işçi.</summary>
+    public bool islandStaffV2 = true;
+    /// <summary>Her üretim binasının kendi işçi sayısı (yuvaya sayılır).</summary>
+    public int staffOwnWorkers = 1;
+
+    [Header("Ada ağaçları ve koyunlar (AŞAMA 2 §3)")]
+    /// <summary>Üretim ağacı olmayan ağaçlar altınla kesilir (yer açar, odun verir); koyunlar yalnız Ağıl çevresinde.</summary>
+    public bool islandClearableTrees = true;
+    /// <summary>Ağaç kesme bedeli (Ana Üs altını) ve verdiği Odun.</summary>
+    public int clearTreeGold = 10;
+    public int clearTreeWood = 8;
+    /// <summary>Tamamlanmış her Ağıl çevresindeki koyun sayısı ve yarıçapı (hücre).</summary>
+    public int sheepPerPasture = 3;
+    public float sheepRadius = 2.5f;
+
+    [Header("Gözcü kuleleri ve Akın ölçeği (AŞAMA 2 §4)")]
+    /// <summary>Elle Akın düşman can/hasar çarpanı = clamp(taban + kule sv toplamı × k + (KK − KKtaban) × m, min, max).</summary>
+    public bool islandTowerScaling = true;
+    public float akinScaleBase = 0.8f;
+    public float akinScalePerTowerLevel = 0.015f;
+    public float akinScalePerKeep = 0.02f;
+    public int akinScaleKeepBase = 5;
+    public float akinScaleMin = 0.7f;
+    public float akinScaleMax = 1.15f;
+
     private static FeatureConfig cached;
 
     public static FeatureConfig Instance
