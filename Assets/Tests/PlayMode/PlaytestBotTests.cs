@@ -43,7 +43,8 @@ public class PlaytestBotTests
         else if (File.Exists(SaveFile)) File.Delete(SaveFile);
     }
 
-    private const int Seeds = 3;
+    /// <summary>Tohum sayısı: varsayılan 3; ölçüm turlarında PLAYTEST_SEEDS ortam değişkeniyle artırılır (gürültüyü azaltmak için).</summary>
+    private static readonly int Seeds = int.TryParse(Environment.GetEnvironmentVariable("PLAYTEST_SEEDS"), out int n) && n > 0 ? n : 3;
 
     private static IEnumerator PlayAll(int region)
     {

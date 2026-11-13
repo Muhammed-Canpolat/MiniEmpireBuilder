@@ -63,6 +63,9 @@ public static class PlaytestBot
         return Mathf.Clamp(required + (level - 1) / 2, 1, Progression.MaxLevel);
     }
 
+    /// <summary>PLAYTEST_NO_BARRACKS=1: bot Kışla/Köylü Evi kurmaz (Faz F öncesi davranışla eşlenik ölçüm için).</summary>
+    public static bool NoBarracks => Environment.GetEnvironmentVariable("PLAYTEST_NO_BARRACKS") == "1";
+
     /// <summary>Profil: Ana Üs/kahraman = baseLevel, kuleler baseLevel-1 (açıksa).</summary>
     public static PlayerSaveData CreateProfile(int baseLevel)
     {
@@ -82,12 +85,12 @@ public static class PlaytestBot
         save.placedBuildings.Clear();
         int slot = 0;
         foreach (var entry in save.buildings)
-            if (entry.isUnlocked && entry.level > 0)
+            if (entry.isUnlocked && entry.level > 0 && !(NoBarracks && (entry.buildingType == BuildingType.Barracks || entry.buildingType == BuildingType.House)))
                 save.placedBuildings.Add(new PlacedBuildingData
                     { slotId = "bot_" + slot++, buildingType = entry.buildingType.ToString(), level = entry.level });
         // Faz F: 2. Kışla / 2. Köylü Evi açıldıysa beklenen oyuncu onu da kurar (bir seviye geride: yeni bina yetişmeye çalışır).
         foreach (var type in new[] { BuildingType.Barracks, BuildingType.House })
-            if (baseLevel >= Progression.SecondUnlockLevel(type))
+            if (baseLevel >= Progression.SecondUnlockLevel(type) && !NoBarracks)
                 save.placedBuildings.Add(new PlacedBuildingData
                     { slotId = "bot_" + slot++, buildingType = type.ToString(), level = Mathf.Max(1, baseLevel - 2) });
         return save;
