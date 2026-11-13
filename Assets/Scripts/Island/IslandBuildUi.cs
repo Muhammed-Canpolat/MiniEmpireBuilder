@@ -151,9 +151,12 @@ public sealed class IslandBuildUi
             card.role.sprite = RoleIcon(card.kind);
             card.role.preserveAspect = true;
             card.info = ReferenceUiVisuals.Text(rect, "Info", "", 11, light, TextAlignmentOptions.Left,
-                new Vector2(0, 0.02f), new Vector2(0.64f, 0.56f), new Vector2(118, 0), new Vector2(0, 0), false, true);
+                new Vector2(0, 0), new Vector2(0.64f, 0.56f), new Vector2(118, 12), new Vector2(0, 0), false, true);   // AŞAMA 3 §3G: 2. satır kartın alt kenarlığına taşmaz
             card.info.textWrappingMode = TextWrappingModes.Normal;
+            card.info.overflowMode = TextOverflowModes.Truncate;
             card.info.fontSizeMin = 7f;
+            card.info.fontSizeMax = 11f;
+            card.info.lineSpacing = -10f;
             card.free = ReferenceUiVisuals.Text(rect, "Free", L.T("İLK YAPIM\nBEDAVA", "FIRST BUILD\nFREE"), 11, new Color(0.55f, 1f, 0.55f), TextAlignmentOptions.Center,
                 new Vector2(0.64f, 0.12f), new Vector2(0.84f, 0.88f), new Vector2(0, 0), new Vector2(0, 0), true);
             card.free.fontSizeMin = 7f;
@@ -241,6 +244,26 @@ public sealed class IslandBuildUi
         return null;
     }
 
+    /// <summary>Türün açıldığı en düşük Kıyı Kalesi seviyesi (adet 0'dan büyük olur); yoksa 0.</summary>
+    public static int UnlockKeep(IslandLayout.BuildingKind kind)
+    {
+        for (int k = 1; k <= Progression.MaxLevel; k++) if (Progression.Island.MaxCount(kind, k) > 0) return k;
+        return 0;
+    }
+
+    private static string TurkishLocative(int n)
+    {
+        if (n % 10 == 0) return n % 20 == 0 ? "de" : "da";   // 10'da, 20'de, 30'da
+        switch (n % 10) { case 1: case 2: case 7: case 8: return "de"; case 3: case 4: case 5: return "te"; default: return "da"; }
+    }
+
+    /// <summary>Kartta kilit nedeni: "Kıyı Kalesi 6'da açılır".</summary>
+    public static string LockedText(IslandLayout.BuildingKind kind)
+    {
+        int k = UnlockKeep(kind);
+        return L.T($"Kıyı Kalesi\n{k}'{TurkishLocative(k)} açılır", $"Unlocks at\nKeep {k}");
+    }
+
     private void RefreshMenu()
     {
         var save = IslandSession.Save;
@@ -249,10 +272,23 @@ public sealed class IslandBuildUi
             var cost = IslandEconomy.BuildCost(card.kind);
             int have = IslandEconomy.CountOf(card.kind), max = Progression.Island.MaxCount(card.kind, IslandEconomy.Keep);
             bool buildable = IslandEconomy.Buildable(card.kind);
-            bool free = buildable && IslandEconomy.IsFirstBuildFree(card.kind);
-            card.free.gameObject.SetActive(free);   // AŞAMA 2 §1: bedel yerine "İLK YAPIM BEDAVA"
-            card.wood.gameObject.SetActive(!free); card.meat.gameObject.SetActive(!free);
-            card.woodIcon.gameObject.SetActive(!free); card.meatIcon.gameObject.SetActive(!free);
+            // AŞAMA 3 §3G: adedi 0 olan tür (ör. Manastır KK5) kilit nedenini gösterir; "İLK YAPIM BEDAVA" yalnız şimdi kurulabilirse.
+            bool lockedByKeep = max <= 0;
+            bool free = buildable && !lockedByKeep && IslandEconomy.IsFirstBuildFree(card.kind);
+            card.free.gameObject.SetActive(free || lockedByKeep);   // AŞAMA 2 §1: bedel yerine "İLK YAPIM BEDAVA"
+            if (lockedByKeep)
+            {
+                card.free.text = LockedText(card.kind);
+                card.free.color = new Color(1f, 0.72f, 0.45f);
+            }
+            else
+            {
+                card.free.text = L.T("İLK YAPIM\nBEDAVA", "FIRST BUILD\nFREE");
+                card.free.color = new Color(0.55f, 1f, 0.55f);
+            }
+            bool showCost = !free && !lockedByKeep;
+            card.wood.gameObject.SetActive(showCost); card.meat.gameObject.SetActive(showCost);
+            card.woodIcon.gameObject.SetActive(showCost); card.meatIcon.gameObject.SetActive(showCost);
             card.wood.text = !buildable ? "-" : cost.wood.ToString();
             card.meat.text = !buildable ? "-" : cost.meat.ToString();
             card.wood.color = save != null && save.wood < cost.wood ? new Color(1f, 0.5f, 0.4f) : new Color(1f, 0.95f, 0.78f);
