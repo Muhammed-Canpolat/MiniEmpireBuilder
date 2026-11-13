@@ -44,7 +44,12 @@ public sealed class IslandBaseButton : MonoBehaviour
     {
         bool unlocked = Unlocked;
         label.text = unlocked ? L.T("ADA", "ISLE") : L.T("ADA · 5", "ISLE · 5");
-        face.color = unlocked ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.9f);
+        var visual = transform.Find("Visual");   // radyal menü öğesi: gri tonu yuvarlak görünüme uygulanır
+        if (visual != null)
+        {
+            Tint(visual, !unlocked);
+        }
+        else face.color = unlocked ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.9f);
         if (unlocked && !lastUnlocked && !first) Pulse();
         lastUnlocked = unlocked;
         var save = IslandSession.Save;
@@ -53,6 +58,21 @@ public sealed class IslandBaseButton : MonoBehaviour
             save.announced = true;
             GameManager.Instance?.SaveGame();
             Say(L.T("Ufukta bir ada!", "An island on the horizon!"), 4f, true);
+        }
+    }
+
+    private bool dimmed;
+
+    private void Tint(Transform visual, bool dim)
+    {
+        if (dim == dimmed) return;
+        dimmed = dim;
+        foreach (var image in visual.GetComponentsInChildren<Image>(true))
+        {
+            string n = image.name;
+            if (n == "Badge" || n == "Dot" || n == "Rim" || n == "LockIcon" || n.StartsWith("Ribbon")) continue;
+            var c = image.color;
+            image.color = dim ? new Color(c.r * 0.6f, c.g * 0.6f, c.b * 0.6f, c.a) : new Color(c.r / 0.6f, c.g / 0.6f, c.b / 0.6f, c.a);
         }
     }
 

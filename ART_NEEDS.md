@@ -55,3 +55,8 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
 3. **Hazır paket** (itch.io / Asset Store): `pixel art boat top down`, `rowboat pixel sprite`, `pirate ship pixel art top down`,
    `viking longship pixel art`, `tiny swords compatible boat`, `pixel frog ship` (Pixel Frog "Treasure Hunters" yan
    görünüşlü, açı uymayabilir). Lisans kuralları yukarıdaki gibi.
+
+## Gece çalışması (13 Kasım 2026) ihtiyaçları
+- **Ada ikonu** (radyal menü ADA düğmesi): 128×128, palmiyeli/kumsallı küçük ada, Tiny Swords stilinde. Şu an yer tutucu:
+  kale sprite'ı + ağaç, deniz rengi zemin (`UI/RadialDockMenu.cs`).
+- **Ses:** ada baskın borusu (`AudioLibrary.raidHorn` boş), ayrı sakin ada müziği (şu an Ana Üs çalma listesi).

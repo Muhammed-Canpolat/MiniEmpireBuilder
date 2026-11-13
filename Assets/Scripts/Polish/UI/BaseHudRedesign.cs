@@ -143,30 +143,57 @@ public static class BaseHudRedesign
     private static void StyleDock(Transform hud)
     {
         SkinDock(hud.Find("BottomDock") as RectTransform);
+        if (FeatureConfig.Instance.radialDockMenu)
+        {
+            // AŞAMA 3 §3F: kapalı şerit + büyük yuvarlak ana düğme, açılınca 4 yuvarlak düğme yayı.
+            AddRadialBand(hud.Find("BottomDock") as RectTransform);
+            EnsureHeroButton(hud);
+            IslandBaseButton.Attach(hud);
+            RadialDockMenu.Attach(hud);
+            return;
+        }
         var build = hud.Find("BuildBtn") as RectTransform;
         var battle = hud.Find("BattleBtn") as RectTransform;
         StackedButton(build, new Vector2(0.17f, 0f), DockButtonWidth, DockButtonHeight, 46f, false, L.T("İNŞA ET", "BUILD"));
         StackedButton(battle, new Vector2(0.5f, 0f), CenterButtonWidth, CenterButtonHeight, 52f, true, L.T("SEFER", "CAMPAIGN"));
 
-        if (hud.Find("HeroBtn") == null)
-        {
-            var hero = ReferenceUiVisuals.Button(hud, "HeroBtn", "", false,
-                new Vector2(0.83f, 0f), new Vector2(0.83f, 0f), Vector2.zero, Vector2.zero, 13);
-            var icon = ReferenceUiVisuals.Image(hero.transform, "Icon", Vector2.zero, Vector2.one,
-                Vector2.zero, Vector2.zero, Color.white);
-            icon.preserveAspect = true;
-            var gm = GameManager.Instance;
-            if (gm?.PlayerData != null && SpriteManager.Instance != null)
-                icon.sprite = HeroPortraitSprite.Get(SpriteManager.Instance.GetHeroSprite(gm.PlayerData.hero.weaponType));
-            var label = hero.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.name = "Label";
-            hero.onClick.AddListener(() => BaseWorldUI.Instance?.ShowHeroInfo());
-            StackedButton((RectTransform)hero.transform, new Vector2(0.83f, 0f), DockButtonWidth,
+        if (EnsureHeroButton(hud))
+            StackedButton(hud.Find("HeroBtn") as RectTransform, new Vector2(0.83f, 0f), DockButtonWidth,
                 DockButtonHeight, 46f, false, L.T("KAHRAMAN", "HERO"));
-        }
 
         // Martı Adası (island_base.md §1): SEFER'in yanında ADA düğmesi (Ana Üs 5'ten önce kilitli görünür).
         IslandBaseButton.Attach(hud);
+    }
+
+    /// <summary>Kahraman düğmesi yoksa oluşturur (dinleyici + portre ikonu); yeni oluşturulduysa true.</summary>
+    private static bool EnsureHeroButton(Transform hud)
+    {
+        if (hud.Find("HeroBtn") != null) return false;
+        var hero = ReferenceUiVisuals.Button(hud, "HeroBtn", "", false,
+            new Vector2(0.83f, 0f), new Vector2(0.83f, 0f), Vector2.zero, Vector2.zero, 13);
+        var icon = ReferenceUiVisuals.Image(hero.transform, "Icon", Vector2.zero, Vector2.one,
+            Vector2.zero, Vector2.zero, Color.white);
+        icon.preserveAspect = true;
+        var gm = GameManager.Instance;
+        if (gm?.PlayerData != null && SpriteManager.Instance != null)
+            icon.sprite = HeroPortraitSprite.Get(SpriteManager.Instance.GetHeroSprite(gm.PlayerData.hero.weaponType));
+        var label = hero.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null) label.name = "Label";
+        hero.onClick.AddListener(() => BaseWorldUI.Instance?.ShowHeroInfo());
+        return true;
+    }
+
+    /// <summary>Radyal menü şeridi: dock'un üstüne koyu süslü şerit katmanı (köşe süsleri) ve koyulaştırma.</summary>
+    private static void AddRadialBand(RectTransform dock)
+    {
+        if (dock == null || dock.Find("RadialBand") != null) return;
+        var dark = ReferenceUiVisuals.Image(dock, "RadialBand", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
+            new Color(0.05f, 0.035f, 0.02f, 0.55f));
+        var strip = OrnateStrip(false);
+        if (strip == null) return;
+        var ornament = ReferenceUiVisuals.Image(dark.rectTransform, "RadialOrnament", Vector2.zero, Vector2.one,
+            new Vector2(-2f, 0f), new Vector2(2f, -4f), new Color(1f, 1f, 1f, 0.85f));
+        ornament.sprite = strip;
     }
 
     /// <summary>Simge üstte, yazı altta; orta düğme daha büyük ve dock'tan hafif taşar.</summary>

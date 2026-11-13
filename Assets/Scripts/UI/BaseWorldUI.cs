@@ -194,6 +194,8 @@ public class BaseWorldUI : MonoBehaviour
 
     public void ToggleBottomButtons(bool show)
     {
+        // Radyal menü: düğmeleri menü kendi açık/kapalı durumuna göre yönetir.
+        if (RadialDockMenu.Current != null) { RadialDockMenu.Current.SetDockVisible(show); return; }
         if (battleButton != null) battleButton.gameObject.SetActive(show);
         if (buildMenuButton != null) buildMenuButton.gameObject.SetActive(show);
         // Dock'a sonradan eklenen Kahraman düğmesi de aynı anda gizlenir/görünür.
