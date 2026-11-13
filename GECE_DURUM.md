@@ -1,12 +1,14 @@
 # GECE_DURUM — Otonom gece çalışması (13 Kasım 2026)
 
 DURUM: DEVAM EDİYOR
-SON AKTİVİTE: 2026-11-13 13:50
-ŞU ANKİ İŞ: AŞAMA 1 (ajan: müzik → kamera → bulut geçişi) + paralel ECONOMY.md analizi
-SIRADAKİ İŞ: AŞAMA 2 — ada yapısı ve kadro
+SON AKTİVİTE: 2026-11-13 14:12
+ŞU ANKİ İŞ: AŞAMA 2 — ada yapısı ve kadro (ajan, Opus)
+SIRADAKİ İŞ: AŞAMA 3 — UI/UX, sonra AŞAMA 4 ekonomi uygulaması
 
 TAMAMLANANLAR:
-- AŞAMA 0 analiz → PLAN_ADA.md
+- AŞAMA 0 analiz → PLAN_ADA.md (e1d1b4c)
+- ECONOMY.md + Tools/economy_sim_v2.py (95968d8) — V2 önerisi simüle edildi
+- AŞAMA 1: müzik (6eb2989), sabit kamera (ad14e72, 0173606), bulut geçişi (1f32657); Island testleri 107/107
 
 ENGELLENENLER:
 - (henüz yok)
