@@ -309,9 +309,11 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         timers.Add((job, fill, time));
         int adsLeft = AdRewards.WorkshopAdsLeft;
         int captured = index;
-        var ad = TsButton(paper.transform, "Ad", L.T($"REKLAM\n{adsLeft}/{GemEconomy.DailyWorkshopAds}", $"AD\n{adsLeft}/{GemEconomy.DailyWorkshopAds}"), false,
-            w - 36f - 160f, 4f, 92f, 44f, 11, out var adLabel);
-        ButtonIcon(ad, adLabel, CampaignSceneSetup.Art("ui_icon_play"), 20f);
+        var ad = TsButton(paper.transform, "Ad", $"{adsLeft}/{GemEconomy.DailyWorkshopAds}", false,
+            w - 36f - 160f, 4f, 92f, 44f, 14, out var adLabel);
+        ButtonIcon(ad, adLabel, CampaignSceneSetup.Art("ui_icon_play"), 22f);   // ikon + "3/3"
+        adLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        adLabel.fontSizeMax = 14f;
         Dim(ad, adsLeft > 0);
         ad.onClick.AddListener(() => RewardedAds.Show("workshop_finish", ok =>
         {
@@ -402,9 +404,20 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         if (free) Tx(paper.transform, "Free", L.T("İLK ÜRETİM BEDAVA · 30 sn", "FIRST CRAFT FREE · 30 s"), 12, new Color(0.15f, 0.5f, 0.2f), 12f, hintY, inner - 24f, 16f, TextAlignmentOptions.Left, true);
         else if (meatShort && tierOpen)
         {
-            Tx(paper.transform, "MeatHint", L.T($"Et eksik ({meat - IslandEconomy.Meat}): Ağıl'dan ya da", $"Meat short ({meat - IslandEconomy.Meat}): Pasture or"), 12, Warn, 12f, hintY, 160f, 16f, TextAlignmentOptions.Left, true);
-            Pic(paper.transform, "HintGemIcon", GemIcon.Sprite, 176f, hintY - 1f, 18f, 18f);
-            Tx(paper.transform, "HintGems", CardWorkshop.MeatShortfallGems(card).ToString(), 13, Warn, 196f, hintY, 50f, 16f, TextAlignmentOptions.Left, true);
+            // Tek satir: "Et eksik (160): Agil ya da [elmas] 20" - elmas simgesi + sayi yazinin hemen ardinda, sigmazsa yazi kuculur.
+            var hint = Tx(paper.transform, "MeatHint", L.T($"Et eksik ({meat - IslandEconomy.Meat}): Ağıl ya da", $"Meat short ({meat - IslandEconomy.Meat}): Pasture or"), 12, Warn, 12f, hintY, inner - 24f, 16f, TextAlignmentOptions.Left, true);
+            hint.textWrappingMode = TextWrappingModes.NoWrap;
+            hint.enableAutoSizing = false;
+            string gemsText = CardWorkshop.MeatShortfallGems(card).ToString();
+            const float gemIconW = 18f, gemTextW = 34f;
+            float avail = inner - 24f - gemIconW - gemTextW - 6f;
+            float textW = hint.GetPreferredValues(hint.text, 1000f, 16f).x;
+            hint.fontSize = textW > avail ? 12f * avail / textW : 12f;
+            textW = hint.GetPreferredValues(hint.text, 1000f, 16f).x;
+            hint.rectTransform.offsetMax = new Vector2(12f + textW + 2f, hint.rectTransform.offsetMax.y);
+            float gemX = 12f + textW + 6f;
+            Pic(paper.transform, "HintGemIcon", GemIcon.Sprite, gemX, hintY - 1f, gemIconW, gemIconW);
+            Tx(paper.transform, "HintGems", gemsText, 13, Warn, gemX + gemIconW + 2f, hintY, gemTextW, 16f, TextAlignmentOptions.Left, true).textWrappingMode = TextWrappingModes.NoWrap;
         }
 
         string block = CardWorkshop.CraftBlockReason(card);
