@@ -31,6 +31,8 @@ public static class EndlessMode
     public static int BattleLevel(int floor) => 30 + Mathf.Max(1, floor);
     public static int Reward(int floor) => 300 + 20 * Mathf.Max(1, floor);
     public static bool IsBossFloor(int floor) => floor % FloorsPerTheme == 0;
+    /// <summary>Dalga başına düşman sayısı (taban); savaş içi kule bedeli de bununla ölçeklenir (ECONOMY §5).</summary>
+    public static int PerWave(int floor) => Mathf.Min(28, 12 + Mathf.Max(1, floor) / 2);
 
     /// <summary>Bu katın teması olan bölge (5 katta bir sıradaki bölge).</summary>
     public static RegionData Theme(int floor)
@@ -73,7 +75,7 @@ public static class EndlessMode
         bool boss = IsBossFloor(floor);
         var kind = boss ? CampaignLevelKind.Boss : KindCycle[(floor - 1) % FloorsPerTheme % KindCycle.Length];
         int waves = boss ? 3 : Mathf.Min(4, 2 + floor / 8);
-        int perWave = Mathf.Min(28, 12 + floor / 2);
+        int perWave = PerWave(floor);
         var counts = new int[waves];
         for (int i = 0; i < waves; i++) counts[i] = perWave + i * 2;
         return new CampaignLevelData

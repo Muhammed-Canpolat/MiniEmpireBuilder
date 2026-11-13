@@ -39,7 +39,7 @@ public class BattleManager : MonoBehaviour
     private int lastStars;
 
     /// <summary>Daha önce kazanılmış bir sefer aşaması tekrar oynanınca toplam ödülün bu oranı verilir.</summary>
-    public const float ReplayRewardRate = 0.3f;
+    public static float ReplayRewardRate => Economy.Active.replayRewardRate;
     /// <summary>Bu savaş, önceden en az 1 yıldızla geçilmiş bir aşamanın tekrarı mı.</summary>
     public bool IsReplay { get; private set; }
     /// <summary>Zaferde cüzdana aktarılan son tutar (tekrar oynama kesintisi dahil).</summary>
@@ -808,6 +808,14 @@ public class BattleManager : MonoBehaviour
             case BuildingType.Monastery: baseCost = monasteryBattleBuildCost; break;
             default: return 0;
         }
+        // AŞAMA 4B: Sonsuz Sefer / İstila bölge numarası 99/98 olduğundan eski ölçek ×20 veriyordu (hata). Formül her iki
+        // profilde açık (EconomyConfig.endlessBuildCostFormula = false eski hatayı geri getirir).
+        var econ = Economy.Active;
+        if (econ.endlessBuildCostFormula && (BattleSession.IsEndless || BattleSession.IsInvasion))
+        {
+            float perWave = BattleSession.IsEndless ? EndlessMode.PerWave(BattleSession.Floor) : econ.invasionPerWave;
+            return econ.EndlessBuildCost(baseCost, BattleSession.BattleLevel, perWave);
+        }
         // Geç bölgede düşmanlar daha çok altın bırakır: kule bedeli de bölgeyle artar (round2 A).
         int region = BattleSession.IsCampaign ? BattleSession.RegionId : 1;
         return Mathf.RoundToInt(baseCost * Progression.BattleBuildCostScale(region) / 5f) * 5;
@@ -958,9 +966,8 @@ public class BattleManager : MonoBehaviour
                 CampaignProgress.RecordVictory(BattleSession.RegionId, BattleSession.LevelNumber, lastStars);
             }
         }
-        int totalPayout = BattleGoldNet + GetVictoryBonus();
-        // Tamamlanmış aşamayı tekrar oynamak altın kasma yolu olmasın: toplamın %30'u.
-        if (IsReplay) totalPayout = Mathf.RoundToInt(totalPayout * ReplayRewardRate);
+        // Net savaş altınının cüzdana geçen payı profilden (V2 %75; LEGACY %100); tekrar oynama kesintisi ComputePayout'ta.
+        int totalPayout = ComputePayout(BattleGoldNet, GetVictoryBonus(), IsReplay);
         LastPayout = totalPayout;
 
         Debug.Log($"[BattleManager] SAVAŞ KAZANILDI! Savas ici kalan altin: {totalGoldEarned}, Odul: {GetVictoryBonus()}, Toplam: {totalPayout}");
@@ -1019,10 +1026,27 @@ public class BattleManager : MonoBehaviour
     public bool IsBattleWon => battleWon;
     public int LastStars => lastStars;
 
+    /// <summary>Zafer ödemesi: round(net savaş altını × aktarım oranı) + zafer ödülü; tekrar oynamada ×tekrar oranı.</summary>
+    public static int ComputePayout(int battleGoldNet, int victoryBonus, bool replay)
+    {
+        var econ = Economy.Active;
+        int total = Mathf.RoundToInt(Mathf.Max(0, battleGoldNet) * econ.killGoldTransferRate) + victoryBonus;
+        // Tamamlanmış aşamayı tekrar oynamak altın kasma yolu olmasın: toplamın %30'u.
+        if (replay) total = Mathf.RoundToInt(total * econ.replayRewardRate);
+        return total;
+    }
+
+    /// <summary>Sefer aşaması zafer ödülü: LEGACY bölge asset'inden, V2 formülden (özel modlar kendi ödülünü kullanır).</summary>
+    public static int CampaignVictoryReward(int region, int stage, int assetReward, bool special)
+    {
+        var econ = Economy.Active;
+        return special || econ.victoryRewardFromAsset ? assetReward : econ.VictoryRewardFormula(region, stage);
+    }
+
     private int GetVictoryBonus()
     {
         if (BattleSession.IsCampaign && BattleSession.Level != null)
-            return BattleSession.Level.reward;
+            return CampaignVictoryReward(BattleSession.RegionId, BattleSession.LevelNumber, BattleSession.Level.reward, BattleSession.IsSpecial);
         int battleLevel = GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
         return baseWinGoldReward + (battleLevel - 1) * 10;
     }

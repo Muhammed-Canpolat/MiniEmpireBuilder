@@ -26,6 +26,7 @@ public sealed class ApprenticeProgressionData : ScriptableObject
         return Mathf.RoundToInt(hero.damage * damageFraction * Multiplier(level));
     }
 
-    public int MineBonus(int level) => mineBonuses[Mathf.Clamp(level - 1, 0, mineBonuses.Length - 1)];
+    /// <summary>Çırak maden bonusu (%): AŞAMA 4'ten beri etkin ekonomi profilinden (asset'teki mineBonuses = LEGACY kopyası, değiştirilmedi).</summary>
+    public int MineBonus(int level) => Economy.Active.ApprenticeMineBonusPercent(level);
     public float Multiplier(int level) => levelMultipliers[Mathf.Clamp(level - 1, 0, levelMultipliers.Length - 1)];
 }

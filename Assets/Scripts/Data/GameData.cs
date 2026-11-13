@@ -260,7 +260,7 @@ public class BuildingData
             case BuildingType.GoldMine:
                 maxHealth = 50f + (level - 1) * 10f;
                 currentHealth = maxHealth;
-                goldPerSecond = 1f + (level - 1) * 0.5f;
+                goldPerSecond = Economy.Active.MineGps(level);   // AŞAMA 4: profil (LEGACY 1 + 0,5(L−1))
                 break;
 
             case BuildingType.Monastery:
@@ -746,7 +746,7 @@ public static class Progression
     /// <summary>Köylü Evi: 1. ev Ana Üs 3, 2. ev Ana Üs 9. Maden deposu +%(5 + 0,5(L−1)); üretim hızı değişmez.</summary>
     public static readonly int[] HouseUnlock = { 3, 9 };
     public const float HouseCostFactor = 0.4f;
-    public static float HouseStorageBonus(int level) => 0.05f + 0.005f * (Mathf.Max(1, level) - 1);
+    public static float HouseStorageBonus(int level) => Economy.Active.HouseStorageBonus(level);
     /// <summary>Yeni Kışla/Ev kurma bedeli (altın; elmasla alınmaz): 1. seviyeye yükseltme bedeli kadar.</summary>
     public static int BuildCost(BuildingType type) => UpgradeCost(type, 2);
 
@@ -886,17 +886,13 @@ public static class Progression
     {
         if (builderNumber <= 1 || builderNumber > MaxBuilders) return (0, 0);
         if (builderNumber == 2)
-            return (UpgradeCost(BuildingType.MainBase, SecondBuilderMainBaseLevel + 1), 0);
+            return (Economy.Active.builder2GoldCost, 0);   // AŞAMA 4: Ana Üs tablosundan ayrık sabit (850)
         return (0, (builderNumber - 2) * 100);
     }
 
     // Yükseltme süreleri artık Resources/Config/TimingConfig.asset içinde (TimingConfig).
 
-    // Ana Üs bedeli (index = hedef seviye); diğer yapılar bunun oranıyla ölçeklenir.
-    private static readonly int[] MainBaseCosts =
-    {
-        0, 0, 150, 250, 400, 600, 850, 1150, 1500, 1900, 2400, 3000, 3700, 4500, 5400, 6500
-    };
+    // Ana Üs bedeli tablosu (index = hedef seviye) artık EconomyConfig.mainBaseCosts (etkin profil); diğer yapılar oranıyla ölçeklenir.
 
     public static int ColorTier(int level) => Mathf.Clamp((level - 1) / LevelsPerColorTier, 0, 4);
 
@@ -904,15 +900,9 @@ public static class Progression
 
     public static int UpgradeCost(BuildingType type, int targetLevel)
     {
-        int baseCost = MainBaseCosts[Mathf.Clamp(targetLevel, 0, MainBaseCosts.Length - 1)];
-        float factor = type == BuildingType.MainBase ? 1f
-            : type == BuildingType.CannonTower ? 0.7f
-            : type == BuildingType.Monastery ? 0.6f
-            : type == BuildingType.GoldMine ? 0.55f
-            : type == BuildingType.CardWorkshop ? Workshop.UpgradeFactor
-            : type == BuildingType.Barracks ? BarracksCostFactor
-            : type == BuildingType.House ? HouseCostFactor
-            : 0.5f; // Okçu
+        var econ = Economy.Active;
+        int baseCost = econ.MainBaseCost(targetLevel);
+        float factor = econ.UpgradeFactor(type);
         return Mathf.Max(10, Mathf.RoundToInt(baseCost * factor / 10f) * 10);
     }
 
@@ -945,11 +935,11 @@ public static class Progression
 
     /// <summary>Kahraman yükseltme bedeli (anında; seviye tavanı Ana Üs seviyesi).</summary>
     public static int HeroUpgradeCost(int currentLevel) =>
-        Mathf.RoundToInt(60f * Mathf.Pow(1.28f, currentLevel - 1) / 10f) * 10;
+        Economy.Active.HeroCost(currentLevel);
 
     /// <summary>Çırak yükseltme bedeli (anında; seviye tavanı Ana Üs seviyesi).</summary>
     public static int ApprenticeUpgradeCost(int currentLevel) =>
-        Mathf.RoundToInt(80f * Mathf.Pow(1.3f, currentLevel - 1) / 10f) * 10;
+        Economy.Active.ApprenticeCost(currentLevel);
 
     /// <summary>Kısa Türkçe süre: "15 sn", "30 dk", "2 sa 15 dk", "1 g 6 sa".</summary>
     public static string FormatDuration(double seconds)
@@ -1183,7 +1173,7 @@ public class EnemyStats
         health *= 1f + (level - 1) * 0.085f;
         damage *= 1f + (level - 1) * DamageGrowthPerLevel;
         // goldDrop da hafif artar
-        goldDrop = Mathf.RoundToInt(goldDrop * (1f + (level - 1) * 0.08f));
+        goldDrop = Mathf.RoundToInt(goldDrop * (1f + (level - 1) * Economy.Active.enemyGoldGrowthPerLevel));
     }
 }
 

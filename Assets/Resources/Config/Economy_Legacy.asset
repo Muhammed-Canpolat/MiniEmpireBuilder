@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9929993fb543df8158c32692f0af35, type: 3}
+  m_Name: Economy_Legacy
+  m_EditorClassIdentifier: Assembly-CSharp::EconomyConfig
+  profileName: Legacy
+  mainBaseCosts:
+  - 0
+  - 0
+  - 150
+  - 250
+  - 400
+  - 600
+  - 850
+  - 1150
+  - 1500
+  - 1900
+  - 2400
+  - 3000
+  - 3700
+  - 4500
+  - 5400
+  - 6500
+  factorArcher: 0.5
+  factorCannon: 0.7
+  factorMonastery: 0.6
+  factorMine: 0.55
+  factorBarracks: 0.65
+  factorHouse: 0.4
+  factorWorkshop: 0.45
+  builder2GoldCost: 850
+  mineGpsBase: 1
+  mineGpsPerLevel: 0.5
+  mineStorageBase: 200
+  mineStoragePerLevel: 150
+  houseStorageBase: 0.05
+  houseStoragePerLevel: 0.005
+  apprenticeMineBonus:
+  - 10
+  - 15
+  - 20
+  - 25
+  - 30
+  - 32
+  - 34
+  - 36
+  - 38
+  - 40
+  - 42
+  - 44
+  - 46
+  - 48
+  - 50
+  walletCapMult: 1.5
+  walletCapMin: 500
+  heroCostBase: 60
+  heroCostGrowth: 1.28
+  apprenticeCostBase: 80
+  apprenticeCostGrowth: 1.3
+  victoryRewardFromAsset: 1
+  victoryRewardBase: 35
+  victoryRewardPerRegion: 35
+  victoryRewardPerStage: 18
+  killGoldTransferRate: 1
+  enemyGoldGrowthPerLevel: 0.08
+  replayRewardRate: 0.3
+  victoryDoubleAdsPerDay: 0
+  endlessBuildCostFormula: 1
+  endlessBuildCostK: 1
+  invasionPerWave: 14
+  calendarDay1Base: 50
+  calendarDay1PerMb: 50
+  calendarDay3Base: 100
+  calendarDay3PerMb: 100
+  calendarDay7ChestPerMb: 150
+  questGoldBase: 80
+  questGoldPerMb: 40
+  adChestGoldBase: 100
+  adChestGoldPerMb: 50
+  traderEnabled: 0
+  traderPackAmount: 50
+  traderBaseCost: 400
+  traderPerMbCost: 120
+  traderMbRef: 5
+  traderPacksPerDay: 2

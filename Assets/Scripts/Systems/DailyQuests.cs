@@ -112,7 +112,7 @@ public static class DailyQuests
         }
     }
 
-    public static int GoldReward => 80 + 40 * Mathf.Max(1, GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1);
+    public static int GoldReward => Economy.Active.questGoldBase + Economy.Active.questGoldPerMb * Mathf.Max(1, GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1);
 
     public static string RewardText(int index)
     {

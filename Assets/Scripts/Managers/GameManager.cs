@@ -126,7 +126,7 @@ public class GameManager : MonoBehaviour
         int mainBaseLevel = GetMainBaseLevel();
         int next = Progression.UpgradeCost(BuildingType.MainBase,
             Mathf.Min(mainBaseLevel + 1, Progression.MaxLevel));
-        return Mathf.Max(500, Mathf.CeilToInt(next * 1.5f / 100f) * 100);
+        return Economy.Active.WalletCap(next);   // LEGACY: max(500, ⌈1,5 × sonraki MB / 100⌉ × 100)
     }
 
     /// <summary>
@@ -153,7 +153,7 @@ public class GameManager : MonoBehaviour
         if (!mine.isUnlocked || mine.level <= 0)
             return 0;
 
-        return Mathf.RoundToInt((200 + (mine.level - 1) * 150) * (1f + HouseStorageBonus()));
+        return Mathf.RoundToInt(Economy.Active.MineStorage(mine.level) * (1f + HouseStorageBonus()));
     }
 
     /// <summary>Kurulu Köylü Evleri'nin maden deposuna toplam katkısı (Progression.HouseStorageBonus, ev başına seviyeye göre; üretim hızı değişmez).</summary>
@@ -1047,9 +1047,10 @@ public class GameManager : MonoBehaviour
         if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked)
         {
             int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;
-            var progression = ApprenticeProgressionData.Instance;
-            return Buildings[BuildingType.GoldMine].goldPerSecond * boost *
-                (1f + (progression != null ? progression.MineBonus(level) : 10) / 100f);
+            // AŞAMA 4: üretim ve çırak bonusu etkin ekonomi profilinden (kayıttaki goldPerSecond alanına bağımlı değil).
+            var econ = Economy.Active;
+            return econ.MineGps(Mathf.Max(1, Buildings[BuildingType.GoldMine].level)) * boost *
+                (1f + econ.ApprenticeMineBonusPercent(level) / 100f);
         }
         return 0f;
     }

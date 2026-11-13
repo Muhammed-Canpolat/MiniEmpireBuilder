@@ -96,6 +96,10 @@ public sealed class FeatureConfig : ScriptableObject
     public float compactDockHeight = 54f;
     public float compactDockWidth = 124f;
 
+    [Header("Ekonomi (AŞAMA 4)")]
+    /// <summary>Etkin altın ekonomisi profili: Resources/Config/ altındaki EconomyConfig asset adı ("Economy_V2" ya da "Economy_Legacy").</summary>
+    public string economyProfile = "Economy_V2";
+
     private static FeatureConfig cached;
 
     public static FeatureConfig Instance

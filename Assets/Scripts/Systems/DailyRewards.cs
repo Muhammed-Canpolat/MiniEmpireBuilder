@@ -74,15 +74,15 @@ public static class DailyRewards
         int level = GameManager.Instance != null ? Mathf.Max(1, GameManager.Instance.GetMainBaseLevel()) : 1;
         switch (day)
         {
-            case 1: return Make(day, DailyRewardKind.Gold, 50 + 50 * level, "", "ui_icon_coin");
+            case 1: return Make(day, DailyRewardKind.Gold, Economy.Active.calendarDay1Base + Economy.Active.calendarDay1PerMb * level, "", "ui_icon_coin");
             case 2: return Make(day, DailyRewardKind.BuildSpeedup, 30, L.T("30 dk hızlandırma", "30 min speed-up"), "ui_icon_hammer");
-            case 3: return Make(day, DailyRewardKind.Gold, 100 + 100 * level, "", "ui_icon_coin");
+            case 3: return Make(day, DailyRewardKind.Gold, Economy.Active.calendarDay3Base + Economy.Active.calendarDay3PerMb * level, "", "ui_icon_coin");
             case 4: return Make(day, DailyRewardKind.CardToken, 1, L.T("Savaş kartı jetonu", "Battle card token"), "ui_icon_sword");
             case 5: return Make(day, DailyRewardKind.MineBoost, 60, L.T("1 sa 2x maden", "1 h 2x mine"), "ui_icon_coin");
             case 6: return Make(day, DailyRewardKind.UnlimitedLives, 120, L.T("2 sa sınırsız can", "2 h unlimited lives"), "ui_icon_heart");
             default:
                 var chest = Make(Days, DailyRewardKind.GemsChest, 20, L.T("20 elmas + sandık", "20 gems + chest"), "gem");
-                chest.chestGold = 150 * level;
+                chest.chestGold = Economy.Active.calendarDay7ChestPerMb * level;
                 return chest;
         }
     }

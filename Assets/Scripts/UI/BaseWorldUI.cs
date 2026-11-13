@@ -677,7 +677,7 @@ public class BaseWorldUI : MonoBehaviour
 
             case BuildingType.GoldMine:
                 return L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}\n" +
-                       L.T($"Üretim: {building.goldPerSecond:F1} altın/sn", $"Production: {building.goldPerSecond:F1} gold/s");
+                       L.T($"Üretim: {Economy.Active.MineGps(building.level):F1} altın/sn", $"Production: {Economy.Active.MineGps(building.level):F1} gold/s");
 
             case BuildingType.Monastery:
                 int healPct = Mathf.RoundToInt(Progression.MonasteryHealFraction(building.level) * 100f);
