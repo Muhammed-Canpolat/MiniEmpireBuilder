@@ -76,7 +76,7 @@ public class PlaytestBotTests
         Screen.SetResolution(390, 844, false);
         var bot = Type("PlaytestBot");
         var routine = (IEnumerator)bot.GetMethod("PlayBattle")
-            .Invoke(null, new object[] { region, level, 4f, 600f, capture, seed * 7919 + region * 31 + level, casual, strategy });
+            .Invoke(null, new object[] { region, level, 4f, 600f, capture, seed * 7919 + region * 31 + level, casual, strategy, false });
         yield return routine;
         var last = bot.GetProperty("Last").GetValue(null);
         string result = (string)last.GetType().GetField("result").GetValue(last);
