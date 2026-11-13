@@ -53,6 +53,19 @@ public static class GemEconomy
     public const int RoyalDailyGems = 10;
     public const float RoyalMineBonus = 0.2f; // +%20 maden; sınırsız can ve %15 kartlar ayrıca
 
+    // ==================== ADA ADI (AŞAMA 3) ====================
+    /// <summary>
+    /// Ada adı değiştirme bedeli (elmas); changesSoFar = şimdiye dek yapılan değişiklik. İlk 2 bedava, sonra 50, 100, 150…
+    /// (adım FeatureConfig.islandRenameGemStep; diğer elmas fiyatlarına dokunmaz).
+    /// </summary>
+    public static int IslandRenameCost(int changesSoFar)
+    {
+        var cfg = FeatureConfig.Instance;
+        int free = Mathf.Max(0, cfg.islandNameFreeChanges);
+        if (changesSoFar < free) return 0;
+        return (changesSoFar - free + 1) * Mathf.Max(0, cfg.islandRenameGemStep);
+    }
+
     // ==================== KAZANÇ ====================
     public const int GemsPerNewStar = 1;
     public const int GemsPerFirstBossWin = 10;

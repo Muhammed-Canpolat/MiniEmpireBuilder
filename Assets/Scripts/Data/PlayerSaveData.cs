@@ -203,7 +203,7 @@ public class PlayerSaveData
         return data;
     }
 
-    public const int CurrentVersion = 10;
+    public const int CurrentVersion = 11;
 
     /// <summary>Kışla ve Köylü Evi türleri kayıtta yoksa ekler (v9; eski kayıt göçü ve yeni oyun): açılış seviyesindeyse açık, yoksa kilitli.</summary>
     public static void EnsureBaseBondEntries(PlayerSaveData data)
@@ -306,6 +306,11 @@ public class IslandSaveData
     public int freeBuildMask;       // bit (int)BuildingKind = o türün ilk yapımı kullanıldı (bedava hakkı bitti)
     public List<string> clearedTrees = new List<string>();   // kesilen ağaçlar "sütun,satır" (bir daha büyümez)
     public bool legacyVillage;      // v10 öncesi ilerlemesi olan ama köyü tohumlanmamış kayıt: ilk açılışta hazır köy kurulur
+    // v11 (AŞAMA 3): ada adı. Boş ad = "Martı Adası". nameSeal = ad+değişiklik sayısının basit özeti (elle düzenleme tespiti).
+    public string islandName = "";
+    public int nameChanges;         // yapılan ad değişikliği sayısı (ilk adlandırma yeni oyuncuda 1. değişiklik)
+    public int nameSeal;            // IslandNameRules.Seal(islandName, nameChanges)
+    public bool nameOffered;        // ada adı sorusu/teklifi gösterildi
     // v7 / Faz B (island_base_v2 §9, §17): yerleştirilmiş binalar, bölge maskesi, Usta görevi. Eski kayıtta boş/varsayılan: hazır köy tohumlanır.
     public bool villageSeeded;      // hazır köy placed listesine yazıldı mı (v6'dan geçişte ilk açılışta yapılır)
     public List<IslandPlacedBuilding> placed = new List<IslandPlacedBuilding>();
@@ -757,6 +762,16 @@ public static class SaveSystem
                 isl.freeBuildMask = isl.villageSeeded ? IslandEconomy.OwnedKindsMask(isl.placed) : 0;
                 isl.legacyVillage = !isl.villageSeeded && (isl.highestAkin > 0 || isl.tutorialStep > 0 || (isl.buildings != null && isl.buildings.Count > 0));
                 data.saveVersion = 10;
+                Save(data);
+            }
+            // v11 (AŞAMA 3): ada adı. Eski kayıtta ad boş ("Martı Adası" gösterilir), teklif henüz yapılmadı.
+            if (data.saveVersion < 11)
+            {
+                data.island.islandName = "";
+                data.island.nameChanges = 0;
+                data.island.nameOffered = false;
+                data.island.nameSeal = IslandNameRules.Seal("", 0);
+                data.saveVersion = 11;
                 Save(data);
             }
             MigrateTimings(data);
