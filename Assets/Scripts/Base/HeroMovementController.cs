@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Base scene ambient hero movement around the camp. Battle movement is separate.</summary>
@@ -103,6 +103,13 @@ public class HeroMovementController : MonoBehaviour
         RectInt area = BaseMapManager.Instance != null ? BaseMapManager.Instance.BuildableRect : new RectInt(0, 0, 0, 0);
         var candidates = new List<Vector2>();
         var occupiedFootprints = BaseWorldLayout.GetOccupiedFootprints();
+        // 3. oturum (1.4): kahraman kamp bayrağının ve dekorların üstüne yürümez (bayrakla iç içe duruyordu)
+        var camp = GameObject.Find("HeroCamp");
+        if (camp != null) occupiedFootprints.Add(new Rect((Vector2)camp.transform.position - new Vector2(1.9f, 0.9f), new Vector2(3.8f, 2.9f)));   // bayrak + kahraman gövdesi payı
+        if (DecorPlacementController.Instance != null)
+            foreach (var item in DecorPlacementController.Instance.Placed)
+                if (item != null && item.Data != null)
+                    occupiedFootprints.Add(new Rect(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
         for (int x = area.xMin + 1; x < area.xMax - 1; x++)
         for (int y = area.yMin + 1; y < area.yMax - 1; y++)
         {

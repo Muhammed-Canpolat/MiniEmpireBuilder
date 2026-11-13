@@ -32,6 +32,15 @@ public sealed class DailyQuestsUI : MonoBehaviour
 
     private void OnDestroy() => DailyQuests.OnChanged -= RefreshDot;
 
+    // 3. oturum (1.2): gün dönümünde OnChanged gelmez; rozet saniyede bir koşuldan yeniden hesaplanır (pencereyi açmaz).
+    private float nextPoll;
+    private void Update()
+    {
+        if (Time.unscaledTime < nextPoll) return;
+        nextPoll = Time.unscaledTime + 1f;
+        if (dot != null) { bool on = DailyQuests.HasClaimable; if (dot.activeSelf != on) dot.SetActive(on); }
+    }
+
     private void RefreshDot()
     {
         if (dot != null) dot.SetActive(DailyQuests.HasClaimable);

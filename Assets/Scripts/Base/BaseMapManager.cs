@@ -1145,6 +1145,81 @@ public class BaseMapManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 3. oturum (1.4): görsel çakışma onarımı. Hücre ayak izleri boş olsa da çatılar/büyük sprite'lar birbirine girebiliyordu
+    /// (Topçu Kulesi ile altındaki ev, Kışla ile fener). Sıra: Ana Üs, maden, diğer binalar ve kulübeler, kamp, dekorlar; önce
+    /// yerleşen kazanır. Çakışan nesne, ayak izi geçerli VE görseli yerleşmişlerle çakışmayan en yakın yere taşınır; yer yoksa
+    /// yerinde kalır (dekor için mevcut onarım kuralı geçerli). Taşınan sayısını döndürür. İdempotent.
+    /// </summary>
+    public int RepairVisualLayout()
+    {
+        var items = BaseVisualBounds.Collect();
+        int Rank(string name) => name.StartsWith("MainBase") || name == "camp" ? 0 : name.StartsWith("GoldMine") ? 1
+            : name.StartsWith("decor:") ? 4 : 2;   // Ana Üs ve kahraman kampı sabit
+        items = items.Select((x, i) => (x, i)).OrderBy(p => Rank(p.x.name)).ThenBy(p => p.i).Select(p => p.x).ToList();
+        var settled = new List<Rect>();
+        int moved = 0;
+        bool AnySettled(Rect r) { foreach (var s in settled) if (BaseVisualBounds.Overlap(r, s)) return true; return false; }
+        var decorCtl = DecorPlacementController.Instance;
+        foreach (var (name, go) in items)
+        {
+            if (go == null) continue;
+            Rect rect = BaseVisualBounds.Of(go);
+            if (rect.width <= 0f || !AnySettled(rect) || Rank(name) == 0 || name == "camp") { settled.Add(rect); continue; }
+            Vector3 pos = go.transform.position;
+            var obj = _mapObjects.Find(o => o.gameObject == go);
+            var decor = obj == null ? go.GetComponent<DecorInstance>() : null;
+            bool done = false;
+            if (obj != null)
+            {
+                Vector2Int size = FootprintOf(obj);
+                var area = _buildableRect.width > 0 ? _buildableRect : BaseWorldLayout.Buildable;
+                var candidates = new List<Vector3>();
+                for (int y = area.yMin; y <= area.yMax - size.y; y++)
+                    for (int x = area.xMin; x <= area.xMax - size.x; x++)
+                        candidates.Add(new Vector3(x + size.x * 0.5f, y + size.y * 0.5f, pos.z));
+                candidates.Sort((a, b) => (a - pos).sqrMagnitude.CompareTo((b - pos).sqrMagnitude));
+                foreach (var c in candidates)
+                {
+                    var shifted = new Rect(rect.position + (Vector2)(c - pos), rect.size);
+                    if (AnySettled(shifted) || !CanPlaceFootprintAt((Vector2)size, c, obj)) continue;
+                    go.transform.position = c;
+                    go.GetComponent<BuilderHut>()?.OnMoved();
+                    rect = shifted; moved++; done = true;
+                    break;
+                }
+            }
+            else if (decor != null && decorCtl != null && decor.Data != null)
+            {
+                var origin = decor.Cell;
+                var cells = new List<Vector2Int>();
+                for (int dy = -10; dy <= 10; dy++) for (int dx = -10; dx <= 10; dx++) cells.Add(origin + new Vector2Int(dx, dy));
+                cells.Sort((a, b) => (a - origin).sqrMagnitude.CompareTo((b - origin).sqrMagnitude));
+                foreach (var cell in cells)
+                {
+                    if (cell == origin || !decorCtl.CanPlace(decor.Data, cell, decor)) continue;
+                    Vector3 before = go.transform.position;
+                    decor.SetCell(cell);
+                    var shifted = new Rect(rect.position + (Vector2)(go.transform.position - before), rect.size);
+                    if (AnySettled(shifted)) { decor.SetCell(origin); continue; }
+                    rect = shifted; moved++; done = true;
+                    break;
+                }
+            }
+            if (!done) Debug.LogWarning($"[BaseMapManager] Görsel çakışma çözülemedi: {name}");
+            settled.Add(rect);
+        }
+        if (moved > 0)
+        {
+            BaseGroundPaths.Instance?.Refresh();
+            HeroMovementController.Instance?.RefreshWalkable();
+            SaveAll();
+            decorCtl?.SaveNow();
+            Debug.Log($"[BaseMapManager] Görsel çakışma onarımı: {moved} nesne taşındı.");
+        }
+        return moved;
+    }
+
+    /// <summary>
     /// Yükleme sonrası onarım: bina/kulübe başka bir nesneyle çakışıyor ya da açık arazinin dışındaysa
     /// en yakın boş geçerli yere taşınır (yerleşme sırası: Ana Üs, sonra liste sırası). Ardından dekor
     /// da aynı ızgaraya göre onarılır; sığmayan dekorun bedeli iade edilir. Taşınan nesne sayısını döndürür.

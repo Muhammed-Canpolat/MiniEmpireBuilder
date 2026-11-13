@@ -48,6 +48,15 @@ public sealed class DailyRewardsUI : MonoBehaviour
 
     private void OnDestroy() => DailyRewards.OnChanged -= RefreshDot;
 
+    // 3. oturum (1.2): gün dönümünde OnChanged gelmez; rozet saniyede bir koşuldan yeniden hesaplanır.
+    private float nextPoll;
+    private void Update()
+    {
+        if (Time.unscaledTime < nextPoll) return;
+        nextPoll = Time.unscaledTime + 1f;
+        RefreshDot();
+    }
+
     private void RefreshDot()
     {
         if (dot != null) dot.SetActive(DailyRewards.CanClaim);

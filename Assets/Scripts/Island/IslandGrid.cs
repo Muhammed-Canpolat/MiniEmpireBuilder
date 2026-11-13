@@ -83,9 +83,9 @@ public static class IslandGrid
         // Doğa (§5): ağaç, altın taşı, koyun çayırı yerleşimi engeller; çalı ve kaya süstür (bina üstlerine biner, engel değil)
         foreach (var t in IslandLayout.Trees) Mark(reason, t.x, t.y, Reason.Nature);
         foreach (var t in IslandLayout.GoldStones) Mark(reason, t.x, t.y, Reason.Nature);
-        var meadow = IslandLayout.Meadow;
-        for (int c = meadow.xMin; c < meadow.xMax; c++)
-            for (int r = meadow.yMin; r < meadow.yMax; r++) Mark(reason, c, r, Reason.Nature);
+        // 3. oturum (1.3): koyun çayırı statik engel değildir. Kesilebilir ağaç modunda (varsayılan) çayır sahnede hiç çizilmez
+        // (koyunlar Ağıl çevresinde): oyuncu düz çim görüp "çayır var" hatası alıyordu. Eski sabit çayır modunda (koyunlar
+        // çayırda otlar) engel <see cref="MeadowBlocks"/> ile Check içinde uygulanır.
         staticReason = reason;
 
         // Ana kara: kaleden doldurma; kalanlar adacık (yalnız kule)
@@ -119,6 +119,21 @@ public static class IslandGrid
             Vector2 p = Vector2.Lerp(a, b, i / (float)steps);
             Mark(reason, Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y), Reason.Lane);
         }
+    }
+
+    /// <summary>Çayır yalnız görünür olduğu eski modda (koyunlar sabit çayırda) yerleşimi engeller.</summary>
+    public static bool MeadowBlocks => FeatureConfig.Instance != null && !FeatureConfig.Instance.islandClearableTrees;
+
+    /// <summary>
+    /// 3. oturum (1.3): hücrenin şu anki (dinamik) engel nedeni: statik neden + kesilmiş ağaç + görünür çayır. Hata ayıklama görseli ve
+    /// "görsel = mantık" testi bunu kullanır; bina çakışması ve bölge kilidi dahil değildir.
+    /// </summary>
+    public static Reason CellReason(int c, int r)
+    {
+        var s = StaticReason(c, r);
+        if (s == Reason.Nature && ClearedTreeAt(c, r)) return Reason.None;
+        if (s == Reason.None && MeadowBlocks && IslandLayout.Meadow.Contains(new Vector2Int(c, r))) return Reason.Nature;
+        return s;
     }
 
     /// <summary>Hücre kalıcı olarak yerleşime kapalı mı (arazi, şerit, doğa); None = serbest.</summary>
@@ -200,6 +215,7 @@ public static class IslandGrid
                 if (s == Reason.Stairs) return Reason.Stairs;
                 if (s == Reason.Lane) return Reason.Lane;
                 if (s == Reason.Nature && !ClearedTreeAt(c, r)) return Reason.Nature;
+                if (s == Reason.None && MeadowBlocks && IslandLayout.Meadow.Contains(new Vector2Int(c, r))) return Reason.Nature;
                 if (!mainland[c, r]) onMainland = false;
             }
         if (!onMainland && kind != IslandLayout.BuildingKind.Tower) return Reason.TowerOnly;

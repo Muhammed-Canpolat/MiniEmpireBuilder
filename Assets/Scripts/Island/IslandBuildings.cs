@@ -328,6 +328,49 @@ public static class IslandRepair
         SaveAll();
     }
 
+    /// <summary>
+    /// 3. oturum (1.3) göçü: kayıttaki hayalet engelleri temizler (yüklemede, idempotent). Silinen: tanınmayan türdeki ya da Kale türündeki
+    /// kayıtlar (ParseKind bunları görünmez 2×2 "Ev" engeline çeviriyordu), harita dışı kayıtlar, aynı kimliğin kopyası, görevi olmayan
+    /// şantiyeler (level 0 ama Usta görevi o binada değil: sonsuza dek soluk duran ve hücre tutan şantiye) ve ağaç hücresi olmayan
+    /// kesilmiş-ağaç anahtarları. Döndürülen: temizlenen kayıt sayısı.
+    /// </summary>
+    public static int CleanGhosts(IslandSaveData save)
+    {
+        if (save == null) return 0;
+        int removed = 0;
+        var seen = new HashSet<string>();
+        if (save.placed != null)
+            for (int i = save.placed.Count - 1; i >= 0; i--)
+            {
+                var b = save.placed[i];
+                bool ghost = b == null || string.IsNullOrEmpty(b.id)
+                    || !Enum.TryParse(b.kind, out IslandLayout.BuildingKind kind) || kind == IslandLayout.BuildingKind.Castle;
+                if (!ghost)
+                {
+                    var size = IslandGrid.Size(IslandGrid.ParseKind(b.kind));
+                    ghost = b.col < 0 || b.row < 0 || b.col + size.x > IslandLayout.Width || b.row + size.y > IslandLayout.Height;
+                }
+                if (!ghost && b.level < 1)
+                    ghost = save.task == null || save.task.kind != "build" || save.task.buildingId != b.id;
+                if (ghost) { save.placed.RemoveAt(i); removed++; }
+            }
+        // Kopya kimlik: ilk görülen (listede baştaki) kalır
+        if (save.placed != null)
+            for (int i = 0; i < save.placed.Count; i++)
+            {
+                if (seen.Add(save.placed[i].id)) continue;
+                save.placed.RemoveAt(i--); removed++;
+            }
+        if (save.clearedTrees != null)
+            removed += save.clearedTrees.RemoveAll(key =>
+            {
+                var parts = (key ?? "").Split(',');
+                return parts.Length != 2 || !int.TryParse(parts[0], out int c) || !int.TryParse(parts[1], out int r) || !IslandEconomy.IsTreeCell(c, r);
+            });
+        if (removed > 0) Debug.Log($"[IslandRepair] Hayalet engel göçü: {removed} kayıt temizlendi.");
+        return removed;
+    }
+
     public static void SaveAll()
     {
         var save = IslandSession.Save;

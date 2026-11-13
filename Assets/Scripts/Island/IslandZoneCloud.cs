@@ -17,6 +17,16 @@ public sealed class IslandZoneCloud : MonoBehaviour
     private Color baseColor = Color.white;
     private Vector3 baseScale = Vector3.one;
     private bool captured;
+    private float dim = 1f;
+
+    /// <summary>3. oturum (1.1): savunmada bulut kapanmaz, yarı saydam kalır (kilitli bölge haritada açık görünmesin; düşman seçilebilir).</summary>
+    public void SetDim(float alpha)
+    {
+        Capture();
+        dim = Mathf.Clamp01(alpha);
+        if (dissolveStart < 0f && sr != null) { var c = baseColor; c.a = baseColor.a * dim; sr.color = c; }
+    }
+    public float Dim => dim;
 
     // ==================== KAPSAMA MODELİ (pişirme + IslandZoneMapTests aynı kuralı kullanır) ====================
 
@@ -65,7 +75,7 @@ public sealed class IslandZoneCloud : MonoBehaviour
     {
         Capture();
         dissolveStart = -1f;
-        if (sr != null) sr.color = baseColor;
+        if (sr != null) { var c = baseColor; c.a = baseColor.a * dim; sr.color = c; }
         transform.localScale = baseScale;
     }
 
@@ -82,7 +92,7 @@ public sealed class IslandZoneCloud : MonoBehaviour
         float eased = t * t * (3f - 2f * t);
         transform.position = new Vector3(anchor.x + sway.x + drift.x * eased, anchor.y + sway.y + drift.y * eased, 0f);
         transform.localScale = baseScale * (1f + 0.25f * eased);
-        if (sr != null) { var c = baseColor; c.a = baseColor.a * (1f - eased); sr.color = c; }
+        if (sr != null) { var c = baseColor; c.a = baseColor.a * dim * (1f - eased); sr.color = c; }
         if (t >= 1f) { dissolveStart = -1f; gameObject.SetActive(false); ResetDissolve(); }
     }
 }

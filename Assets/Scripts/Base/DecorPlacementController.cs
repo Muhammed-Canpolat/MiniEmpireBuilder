@@ -358,6 +358,9 @@ public sealed class DecorPlacementController : MonoBehaviour
         return item;
     }
 
+    /// <summary>Dışarıdan (görsel çakışma onarımı) kayıt.</summary>
+    public void SaveNow() => Save();
+
     private void Save()
     {
         var player = GameManager.Instance?.PlayerData;

@@ -434,6 +434,8 @@ public static class Progression
         /// <summary>Tiny Swords 1:1 (64 px/birim): kale 5, ev 2 hücre; birimler ölçeklenmez.</summary>
         public const float UnitScale = 1f;
         public const float EdgeCloudBattleAlpha = 0.4f, EdgeCloudCount = 7f;
+        /// <summary>3. oturum: savunmada kilitli bölge bulutunun saydamlığı (kapanmaz; düşmanlar altında seçilebilir).</summary>
+        public const float ZoneCloudBattleAlpha = 0.45f;
         public const float PawnRunSpeed = 2.4f, TreeRegrowSeconds = 180f, ChopsPerTree = 3f, TreeStumpEveryVisit = 3f;
         /// <summary>Kenney gemileri 66x113 / 20x38 px (64 PPU); son boy: Sandal 1,48 · Akıncı 2,47 · Mavna 3,53 u.</summary>
         public const float RowboatScale = 2.5f, LongboatScale = 1.4f, BargeScale = 2.0f;

@@ -132,6 +132,7 @@ public sealed class IslandVillage : MonoBehaviour
         keep = keepLevel;
         var save = IslandSession.Save;
         IslandEconomy.EnsureStarted(save, keep);   // AŞAMA 2 §1: yeni ada yalnız kaleyle; eski kayıt hazır köyü korur
+        IslandRepair.CleanGhosts(save);            // 3. oturum (1.3): kayıttaki hayalet engeller
         IslandEconomy.Tick(IslandRepair.Now, true);   // çevrimdışı üretim ve biten görev (onarım kaydı henüz silinmeden)
 
         villageRoot = new GameObject("Village").transform;

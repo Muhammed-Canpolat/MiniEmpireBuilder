@@ -37,10 +37,26 @@ public sealed class IslandCameraController : MonoBehaviour
         : Mathf.Max(IslandLayout.Width * 0.5f / Mathf.Max(0.01f, cam.aspect), IslandLayout.Height * 0.5f);
 
     /// <summary>Savaş çerçevesi: genişlik 22 u sığar (9:16'da ortho ≈19,6).</summary>
-    public float BattleSize => cam == null ? 0f
-        : Progression.Island.BattleFrameWidth * 0.5f / Mathf.Max(0.3f, cam.aspect);
+    public float BattleSize
+    {
+        get
+        {
+            if (cam == null) return 0f;
+            if (FixedView) { ComputeFixedView(cam.aspect, out _, out float s); return s; }
+            return Progression.Island.BattleFrameWidth * 0.5f / Mathf.Max(0.3f, cam.aspect);
+        }
+    }
 
-    public Vector2 BattleCenter => new Vector2(IslandLayout.Width * 0.5f, IslandLayout.Height * 0.5f + 1.2f);   // üst HUD ≈3 u pay
+    public Vector2 BattleCenter
+    {
+        get
+        {
+            // 3. oturum (1.1): sabit kadraj açıkken HARİTA üs görünümüyle aynı kadrajı kullanır (eski "harita ortası 22 u" kadrajı
+            // adanın yalnız bir kısmını, eski düzende gösteriyordu).
+            if (FixedView && cam != null) { ComputeFixedView(cam.aspect, out var c, out _); return c; }
+            return new Vector2(IslandLayout.Width * 0.5f, IslandLayout.Height * 0.5f + 1.2f);   // üst HUD ≈3 u pay
+        }
+    }
 
     /// <summary>Savaş dışında sabit kadraj (FeatureConfig.islandFixedCamera): kaydırma/zum yok.</summary>
     public static bool FixedView => FeatureConfig.Instance.islandFixedCamera;

@@ -225,8 +225,10 @@ public sealed class IslandSceneSetup : MonoBehaviour
             if (cloud == null) continue;
             bool open = KeepOverride > 0 || IslandGrid.ZoneOpen(cloud.zone, mask);
             // Dağılma animasyonu sürerken kapatma (animasyon kendi bitirir)
-            if (cloud.Dissolving && !InDefense) continue;
-            cloud.gameObject.SetActive(!InDefense && !open);
+            if (cloud.Dissolving) continue;
+            // 3. oturum (1.1): savunmada da kilitli bölge bulutlu kalır (yarı saydam): HARİTA adanın gerçek durumunu gösterir
+            cloud.SetDim(InDefense ? Progression.Island.ZoneCloudBattleAlpha : 1f);
+            cloud.gameObject.SetActive(!open);
         }
     }
 

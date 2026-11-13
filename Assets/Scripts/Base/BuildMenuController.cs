@@ -100,9 +100,9 @@ public class BuildMenuController : MonoBehaviour
         // 6 yapı: Kart Atölyesi (Ana Üs 5), Köylü Evi (3) ve Kışla (7) (Faz F); sütunlar dar, yazılar küçülür.
         const float cw = 0.158f, gap = 0.0048f;
         float X(int column) => 0.006f + column * (cw + gap);
-        CreateItem(BuildingType.ArcherTower, X(0), X(0) + cw, 50);
-        CreateItem(BuildingType.CannonTower, X(1), X(1) + cw, 80);
-        CreateItem(BuildingType.Monastery, X(2), X(2) + cw, 60);
+        CreateItem(BuildingType.ArcherTower, X(0), X(0) + cw, MenuCost(BuildingType.ArcherTower));
+        CreateItem(BuildingType.CannonTower, X(1), X(1) + cw, MenuCost(BuildingType.CannonTower));
+        CreateItem(BuildingType.Monastery, X(2), X(2) + cw, MenuCost(BuildingType.Monastery));
         CreateItem(BuildingType.CardWorkshop, X(3), X(3) + cw, Progression.Workshop.BuildCost);
         CreateItem(BuildingType.House, X(4), X(4) + cw, Progression.BuildCost(BuildingType.House));
         CreateItem(BuildingType.Barracks, X(5), X(5) + cw, Progression.BuildCost(BuildingType.Barracks));
@@ -408,6 +408,25 @@ public class BuildMenuController : MonoBehaviour
             }
         });
     }
+
+    /// <summary>İnşa Et menüsündeki yeni yapı bedeli (tek kaynak: menü, rozet ve testler aynı sayıyı kullanır).</summary>
+    public static int MenuCost(BuildingType type)
+    {
+        switch (type)
+        {
+            case BuildingType.ArcherTower: return 50;
+            case BuildingType.CannonTower: return 80;
+            case BuildingType.Monastery: return 60;
+            case BuildingType.CardWorkshop: return Progression.Workshop.BuildCost;
+            case BuildingType.House:
+            case BuildingType.Barracks: return Progression.BuildCost(type);
+            default: return 0;
+        }
+    }
+
+    /// <summary>Menüdeki yapılar (sırasıyla).</summary>
+    public static readonly BuildingType[] MenuTypes = { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery,
+        BuildingType.CardWorkshop, BuildingType.House, BuildingType.Barracks };
 
     // ==================== API ====================
 
