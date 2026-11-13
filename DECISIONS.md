@@ -117,3 +117,22 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   Ödül gibi cüzdan tavanını aşabilir. Ayrı düğme eklenmedi (alt menü kalabalık) → keşfedilebilirliği düşük olabilir.
 - **Yapılmadı:** Sefer Erzakı ve Prestij Anıtları (ECONOMY §6.1, §6.3) — yeni içerik/sanat ister; simde V2 onlarsız da hedefte
   (tavan %2,8 1. gün). Sıradaki iş olarak not edildi.
+
+## D21 — Baştan oynatma sürücüsü oyun kodunda (dc8232f)
+- **Karar:** `PlaytestJourney` (yalnız editör/Development) gerçek akışları tipli kodla sürer; test (`FreshAccountJourneyTests`) yalnız
+  çağırır ve doğrular. DevSettings tamamen kapatılır (sınırsız elmas yok, ad penceresi gerçek oyuncudaki gibi açılır). Oturum
+  araları `DevAdvanceTime` ile (çevrimdışı maden/inşaat/can gerçek kurallarla). Savaşları PlaytestBot oyuncunun kendi kaydıyla
+  oynar (`keepCurrentSave`; profil kurulmaz, `TryStartCampaignBattle` gerçek akışı). Gerçek kayıt test sonunda geri yüklenir.
+- **Alternatif:** cihazda elle oynamak (bu oturumda mümkün değil). ⚠️ Bina yerleştirme (Kışla/Ev, adada yapı) sürücüde yok —
+  onları IslandFreshStartTests/BaseBarracksTests kapsıyor.
+
+## D22 — Kararma geçişi iptali (bf39bd2)
+- **Bulgu:** Ana Üs'e dönüş bulutla asenkron yüklenir; geçiş bitmeden savaş başlatılırsa geciken yükleme kararma örtüsünü yok
+  ediyor, savaş sahnesi hiç açılmıyordu (MissingReferenceException). Gerçek oyuncuda bulut ekranı örttüğü için olasılığı düşük.
+- **Karar:** Örtü yok olursa o kararma geçişi sessizce iptal olur (çifte yükleme yok). Sürücü bulut geçişi bitene kadar bekler.
+
+## D23 — Eski 5 test (9427eb5) ⚠️
+- **Karar:** Hata ayıklama katmanını bekleyen testler DevSettings'i kendileri açar/geri yükler; toprak yollar 5429490'da bilerek
+  kaldırıldığından testler `StoneRoadTilemap` yokluğunu bekler. `ShadowsRemainSoftAfterMovesAndReloads` bundan sonra gerçek bir
+  ölçümde (Topçu Kulesi köşesi komşu zeminin %30'u parlaklıkta) kalıyor; eşik **gevşetilmedi** (denendi, ikinci ölçüt de
+  tutmadı → yanlış alarm değil). Gözle bakılmalı.
