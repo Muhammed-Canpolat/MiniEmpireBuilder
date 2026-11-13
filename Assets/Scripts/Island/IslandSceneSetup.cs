@@ -171,6 +171,9 @@ public sealed class IslandSceneSetup : MonoBehaviour
 
     private void OnRaidState(IslandRaidManager.State state)
     {
+        // Akın sürerken savaş müziği; Idle/Won/Lost sakin müzik (FeatureConfig.islandCalmMusic)
+        if (FeatureConfig.Instance.islandCalmMusic)
+            AudioManager.Instance?.PlayIslandBgm(state == IslandRaidManager.State.Running);
         if (state == IslandRaidManager.State.Running) SetDefense(true);
         else if (state == IslandRaidManager.State.Idle) SetDefense(false);
     }

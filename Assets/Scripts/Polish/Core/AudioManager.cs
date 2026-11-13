@@ -91,7 +91,7 @@ public sealed class AudioManager : MonoBehaviour
         switch (newScene.name)
         {
             case "BaseScene": PlayBaseBgm(); break;
-            case "BattleScene": PlayBattleBgm(); break;
+            case "BattleScene": PlaySceneBattleOrIsland(); break;
             case "MainMenuScene": PlayIntroBgm(); break;
             default: PlayWorldBgm(); break;
         }
@@ -128,7 +128,7 @@ public sealed class AudioManager : MonoBehaviour
     private float TrackVolume(MusicTrack track) => musicVolume * Mathf.Clamp01(track?.volume ?? 1f);
 
     /// <summary>Parçaya 1 sn'lik çapraz geçiş. loop=false ise parça bitince çalma listesi ilerler.</summary>
-    private void PlayTrack(MusicTrack track, bool loop)
+    private void PlayTrack(MusicTrack track, bool loop, float fade = FadeSeconds)
     {
         if (track != null && track.clip == null) track = null;
         if (track != null && currentTrack != null && track.clip == currentTrack.clip) return;
@@ -138,7 +138,7 @@ public sealed class AudioManager : MonoBehaviour
             foreach (var source in new[] { musicA, musicB })
             {
                 source.DOKill();
-                source.DOFade(0f, FadeSeconds).OnComplete(source.Stop);
+                source.DOFade(0f, fade).OnComplete(source.Stop);
             }
             return;
         }
@@ -150,8 +150,8 @@ public sealed class AudioManager : MonoBehaviour
         to.loop = loop;
         to.volume = 0f;
         if (MusicEnabled) to.Play();
-        from.DOFade(0f, FadeSeconds).OnComplete(from.Stop);
-        to.DOFade(MusicEnabled ? TrackVolume(track) : 0f, FadeSeconds);
+        from.DOFade(0f, fade).OnComplete(from.Stop);
+        to.DOFade(MusicEnabled ? TrackVolume(track) : 0f, fade);
         isMusicAActive = !isMusicAActive;
     }
 
@@ -179,6 +179,7 @@ public sealed class AudioManager : MonoBehaviour
     /// <summary>Her savaşta rastgele bir döngü; sisli bölgede altta ambiyans katmanı.</summary>
     public void PlayBattleBgm()
     {
+        lastMusicCategory = "battle";
         StopAmbience();
         playlist = null;
         PlayTrack(Random(Library?.battleMusic), true);
@@ -187,6 +188,53 @@ public sealed class AudioManager : MonoBehaviour
             && BattleSession.Region.specialMechanic == "Sis";
         if (foggy && fog != null && fog.clip != null)
             PlayLayer(layerSource, fog.clip, TrackVolume(fog) * FogLayerVolume);
+    }
+
+    // ---- Ada müziği (FeatureConfig.islandCalmMusic) ----
+    private bool islandRaidRunning;
+    private string lastMusicCategory = "";
+
+    /// <summary>Son seçilen müzik kategorisi: "island-calm", "island-battle", "battle", "base"... (test/telemetri).</summary>
+    public string MusicCategory => lastMusicCategory;
+
+    private static bool IslandCalmMusicActive => IslandSession.Active && FeatureConfig.Instance.islandCalmMusic;
+
+    private void PlaySceneBattleOrIsland()
+    {
+        if (IslandCalmMusicActive) { islandRaidRunning = false; PlayIslandBgm(false); }
+        else PlayBattleBgm();
+    }
+
+    /// <summary>Ada: sakinken Ana Üs listesi + rüzgâr/kuş katmanı; akın sürerken savaş müziği. Geçiş config süresinde çapraz.</summary>
+    public void PlayIslandBgm(bool raidRunning)
+    {
+        islandRaidRunning = raidRunning;
+        float fade = Mathf.Max(0.05f, FeatureConfig.Instance.islandMusicCrossfadeSeconds);
+        if (raidRunning)
+        {
+            StopAmbience();
+            playlist = null;
+            lastMusicCategory = "island-battle";
+            var battle = Random(Library?.battleMusic);
+            if (battle != null && currentTrack != null && battle.clip == currentTrack.clip) return;
+            PlayTrack(battle, true, fade);
+            return;
+        }
+        lastMusicCategory = "island-calm";
+        var tracks = Library?.baseMusic;
+        playlist = tracks != null ? System.Array.FindAll(tracks, t => t != null && t.clip != null) : null;
+        if (playlist != null && playlist.Length > 0)
+        {
+            bool alreadyInList = currentTrack != null && System.Array.Exists(playlist, t => t.clip == currentTrack.clip);
+            if (!alreadyInList)
+            {
+                playlistIndex = UnityEngine.Random.Range(0, playlist.Length);
+                PlayTrack(playlist[playlistIndex], playlist.Length == 1, fade);
+            }
+        }
+        else PlayTrack(null, true, fade);
+        PlayLayer(windSource, Library?.baseWindLoop, 0.22f);
+        PlayLayer(birdSource, Library?.baseBirdLoop, 0.14f);
     }
 
     /// <summary>Boss sahaya çıkınca boss müziği (atanmışsa).</summary>
@@ -199,6 +247,7 @@ public sealed class AudioManager : MonoBehaviour
     /// <summary>Ana Üs: uzun parçalar sırayla çalar, liste bitince başa döner.</summary>
     public void PlayBaseBgm()
     {
+        lastMusicCategory = "base";
         var tracks = Library?.baseMusic;
         playlist = tracks != null ? System.Array.FindAll(tracks, t => t != null && t.clip != null) : null;
         if (playlist != null && playlist.Length > 0)
@@ -296,6 +345,7 @@ public sealed class AudioManager : MonoBehaviour
         }
         string scene = SceneManager.GetActiveScene().name;
         if (scene == "BaseScene") PlayBaseBgm();
+        else if (scene == "BattleScene" && IslandCalmMusicActive) PlayIslandBgm(islandRaidRunning);
         else if (scene == "BattleScene" && currentTrack == null) PlayBattleBgm();
     }
 
