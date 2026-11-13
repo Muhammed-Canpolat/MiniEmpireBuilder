@@ -83,3 +83,37 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   (DOTween'deki DOKill çakışması). İlk açılış açık, durum `MEB_RadialOpen`. Ada rozeti yalnız baskın uyarısı/canlı baskında
   ("Akın hazır" rozeti yapılmadı). Ada ikonu yer tutucu (kale + ağaç) → ART_NEEDS.
 - **Geri alma:** `radialDockMenu=false` (eski dock + düz ADA düğmesi). ⚠️ KAHRAMAN/SEFER kurdeleleri düğmeye hafif biniyor.
+
+## D15 — Yarım kalan AŞAMA 4 değişiklikleri (oturum kesintisi)
+- **Karar:** API limiti yüzünden kesilen ajanın commit'lenmemiş değişiklikleri (EconomyConfig + iki asset + çağrı noktaları)
+  incelendi; derleniyordu ve ECONOMY.md §7 ile tutarlıydı → **geri alınmadı, tamamlandı** (7c3569e). Test pişirmesinin
+  `IslandTerrain.prefab`'ta bıraktığı rastgele animasyon hızı gürültüsü geri alındı; `ground_mine_rocks.png.meta`'ya dokunulmadı.
+
+## D16 — Economy_V2 varsayılan, Legacy korunur (7c3569e)
+- **Karar:** `FeatureConfig.economyProfile = "Economy_V2"`. Asset bulunamazsa kod varsayılanı **LEGACY** (güvenli).
+  2. inşaatçı Ana Üs tablosundan koparıldı (sabit 850). Elmas fiyatları, GoldPerGem, süreler değişmedi.
+  Eski kayıtların `goldPerSecond` alanı artık okunmuyor; maden hızı her zaman profilden.
+- **Geri alma:** `economyProfile = "Economy_Legacy"` (FeatureConfig asset'i oluşturup) — davranış birebir eskiye döner
+  (EconomyProfileTests bunu denetler). Sonsuz kule bedeli düzeltmesi iki profilde de açık (`endlessBuildCostFormula`).
+- ⚠️ V2 sayıları simülasyondan; bot/cihazla doğrulanmadı (ECONOMY §10 telemetri alanları eklenmedi).
+
+## D17 — 2x zafer reklamı günde 5 hak ⚠️ (ca33aa4)
+- **Karar:** ECONOMY §9'daki AI_README çatışması (2x "savaş başına 1, günlük sınır yok") V2 lehine çözüldü: V2'de günde 5
+  (`victoryDoubleAdsPerDay`), düğmede kalan hak "(4/5)" yazar; hak bitince düğme doğrudan TEKRAR/SONRAKİ KAT olur. LEGACY sınırsız.
+- **Gerekçe:** Simde 2x reklam sınırsızken tek başına tavan kaybının ana kaynağı. **Geri alma:** değeri 0 yap.
+
+## D18 — Ganimet payı gösterimi
+- **Karar:** Zafer ekranında "Üsse aktarılan" artık gerçek ödeme (`LastPayout`, %75 ganimet + tekrar kesintisi sonrası);
+  sefer zaferinde "Ganimet %75: savaş altınının %75'i üsse geçer" satırı. Satır değerleri (düşman altını/ödül/inşa) brüt kalır.
+
+## D19 — Sonsuz Sefer / İstila kart seçimi (ca33aa4)
+- **Karar:** Kart satırları ortak `BuildCardSection` oldu; Sonsuz ve İstila penceresi (ModeLaunchPanel) kart bölümü kadar uzar.
+  Zaferden sonra "SONRAKİ KAT" artık haritaya döner ve Sonsuz penceresi kendiliğinden açılır (kart seçilsin diye; eskiden
+  doğrudan savaş). Yenilgide "TEKRAR DENE" seferdeki gibi kartsız doğrudan başlar (mevcut kural). İstila boss sayılır
+  (Kalkan Kıran işe yarar). Pencere içi uyarılar pencerenin kendi satırında (harita toast'ı altta kalıyordu).
+
+## D20 — Ada Tüccarı (ca33aa4); diğer iki yutak yapılmadı ⚠️
+- **Karar:** Adada Et/Odun çipine dokununca Ada Tüccarı: 50 Et ya da 50 Odun, 400 + 120(MB−5) altın, günde 2 paket (V2).
+  Ödül gibi cüzdan tavanını aşabilir. Ayrı düğme eklenmedi (alt menü kalabalık) → keşfedilebilirliği düşük olabilir.
+- **Yapılmadı:** Sefer Erzakı ve Prestij Anıtları (ECONOMY §6.1, §6.3) — yeni içerik/sanat ister; simde V2 onlarsız da hedefte
+  (tavan %2,8 1. gün). Sıradaki iş olarak not edildi.
