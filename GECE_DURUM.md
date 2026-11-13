@@ -1,25 +1,25 @@
 # GECE_DURUM — Otonom çalışma (13 Kasım 2026, 3. oturum: oyun testi geri bildirimi 2 + Google Play hazırlığı)
 
-DURUM: SÜRÜYOR (3. oturum)
-ŞU ANKİ İŞ: AŞAMA 1.1 akın haritası
-SIRADAKİ İŞ: 1.2 rozet
-Kararlar: DECISIONS.md D31+ · Başlangıç commit'i: ce2f308
+DURUM: TAMAMLANDI (3. oturum)
+ŞU ANKİ İŞ: (yok) — rapor REPORT.md
+SIRADAKİ İŞ: kullanıcı: cihaz denemesi + PLAY_RELEASE §8 (upload key, gizlilik URL'si, formlar, 12 test kullanıcısı)
+Kararlar: DECISIONS.md D31+ · Başlangıç commit'i: ce2f308 · AŞAMA 1: b730d34 · AŞAMA 2: 1c0a19e · AŞAMA 3: 52b5856 · AŞAMA 4: ef28f4c
 
 3. OTURUM İŞ LİSTESİ:
-- [ ] 1.1 Akın haritası eski görüntü
-- [ ] 1.2 Takılı bildirim rozeti (tüm menü rozetleri)
-- [ ] 1.3 "Ağaç, Altın Taşı ya da Çayır var" hayalet engel + migration + debug görsel
-- [ ] 1.4 Ana Üs yerleşim çakışmaları
-- [ ] 2.1 Radyal menü %20-25 küçük, alt bar boş süs yuvaları
-- [ ] 2.2 Üst bar sıralaması (config)
-- [ ] 2.3 Akın sayacı "10sa 0dk / 45dk / 30sn"
-- [ ] 2.4 Ortak yükseltme penceresi
-- [ ] 2.5 Süslü Geri Al + adada taşıma
-- [ ] 3.1 Ana Üs animasyonları
-- [ ] 3.2 Okçu noktaları
-- [ ] 3.3 Akın yetenek butonları + efektler
-- [ ] 4 Google Play hazırlığı (PLAY_RELEASE, DATA_SAFETY, PRIVACY_POLICY, STORE_LISTING, AAB)
-- [ ] SON: görüntüler, baştan oynatma, REPORT.md
+- [x] 1.1 Akın haritası eski görüntü
+- [x] 1.2 Takılı bildirim rozeti (tüm menü rozetleri)
+- [x] 1.3 "Ağaç, Altın Taşı ya da Çayır var" hayalet engel + migration + debug görsel
+- [x] 1.4 Ana Üs yerleşim çakışmaları
+- [x] 2.1 Radyal menü %20-25 küçük, alt bar boş süs yuvaları
+- [x] 2.2 Üst bar sıralaması (config)
+- [x] 2.3 Akın sayacı "10sa 0dk / 45dk / 30sn"
+- [x] 2.4 Ortak yükseltme penceresi
+- [x] 2.5 Süslü Geri Al + adada taşıma
+- [x] 3.1 Ana Üs animasyonları
+- [x] 3.2 Okçu noktaları
+- [x] 3.3 Akın yetenek butonları + efektler
+- [x] 4 Google Play hazırlığı (AAB 0.1.0/1, 92,6 MB, 16 KB 7/7 uygun; hata ayıklama imzası) (PLAY_RELEASE, DATA_SAFETY, PRIVACY_POLICY, STORE_LISTING, AAB)
+- [x] SON: görüntüler Docs/playtest/session3, baştan oynatma (Nov13 Journey), REPORT.md
 
 ENGELLENENLER:
 - (yok)

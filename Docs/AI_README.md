@@ -215,3 +215,13 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **Yenilgi önerisi** "Üsse dön, güçlendir" Ana Üs ≤ 4 (`VictoryReferenceView.EarlyDefeatMaxBase`).
 - Üst bar veri kaynağı: altın `GameManager.Gold`, elmas `GameManager.Gems` (+`OnGemsChanged`), Et/Odun `PlayerData.island` — Ana Üs
   ve Ada aynı; `Nov13FeedbackTests.JourneyIslandRaidReturnBaseIslandWithSharedTopBarValues` iki yönde karşılaştırır.
+
+## 13–14 Kasım 2026 (3. oturum): geri bildirim 2 + Google Play (D31–D44)
+- Ada: savunmada kilitli bölge bulutları yarı saydam; HARİTA = üs kadrajı. Çayır engel değil; yükleme göçü `IslandRepair.CleanGhosts`.
+- Ana Üs: `BaseVisualBounds` + `BaseMapManager.RepairVisualLayout` (sprite çakışması); rozet kuralları `UI/BaseBadges.cs`.
+- Ortak UI: `RadialDockMenu` sabitleri (72/56/48), üst bar sırası `FeatureConfig.baseTopBarOrder/islandTopBarOrder` (`ResourceTopBar`),
+  süslü pencere `UI/FancyInfoPanel.cs` (ada + Ana Üs), GERİ AL `UI/UndoMoveButton.cs`.
+- Hareket: `Base/BaseAmbientLife.cs`; akın: `IslandAbilities.UseAt` + nişan kipi, `Island/IslandAbilityFx.cs` (ağ/alev/sarsıntı).
+- Yayın: `Editor/AndroidReleaseBuild.cs` (-executeMethod AndroidReleaseBuild.BuildFromCommandLine; imza MEB_KEYSTORE_* ortam değişkeni),
+  `Systems/ReleaseLogging.cs`, `Tools/check_aab.py`; belgeler PLAY_RELEASE / DATA_SAFETY / PRIVACY_POLICY / STORE_LISTING.
+- Test notu: `-testFilter BasePresentationTests` tüm takımı koşturur (derleme adı); sınıf adlarıyla gruplayın.
