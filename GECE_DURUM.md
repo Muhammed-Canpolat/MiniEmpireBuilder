@@ -1,14 +1,15 @@
 # GECE_DURUM — Otonom gece çalışması (13 Kasım 2026)
 
 DURUM: DEVAM EDİYOR
-SON AKTİVİTE: 2026-11-13 14:12
-ŞU ANKİ İŞ: AŞAMA 2 — ada yapısı ve kadro (ajan, Opus)
-SIRADAKİ İŞ: AŞAMA 3 — UI/UX, sonra AŞAMA 4 ekonomi uygulaması
+SON AKTİVİTE: 2026-11-13 15:30
+ŞU ANKİ İŞ: AŞAMA 3A–E,G — ortak üst bar, ada adı, sayaç, ada düğmeleri, atölye ikonları (ajan)
+SIRADAKİ İŞ: AŞAMA 3F radyal menü → AŞAMA 4 ekonomi (EconomyConfig, Sonsuz kule/kart) → SON (REPORT.md)
 
 TAMAMLANANLAR:
 - AŞAMA 0 analiz → PLAN_ADA.md (e1d1b4c)
 - ECONOMY.md + Tools/economy_sim_v2.py (95968d8) — V2 önerisi simüle edildi
 - AŞAMA 1: müzik (6eb2989), sabit kamera (ad14e72, 0173606), bulut geçişi (1f32657); Island testleri 107/107
+- AŞAMA 2: boş başlangıç/bedava hak/bilgi, kadro, ağaç/koyun, Akın ölçeği, kayıt v10 (a8f82cc, 5851b4d); Island 115/115; ilk 30 dk: Docs/playtest/gece/first30_island.md
 
 ENGELLENENLER:
 - (henüz yok)
