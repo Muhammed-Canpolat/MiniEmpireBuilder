@@ -124,8 +124,44 @@ public sealed class ResourceTopBar : MonoBehaviour
 
     private void OnChipTapped(Chip chip)
     {
-        if (!chip.Locked) return;
+        if (!chip.Locked)
+        {
+            // AŞAMA 4: adada Et/Odun çipi Ada Tüccarı'nı açar (V2 profili; LEGACY'de kapalı).
+            if (mode == Mode.Island && IslandEconomy.TraderEnabled) ShowTrader(this);
+            return;
+        }
         ShowToast(L.T("Ada'dan elde edilir — Ana Üs Sv.5'te açılır", "Comes from the Island — unlocks at Main Base Lv.5"));
+    }
+
+    /// <summary>Ada Tüccarı penceresi: Ana Üs altınıyla 50 Et ya da 50 Odun (günde 2 paket).</summary>
+    public static void ShowTrader(ResourceTopBar bar = null)
+    {
+        int amount = IslandEconomy.TraderPackAmount, cost = IslandEconomy.TraderPackCost, left = IslandEconomy.TraderPacksLeft;
+        int perDay = Economy.Active.traderPacksPerDay;
+        string body = L.T(
+            $"Gezgin tüccar Ana Üs altını karşılığında erzak getirir.\n\n<b>Paket:</b> {amount} Et ya da {amount} Odun\n<b>Bedel:</b> {cost} altın\n<b>Bugün kalan:</b> {left}/{perDay}\n\nAltının: {NumberFormat.Short(GameManager.Instance != null ? GameManager.Instance.Gold : 0, 10000)}",
+            $"A travelling trader brings supplies for Main Base gold.\n\n<b>Pack:</b> {amount} Meat or {amount} Wood\n<b>Cost:</b> {cost} gold\n<b>Left today:</b> {left}/{perDay}\n\nYour gold: {NumberFormat.Short(GameManager.Instance != null ? GameManager.Instance.Gold : 0, 10000)}");
+        ModeLaunchPanel.Show(L.T("ADA TÜCCARI", "ISLAND TRADER"), body, L.T("KAPAT", "CLOSE"), true, null, "ui_ribbon_purple", 60f,
+            container =>
+            {
+                bool can = left > 0 && GameManager.Instance != null && GameManager.Instance.Gold >= cost;
+                void Buy(bool meat)
+                {
+                    if (IslandEconomy.TryBuyTraderPack(meat, out string reason))
+                    {
+                        AudioManager.Instance?.PlaySfx("levelUp");
+                        ModeLaunchPanel.Close();
+                        if (bar != null) { bar.Refresh(true); bar.ShowToast(meat ? L.T($"+{amount} Et", $"+{amount} Meat") : L.T($"+{amount} Odun", $"+{amount} Wood")); }
+                    }
+                    else ModeLaunchPanel.Hint(reason);
+                }
+                var meatButton = ReferenceUiVisuals.Button(container, "TraderMeat", L.T($"{amount} ET", $"{amount} MEAT"), can,
+                    new Vector2(0, 0), new Vector2(0.5f, 1), new Vector2(22, 6), new Vector2(-5, -6), 16);
+                meatButton.onClick.AddListener(() => Buy(true));
+                var woodButton = ReferenceUiVisuals.Button(container, "TraderWood", L.T($"{amount} ODUN", $"{amount} WOOD"), can,
+                    new Vector2(0.5f, 0), new Vector2(1, 1), new Vector2(5, 6), new Vector2(-22, -6), 16);
+                woodButton.onClick.AddListener(() => Buy(false));
+            });
     }
 
     public void ShowToast(string message)

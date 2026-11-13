@@ -12,10 +12,17 @@ public sealed class ModeLaunchPanel : MonoBehaviour
 {
     private static readonly Color Ink = ReferenceUiVisuals.Hex(0x3B2A1A);
     private static ModeLaunchPanel open;
+    private TextMeshProUGUI hintLabel;
 
+    /// <summary>
+    /// extraHeight &gt; 0 ve extra verilirse başlat düğmesinin üstünde o yükseklikte bir kap açılır (AŞAMA 4: savaş kartları);
+    /// pencere o kadar uzar.
+    /// </summary>
     public static void Show(string title, string body, string startLabel, bool canStart, Action onStart,
-        string ribbon = "ui_ribbon_purple")
+        string ribbon = "ui_ribbon_purple", float extraHeight = 0f, Action<RectTransform> extra = null)
     {
+        if (extra == null) extraHeight = 0f;
+        float half = 175f + extraHeight * 0.5f;
         Close();
         var root = new GameObject("ModeLaunchPanel", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         var canvas = root.GetComponent<Canvas>();
@@ -33,7 +40,7 @@ public sealed class ModeLaunchPanel : MonoBehaviour
         dimButton.onClick.AddListener(Close);
 
         var center = new Vector2(0.5f, 0.5f);
-        var panel = ReferenceUiVisuals.Image(safe, "Panel", center, center, new Vector2(-165, -175), new Vector2(165, 175),
+        var panel = ReferenceUiVisuals.Image(safe, "Panel", center, center, new Vector2(-165, -half), new Vector2(165, half),
             Color.white);
         panel.sprite = CampaignSceneSetup.Art("ui_paper", 22f);
         panel.type = Image.Type.Sliced;
@@ -52,8 +59,18 @@ public sealed class ModeLaunchPanel : MonoBehaviour
         shadow.effectDistance = new Vector2(1.6f, -1.6f);
 
         var bodyText = ReferenceUiVisuals.Text(panel.transform, "Body", body, 14, Ink, TextAlignmentOptions.TopLeft,
-            Vector2.zero, Vector2.one, new Vector2(24, 86), new Vector2(-24, -58), false, true);
+            Vector2.zero, Vector2.one, new Vector2(24, 86 + extraHeight), new Vector2(-24, -58), false, true);
         bodyText.richText = true;
+
+        if (extra != null)
+        {
+            var container = ReferenceUiVisuals.Rect(panel.transform, "Extra", new Vector2(0, 0), new Vector2(1, 0),
+                new Vector2(0, 80), new Vector2(0, 80 + extraHeight));
+            // Uyarı satırı (kart açık / kalkansız aşama vb.): haritanın toast'ı bu pencerenin altında kalır.
+            open.hintLabel = ReferenceUiVisuals.Text(panel.transform, "Hint", "", 11, ReferenceUiVisuals.Red,
+                TextAlignmentOptions.Center, new Vector2(0, 0), new Vector2(1, 0), new Vector2(18, 70), new Vector2(-18, 86), true);
+            extra(container);
+        }
 
         var start = ReferenceUiVisuals.Button(panel.transform, "Start", startLabel, canStart,
             new Vector2(0, 0), new Vector2(1, 0), new Vector2(22, 20), new Vector2(-22, 72), 18);
@@ -73,6 +90,17 @@ public sealed class ModeLaunchPanel : MonoBehaviour
         closeButton.onClick.AddListener(Close);
         ReferenceUiVisuals.Text(closeRect, "X", "X", 16, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
+    }
+
+    /// <summary>Pencerenin içindeki kısa uyarı (kart bölümü için); pencere yoksa yok sayılır.</summary>
+    public static void Hint(string text)
+    {
+        if (open == null || open.hintLabel == null) return;
+        var label = open.hintLabel;
+        label.text = text;
+        label.DOKill();
+        label.alpha = 1f;
+        label.DOFade(0f, 0.6f).SetDelay(2.4f).SetLink(label.gameObject);
     }
 
     public static void Close()

@@ -99,6 +99,12 @@ public class PlayerSaveData
     public int lumberShipCount;
     public int adMineDay;
     public int adChestDay;
+    // Zaferde 2x ödül reklamı günlük sayacı (AŞAMA 4; Economy.victoryDoubleAdsPerDay > 0 ise sınırlı). Eski kayıtta 0.
+    public int adDoubleDay;
+    public int adDoubleCount;
+    // Ada Tüccarı (AŞAMA 4): günlük paket sayacı. Eski kayıtta 0.
+    public int traderDay;
+    public int traderCount;
     public int royalGemDay;
     // Günlük görevler (DailyQuests): gün, seçilen 3 görev, ilerleme, alınanlar, bonus.
     public int questDay;

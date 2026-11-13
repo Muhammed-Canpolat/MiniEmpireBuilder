@@ -116,7 +116,13 @@ public sealed class VictoryReferenceView : MonoBehaviour
                 if (doubleAmount > 0) { WatchDoubleReward(); return; }
                 // Sonsuz Sefer: kazanınca sıradaki kata geçilir (can yoksa kat değişmez).
                 int floor = BattleSession.Floor;
-                if (BattleSession.IsEndless && lastWon) BattleSession.BeginEndless(floor + 1);
+                // AŞAMA 4: sıradaki kat sefer haritasındaki Sonsuz penceresinden başlar (orada savaş kartları seçilir).
+                if (BattleSession.IsEndless && lastWon)
+                {
+                    BattleSession.BeginEndless(floor + 1);
+                    GameManager.Instance.ReturnToCampaign();
+                    return;
+                }
                 // Tekrar deneme de can ister; kartlar tek savaşlıktır (bölge ekranında yeniden açılır).
                 if (GameManager.Instance.TryStartCampaignBattle()) return;
                 if (BattleSession.IsEndless) BattleSession.BeginEndless(floor);
@@ -135,7 +141,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
         : lastWon ? L.T("TEKRAR OYNA", "PLAY AGAIN") : L.T("TEKRAR DENE", "TRY AGAIN");
     private int shownTotal;
 
-    /// <summary>Ödüllü reklam: savaşta kazanılan altın bir kez daha verilir (savaş başına 1).</summary>
+    /// <summary>Ödüllü reklam: savaşta kazanılan altın bir kez daha verilir (savaş başına 1; V2'de günde 5 hak).</summary>
     private void WatchDoubleReward()
     {
         int amount = doubleAmount;
@@ -143,6 +149,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
         {
             if (!ok || doubleAmount <= 0) return;
             doubleAmount = 0;
+            AdRewards.ConsumeVictoryDouble();
             GameManager.Instance?.AddGold(amount);
             GameManager.Instance?.SaveGame();
             AudioManager.Instance?.PlaySfx("levelUp");
@@ -293,6 +300,17 @@ public sealed class VictoryReferenceView : MonoBehaviour
         values[1].text = "+" + (won ? bonus : 0);
         values[2].text = "−" + buildCost;
         int transfer = won ? enemyGold + bonus - buildCost : 0;
+        // AŞAMA 4: gerçek ödeme BattleManager'da (ganimet payı + tekrar kesintisi); gösterilen toplam onunla aynı olmalı.
+        if (won && BattleManager.Instance != null && BattleManager.Instance.LastPayout > 0)
+            transfer = BattleManager.Instance.LastPayout;
+        float lootRate = Economy.Active.killGoldTransferRate;
+        if (won && BattleSession.IsCampaign && lootRate < 0.999f && starReason != null)
+        {
+            int pct = Mathf.RoundToInt(lootRate * 100f);
+            starReason.gameObject.SetActive(true);
+            starReason.text += L.T($"\n<color=#C9B48A>Ganimet %{pct}: savaş altınının %{pct}'i üsse geçer</color>",
+                $"\n<color=#C9B48A>Loot {pct}%: {pct}% of battle gold goes to base</color>");
+        }
         bool replay = won && BattleManager.Instance != null && BattleManager.Instance.IsReplay;
         if (replay)
         {
@@ -309,11 +327,14 @@ public sealed class VictoryReferenceView : MonoBehaviour
         values[3].text = "0";
         shownTotal = transfer;
         // Zafer: "Tekrar oyna" düğmesi önce "▶ 2X ÖDÜL" olur.
-        doubleAmount = won && BattleSession.IsCampaign && retryButton != null ? Mathf.Max(0, transfer) : 0;
+        // V2: günlük 2x hakkı sınırlı (Economy.victoryDoubleAdsPerDay); hak bitince düğme doğrudan tekrar/sonraki kat olur.
+        doubleAmount = won && BattleSession.IsCampaign && retryButton != null && AdRewards.VictoryDoubleAvailable
+            ? Mathf.Max(0, transfer) : 0;
         if (doubleAmount > 0)
         {
             var label = retryButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = L.T($"2X ÖDÜL  +{doubleAmount}", $"2X REWARD  +{doubleAmount}");
+            string left = AdRewards.VictoryDoubleUnlimited ? "" : $" ({AdRewards.VictoryDoubleLeft}/{AdRewards.VictoryDoubleLimit})";
+            if (label != null) label.text = L.T($"2X ÖDÜL  +{doubleAmount}{left}", $"2X REWARD  +{doubleAmount}{left}");
             ReferenceUiVisuals.ApplyButtonSkin(retryButton, true);
         }
         else if (retryButton != null)

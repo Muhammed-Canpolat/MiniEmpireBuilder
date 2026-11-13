@@ -763,7 +763,7 @@ public class CampaignSceneSetup : MonoBehaviour
         bool replay = CampaignProgress.Stars(selectedRegion.id, selectedLevel) > 0;
         string reward = replay
             ? L.T($"Ödül: %{Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)} (tekrar)", $"Reward: {Mathf.RoundToInt(BattleManager.ReplayRewardRate * 100f)}% (replay)")
-            : L.T($"Ödül: {level.reward}", $"Reward: {level.reward}");
+            : L.T($"Ödül: {StageReward(level)}", $"Reward: {StageReward(level)}");
         string extra = level.kind == CampaignLevelKind.TimeTrial
             ? L.T($"   ·   Süre: {Mathf.RoundToInt(BattleManager.TimeTrialSeconds / 60f)} dk", $"   ·   Time: {Mathf.RoundToInt(BattleManager.TimeTrialSeconds / 60f)} min") : "";
         TopLabel(detailPanel, "Meta", L.T("Düşman: ", "Enemies: ") + $"{level.TotalEnemies}    {reward}{extra}",
@@ -776,11 +776,8 @@ public class CampaignSceneSetup : MonoBehaviour
         StarRow(detailPanel, "BestStars", Vector2.up, new Vector2(best > 0 ? 100 : 176, -133), 17f, 20f, best);
 
         // Savaş kartları: bu savaş için +%10 (Kraliyet %15).
-        TopLabel(detailPanel, "CardsTitle", L.T("SAVAŞ KARTLARI", "BATTLE CARDS"), 18, 148, 130, 20, 12, Ink, true, TextAlignmentOptions.Left);
-        TopLabel(detailPanel, "CardsHint", CardsHint(), 150, 148, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
-        CardWorkshop.TickIfAny();
-        for (int i = 0; i < BattleCards.BasicCount; i++) CreateCard((BattleCard)i, i);
-        if (CardWorkshop.Built) CreateWorkshopRow(level.kind == CampaignLevelKind.Boss);
+        BuildCardSection(detailPanel, 148f, 150f, level.kind == CampaignLevelKind.Boss,
+            () => { if (detailOpen) RenderLevelDetail(); }, ShowToast);
 
         bool canPlay = LivesSystem.CanPlay;
         var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle",
@@ -795,6 +792,10 @@ public class CampaignSceneSetup : MonoBehaviour
         });
     }
 
+    /// <summary>Zafer ödülü (etkin ekonomi profili: LEGACY asset değeri, V2 formül).</summary>
+    private int StageReward(CampaignLevelData level) =>
+        BattleManager.CampaignVictoryReward(selectedRegion.id, selectedLevel, level.reward, false);
+
     /// <summary>Atölye kuruluysa ayrıntı paneli bir "ATÖLYE KARTLARI" satırı kadar uzar.</summary>
     private static float DetailHeight => CardWorkshop.Built ? 388f : 300f;
 
@@ -808,12 +809,29 @@ public class CampaignSceneSetup : MonoBehaviour
 
     private static string CardIcon(BattleCard card) => BattleCards.IconName(card);
 
-    private void CreateCard(BattleCard card, int index)
+    /// <summary>
+    /// Kart bölümü (sefer aşama paneli ve AŞAMA 4'ten beri Sonsuz Sefer / Ejder İstilası penceresi ortak): başlık + 3 temel kart
+    /// + atölye kuruluysa "ATÖLYE KARTLARI" satırı. top: üst kenardan uzaklık; hintX: sağdaki ipucunun sol kenarı.
+    /// Yükseklik: <see cref="CardSectionHeight"/>.
+    /// </summary>
+    private void BuildCardSection(RectTransform parent, float top, float hintX, bool wardStage, System.Action refresh, System.Action<string> toast)
+    {
+        TopLabel(parent, "CardsTitle", L.T("SAVAŞ KARTLARI", "BATTLE CARDS"), 18, top, 130, 20, 12, Ink, true, TextAlignmentOptions.Left);
+        TopLabel(parent, "CardsHint", CardsHint(), hintX, top, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
+        CardWorkshop.TickIfAny();
+        for (int i = 0; i < BattleCards.BasicCount; i++) CreateCard(parent, (BattleCard)i, i, top, refresh, toast);
+        if (CardWorkshop.Built) CreateWorkshopRow(parent, top, hintX, wardStage, refresh, toast);
+    }
+
+    /// <summary>Kart bölümünün yüksekliği (başlık üstünden son kart altına).</summary>
+    private static float CardSectionHeight => CardWorkshop.Built ? 166f : 88f;
+
+    private void CreateCard(RectTransform parent, BattleCard card, int index, float top, System.Action refresh, System.Action<string> toast)
     {
         bool active = BattleCards.IsUnlocked(card);
         // Panel genişliğinin üçte biri: kenarlardan 16, aralar 8.
-        var rect = ReferenceUiVisuals.Rect(detailPanel, "Card_" + card, new Vector2(index / 3f, 1), new Vector2((index + 1) / 3f, 1),
-            new Vector2(index == 0 ? 16 : 4, -232), new Vector2(index == 2 ? -16 : -4, -170));
+        var rect = ReferenceUiVisuals.Rect(parent, "Card_" + card, new Vector2(index / 3f, 1), new Vector2((index + 1) / 3f, 1),
+            new Vector2(index == 0 ? 16 : 4, -(top + 84)), new Vector2(index == 2 ? -16 : -4, -(top + 22)));
         var image = rect.gameObject.AddComponent<Image>();
         // Beyaz hap: renk Image.color'dan gelir (PillSprite koyu zemin taşır, rengi siyaha boğar).
         image.sprite = ReferenceUiVisuals.SolidPillSprite();
@@ -840,20 +858,20 @@ public class CampaignSceneSetup : MonoBehaviour
             Vector2.zero, new Vector2(1, 0.34f), new Vector2(34, 3), new Vector2(-4, 0), TextAlignmentOptions.Left);
         button.onClick.AddListener(() =>
         {
-            if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); RenderLevelDetail(); return; }   // atölye seçimi geri alınır (hak savaşta düşer)
-            if (BattleCards.IsUnlocked(card)) { ShowToast(L.T($"{BattleCards.Description(card)} kartı bu savaş için açık.", $"{BattleCards.Description(card)} card is active for this battle.")); return; }
-            if (BattleCards.TryUnlockWithoutAd(card)) { RenderLevelDetail(); return; }
+            if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); refresh(); return; }   // atölye seçimi geri alınır (hak savaşta düşer)
+            if (BattleCards.IsUnlocked(card)) { toast(L.T($"{BattleCards.Description(card)} kartı bu savaş için açık.", $"{BattleCards.Description(card)} card is active for this battle.")); return; }
+            if (BattleCards.TryUnlockWithoutAd(card)) { refresh(); return; }
             // Elmasla hemen aç ya da reklam izle.
             GemConfirm.Show(L.T("SAVAŞ KARTI", "BATTLE CARD"),
                 L.T($"{BattleCards.Description(card)} bu savaş için +%{BattleCards.BonusPercent}.", $"{BattleCards.Description(card)} +{BattleCards.BonusPercent}% for this battle."),
                 GemEconomy.BattleCardCost, L.T("AÇ", "UNLOCK"), () =>
                 {
-                    if (BattleCards.UnlockWithGems(card) && detailOpen) RenderLevelDetail();
+                    if (BattleCards.UnlockWithGems(card)) refresh();
                 }, null, false, L.T("REKLAM İZLE", "WATCH AD"), () => RewardedAds.Show("battle_card", ok =>
                 {
                     if (!ok) return;
                     BattleCards.UnlockFromAd(card);
-                    if (detailOpen) RenderLevelDetail();
+                    refresh();
                 }));
         });
     }
@@ -862,24 +880,25 @@ public class CampaignSceneSetup : MonoBehaviour
     /// "ATÖLYE KARTLARI" satırı: Nadir/Destansı kartlar (stok = kalan hak). Yuva sayacı atölye seviyesine bağlıdır; savaş başına en çok 1 Destansı.
     /// Kalkan Kıran kalkansız aşamada soluk gösterilir ve hak harcamaz (<see cref="BattleCards.BeginBattle"/>).
     /// </summary>
-    private void CreateWorkshopRow(bool wardStage)
+    private void CreateWorkshopRow(RectTransform parent, float top, float hintX, bool wardStage, System.Action refresh, System.Action<string> toast)
     {
         int slots = Progression.Workshop.SpecialSlots(CardWorkshop.Level);
-        TopLabel(detailPanel, "WorkshopTitle", L.T("ATÖLYE KARTLARI", "WORKSHOP CARDS"), 18, 238, 160, 20, 12, Ink, true, TextAlignmentOptions.Left);
-        TopLabel(detailPanel, "WorkshopHint", slots > 0
+        TopLabel(parent, "WorkshopTitle", L.T("ATÖLYE KARTLARI", "WORKSHOP CARDS"), 18, top + 90, 160, 20, 12, Ink, true, TextAlignmentOptions.Left);
+        TopLabel(parent, "WorkshopHint", slots > 0
             ? L.T($"Yuva {BattleCards.SpecialsChosen}/{slots} · savaşta hak düşer", $"Slots {BattleCards.SpecialsChosen}/{slots} · a use is spent")
-            : L.T("Nadir kartlar: Atölye Sv 3", "Rare cards: Workshop Lv 3"), 150, 238, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
-        for (int i = BattleCards.BasicCount; i < BattleCards.Count; i++) CreateWorkshopChip((BattleCard)i, i - BattleCards.BasicCount, wardStage);
+            : L.T("Nadir kartlar: Atölye Sv 3", "Rare cards: Workshop Lv 3"), hintX, top + 90, 196, 20, 11, InkGold, false, TextAlignmentOptions.Right);
+        for (int i = BattleCards.BasicCount; i < BattleCards.Count; i++)
+            CreateWorkshopChip(parent, (BattleCard)i, i - BattleCards.BasicCount, top, wardStage, refresh, toast);
     }
 
-    private void CreateWorkshopChip(BattleCard card, int index, bool wardStage)
+    private void CreateWorkshopChip(RectTransform parent, BattleCard card, int index, float top, bool wardStage, System.Action refresh, System.Action<string> toast)
     {
         bool tierOpen = CardWorkshop.IsUnlocked(card);
         bool active = BattleCards.IsUnlocked(card);
         bool useless = card == BattleCard.WardBreaker && !wardStage;   // kalkanlı boss yok: soluk, hak harcamaz
         int stock = CardWorkshop.Stock(card);
-        var rect = ReferenceUiVisuals.Rect(detailPanel, "WorkshopCard_" + card, new Vector2(index / 4f, 1), new Vector2((index + 1) / 4f, 1),
-            new Vector2(index == 0 ? 16 : 3, -310), new Vector2(index == 3 ? -16 : -3, -262));
+        var rect = ReferenceUiVisuals.Rect(parent, "WorkshopCard_" + card, new Vector2(index / 4f, 1), new Vector2((index + 1) / 4f, 1),
+            new Vector2(index == 0 ? 16 : 3, -(top + 162)), new Vector2(index == 3 ? -16 : -3, -(top + 114)));
         var image = rect.gameObject.AddComponent<Image>();
         image.sprite = ReferenceUiVisuals.SolidPillSprite();
         image.type = Image.Type.Sliced;
@@ -904,10 +923,10 @@ public class CampaignSceneSetup : MonoBehaviour
             Vector2.zero, new Vector2(1, 0.5f), new Vector2(29, 2), new Vector2(-2, 0), TextAlignmentOptions.Left);
         button.onClick.AddListener(() =>
         {
-            if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); RenderLevelDetail(); return; }
-            if (useless) { ShowToast(L.T("Bu aşamada kalkanlı boss yok: kart işe yaramaz.", "No shielded boss in this stage: the card would do nothing.")); return; }
-            if (BattleCards.TrySelectSpecial(card, out string reason)) RenderLevelDetail();
-            else ShowToast(reason);
+            if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); refresh(); return; }
+            if (useless) { toast(L.T("Bu aşamada kalkanlı boss yok: kart işe yaramaz.", "No shielded boss in this stage: the card would do nothing.")); return; }
+            if (BattleCards.TrySelectSpecial(card, out string reason)) refresh();
+            else toast(reason);
         });
     }
 
@@ -938,7 +957,7 @@ public class CampaignSceneSetup : MonoBehaviour
                 BattleSession.BeginEndless(floor);
                 if (GameManager.Instance.TryStartCampaignBattle()) return;
                 OfferLifeAd();
-            });
+            }, "ui_ribbon_purple", CardSectionHeight, container => ModeCards(container, boss));
     }
 
     /// <summary>Başlıkta Ejder İstilası düğmesi: hafta sonu kırmızı ve parlak, hafta içi kalan süre.</summary>
@@ -995,7 +1014,22 @@ public class CampaignSceneSetup : MonoBehaviour
                 BattleSession.BeginInvasion();
                 if (GameManager.Instance.TryStartCampaignBattle()) return;
                 OfferLifeAd();
-            }, "ui_ribbon_red");
+            }, "ui_ribbon_red", CardSectionHeight, container => ModeCards(container, true));
+    }
+
+    /// <summary>
+    /// AŞAMA 4 (kart hatası): Sonsuz Sefer ve İstila penceresinde de savaş kartları seçilir (eskiden kart arayüzü yoktu,
+    /// savaş doğrudan başlıyordu). Değişince yalnız kart bölümü yeniden çizilir; uyarılar pencerenin içinde gösterilir.
+    /// </summary>
+    private void ModeCards(RectTransform container, bool wardStage)
+    {
+        void Refresh()
+        {
+            if (container == null) return;
+            for (int i = container.childCount - 1; i >= 0; i--) DestroyImmediate(container.GetChild(i).gameObject);
+            BuildCardSection(container, 0f, 118f, wardStage, Refresh, ModeLaunchPanel.Hint);
+        }
+        Refresh();
     }
 
     // ==================== CAN ====================

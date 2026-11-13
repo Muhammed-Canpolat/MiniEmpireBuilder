@@ -73,6 +73,40 @@ public static class IslandEconomy
         return true;
     }
 
+    // ==================== ADA TÜCCARI (AŞAMA 4, ECONOMY §6.2) ====================
+    // Ana Üs altınıyla 50 Et ya da 50 Odun paketi; bedel 400 + 120(MB−5), günde 2 paket. Yalnız V2 profilinde açık.
+
+    public static bool TraderEnabled => Economy.Active.traderEnabled && Save != null && IslandSession.Unlocked();
+    public static int TraderPackAmount => Economy.Active.traderPackAmount;
+    public static int TraderPackCost =>
+        Economy.Active.TraderPackCost(GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 5);
+    public static int TraderPacksToday
+    {
+        get
+        {
+            var data = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
+            return data == null || data.traderDay != GameClock.TodayId ? 0 : data.traderCount;
+        }
+    }
+    public static int TraderPacksLeft => Mathf.Max(0, Economy.Active.traderPacksPerDay - TraderPacksToday);
+
+    /// <summary>Paket alır (meat: Et, değilse Odun). Hak/altın yoksa hiçbir şey harcamaz; reason doldurulur.</summary>
+    public static bool TryBuyTraderPack(bool meat, out string reason)
+    {
+        reason = null;
+        var gm = GameManager.Instance;
+        if (gm == null || !TraderEnabled) { reason = L.T("Tüccar yok", "No trader"); return false; }
+        if (TraderPacksLeft <= 0) { reason = L.T("Tüccar bugünlük gitti: yarın yine gelir", "The trader is gone for today: back tomorrow"); return false; }
+        int cost = TraderPackCost;
+        if (gm.Gold < cost || !gm.SpendGold(cost)) { reason = L.T($"Altın yetersiz ({gm.Gold}/{cost})", $"Not enough gold ({gm.Gold}/{cost})"); return false; }
+        if (meat) AddMeat(TraderPackAmount); else AddWood(TraderPackAmount);
+        var data = gm.PlayerData;
+        if (data.traderDay != GameClock.TodayId) { data.traderDay = GameClock.TodayId; data.traderCount = 0; }
+        data.traderCount++;
+        gm.SaveGame();
+        return true;
+    }
+
     // ==================== CÜZDAN (Et / Odun) ====================
 
     public static int Meat => Save != null ? Save.meat : 0;

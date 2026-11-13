@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Günlük hakları olan ödüllü reklam ödülleri: inşaatta −30 dk (günde 3), madende 2 sa 2x (günde 1),
 /// dükkânda günlük sandık (günde 1). Reklamın kendisi <see cref="RewardedAds"/>; burada yalnız hak sayımı
-/// ve ödül verilir. (Zaferde 2x altın ve yenilgide devam savaş başına bir kez olduğundan günlük hakları yok.)
+/// ve ödül verilir. Zaferde 2x altın savaş başına bir kez ve (V2 profilinde) günde 5 hak; yenilgide devamın günlük hakkı yok.
 /// </summary>
 public static class AdRewards
 {
@@ -46,6 +46,24 @@ public static class AdRewards
         return true;
     }
 
+    // ==================== ZAFER 2X ÖDÜL ====================
+
+    /// <summary>Günlük 2x zafer hakkı; 0 = sınırsız (LEGACY). V2: günde 5 (ECONOMY §4).</summary>
+    public static int VictoryDoubleLimit => Economy.Active.victoryDoubleAdsPerDay;
+    public static int VictoryDoubleToday => Data == null || Data.adDoubleDay != Today ? 0 : Data.adDoubleCount;
+    public static bool VictoryDoubleUnlimited => VictoryDoubleLimit <= 0;
+    public static int VictoryDoubleLeft => VictoryDoubleUnlimited ? int.MaxValue : Mathf.Max(0, VictoryDoubleLimit - VictoryDoubleToday);
+    public static bool VictoryDoubleAvailable => VictoryDoubleLeft > 0;
+
+    /// <summary>2x zafer reklamı izlendi: günlük haktan 1 düşer (sınırsızsa yalnız sayılır).</summary>
+    public static void ConsumeVictoryDouble()
+    {
+        var data = Data;
+        if (data == null) return;
+        if (data.adDoubleDay != Today) { data.adDoubleDay = Today; data.adDoubleCount = 0; }
+        data.adDoubleCount++;
+    }
+
     // ==================== MADEN 2X ====================
 
     public static bool MineAdAvailable => Data != null && Data.adMineDay != Today;
@@ -78,7 +96,7 @@ public static class AdRewards
         string result;
         if (roll < 0.6f)
         {
-            int gold = 100 + 50 * Mathf.Max(1, gm.GetMainBaseLevel());
+            int gold = Economy.Active.adChestGoldBase + Economy.Active.adChestGoldPerMb * Mathf.Max(1, gm.GetMainBaseLevel());
             gm.AddGold(gold);
             result = L.T($"+{gold} altın", $"+{gold} gold");
         }
