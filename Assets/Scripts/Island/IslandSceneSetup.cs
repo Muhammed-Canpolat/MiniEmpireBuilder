@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -31,7 +32,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
 
     private Transform worldRoot, pawnsRoot;
     private GameObject terrainObject, natureObject;
-    private readonly List<SpriteRenderer> postMarkers = new List<SpriteRenderer>();
+    private readonly List<PostMarker> postMarkers = new List<PostMarker>();
     private readonly List<IslandCloud> edgeClouds = new List<IslandCloud>();
     private readonly List<IslandZoneCloud> zoneClouds = new List<IslandZoneCloud>();
 
@@ -280,22 +281,46 @@ public sealed class IslandSceneSetup : MonoBehaviour
     }
 
     // ==================== ATIŞ YERİ İŞARETLERİ ====================
+    // 3. oturum 3.2: yuvarlak işaretler. Altın dolu = okçunun bulunduğu yer · gidilen yer = turuncu hızlı nabız ·
+    // ulaşılabilir = açık halka (nabız) · kilitli = soluk gri + kilit simgesi (dokunulmaz, dokununca kilit bilgisi).
+
+    public sealed class PostMarker
+    {
+        public GameObject root;
+        public SpriteRenderer ring, fill, lockIcon;
+        public string State = "";
+    }
+
+    public const string PostHintKey = "MEB_PostHintShown";
+    private float postHintUntil;
+    private bool postHintChecked;
+    private GameObject postHintLabel;
+
+    public IReadOnlyList<PostMarker> PostMarkerList => postMarkers;
 
     private void BuildPostMarkers()
     {
-        var catalog = IslandVisualCatalog.Instance;
-        var sprite = catalog != null ? catalog.Single("cursor_brackets") : null;
+        var lockSprite = CampaignSceneSetup.Art("ui_icon_lock");
         for (int i = 0; i < IslandLayout.Posts.Length; i++)
         {
-            var go = new GameObject("PostMarker_" + IslandLayout.Posts[i].Name);
-            go.transform.SetParent(worldRoot, false);
-            go.transform.position = IslandLayout.Posts[i].World;
-            go.transform.localScale = Vector3.one * 0.55f;
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.sortingOrder = -5;   // zemin kaplamaları bandı (-20…-1): arazinin üstünde, nesnelerin altında
-            sr.enabled = false;
-            postMarkers.Add(sr);
+            var m = new PostMarker { root = new GameObject("PostMarker_" + IslandLayout.Posts[i].Name) };
+            m.root.transform.SetParent(worldRoot, false);
+            m.root.transform.position = IslandLayout.Posts[i].World;
+            SpriteRenderer Part(string name, Sprite sprite, int order)
+            {
+                var go = new GameObject(name);
+                go.transform.SetParent(m.root.transform, false);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = sprite;
+                sr.sortingOrder = order;   // zemin kaplamaları bandı (-20…-1): arazinin üstünde, nesnelerin altında
+                sr.enabled = false;
+                return sr;
+            }
+            m.fill = Part("Fill", IslandAbilityArt.Disc(), -7);
+            m.ring = Part("Ring", IslandAbilityArt.Ring(), -6);
+            m.lockIcon = Part("Lock", lockSprite, -5);
+            if (lockSprite != null) m.lockIcon.transform.localScale = Vector3.one * (0.45f / Mathf.Max(0.01f, lockSprite.bounds.size.y));
+            postMarkers.Add(m);
         }
     }
 
@@ -303,20 +328,83 @@ public sealed class IslandSceneSetup : MonoBehaviour
     {
         if (Archer == null) return;
         int keep = IslandSession.KeepLevel();
+        int runTo = Archer.TargetPost;
         for (int i = 0; i < postMarkers.Count; i++)
         {
-            var sr = postMarkers[i];
-            if (sr == null) continue;
+            var m = postMarkers[i];
+            if (m == null || m.ring == null) continue;
             bool unlocked = IslandLayout.PostUnlocked(i, keep);
             bool current = !Archer.Running && Archer.CurrentPost == i;
-            sr.enabled = InDefense && unlocked && !current;
+            bool target = runTo == i;
+            bool visible = InDefense;
+            m.ring.enabled = m.fill.enabled = visible;
+            m.lockIcon.enabled = visible && !unlocked;
+            if (!visible) continue;
             bool tutorialPulse = Raid != null && Raid.TutorialStep == 2 && Raid.Phase == IslandRaidManager.State.Running && i == 3;
-            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * (tutorialPulse ? 7f : 3f));
-            sr.color = tutorialPulse ? new Color(1f, 0.85f, 0.25f, 0.5f + 0.5f * pulse)
-                : new Color(1f, 0.95f, 0.7f, 0.45f + 0.3f * pulse);
-            sr.transform.localScale = Vector3.one * (tutorialPulse ? 0.65f + 0.1f * pulse : 0.55f);
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * (target || tutorialPulse ? 8f : 3f));
+            float diameter;
+            if (current)
+            {
+                m.State = "current"; diameter = 1.15f;
+                m.ring.color = new Color(1f, 0.82f, 0.2f, 1f);
+                m.fill.color = new Color(1f, 0.82f, 0.2f, 0.45f);
+            }
+            else if (target)
+            {
+                m.State = "target"; diameter = 1.1f + 0.12f * pulse;
+                m.ring.color = new Color(1f, 0.55f, 0.15f, 1f);
+                m.fill.color = new Color(1f, 0.55f, 0.15f, 0.3f);
+            }
+            else if (unlocked)
+            {
+                m.State = "reachable"; diameter = tutorialPulse ? 1.05f + 0.1f * pulse : 0.95f + 0.05f * pulse;
+                m.ring.color = tutorialPulse ? new Color(1f, 0.85f, 0.25f, 1f) : new Color(0.95f, 0.97f, 1f, 0.5f + 0.4f * pulse);
+                m.fill.color = new Color(0.95f, 0.97f, 1f, 0.08f + 0.1f * pulse);
+            }
+            else
+            {
+                m.State = "locked"; diameter = 0.7f;
+                m.ring.color = new Color(0.5f, 0.5f, 0.55f, 0.55f);
+                m.fill.color = new Color(0.25f, 0.25f, 0.3f, 0.35f);
+            }
+            m.ring.transform.localScale = m.fill.transform.localScale = Vector3.one * diameter;
         }
+        UpdatePostHint(keep);
     }
+
+    /// <summary>İlk akında (kayıt başına bir kez) işaret ipucu: bildirim şeridi + en yakın ulaşılabilir işaretin üstünde küçük yazı.</summary>
+    private void UpdatePostHint(int keep)
+    {
+        if (postHintLabel != null && (Time.time > postHintUntil || !InDefense)) { Destroy(postHintLabel); postHintLabel = null; }
+        if (postHintChecked || !InDefense || Raid == null || Raid.Phase != IslandRaidManager.State.Running || !Archer.IsAlive) return;
+        if (PlayerPrefs.GetInt(PostHintKey, 0) == 1) { postHintChecked = true; return; }
+        if (!string.IsNullOrEmpty(Raid.TutorialHint())) return;   // öğretici ipucu bitince göster
+        int nearest = -1; float best = float.MaxValue;
+        for (int i = 0; i < IslandLayout.Posts.Length; i++)
+        {
+            if (i == Archer.CurrentPost || !IslandLayout.PostUnlocked(i, keep)) continue;
+            float d = Vector2.Distance(Archer.Position, IslandLayout.Posts[i].World);
+            if (d < best) { best = d; nearest = i; }
+        }
+        postHintChecked = true;
+        PlayerPrefs.SetInt(PostHintKey, 1);
+        PlayerPrefs.Save();
+        Hud?.Toast(L.T("Okçu buraya gidip buradan savaşabilir — işarete dokun", "The archer can move here and fight from here — tap a marker"), 6f);
+        if (nearest < 0) return;
+        postHintUntil = Time.time + 6f;
+        postHintLabel = new GameObject("PostHintLabel");
+        postHintLabel.transform.position = IslandLayout.Posts[nearest].World + Vector2.up * 0.9f;
+        var tmp = postHintLabel.AddComponent<TextMeshPro>();
+        tmp.text = L.T("Dokun: buraya git", "Tap: go here");
+        tmp.fontSize = 3.2f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(1f, 0.9f, 0.45f);
+        tmp.fontStyle = FontStyles.Bold;
+        IslandFx.Outline(tmp);
+        tmp.sortingOrder = IslandFx.FxSorting + 3;
+    }
+
+    public bool PostHintVisible => postHintLabel != null;
 
     // ==================== DOKUNUŞ ====================
 
@@ -340,6 +428,9 @@ public sealed class IslandSceneSetup : MonoBehaviour
             return;
         }
         if (Archer == null || !Archer.IsAlive || Raid == null || Raid.Phase != IslandRaidManager.State.Running) return;
+        // Ok Yağmuru nişan kipi: dokunuş halkayı taşır (menzil sınırlı)
+        var abilities = IslandAbilities.Instance;
+        if (abilities != null && abilities.Aiming) { abilities.SetAim(world); return; }
         IslandTarget best = null;
         float bestDistance = 1.0f;
         foreach (var target in IslandTarget.Collect())

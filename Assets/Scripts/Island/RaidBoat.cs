@@ -167,13 +167,18 @@ public sealed class RaidBoat : MonoBehaviour
         burnUntil = Time.time + seconds;
         burnFraction = fractionPerSecond;
         burnTick = Time.time + 0.5f;
-        IslandFx.Play("fire_2", transform.position, 0.9f, 14f, false, transform);
+        if (burnFx == null) burnFx = IslandFx.Play("fire_2", transform.position, 0.9f, 14f, true, transform);
+        if (burnFx != null) burnFx.name = "BurnFx";
     }
+
+    private GameObject burnFx;
+    public bool HasBurnFx => burnFx != null;
 
     public bool Burning => Alive && Time.time < burnUntil;
 
     private void TickBurn()
     {
+        if (burnFx != null && !(Alive && Time.time < burnUntil)) { Destroy(burnFx); burnFx = null; }
         if (!Alive || Time.time >= burnUntil || Time.time < burnTick) return;
         burnTick = Time.time + 0.5f;
         TakeFire(MaxHealth * burnFraction * 0.5f);

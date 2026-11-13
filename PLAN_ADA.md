@@ -98,3 +98,19 @@ Bulgular (ayrıntı ECONOMY.md'de):
 - Ekonomi modeli: game-designer (Opus 5.5, yüksek) yalnız tasarım/simülasyon.
 - Kayıt göçü (v10): Opus.
 - Denetim: ekran görüntüsü (PlayMode test görüntüleri) + benim kontrolüm.
+
+## 3. oturum 3.3 — akın düğmeleri ne yapar
+Akın sırasında sağ altta: büyük **ATEŞ** çapadır; üç yetenek onun sol-üstünde yay üzerindedir; **OTO** ve **HARİTA** sağ kenarda ayrı küçük sütundadır.
+
+| Düğme | Ne yapar | Açılış / bekleme |
+|---|---|---|
+| **ATEŞ** (büyük, kırmızı) | Okçunun normal atışı. Dokun = hedefe bir ok. Basılı tut = dolum halkası dolar, bırakınca 3 hedefi delen **dolu atış**. Her zaman kullanılabilir (yalnız atış bekleme süresi var). | Baştan açık |
+| **YAĞMUR** (Ok Yağmuru) | Önce nişan kipi açılır: yerde bir halka (yarıçap 1,8 u) görünür, haritaya dokunarak taşınır (okçu menzili + 2 u ile sınırlı). YAĞMUR'a tekrar basınca ya da 4 sn sonra kendiliğinden o alana ~15 ok gökten yağar; alandaki herkes 1,5 sn içinde 3 kez ok hasarı alır. | Okçu Sv 2, bekleme 18 sn |
+| **ATEŞ OK** (Ateşli Ok) | Okçunun **sonraki 3 normal atışını** alevli yapar: ok turuncu, arkasında alev izi; isabet edince hedef birkaç saniye **yanar** (saniyede hasar, üstünde dönen alev). Tek hedefe, atışlarını sen yaparsın. Hedef seçmez, anında etkinleşir. | Okçu Sv 4 |
+| **AĞ** (Ağ Oku) | Okçu şu anki hedefe bir ağ fırlatır (0,35 sn yay); düştüğü yerdeki (1,5 u) tüm düşmanlar **2,5 sn kökleşir** (üstlerinde ağ görünür) ve sonra yavaşlar; tekneler yavaşlar. | Okçu Sv 6 |
+| **HARİTA** | Kamerayı tüm adayı gösteren geniş kadraja alır; tekrar basınca (TAKİP) okçuyu izler. | Baştan açık |
+| **OTO** | Otomatik ateşi açar/kapatır: okçu ATEŞ'e basmadan menzildeki hedefe kendi atar (yavaş hızda). Yetenekleri otomatik kullanmaz. | Kıyı Kalesi seviyesi (AutoFireUnlockKeepLevel) |
+
+**ATEŞ ile ATEŞ OK farkı:** ATEŞ her atışta ok atan temel silahtır, sınırsız ve ek hasarsız. ATEŞ OK bir silah değil, bir *güçlendirmedir*: kendi başına ok atmaz; bastıktan sonra yaptığın sıradaki 3 ATEŞ atışı alevli olur (yakar, zamanla hasar verir) ve bekleme süresi doluncaya kadar tekrar kullanılamaz. Yani ATEŞ OK'a bastıktan sonra yine ATEŞ'e basarsın.
+
+Düzen: yetenek düğmeleri 56 birim, ATEŞ merkezinden 112 birim yarıçaplı yayda (170°/135°/100°); OTO/HARİTA 52 birim, sağ kenarda yayın üstünde. Dolum: dairesel karartma + ortada kalan saniye.

@@ -609,10 +609,10 @@ public sealed class IslandHud : MonoBehaviour
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
 
         BuildAbilityButtons(rootRt);
-        autoButton = SquareButton(rootRt, "AutoButton", L.T("OTO", "AUTO"), new Vector2(-266, 40), out autoLabel);
+        autoButton = SquareButton(rootRt, "AutoButton", L.T("OTO", "AUTO"), new Vector2(-76, 200), out autoLabel);
         autoRoot = autoButton.gameObject;
         autoButton.onClick.AddListener(OnAutoToggle);
-        mapButton = SquareButton(rootRt, "MapButton", L.T("HARİTA", "MAP"), new Vector2(-266, 112), out mapLabel);
+        mapButton = SquareButton(rootRt, "MapButton", L.T("HARİTA", "MAP"), new Vector2(-76, 262), out mapLabel);
         mapButton.onClick.AddListener(() => { setup.CameraController.ToggleFullFrame(); });
 
         // Kısa bildirimler (okçu düştü, atış yeri kilidi...): Tiny Swords kurdele üstünde, otomatik kapanır
@@ -626,10 +626,15 @@ public sealed class IslandHud : MonoBehaviour
         bannerBg.gameObject.SetActive(false);
     }
 
-    // ---- Faz E2: Okçu yetenekleri (Ok Yağmuru Sv 2 · Ateşli Ok Sv 4 · Ağ Oku Sv 6), ATEŞ'in üstünde 3 küçük düğme ----
+    // ---- Faz E2 + 3. oturum 3.3: Okçu yetenekleri (Ok Yağmuru Sv 2 · Ateşli Ok Sv 4 · Ağ Oku Sv 6) ----
+    // ATEŞ sağ-altta çapadır (merkez -99,107); yetenekler onun sol-üstünde, başparmağın yetiştiği 112 birimlik yayda (56 birim, altın halkalı yuvarlak düğme).
+    // Yardımcı düğmeler (OTO, HARİTA) sağ kenarda, yayın dışında ayrı küçük bir sütundadır.
     private readonly Image[] abilityFace = new Image[3], abilityFill = new Image[3];
-    private readonly TextMeshProUGUI[] abilityLabel = new TextMeshProUGUI[3];
+    private readonly TextMeshProUGUI[] abilityLabel = new TextMeshProUGUI[3], abilityTime = new TextMeshProUGUI[3];
     private GameObject abilityRoot;
+    public const float AbilityButtonSize = 56f, AbilityArcRadius = 112f, UtilityButtonSize = 52f;
+    private static readonly Vector2 FireCenter = new Vector2(-99f, 107f);
+    private static readonly float[] AbilityAngles = { 170f, 135f, 100f };
 
     private void BuildAbilityButtons(RectTransform rootRt)
     {
@@ -638,30 +643,80 @@ public sealed class IslandHud : MonoBehaviour
         var rt = (RectTransform)abilityRoot.transform;
         rt.anchorMin = rt.anchorMax = new Vector2(1, 0);
         rt.offsetMin = rt.offsetMax = Vector2.zero;
-        var round = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("ui_round_blue") : null;
+        var catalog = IslandVisualCatalog.Instance;
+        var round = catalog != null ? catalog.Single("ui_round_blue") : null;
+        var ringSprite = IslandAbilityArt.Ring();
         for (int i = 0; i < 3; i++)
         {
             var kind = (IslandAbilities.Kind)i;
+            float rad = AbilityAngles[i] * Mathf.Deg2Rad;
+            Vector2 c = FireCenter + new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * AbilityArcRadius;
+            float h = AbilityButtonSize * 0.5f;
             var face = ReferenceUiVisuals.Image(rt, "Ability" + kind, new Vector2(1, 0), new Vector2(1, 0),
-                new Vector2(-176 + i * 60, 196), new Vector2(-176 + i * 60 + 54, 250), Color.white);
+                new Vector2(c.x - h, c.y - h), new Vector2(c.x + h, c.y + h), Color.white);
             face.sprite = round;
             face.raycastTarget = true;
             var button = face.gameObject.AddComponent<Button>();
             button.targetGraphic = face;
             button.transition = Selectable.Transition.None;
             face.gameObject.AddComponent<ReferenceButtonPress>();
-            button.onClick.AddListener(() => { if (IslandAbilities.Instance != null) IslandAbilities.Instance.Use(kind); });
+            button.onClick.AddListener(() => OnAbilityPressed(kind));
             abilityFace[i] = face;
-            abilityFill[i] = RadialOverlay(face.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.55f));
-            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", AbilityShortName(i), 10, Color.white, TextAlignmentOptions.Center,
-                Vector2.zero, Vector2.one, new Vector2(9, 9), new Vector2(-9, -9), true);   // dairenin içine sığsın
+            // Simge (üst), kısa ad (alt)
+            var icon = ReferenceUiVisuals.Image(face.transform, "Icon", new Vector2(0.2f, 0.36f), new Vector2(0.8f, 0.9f), Vector2.zero, Vector2.zero, Color.white);
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            if (kind == IslandAbilities.Kind.Volley)
+            {
+                icon.sprite = catalog != null ? catalog.Single("arrow") : null;
+                icon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -90f);   // yağmur: aşağı inen ok
+            }
+            else if (kind == IslandAbilities.Kind.FireArrow)
+            {
+                icon.sprite = catalog != null ? catalog.Single("fire_1") : null;
+                icon.color = new Color(1f, 0.7f, 0.35f);
+            }
+            else icon.sprite = IslandAbilityArt.Net();
+            abilityFill[i] = RadialOverlay(face.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.6f));
+            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", AbilityShortName(i), 9, Color.white, TextAlignmentOptions.Center,
+                new Vector2(0f, 0f), new Vector2(1f, 0.38f), new Vector2(6, 3), new Vector2(-6, 0), true);   // dairenin içine sığsın
             abilityLabel[i].enableAutoSizing = true;
             abilityLabel[i].fontSizeMin = 5; abilityLabel[i].fontSizeMax = 9;
+            abilityLabel[i].raycastTarget = false;
+            // Kalan saniye: dolum sürerken dairenin ortasında iri sayı
+            abilityTime[i] = ReferenceUiVisuals.Text(face.transform, "Seconds", "", 20, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
+            abilityTime[i].raycastTarget = false;
+            // Altın halka (ATEŞ ile aynı düğme ailesi)
+            var gold = ReferenceUiVisuals.Image(face.transform, "GoldRing", Vector2.zero, Vector2.one, new Vector2(-1, -1), new Vector2(1, 1), new Color(0.98f, 0.8f, 0.3f, 0.95f));
+            gold.sprite = ringSprite;
+            gold.raycastTarget = false;
         }
     }
 
+    private void OnAbilityPressed(IslandAbilities.Kind kind)
+    {
+        var abilities = IslandAbilities.Instance;
+        if (abilities == null) return;
+        if (kind == IslandAbilities.Kind.Volley)
+        {
+            // Yağmur: ilk basış nişan halkasını açar, ikinci basış ateşler
+            if (abilities.Aiming) abilities.ConfirmAim();
+            else if (!abilities.BeginAim()) { if (abilities.Unlocked(kind)) return; ToastLocked(kind); }
+            else Toast(L.T("Haritaya dokunup yeri seç, sonra YAĞMUR'a tekrar bas", "Tap the map to pick the spot, then press RAIN again"), 3f);
+            return;
+        }
+        if (!abilities.Unlocked(kind)) { ToastLocked(kind); return; }
+        if (kind == IslandAbilities.Kind.FireArrow) { abilities.Use(kind); return; }
+        // Ağ: şu anki hedefe atılır; hedef yoksa bekleme harcanmaz
+        if (!abilities.Use(kind) && abilities.CanReady(kind)) Toast(L.T("Menzilde hedef yok.", "No target in range."));
+    }
+
+    private void ToastLocked(IslandAbilities.Kind kind) =>
+        Toast(L.T($"{IslandAbilities.NameOf(kind)}: Okçu Sv {IslandAbilities.UnlockLevel(kind)}'de açılır.", $"{IslandAbilities.NameOf(kind)}: unlocks at Archer Lv {IslandAbilities.UnlockLevel(kind)}."));
+
     private static string AbilityShortName(int i) =>
-        i == 0 ? L.T("YAĞ\nMUR", "RAIN") : i == 1 ? L.T("ATEŞ\nOK", "FIRE") : L.T("AĞ", "NET");
+        i == 0 ? L.T("YAĞMUR", "RAIN") : i == 1 ? L.T("ATEŞ OK", "FLAME") : L.T("AĞ", "NET");
 
     private void RefreshAbilities()
     {
@@ -672,11 +727,16 @@ public sealed class IslandHud : MonoBehaviour
             var kind = (IslandAbilities.Kind)i;
             bool unlocked = abilities != null && abilities.Unlocked(kind);
             abilityFill[i].fillAmount = unlocked ? abilities.Remaining01(kind) : 1f;
+            bool aiming = unlocked && kind == IslandAbilities.Kind.Volley && abilities.Aiming;
             abilityFace[i].color = !unlocked ? new Color(0.55f, 0.55f, 0.6f)
+                : aiming ? Color.Lerp(Color.white, new Color(1f, 0.85f, 0.3f), 0.5f + 0.5f * Mathf.Sin(Time.time * 8f))
                 : kind == IslandAbilities.Kind.FireArrow && abilities.FireShotsLeft > 0 ? new Color(1f, 0.7f, 0.4f) : Color.white;
             string name = AbilityShortName(i);
             abilityLabel[i].text = !unlocked ? L.T("Sv", "Lv") + IslandAbilities.UnlockLevel(kind)
+                : aiming ? L.T("ATEŞ!", "GO!")
                 : kind == IslandAbilities.Kind.FireArrow && abilities.FireShotsLeft > 0 ? "×" + abilities.FireShotsLeft : name;
+            float left = unlocked ? abilities.RemainingSeconds(kind) : 0f;
+            abilityTime[i].text = left > 0.05f ? Mathf.CeilToInt(left).ToString() : "";
         }
     }
 
@@ -694,7 +754,7 @@ public sealed class IslandHud : MonoBehaviour
 
     private static Button SquareButton(RectTransform parent, string name, string label, Vector2 corner, out TextMeshProUGUI text)
     {
-        var image = ReferenceUiVisuals.Image(parent, name, new Vector2(1, 0), new Vector2(1, 0), corner, corner + new Vector2(84, 68), Color.white);
+        var image = ReferenceUiVisuals.Image(parent, name, new Vector2(1, 0), new Vector2(1, 0), corner, corner + new Vector2(UtilityButtonSize, UtilityButtonSize), Color.white);
         image.sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.Single("ui_square_blue") : null;
         image.raycastTarget = true;
         var button = image.gameObject.AddComponent<Button>();
@@ -702,12 +762,12 @@ public sealed class IslandHud : MonoBehaviour
         button.transition = Selectable.Transition.None;
         image.gameObject.AddComponent<ReferenceButtonPress>();
         text = ReferenceUiVisuals.Text(image.transform, "Label", label, 12, Color.white, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(8, 8), new Vector2(-8, -10), true);
+            Vector2.zero, Vector2.one, new Vector2(5, 6), new Vector2(-5, -8), true);
         text.textWrappingMode = TextWrappingModes.Normal;
         // Düğme kenarına taşmasın: uzun etiket ("OTO KAPALI", "HARİTA") küçülür.
         text.enableAutoSizing = true;
-        text.fontSizeMin = 7f;
-        text.fontSizeMax = 12f;
+        text.fontSizeMin = 6f;
+        text.fontSizeMax = 11f;
         return button;
     }
 
@@ -860,11 +920,13 @@ public sealed class IslandHud : MonoBehaviour
         GameManager.Instance?.LoadBaseWorld();
     }
 
-    public void Toast(string text)
+    public void Toast(string text) => Toast(text, 2.4f);
+
+    public void Toast(string text, float seconds)
     {
         bannerText.text = text;
         bannerBg.gameObject.SetActive(true);
-        toastUntil = Time.unscaledTime + 2.4f;
+        toastUntil = Time.unscaledTime + seconds;
     }
 
     private string GateText(int akin)

@@ -67,6 +67,7 @@ public class BaseSceneSetup : MonoBehaviour
         new GameObject("BaseApprentice").AddComponent<BaseApprenticeVisual>();
         CreateHeroCamp();
         gameObject.AddComponent<BaseAmbientMotion>();
+        gameObject.AddComponent<BaseAmbientLife>();
         BaseMapManager.Instance.LoadOrSeedTerrainResources(() =>
         {
             SpawnTerrainResources(8, true);

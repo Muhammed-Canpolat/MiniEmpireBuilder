@@ -177,6 +177,13 @@ public class BaseWorldUI : MonoBehaviour
             float a = sr.bounds.size.x * sr.bounds.size.y;
             if (a > area) { area = a; best = sr; }
         }
+        if (best == null)   // yapı sprite'ı Animator'lı alt nesnedeyse (Ana Üs) en büyük görünür sprite
+            foreach (var sr in obj.gameObject.GetComponentsInChildren<SpriteRenderer>())
+            {
+                if (sr.sprite == null || sr.color.a < 0.5f || sr.name.IndexOf("shadow", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                float a = sr.bounds.size.x * sr.bounds.size.y;
+                if (a > area) { area = a; best = sr; }
+            }
         return best != null ? best.sprite : null;
     }
 
@@ -189,6 +196,7 @@ public class BaseWorldUI : MonoBehaviour
         // Başlık = ad (kurdele), seviye satırı = "Seviye N / 15" (simgenin sağında); gövde onun altından başlar
         fancy.body.rectTransform.offsetMax = new Vector2(-18f, -70f);
         var icon = BuildingSprite(slotId);
+        if (icon == null && type == BuildingType.MainBase) icon = SpriteManager.Instance?.MainBase;
         if (icon != null) fancy.icon.sprite = icon;
         fancy.icon.enabled = fancy.icon.sprite != null;
         bool canGrow = typeData.isUnlocked && task == null && building.level < Progression.MaxLevel && block != GameManager.UpgradeBlock.MaxLevel;

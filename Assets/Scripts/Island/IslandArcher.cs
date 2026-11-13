@@ -105,6 +105,7 @@ public sealed class IslandArrow : MonoBehaviour
     {
         var go = IslandFx.NewArrow(fire ? new Color(1f, 0.5f, 0.15f) : charged ? new Color(1f, 0.85f, 0.35f) : Color.white, from);
         if (charged) go.transform.localScale = new Vector3(1.4f, 2f, 1f);
+        if (fire) go.AddComponent<IslandFlameTrail>();   // alev izi
         var arrow = go.AddComponent<IslandArrow>();
         arrow.target = target;
         arrow.origin = from;
@@ -129,7 +130,12 @@ public sealed class IslandArrow : MonoBehaviour
     private void Impact()
     {
         target.Hit(damage, charged, origin);
-        if (fire) target.Ignite(damage);
+        if (fire)
+        {
+            target.Ignite(damage);
+            IslandFx.Play("explosion_1", target.Position, 0.9f, 18f);   // küçük alev patlaması
+            IslandAbilityArt.Sfx("swordHit");
+        }
         if (!charged) return;
         // Delme: hedefin ardındaki çizgide (≤0,7 u) en yakın 2 hedef daha.
         Vector2 dir = (target.Position - origin).normalized;
@@ -311,6 +317,8 @@ public sealed class IslandArcher : MonoBehaviour
     }
 
     private int runTarget;
+    /// <summary>Koşarken gidilen atış yeri (yoksa -1): işaret vurgusu.</summary>
+    public int TargetPost => Running ? (pendingPost >= 0 ? pendingPost : runTarget) : -1;
 
     // ==================== GÜNCELLEME ====================
 

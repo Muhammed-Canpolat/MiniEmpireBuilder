@@ -20,13 +20,13 @@ public sealed class UndoMoveButton : MonoBehaviour
 
     public bool Visible => this != null && gameObject.activeInHierarchy;
 
-    /// <summary>Düğmeyi <paramref name="safe"/> alanının altına (alt menünün üstüne) açar; öncekini kapatır.</summary>
+    /// <summary>Düğmeyi <paramref name="safe"/> alanının altına, açık radyal menü yayının ve etiketlerinin üstüne açar; öncekini kapatır.</summary>
     public static UndoMoveButton Show(Transform safe, Action onUndo, float seconds = DefaultSeconds)
     {
         if (Current != null) Destroy(Current.gameObject);
         if (safe == null) return null;
         var rim = ReferenceUiVisuals.Image(safe, "MoveUndoToast", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-            new Vector2(-82f, 112f), new Vector2(82f, 158f), ReferenceUiVisuals.Gold);
+            new Vector2(-82f, 214f), new Vector2(82f, 260f), ReferenceUiVisuals.Gold);
         rim.sprite = ReferenceUiVisuals.SolidPillSprite();
         rim.type = Image.Type.Sliced;
         rim.raycastTarget = true;

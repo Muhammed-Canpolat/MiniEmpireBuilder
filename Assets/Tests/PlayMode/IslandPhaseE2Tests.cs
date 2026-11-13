@@ -472,6 +472,7 @@ public class IslandPhaseE2Tests
 
         // Ağ Oku: daire içindekiler kökleşir, sonra %40 yavaşlar
         Assert.IsTrue((bool)abilities.GetType().GetMethod("Use").Invoke(abilities, new[] { K("Net") }));
+        yield return new WaitForSecondsRealtime(0.6f);   // ağ 0,35 sn uçar
         Assert.IsTrue(cluster.All(e => (bool)Prop(e, "Rooted")), "2,5 sn kökleşti");
         Assert.IsFalse((bool)Prop(outside, "Rooted"));
         yield return null;

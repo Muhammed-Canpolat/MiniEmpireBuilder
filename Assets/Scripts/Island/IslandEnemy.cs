@@ -348,11 +348,18 @@ public sealed class IslandEnemy : MonoBehaviour
         burnUntil = Time.time + seconds;
         burnDps = dps;
         burnTick = Time.time + 0.5f;
-        IslandFx.Play("fire_1", AimPoint + Vector2.up * 0.2f, 0.9f, 14f, false, transform);
+        // Yanma süresince dönen alev (yanma bitince TickEffects söndürür)
+        if (burnFx == null) burnFx = IslandFx.Play("fire_1", AimPoint + Vector2.up * 0.2f, 0.9f, 14f, true, transform);
+        if (burnFx != null) burnFx.name = "BurnFx";
     }
+
+    private GameObject burnFx;
+    /// <summary>Yanma alevi (test/görsel denetim).</summary>
+    public bool HasBurnFx => burnFx != null;
 
     private void TickEffects()
     {
+        if (burnFx != null && !(Alive && Time.time < burnUntil)) { Destroy(burnFx); burnFx = null; }
         Controller.SpeedMultiplier = roarMult * (Time.time < rootUntil ? 0f : Time.time < slowUntil ? slowMult : 1f);
         if (Alive && Time.time < burnUntil && Time.time >= burnTick)
         {

@@ -245,3 +245,35 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 ## D39 — Çalışma biçimi
 - Unity batchmode koşusu tek seferde birkaç dakika sürdüğü için her iş derlenir, testleri aşama sonunda gruplar halinde koşturulur;
   commit'ler iş başına ayrıdır. Takılan bir test (test çalıştırıcının sahnesini kapatan yardımcı) bulundu ve düzeltildi.
+
+## D40 — Ana Üs ortam hareketi (3.1; Sonnet alt ajanı, orta çaba)
+- **Karar:** `Base/BaseAmbientLife.cs` tek merkezî Update: dekor koyunları ada koyunu kareleriyle otlar/bekler/0,35 u/sn yürür (taban
+  noktasının 0,5 u çevresinde; hücre/doluluk değişmez), Animator'sız ağaç/çalılar (dekor, kilitli arazi, çit dışı `ExteriorScenery` ve
+  `ForestMargin`) ±1–1,5° sallanır. Görünürlük kamera görüş dikdörtgeniyle (renderer.isVisible kamera çizmeden güncellenmiyordu), en çok
+  160 nesne, 3 sn'de bir yeniden tarama, nesne başına DOTween yok.
+- **Bulgu:** Madenci (`MinePawn`, Tiny Swords kazma klibi), garnizon, kapı muhafızları, keşiş, çırak, inşaatçı, kahraman zaten Animator'lı;
+  kodda madende tek madenci var (görseldeki ikinci figür inşaatçı kulübesinin işçisi). Yeni sprite gerekmedi.
+- **Ölçüm:** cihazda kare hızı ölçülmedi (⚠️); maliyet O(nesne) sinüs + dikdörtgen kesişimi, en çok 160 nesne.
+
+## D41 — Okçu atış yerleri (3.2; Sonnet alt ajanı)
+- **Karar:** Yuvarlak işaretler: mevcut yer altın dolu, gidilen yer turuncu hızlı nabız, ulaşılabilir açık nabızlı halka, kilitli küçük gri +
+  kilit simgesi (dokununca "Kıyı Kalesi N'de açılır"). İlk akında bir kez (`MEB_PostHintShown`) 6 sn şerit "Okçu buraya gidip buradan
+  savaşabilir — işarete dokun" ve en yakın işaretin üstünde "Dokun: buraya git".
+
+## D42 — Akın düğmeleri ve yetenek efektleri (3.3; Sonnet alt ajanı)
+- **Düğmeler ne yapar** (`PLAN_ADA.md` "3. oturum 3.3"): ATEŞ = okçunun temel atışı (dokun: ok, basılı tut: delici şarjlı ok);
+  ATEŞ OK = sonraki 3 ATEŞ atışını alevli yapan güçlendirme (yanma 5 sn, %4/sn); YAĞMUR = seçilen alana ok yağmuru; AĞ = hedefe ağ
+  (kök 2,5 sn + yavaşlama, tekneler yavaşlar); HARİTA = tam ada kadrajı ↔ takip; OTO = otomatik ateş (Kıyı Kalesi şartı).
+- **Yerleşim:** ATEŞ sağ altta çapa; yetenekler ATEŞ merkezinden 112 birim yarıçaplı yayda (170°/135°/100°), 56 birim, altın halka, simge +
+  kısa ad, dairesel bekleme + kalan saniye; HARİTA/OTO 52 birim, sağ kenarda ayrı sütun. Nesne adları/API aynı (bot ve eski testler).
+- **Efektler:** Yağmur nişan kipi (halka önizleme, haritaya dokun → taşı, düğme tekrar ya da 4 sn → ateş; `UseAt`), 15 ok gökten düşer;
+  Ateşli Ok turuncu ok + alev izi + isabet patlaması + yanma süresince düşmanda alev; Ağ okçudan yay çizen ağ, isabette köklenen
+  herkesin üstünde ağ (süre bitince söner). Vuruşta `swordHit`/`arrowShoot` sesi, hafif ekran sarsıntısı (0,08 u, 0,12 sn).
+- ⚠️ **Geçici:** ağ, nişan halkası ve disk sprite'ları kodla çizildi (kullanıcı kuralı "kodla çizme" ile çelişir; uygun hazır sprite yok) →
+  ART_NEEDS'te. Kullanıcı bir ağ sprite'ı verirse `IslandAbilityArt` tek yerden değişir.
+- Test: `RaidAbilityTests` (5) + eski `IslandPhaseE2Tests` (ağ artık 0,35 sn uçtuğu için ağ testine 0,6 sn bekleme eklendi).
+
+## D43 — Test koşusu notu
+- `-testFilter BasePresentationTests` test derlemesinin adıyla eşleşip **tüm** takımı koşturuyor (50 dk sınırını aştı). Gruplar sınıf
+  adlarıyla koşturuldu: Session3/RaidAbility/BaseAmbientLife/RadialMenu 25/25, IslandPhaseC/E1/E2 38/38, IslandPhaseB/FreshStart 20/20,
+  Nov13Feedback 8/8.
