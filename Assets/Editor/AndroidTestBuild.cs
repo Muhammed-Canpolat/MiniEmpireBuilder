@@ -49,6 +49,10 @@ public static class AndroidTestBuild
 
         ApplyPlayerSettings();
         EditorUserBuildSettings.buildAppBundle = false;
+        // Yayın betiği (AndroidReleaseBuild) Log/Warning yığın izini kapatır; test derlemesinde geri açılır
+        var trace = development ? StackTraceLogType.ScriptOnly : StackTraceLogType.None;
+        PlayerSettings.SetStackTraceLogType(LogType.Log, trace);
+        PlayerSettings.SetStackTraceLogType(LogType.Warning, trace);
 
         string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
         if (scenes.Length == 0)

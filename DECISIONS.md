@@ -277,3 +277,13 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - `-testFilter BasePresentationTests` test derlemesinin adıyla eşleşip **tüm** takımı koşturuyor (50 dk sınırını aştı). Gruplar sınıf
   adlarıyla koşturuldu: Session3/RaidAbility/BaseAmbientLife/RadialMenu 25/25, IslandPhaseC/E1/E2 38/38, IslandPhaseB/FreshStart 20/20,
   Nov13Feedback 8/8.
+
+## D44 — Google Play hazırlığı (AŞAMA 4)
+- **Doğrulanan kurallar (13–14 Kasım 2026):** yeni uygulama/güncelleme hedef API 36 (31 Ağu 2026'dan beri); 16 KB sayfa: resmî sayfa
+  1 Şubat 2027 diyor (bazı ikincil kaynaklar daha erken); kişisel hesap 12 test kullanıcısı × 14 gün kesintisiz kapalı test; Play Billing
+  en az 8 (eklenirse).
+- **Karar:** `Editor/AndroidReleaseBuild.cs` (AAB, IL2CPP, ARM64, API 36/25, imza ortam değişkenlerinden), `Systems/ReleaseLogging.cs`
+  (yayında Debug.Log kapalı), `Tools/check_aab.py` (16 KB + hile izi + izin). Hileler zaten derleme dışıydı; testle ve AAB metadata'sıyla
+  doğrulandı. `.gitignore` anahtar deposu/şifre dosyalarını dışlar. Reklam/satın alma SDK'sı eklenmedi (paket değişikliği + AdMob/ürün
+  kimlikleri kullanıcıda) → UMP akışı yapılmadı, belgelendi (PLAY_RELEASE §6). En düşük API 25 korundu.
+- **Alternatif:** min API 24 (≈+%0,5 cihaz) — gerek görülmedi.

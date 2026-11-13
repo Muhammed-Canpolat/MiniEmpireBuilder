@@ -92,3 +92,11 @@ Assets/InitTestScene*.unity*
 
 # Otomatik oyuncu çıktıları (seçilmiş görüntüler Docs/playtest/ altına kopyalanır)
 PlaytestOutput/
+
+# 3. oturum (AŞAMA 4): imza anahtarları ve şifreler ASLA git'e girmez
+*.keystore
+*.jks
+*.p12
+*.pem
+keystore.properties
+signing.properties
