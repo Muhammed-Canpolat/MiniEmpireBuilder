@@ -86,6 +86,8 @@ public class ExpansionFeatureTests
         var activeSave = Value(gameManager, "PlayerData");
         var apprenticeLevel = activeSave.GetType().GetField("apprenticeLevel");
         int savedLevel = (int)apprenticeLevel.GetValue(activeSave);
+        // Bu test LEGACY eğrisini (80 × 1,3^n, çırak bonusu %10+5) doğrular; V2 değerleri EconomyProfileTests'te.
+        RuntimeType("Economy").GetMethod("OverrideForTests").Invoke(null, new object[] { "Legacy" });
         try
         {
             float baseIncome = 0f;
@@ -102,7 +104,11 @@ public class ExpansionFeatureTests
                 Assert.AreEqual(baseIncome * (1.1f + (level - 1) * 0.05f), income, 0.001f);
             }
         }
-        finally { apprenticeLevel.SetValue(activeSave, savedLevel); }
+        finally
+        {
+            apprenticeLevel.SetValue(activeSave, savedLevel);
+            RuntimeType("Economy").GetMethod("ClearOverride").Invoke(null, null);
+        }
         var worldUi = Object.FindFirstObjectByType(RuntimeType("BaseWorldUI"));
         worldUi.GetType().GetMethod("ShowApprenticeInfo").Invoke(worldUi, null);
         yield return new WaitForSecondsRealtime(0.35f);

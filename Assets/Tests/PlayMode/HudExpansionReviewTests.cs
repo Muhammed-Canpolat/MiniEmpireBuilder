@@ -210,13 +210,19 @@ public class HudExpansionReviewTests
         var multiplier = progression.GetType().GetMethod("Multiplier");
         var bonus = progression.GetType().GetMethod("MineBonus");
         float[] expectedMultipliers = { 1f, 1.3f, 1.65f, 2.05f, 2.5f };
-        for (int level = 1; level <= 5; level++)
+        // Maden bonusu LEGACY değerleriyle (%10+5); V2 yarısı EconomyProfileTests'te.
+        Type("Economy").GetMethod("OverrideForTests").Invoke(null, new object[] { "Legacy" });
+        try
         {
-            Assert.AreEqual(expectedMultipliers[level - 1],
-                (float)multiplier.Invoke(progression, new object[] { level }), 0.001f);
-            Assert.AreEqual(5 + level * 5,
-                (int)bonus.Invoke(progression, new object[] { level }));
+            for (int level = 1; level <= 5; level++)
+            {
+                Assert.AreEqual(expectedMultipliers[level - 1],
+                    (float)multiplier.Invoke(progression, new object[] { level }), 0.001f);
+                Assert.AreEqual(5 + level * 5,
+                    (int)bonus.Invoke(progression, new object[] { level }));
+            }
         }
+        finally { Type("Economy").GetMethod("ClearOverride").Invoke(null, null); }
         var health = progression.GetType().GetMethod("Health");
         int levelOneHealth = (int)health.Invoke(progression,
             new[] { Enum.Parse(Type("WeaponType"), "Axe"), (object)1 });
