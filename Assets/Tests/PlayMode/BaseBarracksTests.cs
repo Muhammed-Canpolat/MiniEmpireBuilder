@@ -65,6 +65,19 @@ public class BaseBarracksTests
         T("BattleCards").GetMethod("ResetForTests").Invoke(null, null);
     }
 
+    /// <summary>
+    /// GameManager sahne geçişlerinde yaşar ve <c>OnApplicationQuit</c>'te son oyuncu verisini kaydeder: test Ana Üs 11-12 + Kışla kayıtını
+    /// gerçek kayda yazıp sonraki koşuları (ör. IslandEconomySimTests: etkin Kıyı Kalesi = Ana Üs) bozardı. Sınıf bitince yok edilir.
+    /// </summary>
+    [OneTimeTearDown]
+    public void DropTestGameManager()
+    {
+        var manager = Manager;
+        if (manager != null) Object.DestroyImmediate(manager.gameObject);
+        if (savedFile != null) File.WriteAllText(FilePath, savedFile);
+        PlayerPrefs.Save();
+    }
+
     /// <summary>Yeni kayıt: Ana Üs <paramref name="mainBase"/>, verilen (slot, tür, seviye) yerleşik binalar, altın.</summary>
     private static IEnumerator Setup(int mainBase, int gold = 5000, params (string slot, string type, int level)[] placedBuildings)
     {
