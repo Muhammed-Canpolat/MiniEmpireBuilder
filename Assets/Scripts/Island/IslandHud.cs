@@ -45,7 +45,8 @@ public sealed class IslandHud : MonoBehaviour
     private IslandRaidBoard board;
     private bool prepOpen;
     private TextMeshProUGUI akinDockLabel;
-    private Button homeButton, autoButton;
+    private Button homeButton, autoButton, nameButton;
+    private ResourceTopBar resourceBar;
     private int selectedAkin = 1;
     private float homeConfirmUntil;
     private TextMeshProUGUI resultTitle, resultBody;
@@ -99,6 +100,7 @@ public sealed class IslandHud : MonoBehaviour
         raid.StateChanged += _ => Refresh();
         raid.TutorialChanged += Refresh;
         Refresh();
+        if (FeatureConfig.Instance.islandNaming) StartCoroutine(OfferNameSoon());
     }
 
     // ==================== KURULUM ====================
@@ -107,6 +109,9 @@ public sealed class IslandHud : MonoBehaviour
     {
         var bar = ReferenceUiVisuals.Image(safe, "TopBar", new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -52), Vector2.zero,
             new Color(0.08f, 0.06f, 0.04f, 0.72f));
+        if (FeatureConfig.Instance.sharedTopBar) BuildSharedTopBar(bar);
+        else
+        {
         homeButton = ReferenceUiVisuals.Button(bar.transform, "HomeButton", L.T("ANA ÜS", "BASE"), false,
             new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, -16), new Vector2(96, 16), 12);
         homeLabel = homeButton.GetComponentInChildren<TextMeshProUGUI>();
@@ -118,6 +123,7 @@ public sealed class IslandHud : MonoBehaviour
         meatText = ResourceChip(bar.transform, 0, catalog != null ? catalog.meatIcon : null);
         woodText = ResourceChip(bar.transform, 1, catalog != null ? catalog.woodIcon : null);
         goldText = ResourceChip(bar.transform, 2, catalog != null ? catalog.Single("gold_icon") : null);
+        }
 
         var barBg = ReferenceUiVisuals.Image(safe, "CastleBar", new Vector2(0.18f, 1), new Vector2(0.82f, 1),
             new Vector2(0, -74), new Vector2(0, -58), new Color(0.05f, 0.04f, 0.03f, 0.85f));
@@ -129,6 +135,63 @@ public sealed class IslandHud : MonoBehaviour
         castleFill.fillMethod = Image.FillMethod.Horizontal;
         castleText = ReferenceUiVisuals.Text(barBg.transform, "Text", "", 11, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, false, true);
+    }
+
+    /// <summary>AŞAMA 3 §3A: Ana Üs'le aynı süslü çerçeve + ResourceTopBar çipleri; solda ANA ÜS, yanında ada adı (tek satır, dokununca değişir).</summary>
+    private void BuildSharedTopBar(Image bar)
+    {
+        bar.color = new Color(0.07f, 0.05f, 0.04f, 0.97f);
+        var strip = BaseHudRedesign.OrnateStrip(true);
+        if (strip != null)
+        {
+            var ornament = ReferenceUiVisuals.Image(bar.transform, "Ornament", Vector2.zero, Vector2.one, new Vector2(-4f, -2f), new Vector2(4f, 2f), Color.white);
+            ornament.sprite = strip;
+        }
+        homeButton = ReferenceUiVisuals.Button(bar.transform, "HomeButton", L.T("ANA ÜS", "BASE"), false,
+            new Vector2(0.015f, 0.14f), new Vector2(0.165f, 0.86f), Vector2.zero, Vector2.zero, 11);
+        homeLabel = homeButton.GetComponentInChildren<TextMeshProUGUI>();
+        homeLabel.characterSpacing = 0.4f;
+        homeLabel.fontSizeMin = 7f;
+        homeLabel.rectTransform.offsetMin = new Vector2(3, 0);
+        homeLabel.rectTransform.offsetMax = new Vector2(-3, 0);
+        homeButton.onClick.AddListener(OnHome);
+        // Ada adı: tek satır, otomatik küçülür, sığmazsa üç nokta; dokununca yeniden adlandırma penceresi.
+        var nameRect = ReferenceUiVisuals.Rect(bar.transform, "IslandNameButton", new Vector2(0.17f, 0.1f), new Vector2(0.36f, 0.9f), Vector2.zero, Vector2.zero);
+        var nameImage = nameRect.gameObject.AddComponent<Image>();
+        nameImage.sprite = ReferenceUiVisuals.PillSprite();   // zifiri/süs üstünde okunur: çiplerle aynı koyu hap
+        nameImage.type = Image.Type.Sliced;
+        nameImage.color = Color.white;
+        nameImage.raycastTarget = true;
+        nameButton = nameRect.gameObject.AddComponent<Button>();
+        nameButton.targetGraphic = nameImage;
+        nameButton.transition = Selectable.Transition.None;
+        nameButton.onClick.AddListener(OpenRename);
+        titleText = ReferenceUiVisuals.Text(nameRect, "Title", "", 13, Gold, TextAlignmentOptions.Center, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
+        titleText.textWrappingMode = TextWrappingModes.NoWrap;
+        titleText.overflowMode = TextOverflowModes.Ellipsis;
+        titleText.enableAutoSizing = true;
+        titleText.fontSizeMin = 7f;
+        titleText.fontSizeMax = 13f;
+        resourceBar = ResourceTopBar.BuildIsland(bar.rectTransform, 0.365f, 0.875f);
+    }
+
+    /// <summary>Üst çubuktaki ada adına dokunma: yeniden adlandırma (bedel gösterilir). Akın/yerleştirme sırasında kapalı.</summary>
+    public void OpenRename()
+    {
+        if (!FeatureConfig.Instance.islandNaming || raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        buildUi?.Close();
+        prepOpen = false;
+        IslandNameUi.Open(IslandSession.Save, IslandNameUi.Mode.Rename, () => Refresh());
+    }
+
+    /// <summary>Ada ilk açıldığında (ve eski kayıtta bir kez) ad sorusu/teklifi.</summary>
+    private System.Collections.IEnumerator OfferNameSoon()
+    {
+        yield return new WaitForSecondsRealtime(1.2f);
+        while (raid != null && (raid.Phase != IslandRaidManager.State.Idle || placing)) yield return null;
+        if (DevSettings.Enabled && !IslandNameUi.OfferInDev) yield break;
+        var mode = IslandNameUi.OfferFor(IslandSession.Save);
+        if (mode.HasValue && !IslandNameUi.IsOpen) IslandNameUi.Open(IslandSession.Save, mode.Value, () => Refresh());
     }
 
     // ==================== ZAMANLI BASKIN (Faz D) ====================
@@ -145,8 +208,16 @@ public sealed class IslandHud : MonoBehaviour
         button.targetGraphic = raidBadgeBg;
         button.transition = Selectable.Transition.None;
         button.onClick.AddListener(OnRaidBadge);
+        bool clock = FeatureConfig.Instance.raidPillClock;
+        if (clock)
+        {
+            var icon = ReferenceUiVisuals.Image(raidBadgeBg.transform, "ClockIcon", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, -9), new Vector2(26, 9), Color.white);
+            icon.sprite = CampaignSceneSetup.Art("ui_icon_clock");
+            icon.preserveAspect = true;
+            icon.enabled = icon.sprite != null;
+        }
         raidBadgeText = ReferenceUiVisuals.Text(raidBadgeBg.transform, "Label", "", 12, Color.white, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(8, 0), new Vector2(-8, 0), true);
+            Vector2.zero, Vector2.one, new Vector2(clock ? 28 : 8, 0), new Vector2(-8, 0), true);
         raidBadgeText.textWrappingMode = TextWrappingModes.NoWrap;
         raidBadgeText.enableAutoSizing = true;
         raidBadgeText.fontSizeMin = 8f;
@@ -171,7 +242,9 @@ public sealed class IslandHud : MonoBehaviour
         {
             case IslandRaidScheduler.Phase.Live: return L.T($"BASKIN! · {Span(left)}", $"RAID! · {Span(left)}");
             case IslandRaidScheduler.Phase.Warning: return L.T($"Baskın geliyor · {Span(left)}", $"Raid incoming · {Span(left)}");
-            default: return L.T($"Sakin · {Span(left)}", $"Calm · {Span(left)}");
+            default:
+                return FeatureConfig.Instance.raidPillClock ? L.T($"Sonraki akın: {Span(left)}", $"Next raid: {Span(left)}")
+                    : L.T($"Sakin · {Span(left)}", $"Calm · {Span(left)}");
         }
     }
 
@@ -262,20 +335,52 @@ public sealed class IslandHud : MonoBehaviour
 
     private void BuildDock()
     {
+        var cfg = FeatureConfig.Instance;
         var root = new GameObject("Dock", typeof(RectTransform));
         root.transform.SetParent(safe, false);
         var rt = (RectTransform)root.transform;
+        dock = root;
+        if (cfg.islandCompactDock)
+        {
+            // AŞAMA 3 §3D: iki küçük ikonlu düğme alt köşelerde (Ana Üs dock ailesi: koyu İNŞA ET, altın AKIN); ortası boş, ada görünür.
+            rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0);
+            rt.offsetMin = new Vector2(0, 12); rt.offsetMax = new Vector2(0, 12 + cfg.compactDockHeight);
+            var build = CompactDockButton(rt, "BuildButton", L.T("İNŞA ET", "BUILD"), false, "ui_icon_hammer", true, cfg);
+            build.onClick.AddListener(OpenBuildMenu);
+            var akin = CompactDockButton(rt, "AkinButton", L.T("AKIN", "RAID"), true, "ui_icon_sword", false, cfg);
+            akinDockLabel = akin.GetComponentInChildren<TextMeshProUGUI>();
+            akin.onClick.AddListener(() => { buildUi?.Close(); prepOpen = true; Refresh(); });
+            return;
+        }
         rt.anchorMin = new Vector2(0.5f, 0); rt.anchorMax = new Vector2(0.5f, 0);
         rt.offsetMin = new Vector2(-170, 26); rt.offsetMax = new Vector2(170, 92);
-        dock = root;
         // Alt dock (v2 §3): İNŞA ET · AKIN (KAPTAN düğmesi Faz E'de gelir)
-        var build = ReferenceUiVisuals.Button(rt, "BuildButton", L.T("İNŞA ET", "BUILD"), false, Vector2.zero, new Vector2(0.48f, 1),
+        var buildOld = ReferenceUiVisuals.Button(rt, "BuildButton", L.T("İNŞA ET", "BUILD"), false, Vector2.zero, new Vector2(0.48f, 1),
             Vector2.zero, Vector2.zero, 22);
-        build.onClick.AddListener(OpenBuildMenu);
+        buildOld.onClick.AddListener(OpenBuildMenu);
         var button = ReferenceUiVisuals.Button(rt, "AkinButton", L.T("AKIN", "RAID"), true, new Vector2(0.52f, 0), Vector2.one,
             Vector2.zero, Vector2.zero, 24);
         akinDockLabel = button.GetComponentInChildren<TextMeshProUGUI>();
         button.onClick.AddListener(() => { buildUi?.Close(); prepOpen = true; Refresh(); });
+    }
+
+    private static Button CompactDockButton(RectTransform parent, string name, string label, bool gold, string art, bool left, FeatureConfig cfg)
+    {
+        float w = cfg.compactDockWidth;
+        var button = ReferenceUiVisuals.Button(parent, name, label, gold,
+            left ? new Vector2(0, 0) : new Vector2(1, 0), left ? new Vector2(0, 1) : new Vector2(1, 1),
+            left ? new Vector2(10, 0) : new Vector2(-10 - w, 0), left ? new Vector2(10 + w, 0) : new Vector2(-10, 0), 15);
+        var text = button.GetComponentInChildren<TextMeshProUGUI>();
+        text.rectTransform.offsetMin = new Vector2(36, 0);
+        text.rectTransform.offsetMax = new Vector2(-8, 0);
+        text.characterSpacing = 0.6f;
+        text.fontSizeMin = 9f;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        var icon = ReferenceUiVisuals.Image(button.transform, "Icon", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, -15), new Vector2(38, 15), Color.white);
+        icon.sprite = CampaignSceneSetup.Art(art);
+        icon.preserveAspect = true;
+        icon.enabled = icon.sprite != null;
+        return button;
     }
 
     /// <summary>AŞAMA 2 §2: sol kenarda, üst çubuğun altında küçük yuvarlak KADRO düğmesi (adayı örtmez); kadro panelini açar.</summary>
@@ -783,8 +888,8 @@ public sealed class IslandHud : MonoBehaviour
                 $"Coastal Keep {Mathf.CeilToInt(c.CurrentHealth)}/{Mathf.CeilToInt(c.MaxHealth)}");
         }
         var save = IslandSession.Save;
-        meatText.text = save != null ? save.meat.ToString() : "0";
-        if (save != null)
+        if (meatText != null) meatText.text = save != null ? save.meat.ToString() : "0";
+        if (meatText != null && save != null)
         {
             // Cüzdan tavanına ulaşan sayaç sarıya döner (üretim durur)
             meatText.color = save.meat >= IslandEconomy.MeatCap ? Gold : ReferenceUiVisuals.Light;
@@ -802,14 +907,14 @@ public sealed class IslandHud : MonoBehaviour
             bool staffOn = raid.Phase == IslandRaidManager.State.Idle && !placing && !prepOpen;
             if (staffButton.activeSelf != staffOn) staffButton.SetActive(staffOn);
         }
-        woodText.text = save != null ? save.wood.ToString() : "0";
+        if (woodText != null) woodText.text = save != null ? save.wood.ToString() : "0";
         var player = GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
-        goldText.text = player != null ? player.gold.ToString() : "0";
+        if (goldText != null) goldText.text = player != null ? player.gold.ToString() : "0";
         titleText.text = raid.Phase == IslandRaidManager.State.Running && raid.IsRaid
             ? L.T($"BASKIN · DALGA {raid.Wave}/{raid.TotalWaves}", $"RAID · WAVE {raid.Wave}/{raid.TotalWaves}")
             : raid.Phase == IslandRaidManager.State.Running
             ? L.T($"AKIN {raid.Akin} · DALGA {raid.Wave}/{raid.TotalWaves}", $"RAID {raid.Akin} · WAVE {raid.Wave}/{raid.TotalWaves}")
-            : L.T("MARTI ADASI", "GULL ISLE");
+            : resourceBar != null ? IslandNameRules.Display(save) : L.T("MARTI ADASI", "GULL ISLE");
         if (homeLabel != null)
             homeLabel.text = Time.unscaledTime < homeConfirmUntil ? L.T("EMİN MİSİN?", "SURE?") : L.T("ANA ÜS", "BASE");
 

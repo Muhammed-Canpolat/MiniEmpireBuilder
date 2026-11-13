@@ -440,7 +440,7 @@ public class IslandRaidTests
         // Sakin: pencere kapalı, savunma başlamaz; rozet metni "Sakin · …"
         Sched.GetMethod("Tick").Invoke(null, new object[] { island0, t0 });
         string calm = (string)T("IslandHud").GetMethod("RaidBadgeText").Invoke(null, new object[] { island0, t0 });
-        StringAssert.StartsWith(L("Sakin", "Calm"), calm);
+        StringAssert.StartsWith(L("Sonraki akın", "Next raid"), calm);   // AŞAMA 3 §3C: saat ikonlu "Sonraki akın: …"
         Assert.IsFalse((bool)raid.GetType().GetMethod("StartRaid").Invoke(raid, null), "pencere yokken savunma başlamaz");
         // Dev "BASKINI GETİR": T−30 dk
         Call("DevBring", island0, t0);

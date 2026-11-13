@@ -71,6 +71,31 @@ public sealed class FeatureConfig : ScriptableObject
     public float akinScaleMin = 0.7f;
     public float akinScaleMax = 1.15f;
 
+    [Header("AŞAMA 3 · arayüz")]
+    /// <summary>Ana Üs ve Ada aynı ResourceTopBar bileşenini (Altın · Elmas · Et · Odun) kullanır.</summary>
+    public bool sharedTopBar = true;
+    /// <summary>Ada adı: ilk açılışta sorulur, üst çubuktan değiştirilir (3. değişiklikten itibaren elmasla).</summary>
+    public bool islandNaming = true;
+    /// <summary>Ana Üs radyal alt menüsü (AŞAMA 3 §3F; henüz uygulanmadı).</summary>
+    public bool radialDockMenu = true;
+    /// <summary>Ada alt düğmeleri küçük, ikonlu, köşelerde (kapalıysa eski 340×66 dock).</summary>
+    public bool islandCompactDock = true;
+    /// <summary>Ada adı uzunluk sınırları ve ücretsiz değişiklik sayısı.</summary>
+    public int islandNameMin = 3;
+    public int islandNameMax = 16;
+    public int islandNameFreeChanges = 2;
+    /// <summary>Ada adının sonraki değişiklik bedeli: (değişiklik sayısı - ücretsiz + 1) × bu adım (elmas).</summary>
+    public int islandRenameGemStep = 50;
+    /// <summary>Üst çubuk çip sayıları: bu değerden büyük sayılar kısaltılır (12.4K).</summary>
+    public int topBarShortFrom = 10000;
+    /// <summary>Baskın hapı: saat ikonu + "Sonraki akın: 8 sa 54 dk" (kapalıysa "Sakin · …").</summary>
+    public bool raidPillClock = true;
+    /// <summary>Kart Atölyesi paneli kısa tuvalde (3:4) ekrana sığacak kadar ölçeklenir.</summary>
+    public bool workshopPanelFit = true;
+    /// <summary>Ada kompakt dock düğme yüksekliği (referans px, 390×844).</summary>
+    public float compactDockHeight = 54f;
+    public float compactDockWidth = 124f;
+
     private static FeatureConfig cached;
 
     public static FeatureConfig Instance

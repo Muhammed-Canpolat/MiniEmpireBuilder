@@ -48,7 +48,7 @@ public sealed class GemCounter : MonoBehaviour
         if (label == null) return;
         bool changed = shown >= 0 && gems != shown;
         shown = gems;
-        label.text = gems.ToString();
+        label.text = NumberFormat.Short(gems, FeatureConfig.Instance.topBarShortFrom);
         if (!changed) return;
         label.transform.DOKill();
         label.transform.localScale = Vector3.one;

@@ -86,7 +86,7 @@ public class BaseWorldUI : MonoBehaviour
         DOTween.To(() => displayed, value =>
         {
             displayed = value;
-            if (goldText != null) goldText.text = value.ToString();
+            if (goldText != null) goldText.text = NumberFormat.Short(value, FeatureConfig.Instance.topBarShortFrom);
         }, GameManager.Instance.Gold, 0.6f);
     }
 
@@ -229,7 +229,7 @@ public class BaseWorldUI : MonoBehaviour
     private void UpdateGoldDisplay(int gold)
     {
         if (goldText != null)
-            goldText.text = $"{gold}";
+            goldText.text = NumberFormat.Short(gold, FeatureConfig.Instance.topBarShortFrom);
         var levelFill = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea/HudRoot/BaseLevelTrack/Fill") as RectTransform;
         if (levelFill != null && GameManager.Instance?.Buildings != null
             && GameManager.Instance.Buildings.TryGetValue(BuildingType.MainBase, out var mainBase))

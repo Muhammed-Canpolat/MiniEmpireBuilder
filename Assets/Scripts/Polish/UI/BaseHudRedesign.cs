@@ -54,7 +54,8 @@ public static class BaseHudRedesign
         var gold = hud.Find("GoldPill") as RectTransform;
         if (gold != null)
         {
-            SetAnchors(gold, new Vector2(0.025f, 0.931f), new Vector2(0.27f, 0.983f));
+            bool shared = FeatureConfig.Instance.sharedTopBar;   // AŞAMA 3: Altın + Elmas + İnşaatçı solda, Et + Odun sağda (ResourceTopBar)
+            SetAnchors(gold, shared ? new Vector2(0.02f, 0.934f) : new Vector2(0.025f, 0.931f), shared ? new Vector2(0.16f, 0.980f) : new Vector2(0.27f, 0.983f));
             var bg = gold.GetComponent<Image>();
             if (bg != null)
             {
@@ -82,7 +83,8 @@ public static class BaseHudRedesign
         if (hud.Find("GemPill") == null)
         {
             var gemButton = ReferenceUiVisuals.Button(hud, "GemPill", "", false,
-                new Vector2(0.28f, 0.936f), new Vector2(0.415f, 0.978f), Vector2.zero, Vector2.zero, 12);
+                FeatureConfig.Instance.sharedTopBar ? new Vector2(0.165f, 0.934f) : new Vector2(0.28f, 0.936f),
+                FeatureConfig.Instance.sharedTopBar ? new Vector2(0.30f, 0.980f) : new Vector2(0.415f, 0.978f), Vector2.zero, Vector2.zero, 12);
             var gemBg = gemButton.GetComponent<Image>();
             gemBg.sprite = ReferenceUiVisuals.PillSprite();
             gemBg.type = Image.Type.Sliced;
@@ -115,7 +117,8 @@ public static class BaseHudRedesign
         var builder = hud.Find("BuilderPill") as RectTransform;
         if (builder != null)
         {
-            SetAnchors(builder, new Vector2(0.70f, 0.936f), new Vector2(0.87f, 0.978f));
+            if (FeatureConfig.Instance.sharedTopBar) SetAnchors(builder, new Vector2(0.305f, 0.934f), new Vector2(0.415f, 0.980f));
+            else SetAnchors(builder, new Vector2(0.70f, 0.936f), new Vector2(0.87f, 0.978f));
             var bg = builder.GetComponent<Image>();
             if (bg != null)
             {
@@ -124,6 +127,8 @@ public static class BaseHudRedesign
                 bg.color = Color.white;
             }
         }
+
+        ResourceTopBar.AttachBase(hud);
 
         // Seviye yalnız armada: altındaki çubuk ve "Sev. N için…" yazısı gösterilmez.
         foreach (string name in new[] { "BaseLevelTrack", "BaseLevelCaption" })
