@@ -12,6 +12,28 @@ public class EnvironmentAudioReviewTests
 {
     private static Type Type(string name) => AppDomain.CurrentDomain.GetAssemblies()
         .Select(assembly => assembly.GetType(name)).First(type => type != null);
+
+    // Hata ayıklama katmanı DevSettings'e bağlı (cihaz tercihi): bu testler katmanı bekler, tercih ne olursa olsun açılır.
+    private bool devEnabledWas, devOverlayWas;
+
+    [SetUp]
+    public void ForceDebugOverlay()
+    {
+        var dev = Type("DevSettings");
+        devEnabledWas = (bool)dev.GetProperty("Enabled").GetValue(null);
+        dev.GetProperty("Enabled").SetValue(null, true);
+        devOverlayWas = (bool)dev.GetProperty("DebugOverlay").GetValue(null);
+        dev.GetProperty("DebugOverlay").SetValue(null, true);
+    }
+
+    [TearDown]
+    public void RestoreDebugOverlay()
+    {
+        var dev = Type("DevSettings");
+        dev.GetProperty("Enabled").SetValue(null, true);
+        dev.GetProperty("DebugOverlay").SetValue(null, devOverlayWas);
+        dev.GetProperty("Enabled").SetValue(null, devEnabledWas);
+    }
     private static readonly MethodInfo CaptureMethod = typeof(HudExpansionReviewTests)
         .GetMethod("Capture", BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -74,10 +96,7 @@ public class EnvironmentAudioReviewTests
         for (int i = 0; i < 35; i++) yield return null;
         yield return new WaitForSecondsRealtime(0.5f);
         Assert.IsNull(GameObject.Find("YamaTilemap"));
-        Assert.NotNull(GameObject.Find("StoneRoadTilemap"));
-        var road = GameObject.Find("StoneRoadTilemap").GetComponent<UnityEngine.Tilemaps.Tilemap>();
-        Assert.Greater(road.GetUsedTilesCount(), 0);
-        Assert.IsTrue(road.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>().enabled);
+        Assert.IsNull(GameObject.Find("StoneRoadTilemap"), "Toprak yollar kaldırıldı (5429490): yol tilemap'i oluşturulmaz");
         Capture("new-item-03-soft-shadows-roads.png");
         var mine = Object.FindFirstObjectByType(Type("BaseMineVisual")) as Component;
         var map = Object.FindFirstObjectByType(Type("BaseMapManager")) as Component;
@@ -89,7 +108,6 @@ public class EnvironmentAudioReviewTests
             new object[] { placed, new Vector3(17f, 16f) }));
         Assert.NotNull(mine.transform.parent.Find("ZeminGolgesi"));
         Assert.AreEqual(mine.transform.parent.position, mine.transform.parent.Find("ZeminGolgesi").parent.position);
-        Assert.Greater(road.GetUsedTilesCount(), 0);
     }
 
     [UnityTest]

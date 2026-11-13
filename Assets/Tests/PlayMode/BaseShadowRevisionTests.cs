@@ -12,6 +12,28 @@ public class BaseShadowRevisionTests
     private static System.Type Type(string name) => System.AppDomain.CurrentDomain.GetAssemblies()
         .Select(assembly => assembly.GetType(name)).First(type => type != null);
 
+    // Hata ayıklama katmanı DevSettings'e bağlı (cihaz tercihi): bu testler katmanı bekler, tercih ne olursa olsun açılır.
+    private bool devEnabledWas, devOverlayWas;
+
+    [SetUp]
+    public void ForceDebugOverlay()
+    {
+        var dev = Type("DevSettings");
+        devEnabledWas = (bool)dev.GetProperty("Enabled").GetValue(null);
+        dev.GetProperty("Enabled").SetValue(null, true);
+        devOverlayWas = (bool)dev.GetProperty("DebugOverlay").GetValue(null);
+        dev.GetProperty("DebugOverlay").SetValue(null, true);
+    }
+
+    [TearDown]
+    public void RestoreDebugOverlay()
+    {
+        var dev = Type("DevSettings");
+        dev.GetProperty("Enabled").SetValue(null, true);
+        dev.GetProperty("DebugOverlay").SetValue(null, devOverlayWas);
+        dev.GetProperty("Enabled").SetValue(null, devEnabledWas);
+    }
+
     [UnityTest]
     public IEnumerator DiagnoseMovedMineLayers()
     {
@@ -146,9 +168,7 @@ public class BaseShadowRevisionTests
             Assert.IsTrue(moved, "Three distinct valid mine positions required");
             previousPositions.Add(mine.transform.position);
             for (int frame = 0; frame < 3; frame++) yield return null;
-            var road = GameObject.Find("StoneRoadTilemap")?.GetComponent<UnityEngine.Tilemaps.Tilemap>();
-            Assert.NotNull(road);
-            Assert.Greater(road.GetUsedTilesCount(), 0, "A* route after mine move");
+            Assert.IsNull(GameObject.Find("StoneRoadTilemap"), "Toprak yollar kaldırıldı (5429490): yol tilemap'i oluşturulmaz");
             AssertSoftCorners(mine, "mine move " + move);
             Capture("item-01-mine-move-" + (move + 1));
             SceneManager.LoadScene("BaseScene");

@@ -16,6 +16,28 @@ public class HudExpansionReviewTests
     private static Type Type(string name) => AppDomain.CurrentDomain.GetAssemblies()
         .Select(assembly => assembly.GetType(name)).First(type => type != null);
 
+    // Hata ayıklama katmanı DevSettings'e bağlı (cihaz tercihi): bu testler katmanı bekler, tercih ne olursa olsun açılır.
+    private bool devEnabledWas, devOverlayWas;
+
+    [SetUp]
+    public void ForceDebugOverlay()
+    {
+        var dev = Type("DevSettings");
+        devEnabledWas = (bool)dev.GetProperty("Enabled").GetValue(null);
+        dev.GetProperty("Enabled").SetValue(null, true);
+        devOverlayWas = (bool)dev.GetProperty("DebugOverlay").GetValue(null);
+        dev.GetProperty("DebugOverlay").SetValue(null, true);
+    }
+
+    [TearDown]
+    public void RestoreDebugOverlay()
+    {
+        var dev = Type("DevSettings");
+        dev.GetProperty("Enabled").SetValue(null, true);
+        dev.GetProperty("DebugOverlay").SetValue(null, devOverlayWas);
+        dev.GetProperty("Enabled").SetValue(null, devEnabledWas);
+    }
+
     [UnityTest]
     public IEnumerator OwnershipBattleCardAndLevelVisual()
     {
