@@ -1,9 +1,9 @@
 # GECE_DURUM — Otonom gece çalışması (13 Kasım 2026)
 
-DURUM: DEVAM EDİYOR
-SON AKTİVİTE: 2026-11-13 19:10
-ŞU ANKİ İŞ: SON — sınırsız elmas kapalı baştan oynatma, eski 5 test, REPORT.md
-SIRADAKİ İŞ: (SON bitince) DURUM: TAMAMLANDI
+DURUM: TAMAMLANDI
+SON AKTİVİTE: 2026-11-13 21:00
+ŞU ANKİ İŞ: (yok) — rapor: REPORT.md
+SIRADAKİ İŞ: sabah gözden geçirme (REPORT.md §1 ⚠️ ve §6)
 
 TAMAMLANANLAR:
 - AŞAMA 0 analiz → PLAN_ADA.md (e1d1b4c)
@@ -14,9 +14,12 @@ TAMAMLANANLAR:
 - AŞAMA 3F: radyal alt menü + atölye kozmetik (b7ee615, d3b84ce, 11fd74f); RadialMenuTests 8/8
 - AŞAMA 4: yarım kalan değişiklikler incelendi ve tamamlandı (D15): EconomyConfig Legacy/V2 (7c3569e), 2x günde 5, ganimet
   satırı, Sonsuz/İstila kartları, Ada Tüccarı (ca33aa4), EconomyProfileTests 7/7 (7ec5ad1); ekonomi grupları 21/22 (1 bilinen eski)
+- SON: yeni hesapla baştan oynatma (sınırsız elmas kapalı) kırılmadan bitti — 6 sa 48 dk simüle, Ana Üs 5, ada (ad, Akın 1,
+  Tüccar), sefer paneli (dc8232f; Docs/playtest/gece/son); kararma geçişi hatası (bf39bd2); eski 5 testten 4'ü düzeldi (9427eb5);
+  bot testi gerilemesi düzeltildi; REPORT.md yazıldı
 
 ENGELLENENLER:
-- (henüz yok)
+- (yok) — açık bulgular REPORT.md §6 (Topçu köşe gölgesi testi, erken oyunda B1-5)
 
 Dal: `gece-gelistirme` (push yok). Başlangıç commit'i: `b6fe7bc`.
 Kararlar: `DECISIONS.md`. Plan: `PLAN_ADA.md`. Ekonomi: `ECONOMY.md`. Son rapor: `REPORT.md`.
