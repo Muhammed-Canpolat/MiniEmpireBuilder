@@ -98,9 +98,11 @@ public static class PlaytestBot
 
     /// <summary>Bir aşamayı oynar. maxSeconds oyun zamanıdır; timeScale ile hızlandırılır.</summary>
     public static IEnumerator PlayBattle(int region, int level, float timeScale = 4f, float maxSeconds = 420f,
-        bool capture = true, int seed = 0, bool casual = false, string strategy = "combined")
+        bool capture = true, int seed = 0, bool casual = false, string strategy = "combined", bool keepCurrentSave = false)
     {
-        int baseLevel = ExpectedBaseLevel(region, level);
+        // keepCurrentSave (SON: baştan oynatma): hazır profil kurulmaz, oyuncunun kendi kaydıyla savaşılır.
+        var currentSave = keepCurrentSave && GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
+        int baseLevel = currentSave != null ? GameManager.Instance.GetMainBaseLevel() : ExpectedBaseLevel(region, level);
         if (seed != 0) UnityEngine.Random.InitState(seed);
         Casual = casual;
         Strategy = strategy ?? "combined";
@@ -114,11 +116,25 @@ public static class PlaytestBot
         var gm = GameManager.Instance;
         if (gm == null) gm = new GameObject("BotGameManager").AddComponent<GameManager>();
         yield return null;
-        gm.DevSetPlayerData(CreateProfile(baseLevel));
+        if (currentSave == null) gm.DevSetPlayerData(CreateProfile(baseLevel));
+        else
+        {
+            t.heroLevel = currentSave.hero != null ? currentSave.hero.level : 1;
+            t.towerLevel = gm.Buildings.TryGetValue(BuildingType.ArcherTower, out var archer) ? archer.level : 0;
+        }
         BattleSession.Begin(region, level);
         t.battleLevel = BattleSession.BattleLevel;
-        SceneManager.LoadScene("BattleScene");
+        if (currentSave != null)
+        {
+            // Gerçek akış: can kontrolü + kart savaşa geçişi + sahne (GameManager.TryStartCampaignBattle).
+            if (!gm.TryStartCampaignBattle()) { t.result = "no_lives"; Finish(t); yield break; }
+        }
+        else SceneManager.LoadScene("BattleScene");
         for (int i = 0; i < 40; i++) yield return null;
+        // Gerçek akışta sahne kararmayla yüklenir: savaş kurulana kadar (en çok ~8 sn) bekle.
+        for (float waited = 0f; currentSave != null && (BattleManager.Instance == null ||
+             SceneManager.GetActiveScene().name != "BattleScene") && waited < 8f; waited += Time.unscaledDeltaTime) yield return null;
+        if (currentSave != null) for (int i = 0; i < 20; i++) yield return null;
 
         var battle = BattleManager.Instance;
         var hero = UnityEngine.Object.FindFirstObjectByType<HeroController>();
