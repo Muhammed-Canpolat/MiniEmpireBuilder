@@ -18,6 +18,27 @@ public sealed class IslandZoneCloud : MonoBehaviour
     private Vector3 baseScale = Vector3.one;
     private bool captured;
 
+    // ==================== KAPSAMA MODELİ (pişirme + IslandZoneMapTests aynı kuralı kullanır) ====================
+
+    /// <summary>Bölge bulutlarının ölçeği (sprite 576×256 px, 64 ppu → opak alan ≈7,7×2,5 u). Eski 1,25–1,75 bölge sınırını aşıyordu.</summary>
+    public const float BakedScale = 0.78f;
+    /// <summary>Ölçek 1'de bulutun "kesin örttüğü" çekirdek elipsin yarı eksenleri (opak alanın içi).</summary>
+    public const float CoreHalfWidth = 3.2f, CoreHalfHeight = 0.95f;
+    /// <summary>Update'teki salınım genliği (çekirdekten düşülür: bulut salınırken de hücreyi örter).</summary>
+    public const float SwayX = 0.35f, SwayY = 0.2f;
+
+    /// <summary>Bulut (dinlenme konumu <paramref name="anchor"/>, ölçek <paramref name="scale"/>) dünya noktasını salınım boyunca örter mi.</summary>
+    public static bool CoreCovers(Vector2 anchor, float scale, Vector2 point)
+    {
+        float a = CoreHalfWidth * scale - SwayX, b = CoreHalfHeight * scale - SwayY;
+        if (a <= 0f || b <= 0f) return false;
+        float dx = (point.x - anchor.x) / a, dy = (point.y - anchor.y) / b;
+        return dx * dx + dy * dy <= 1f;
+    }
+
+    /// <summary>Hücre merkezi (dünya).</summary>
+    public static Vector2 CellCenter(int col, int row) => IslandLayout.World(col + 0.5f, row + 0.5f);
+
     /// <summary>Dağılma sürüyor mu.</summary>
     public bool Dissolving => dissolveStart >= 0f;
 

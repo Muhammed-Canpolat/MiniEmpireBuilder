@@ -16,6 +16,8 @@ public sealed class RadialItem
     public Action onClick;
     /// <summary>0 = rozet yok, 1 = kırmızı nokta, N&gt;1 = sayı.</summary>
     public Func<int> badgeProvider;
+    /// <summary>Bilgi pulu (ör. ada AKIN düğmesinde Akın numarası): boş değilse düğmenin sağ üst kenarında küçük altın pul.</summary>
+    public Func<string> infoBadgeProvider;
     public Func<bool> visibleProvider;
     public Func<bool> lockedProvider;
     public bool emphasised;
@@ -26,8 +28,8 @@ public sealed class RadialItem
 
     internal RectTransform rt, visual;
     internal CanvasGroup group;
-    internal GameObject badge, lockIcon;
-    internal TextMeshProUGUI badgeText;
+    internal GameObject badge, lockIcon, infoBadge;
+    internal TextMeshProUGUI badgeText, infoBadgeText;
     internal float t, startAt;
     internal bool target;
     internal int order;
@@ -36,6 +38,7 @@ public sealed class RadialItem
     public bool IsLocked => lockedProvider != null && lockedProvider();
     public int BadgeValue => badgeProvider != null ? badgeProvider() : 0;
     public bool BadgeShown => badge != null && badge.activeSelf;
+    public string InfoBadgeText => infoBadge != null && infoBadge.activeSelf && infoBadgeText != null ? infoBadgeText.text : "";
     public RectTransform Rect => rt;
 }
 
@@ -48,6 +51,8 @@ public sealed class RadialItem
 public sealed class RadialDockMenu : MonoBehaviour
 {
     public const string PrefKey = "MEB_RadialOpen";
+    /// <summary>Ada menüsünün açık/kapalı durumu (Ana Üs'ten ayrı tutulur).</summary>
+    public const string IslandPrefKey = "MEB_IslandRadialOpen";
     private const float MainSize = 92f, MainCenterY = 56f;
 
     public static RadialDockMenu Current { get; private set; }
@@ -63,6 +68,7 @@ public sealed class RadialDockMenu : MonoBehaviour
     private Image[] sparks;
     private float burstStart = -10f, nextRefresh;
     private bool dockShown = true;
+    private string prefKey = PrefKey;
     private static Sprite circle;
 
     private static Sprite Circle => circle != null ? circle : circle = BaseMapManager.MakeCircleSprite(Color.white);
@@ -75,19 +81,7 @@ public sealed class RadialDockMenu : MonoBehaviour
         if (hudRoot == null) return null;
         var existing = hudRoot.Find("RadialMainBtn");
         if (existing != null) return existing.GetComponent<RadialDockMenu>();
-
-        var buttonImage = ReferenceUiVisuals.Image(hudRoot, "RadialMainBtn", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-            Vector2.zero, Vector2.zero, Color.clear);
-        var rt = buttonImage.rectTransform;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2(MainSize, MainSize);
-        rt.anchoredPosition = new Vector2(0f, MainCenterY);
-        buttonImage.raycastTarget = true;
-        var menu = rt.gameObject.AddComponent<RadialDockMenu>();
-        menu.hud = hudRoot as RectTransform;
-        menu.main = rt;
-        menu.BuildMain(buttonImage);
-        Current = menu;
+        var menu = Create(hudRoot, PrefKey);
 
         var b = hudRoot.Find("BuildBtn")?.GetComponent<Button>();
         var s = hudRoot.Find("BattleBtn")?.GetComponent<Button>();
@@ -118,11 +112,39 @@ public sealed class RadialDockMenu : MonoBehaviour
             lockedProvider = () => !IslandSession.Unlocked(),
             badgeProvider = IslandBadge
         });
-        menu.hud.Find("RadialMainBtn")?.SetAsLastSibling();
-
-        bool open = !PlayerPrefs.HasKey(PrefKey) || PlayerPrefs.GetInt(PrefKey, 1) == 1;
-        menu.SetOpen(open, true, false);
+        menu.FinishSetup();
         return menu;
+    }
+
+    /// <summary>
+    /// Aynı bileşenle özel öğe listesi (ör. Ada: İNŞA ET · AKIN · KADRO). Öğeler <see cref="Register"/> ile eklenir,
+    /// ardından <see cref="FinishSetup"/> çağrılır. Açık/kapalı durumu <paramref name="openPrefKey"/> anahtarında tutulur.
+    /// </summary>
+    public static RadialDockMenu Create(Transform hudRoot, string openPrefKey)
+    {
+        var buttonImage = ReferenceUiVisuals.Image(hudRoot, "RadialMainBtn", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            Vector2.zero, Vector2.zero, Color.clear);
+        var rt = buttonImage.rectTransform;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(MainSize, MainSize);
+        rt.anchoredPosition = new Vector2(0f, MainCenterY);
+        buttonImage.raycastTarget = true;
+        var menu = rt.gameObject.AddComponent<RadialDockMenu>();
+        menu.hud = hudRoot as RectTransform;
+        menu.main = rt;
+        menu.prefKey = string.IsNullOrEmpty(openPrefKey) ? PrefKey : openPrefKey;
+        menu.BuildMain(buttonImage);
+        Current = menu;
+        return menu;
+    }
+
+    /// <summary>Öğeler kaydedildikten sonra: ana düğme en üstte, kayıtlı açık/kapalı durumu (ilk açılışta açık) uygulanır.</summary>
+    public void FinishSetup()
+    {
+        main.SetAsLastSibling();
+        bool open = !PlayerPrefs.HasKey(prefKey) || PlayerPrefs.GetInt(prefKey, 1) == 1;
+        SetOpen(open, true, false);
+        RefreshBadges();
     }
 
     private void OnDestroy()
@@ -163,16 +185,27 @@ public sealed class RadialDockMenu : MonoBehaviour
         Ring(mainVisual, ReferenceUiVisuals.Hex(0x7A4E16), 7f);                    // koyu bronz iç halka
         Ring(mainVisual, ReferenceUiVisuals.Hex(0xF3D27A), 9f);                    // ince altın çizgi
         Ring(mainVisual, ReferenceUiVisuals.Hex(0x1A1410), 11f);                   // koyu yüz
+        // Arma: arkada çapraz iki kılıç, önde kalkan. Eskiden kalkanın ortasında anlamsız bir elmas vardı (13 Kasım geri bildirimi).
+        var swordSprite = CampaignSceneSetup.Art("ui_icon_sword");
+        if (swordSprite != null)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                var sword = ReferenceUiVisuals.Image(mainVisual, i == 0 ? "SwordL" : "SwordR", Vector2.zero, Vector2.one,
+                    new Vector2(19f, 19f), new Vector2(-19f, -19f), Color.white);
+                sword.sprite = swordSprite;
+                sword.preserveAspect = true;
+                sword.raycastTarget = false;
+                if (i == 1) sword.rectTransform.localScale = new Vector3(-1f, 1f, 1f);   // ayna: X biçimi
+            }
+        }
         var shield = ReferenceUiVisuals.Image(mainVisual, "Emblem", Vector2.zero, Vector2.one,
-            new Vector2(22f, 20f), new Vector2(-22f, -22f), Color.white);
+            new Vector2(28f, 26f), new Vector2(-28f, -30f), Color.white);
         shield.sprite = CampaignSceneSetup.Art("ui_icon_shield") ?? SpriteManager.Instance?.IconShield;
         shield.preserveAspect = true;
-        var gem = ReferenceUiVisuals.Image(mainVisual, "Gem", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(-9f, -9f), new Vector2(9f, 9f), Color.white);
-        gem.sprite = GemIcon.Sprite;
-        gem.preserveAspect = true;
+        shield.raycastTarget = false;
 
-        mainDot = BuildDot(mainVisual, new Vector2(-16f, -16f), new Vector2(0f, 0f), out _);
+        mainDot = BuildDot(mainVisual, MainSize, out _);
         mainDot.SetActive(false);
 
         var button = rootImage.gameObject.AddComponent<Button>();
@@ -189,19 +222,54 @@ public sealed class RadialDockMenu : MonoBehaviour
         return image;
     }
 
-    private static GameObject BuildDot(RectTransform parent, Vector2 low, Vector2 high, out TextMeshProUGUI text)
+    /// <summary>
+    /// Yuvarlak düğmenin sağ üst KENARINA oturan rozetin merkezi: dairenin 45° noktası (r·0,72). Eskiden kare sınırın köşesine
+    /// (+3,+3) asılıyordu; daire köşeyi doldurmadığından nokta düğmeden kopuk, havada görünüyordu.
+    /// </summary>
+    public static Vector2 EdgeBadgePosition(float buttonSize) => Vector2.one * (buttonSize * 0.5f * 0.72f);
+
+    private static GameObject BuildDot(RectTransform parent, float buttonSize, out TextMeshProUGUI text)
     {
         // Krem kenarlı kırmızı nokta: kök krem daire, içindeki "Dot" kırmızı (alt öğe üstte çizilir).
-        var rim = ReferenceUiVisuals.Image(parent, "Badge", Vector2.one, Vector2.one, low, high, ReferenceUiVisuals.Light);
+        var center = new Vector2(0.5f, 0.5f);
+        var rim = ReferenceUiVisuals.Image(parent, "Badge", center, center, Vector2.zero, Vector2.zero, ReferenceUiVisuals.Light);
         rim.sprite = Circle;
-        rim.rectTransform.pivot = new Vector2(1f, 1f);
+        rim.rectTransform.pivot = center;
         rim.rectTransform.sizeDelta = new Vector2(20f, 20f);
-        rim.rectTransform.anchoredPosition = new Vector2(3f, 3f);
+        rim.rectTransform.anchoredPosition = EdgeBadgePosition(buttonSize);
         var dot = ReferenceUiVisuals.Image(rim.rectTransform, "Dot", Vector2.zero, Vector2.one, new Vector2(2f, 2f), new Vector2(-2f, -2f), ReferenceUiVisuals.Red);
         dot.sprite = Circle;
         text = ReferenceUiVisuals.Text(rim.rectTransform, "Count", "", 11, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, bodyBold: true);
         text.enableAutoSizing = false;
+        return rim.gameObject;
+    }
+
+    /// <summary>Bilgi pulu: altın kenarlı koyu hap, altın yazı (ör. "7"); düğmenin sağ üst kenarına oturur.</summary>
+    private static GameObject BuildInfoBadge(RectTransform parent, float buttonSize, out TextMeshProUGUI text)
+    {
+        var center = new Vector2(0.5f, 0.5f);
+        var rim = ReferenceUiVisuals.Image(parent, "InfoBadge", center, center, Vector2.zero, Vector2.zero, ReferenceUiVisuals.Hex(0xE2B34A));
+        rim.sprite = ReferenceUiVisuals.SolidPillSprite();
+        rim.type = Image.Type.Sliced;
+        rim.pixelsPerUnitMultiplier = 3f;
+        rim.rectTransform.pivot = center;
+        rim.rectTransform.sizeDelta = new Vector2(22f, 20f);
+        rim.rectTransform.anchoredPosition = EdgeBadgePosition(buttonSize);
+        rim.raycastTarget = false;
+        var face = ReferenceUiVisuals.Image(rim.rectTransform, "Face", Vector2.zero, Vector2.one, new Vector2(2f, 2f), new Vector2(-2f, -2f),
+            ReferenceUiVisuals.Hex(0x2A1A08));
+        face.sprite = ReferenceUiVisuals.SolidPillSprite();
+        face.type = Image.Type.Sliced;
+        face.pixelsPerUnitMultiplier = 3f;
+        face.raycastTarget = false;
+        text = ReferenceUiVisuals.Text(rim.rectTransform, "Value", "", 11, ReferenceUiVisuals.Hex(0xF6D463), TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(2f, 0f), new Vector2(-2f, 0f), bodyBold: true);
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 7f; text.fontSizeMax = 11f;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.raycastTarget = false;
+        rim.gameObject.SetActive(false);
         return rim.gameObject;
     }
 
@@ -306,8 +374,9 @@ public sealed class RadialDockMenu : MonoBehaviour
         label.alignment = TextAlignmentOptions.Center;
         label.raycastTarget = false;
 
-        item.badge = BuildDot(visual, Vector2.zero, Vector2.zero, out item.badgeText);
+        item.badge = BuildDot(visual, size, out item.badgeText);
         item.badge.SetActive(false);
+        if (item.infoBadgeProvider != null) item.infoBadge = BuildInfoBadge(visual, size, out item.infoBadgeText);
 
         var press = item.button.GetComponent<ReferenceButtonPress>();
         if (press == null) item.button.gameObject.AddComponent<ReferenceButtonPress>();
@@ -323,7 +392,7 @@ public sealed class RadialDockMenu : MonoBehaviour
         IsOpen = open;
         if (save)
         {
-            PlayerPrefs.SetInt(PrefKey, open ? 1 : 0);
+            PlayerPrefs.SetInt(prefKey, open ? 1 : 0);
             PlayerPrefs.Save();
         }
         float now = Time.unscaledTime;
@@ -436,6 +505,14 @@ public sealed class RadialDockMenu : MonoBehaviour
                 if (item.badgeText != null) item.badgeText.text = value > 1 ? Mathf.Min(value, 99).ToString() : "";
             }
             if (item.lockIcon != null) item.lockIcon.SetActive(item.IsLocked);
+            if (item.infoBadge != null)
+            {
+                string info = item.infoBadgeProvider() ?? "";
+                bool showInfo = info.Length > 0 && value <= 0;   // uyarı noktası varken onun yerini almaz
+                if (item.infoBadge.activeSelf != showInfo) item.infoBadge.SetActive(showInfo);
+                if (item.infoBadgeText != null) item.infoBadgeText.text = info;
+                ((RectTransform)item.infoBadge.transform).sizeDelta = new Vector2(info.Length > 1 ? 28f : 22f, 20f);
+            }
             if (value > 0) any = true;
         }
         // Menü kapalıyken ana düğmede toplu uyarı noktası.

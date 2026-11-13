@@ -61,10 +61,17 @@ public sealed class IslandCameraController : MonoBehaviour
         // World(col,row) = (col, Height-row): satır büyüdükçe y küçülür; hücre 1 u. Kıyı köpüğü için yarım hücre pay.
         float xMin = minC - 0.5f, xMax = maxC + 1.5f;
         float yMin = IslandLayout.Height - maxR - 1.5f, yMax = IslandLayout.Height - minR + 0.5f;
-        landBounds = Rect.MinMaxRect(Mathf.Max(0f, xMin), Mathf.Max(0f, yMin), Mathf.Min(IslandLayout.Width, xMax), Mathf.Min(IslandLayout.Height, yMax));
+        // 13 Kasım: kuzey kıyısındaki ağaçların tepesi kara sınırının ~2,3 u üstüne çıkıyor; kadraj ağaç tepelerini de kapsar
+        // (Kıyı Kalesi'nin kuzeyindeki çamlar ekranın üstünde kesiliyordu).
+        foreach (var tree in IslandLayout.Trees)
+            yMax = Mathf.Max(yMax, IslandLayout.Height - (tree.y + 1f) + 0.1f + TreeTopHeight);
+        landBounds = Rect.MinMaxRect(Mathf.Max(0f, xMin), Mathf.Max(0f, yMin), Mathf.Min(IslandLayout.Width, xMax), Mathf.Min(IslandLayout.Height + TreeTopHeight, yMax));
         return landBounds.Value;
     }
     private static Rect? landBounds;
+
+    /// <summary>Ada ağacının ayaktan tepeye görünür yüksekliği (Tiny Swords Tree1/2: 241 px / 64 ppu ≈ 3,7 u).</summary>
+    public const float TreeTopHeight = 3.7f;
 
     public static void ComputeFixedView(float aspect, out Vector2 center, out float size)
     {

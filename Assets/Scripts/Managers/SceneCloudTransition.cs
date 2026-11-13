@@ -34,6 +34,46 @@ public sealed class SceneCloudTransition : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Sahne yüklemeden bulut geçişi (ör. Akın sonucu → ada görünümü): bulutlar örter, <paramref name="midpoint"/> çalışır,
+    /// <paramref name="holdSeconds"/> (gerçek zaman) beklenir (kamera kayması örtünün altında biter), bulutlar açılır.
+    /// Bayrak kapalıysa ya da başka geçiş sürüyorsa false (çağıran işi kendisi doğrudan yapar).
+    /// </summary>
+    public static bool BeginInPlace(System.Action midpoint, float holdSeconds)
+    {
+        if (!FeatureConfig.Instance.cloudTransition || Active != null) return false;
+        var go = new GameObject("SceneCloudTransition");
+        Active = go.AddComponent<SceneCloudTransition>();
+        Active.StartCoroutine(Active.RunInPlace(midpoint, holdSeconds));
+        return true;
+    }
+
+    private IEnumerator RunInPlace(System.Action midpoint, float holdSeconds)
+    {
+        var config = FeatureConfig.Instance;
+        BuildOverlay();
+        float cover = Mathf.Max(0.05f, config.cloudCoverSeconds);
+        yield return Animate(cover, k =>
+        {
+            Place(k);
+            backdrop.color = new Color(Backdrop.r, Backdrop.g, Backdrop.b, Mathf.Clamp01((k - 0.35f) / 0.5f));
+        });
+        Place(1f);
+        backdrop.color = Backdrop;
+        try { midpoint?.Invoke(); }
+        catch (System.Exception e) { Debug.LogException(e); }
+        float until = Time.unscaledTime + Mathf.Max(0f, holdSeconds);
+        while (Time.unscaledTime < until) yield return null;
+        yield return null;
+        float reveal = Mathf.Max(0.05f, config.cloudRevealSeconds);
+        yield return Animate(reveal, k =>
+        {
+            Place(1f - k);
+            backdrop.color = new Color(Backdrop.r, Backdrop.g, Backdrop.b, 1f - Mathf.Clamp01((k - 0.1f) / 0.5f));
+        });
+        Finish();
+    }
+
     private void OnDestroy() { if (Active == this) Active = null; }
 
     private IEnumerator Run(string sceneName)

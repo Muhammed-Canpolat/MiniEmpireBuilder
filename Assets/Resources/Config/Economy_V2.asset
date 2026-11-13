@@ -73,7 +73,7 @@ MonoBehaviour:
   killGoldTransferRate: 0.75
   enemyGoldGrowthPerLevel: 0.08
   replayRewardRate: 0.3
-  victoryDoubleAdsPerDay: 5
+  victoryDoubleAdsPerDay: 0
   endlessBuildCostFormula: 1
   endlessBuildCostK: 1
   invasionPerWave: 14

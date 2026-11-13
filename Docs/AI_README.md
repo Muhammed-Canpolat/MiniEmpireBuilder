@@ -84,7 +84,8 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **Can:** 5 can, 30 dk'da bir yenilenir; sefer yenilgisi ve pes etme 1 can düşürür. Sınırsız can paketi (14/30 gün).
 - **Satış:** Başlangıç Paketi, inşaatçılar (yukarıdaki), Reklamsız, Kraliyet Üyeliği (sınırsız can, +%20 maden, günlük elmas),
   Sezon Bileti, kozmetik (kahraman/kale görünümü, ücretli dekor), elmas paketleri.
-- **Ödüllü reklamlar:** yenilgide devam (savaş başına 1), zaferde 2x ödül, inşaatta -30 dk (günde 3–5), madende 2 sa 2x,
+- **Ödüllü reklamlar:** yenilgide devam (savaş başına 1), zaferde 2x ödül (**günlük sınır yok**, 13 Kasım kararı; V2'deki
+  günde 5 sınırı kaldırıldı — `victoryDoubleAdsPerDay = 0`), inşaatta -30 dk (günde 3–5), madende 2 sa 2x,
   can bitince +1 can (günde 3), dükkânda günlük sandık. Geçiş reklamı yalnız sonuç ekranında, sık değil.
 - **Yayın:** Google Play + App Store (kullanıcının iki geliştirici hesabı var; test: Android tablet + iPhone).
   Satıştan önce bulut kaydı, satın alma geri yükleme, makbuz doğrulama, KVKK/GDPR izni şart.
@@ -199,3 +200,18 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - Sefer savaşında `Battle/AllyLancer.cs` (`AllyBarracks` + `AllyLancer`): kurulu her Kışla 1 + ⌊L/5⌋ mavi Lancer, yalnız Ana Üs'ün 3,5 u çevresini korur, 15 sn'de yeniden doğar; hasar `DamageSource.Ally`.
   Yakın dövüşçü düşman vuruş menzilindeki Lancer'a vurur (`EnemyController.FindBestTarget`). Köylü Evi `GameManager.GetGoldMineStorageCapacity` içinde maden deposunu büyütür.
 - Bot: `PLAYTEST_NO_BARRACKS=1` Kışla/Ev kurmaz (eşlenik ölçüm), `PLAYTEST_SEEDS=N` tohum sayısı. Ayrıntı ve ölçümler: `Docs/design/island_base_v2.md` §22.
+
+## 13 Kasım 2026 (2. oturum): oyun testi geri bildirimi (D24–D30)
+- **Ada alt menüsü** = Ana Üs'ün `RadialDockMenu` bileşeni (`Create` → `Register` → `FinishSetup`): İNŞA ET · AKIN (Akın numarası
+  pulu, `infoBadgeProvider`) · KADRO. Ayrı İNŞA ET/AKIN düğmeleri ve sol üst KADRO kalktı. Durum anahtarı `MEB_IslandRadialOpen`.
+- **Akın sayacı** kompakt (`IslandHud.RaidPillText`, "14s 48dk"), dokununca açıklama. **Akın sonucu** "ADAYA DÖN"
+  (`SceneCloudTransition.BeginInPlace`: sahne yüklemeden bulut örtüsü).
+- **Bölgeler:** adacıklar bütün olarak tek bölgede; NW adacığı Z0. Bölge bulutları kapsama ile pişirilir
+  (`IslandZoneCloud.CoreCovers`, `BakeIslandTerrain.CoverZone`); `Nov13FeedbackTests` her hücreyi denetler + `F4_zone_map_debug.png`.
+  `ZoneAt` değişirse doğa prefab'ı yeniden pişirilmeli: `-executeMethod BakeIslandTerrain.BakeFromCommandLine` (terrain prefab'ındaki
+  rastgele `m_AnimationSpeed` gürültüsünü `git checkout` ile geri al).
+- **Ada kadrajı** ağaç tepelerini kapsar (`IslandCameraController.TreeTopHeight`), alt HUD payı 0,10.
+- **Ana Üs ana düğmesi:** çapraz kılıç + kalkan arması (elmas yok); rozetler dairenin kenarında (`RadialDockMenu.EdgeBadgePosition`).
+- **Yenilgi önerisi** "Üsse dön, güçlendir" Ana Üs ≤ 4 (`VictoryReferenceView.EarlyDefeatMaxBase`).
+- Üst bar veri kaynağı: altın `GameManager.Gold`, elmas `GameManager.Gems` (+`OnGemsChanged`), Et/Odun `PlayerData.island` — Ana Üs
+  ve Ada aynı; `Nov13FeedbackTests.JourneyIslandRaidReturnBaseIslandWithSharedTopBarValues` iki yönde karşılaştırır.

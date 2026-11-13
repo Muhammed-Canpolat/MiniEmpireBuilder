@@ -239,7 +239,7 @@ public static class BakeIslandTerrain
     {
         string inputHash = Sha(RulesVersion + "nature" + string.Join(";", IslandLayout.Trees) + string.Join(";", IslandLayout.Bushes) +
             string.Join(";", IslandLayout.Rocks) + string.Join(";", IslandLayout.GoldStones) + string.Join(";", IslandLayout.WaterRocks) +
-            ZoneSignature());
+            ZoneSignature() + "cover-v3");
         if (File.Exists(NaturePath) && EditedByHand(NaturePath) && !force)
         {
             Debug.LogWarning("[IslandBake] IslandNature.prefab elle düzenlenmiş görünüyor; üzerine yazılmadı (-force ile zorla).");
@@ -396,34 +396,73 @@ public static class BakeIslandTerrain
             if (i >= anchors.Length - 3) { cloud.swayX = 0.07f; cloud.swayY = 0.012f; cloud.speed = 0.06f; }   // yavaş süzülenler
         }
 
-        // Kilitli bölge bulutları: bölgeyi örter; açılınca kaybolur.
+        // Kilitli bölge bulutları: bölgenin HER kara hücresini örter, başka bölgenin kara hücresine taşmaz (13 Kasım: görsel bulut
+        // alanı = mantıksal kilitli alan). Açgözlü kapsama: her adımda en çok örtülmemiş hücreyi örten, başka bölgeye en az taşan
+        // merkez seçilir. Kapsama kuralı IslandZoneCloud.CoreCovers (IslandZoneMapTests aynı kuralı denetler).
         var zones = Group(root, "ZoneClouds");
         for (int zone = 1; zone < IslandLayout.Zones.Length; zone++)
         {
             var group = Group(zones, "Zone" + zone);
             int count = 0;
-            for (float y = 0f; y < IslandLayout.Height; y += 2.2f)
-            for (float x = -1f; x < IslandLayout.Width + 1; x += 3.2f)
+            foreach (var (anchor, scale) in CoverZone(zone))
             {
-                int col = Mathf.Clamp(Mathf.FloorToInt(x + 1.6f), 0, IslandLayout.Width - 1);
-                int row = Mathf.Clamp(Mathf.FloorToInt(IslandLayout.Height - y - 1.1f), 0, IslandLayout.Height - 1);
-                if (IslandLayout.ZoneAt(col, row) != zone || !NearLand(col, row, 2)) continue;
-                // Hazır köy binasını örtmesin. 4,3 idi; orta çayır bölününce Ağıl'ın yanındaki yeni Z1 alanı bulutsuz kalıyordu.
-                if (NearOpenBuilding(new Vector2(x + 1.6f, y + 1.1f), ZoneCloudClearance)) continue;
                 var go = new GameObject($"ZoneCloud_{zone}_{count++}");
                 go.transform.SetParent(group, false);
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = sprites[rng.Next(sprites.Length)];
+                sr.flipX = rng.Next(2) == 0;
                 sr.sortingOrder = OrderZoneClouds + count;
-                float scale = 1.25f + 0.5f * (float)rng.NextDouble();
                 go.transform.localScale = Vector3.one * scale;
                 var cloud = go.AddComponent<IslandZoneCloud>();
                 cloud.zone = zone;
-                cloud.anchor = new Vector2(x + 1.6f + (float)(rng.NextDouble() - 0.5) * 1.0f, y + 1.1f + (float)(rng.NextDouble() - 0.5) * 0.7f);
+                cloud.anchor = anchor;
                 cloud.phase = (float)rng.NextDouble() * 6f;
                 go.transform.position = cloud.anchor;
             }
         }
+    }
+
+    /// <summary>
+    /// Bölgenin kara hücrelerini örten bulutlar (merkez, ölçek). Açgözlü kapsama; önce iri bulut denenir, başka bölgeye taşıyorsa
+    /// (dar şerit/yar kenarı) daha küçük ölçeğe inilir. Taşmasız seçenek yoksa en küçük ölçekte en az taşan seçilir.
+    /// </summary>
+    private static List<(Vector2 anchor, float scale)> CoverZone(int zone)
+    {
+        var mine = new List<Vector2>();
+        var others = new List<Vector2>();
+        for (int r = 0; r < IslandLayout.Height; r++)
+            for (int c = 0; c < IslandLayout.Width; c++)
+            {
+                if (!IslandLayout.IsLand(c, r)) continue;
+                (IslandLayout.ZoneAt(c, r) == zone ? mine : others).Add(IslandZoneCloud.CellCenter(c, r));
+            }
+        var uncovered = new List<Vector2>(mine);
+        var anchors = new List<(Vector2, float)>();
+        float[] scales = { IslandZoneCloud.BakedScale, 0.62f, 0.5f };
+        while (uncovered.Count > 0)
+        {
+            float bestScore = float.MinValue; Vector2 best = uncovered[0]; float bestScale = scales[scales.Length - 1];
+            foreach (float s in scales)
+            {
+                foreach (var cell in mine)
+                    for (int ox = -1; ox <= 1; ox++)
+                        for (int oy = -1; oy <= 1; oy++)
+                        {
+                            var candidate = cell + new Vector2(ox * 0.5f, oy * 0.3f);
+                            int gain = 0, spill = 0;
+                            foreach (var p in uncovered) if (IslandZoneCloud.CoreCovers(candidate, s, p)) gain++;
+                            if (gain == 0) continue;
+                            foreach (var p in others) if (IslandZoneCloud.CoreCovers(candidate, s, p)) spill++;
+                            float score = gain - 1000f * spill;
+                            if (score > bestScore) { bestScore = score; best = candidate; bestScale = s; }
+                        }
+                if (bestScore > 0f) break;   // bu ölçekte taşmasız bir seçenek var: iri bulut tercih
+            }
+            anchors.Add((best, bestScale));
+            float chosen = bestScale; var at = best;
+            uncovered.RemoveAll(p => IslandZoneCloud.CoreCovers(at, chosen, p));
+        }
+        return anchors;
     }
 
     /// <summary>Bölge haritası (bulutlar ZoneAt'e göre dizilir): sınır değişince doğa prefab'ı yeniden pişirilir.</summary>

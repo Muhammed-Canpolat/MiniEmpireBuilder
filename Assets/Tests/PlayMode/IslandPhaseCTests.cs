@@ -319,9 +319,13 @@ public class IslandPhaseCTests
         yield return LoadIsland(3, 8);
         var hud = Prop(Setup, "Hud");
         Assert.IsFalse((bool)Prop(hud, "BoardVisible"));
-        var button = GameObject.Find("AkinButton");
-        Assert.NotNull(button, "alt dock AKIN düğmesi");
-        button.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+        // 13 Kasım: AKIN radyal menüde ("Radial_raid")
+        var menu = Prop(hud, "Radial");
+        Assert.NotNull(menu, "adada radyal menü");
+        var item = ((IEnumerable)Prop(menu, "Items")).Cast<object>().First(i => (string)i.GetType().GetField("id").GetValue(i) == "raid");
+        var button = (UnityEngine.UI.Button)item.GetType().GetField("button").GetValue(item);
+        Assert.NotNull(button, "alt menü AKIN düğmesi");
+        button.onClick.Invoke();
         yield return null;
         Assert.IsTrue((bool)Prop(hud, "BoardVisible"), "AKIN düğmesi Akın Panosu'nu açar");
         Assert.NotNull(GameObject.Find("RaidBoard"));

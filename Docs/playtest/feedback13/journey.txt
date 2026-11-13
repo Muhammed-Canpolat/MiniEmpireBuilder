@@ -1,0 +1,5 @@
+[Nov13] Baştan oynatma:
+Ana Üs: 4321 · 77 · 123 · 456
+Ada: 4321 · 77 · 123 · 456
+Akın 1 sonucu: Won
+Ada (akından sonra): 2700 · 82 · 130 · 489 → Ana Üs: 2700 · 82 · 130 · 489

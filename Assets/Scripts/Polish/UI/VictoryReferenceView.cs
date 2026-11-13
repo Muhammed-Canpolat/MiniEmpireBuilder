@@ -277,10 +277,12 @@ public sealed class VictoryReferenceView : MonoBehaviour
                     string lives = LivesSystem.Unlimited ? L.T("Sınırsız can: can kaybı yok", "Unlimited lives: no life lost")
                         : L.T($"−1 can · kalan {LivesSystem.Lives}/{LivesSystem.MaxLives}", $"−1 life · {LivesSystem.Lives}/{LivesSystem.MaxLives} left");
                     starReason.gameObject.SetActive(true);
-                    string advice = EarlyDefeat
+                    string advice = !EarlyDefeat ? ""
+                        : GameManager.Instance.GetMainBaseLevel() <= 1
                         ? "\n<color=#F2D68A>" + L.T("Üsse dön: Ana Üs'ü yükselt (2. seviyede Okçu Kulesi açılır) ve kahramanını güçlendir.",
                             "Head back to base: upgrade the Main Base (Archer Tower unlocks at Lv. 2) and level up your hero.") + "</color>"
-                        : "";
+                        : "\n<color=#F2D68A>" + L.T("Üsse dön: kahramanını, kulelerini ve Ana Üs'ü yükselt, sonra tekrar dene.",
+                            "Head back to base: level up your hero, towers and Main Base, then try again.") + "</color>";
                     starReason.text = (reason.Length > 0 ? $"<color=#E07A5F>{reason}</color>\n" : "") +
                         $"<color=#C9B48A>{lives}</color>" + advice;
                 }
@@ -354,6 +356,9 @@ public sealed class VictoryReferenceView : MonoBehaviour
             .SetDelay(1.45f).SetEase(Ease.OutQuad);
     }
 
-    /// <summary>Yeni oyuncunun yenilgisi (Ana Üs 1–2): üsse dönüp yükseltmek tekrar denemekten daha iyi yol.</summary>
-    private static bool EarlyDefeat => GameManager.Instance != null && GameManager.Instance.GetMainBaseLevel() <= 2;
+    /// <summary>Erken oyun yenilgisi (Ana Üs ≤ <see cref="EarlyDefeatMaxBase"/>): üsse dönüp yükseltmek tekrar denemekten daha iyi yol.</summary>
+    private static bool EarlyDefeat => GameManager.Instance != null && GameManager.Instance.GetMainBaseLevel() <= EarlyDefeatMaxBase;
+
+    /// <summary>13 Kasım kararı: "Üsse dön, güçlendir" önerisi Ana Üs 4'e kadar (eskiden 2; B1-5 boss'u Ana Üs koşusunda sertti).</summary>
+    public const int EarlyDefeatMaxBase = 4;
 }

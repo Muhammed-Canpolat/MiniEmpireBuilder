@@ -85,7 +85,7 @@ public class EconomyProfileTests
         Assert.AreEqual(40, Call(v2, "VictoryRewardFormula", 1, 1));
         Assert.AreEqual(40 + 150 + 48, Call(v2, "VictoryRewardFormula", 6, 5));
         Assert.AreEqual(0.75f, (float)Field(v2, "killGoldTransferRate"), 0.0001f);
-        Assert.AreEqual(5, Field(v2, "victoryDoubleAdsPerDay"));
+        Assert.AreEqual(0, Field(v2, "victoryDoubleAdsPerDay"), "13 Kasım: V2'de de 2x sınırsız (D17 kaldırıldı)");
         Assert.AreEqual(400, Call(v2, "TraderPackCost", 5));
         Assert.AreEqual(1000, Call(v2, "TraderPackCost", 10));
         // Hiçbir değer 3 kattan fazla değişmez (ECONOMY §7).
@@ -151,12 +151,10 @@ public class EconomyProfileTests
         int Left() => (int)ads.GetProperty("VictoryDoubleLeft").GetValue(null);
         var consume = ads.GetMethod("ConsumeVictoryDouble");
 
+        // 13 Kasım (D30): V2'de de günlük sınır yok (D17 kaldırıldı)
         Override("V2");
-        Assert.AreEqual(5, Left());
-        for (int i = 0; i < 5; i++) { Assert.IsTrue(Available(), "hak " + (i + 1)); consume.Invoke(null, null); }
-        Assert.IsFalse(Available(), "günde 5 hak");
-        SetField("adDoubleDay", 20000101);   // dünkü sayaç → bugün sıfırlanır
-        Assert.AreEqual(5, Left());
+        for (int i = 0; i < 12; i++) { Assert.IsTrue(Available(), "hak " + (i + 1)); consume.Invoke(null, null); }
+        Assert.IsTrue(Available(), "V2: sınırsız");
 
         Override("Legacy");
         for (int i = 0; i < 12; i++) consume.Invoke(null, null);

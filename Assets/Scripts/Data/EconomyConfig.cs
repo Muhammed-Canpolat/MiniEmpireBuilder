@@ -164,7 +164,7 @@ public sealed class EconomyConfig : ScriptableObject
         c.victoryRewardPerRegion = 30;
         c.victoryRewardPerStage = 12;
         c.killGoldTransferRate = 0.75f;
-        c.victoryDoubleAdsPerDay = 5;
+        c.victoryDoubleAdsPerDay = 0;   // 13 Kasım kararı (D17 kaldırıldı): 2x zafer reklamı sınırsız
         c.traderEnabled = true;
         return c;
     }

@@ -45,6 +45,7 @@ public sealed class IslandHud : MonoBehaviour
     private IslandRaidBoard board;
     private bool prepOpen;
     private TextMeshProUGUI akinDockLabel;
+    private RadialDockMenu radial;
     private Button homeButton, autoButton, nameButton;
     private ResourceTopBar resourceBar;
     private int selectedAkin = 1;
@@ -199,7 +200,10 @@ public sealed class IslandHud : MonoBehaviour
     /// <summary>Sağ üstte baskın rozeti: "Sakin · 3 sa 12 dk" / "Baskın geliyor · 24 dk" / "BASKIN! · savun". Dokununca (pencere açıksa) savunma başlar.</summary>
     private void BuildRaidBadge()
     {
-        raidBadgeBg = ReferenceUiVisuals.Image(safe, "RaidBadge", new Vector2(1, 1), new Vector2(1, 1), new Vector2(-196, -90), new Vector2(-8, -58),
+        // 13 Kasım: kompakt hap (kum saati + "14s 48dk", 104×26); eski uzun hap 188×32 idi ve adanın sağ üstünü örtüyordu.
+        bool compact = FeatureConfig.Instance.raidPillCompact;
+        raidBadgeBg = ReferenceUiVisuals.Image(safe, "RaidBadge", new Vector2(1, 1), new Vector2(1, 1),
+            compact ? new Vector2(-CompactPillWidth - 6, -86) : new Vector2(-196, -90), compact ? new Vector2(-6, -60) : new Vector2(-8, -58),
             new Color(0.12f, 0.3f, 0.36f, 0.92f));
         raidBadgeBg.sprite = ReferenceUiVisuals.PillSprite();
         raidBadgeBg.type = Image.Type.Sliced;
@@ -208,20 +212,24 @@ public sealed class IslandHud : MonoBehaviour
         button.targetGraphic = raidBadgeBg;
         button.transition = Selectable.Transition.None;
         button.onClick.AddListener(OnRaidBadge);
-        bool clock = FeatureConfig.Instance.raidPillClock;
+        bool clock = FeatureConfig.Instance.raidPillClock || compact;
         if (clock)
         {
-            var icon = ReferenceUiVisuals.Image(raidBadgeBg.transform, "ClockIcon", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, -9), new Vector2(26, 9), Color.white);
+            var icon = compact
+                ? ReferenceUiVisuals.Image(raidBadgeBg.transform, "ClockIcon", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(6, -8), new Vector2(22, 8), Color.white)
+                : ReferenceUiVisuals.Image(raidBadgeBg.transform, "ClockIcon", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, -9), new Vector2(26, 9), Color.white);
             icon.sprite = CampaignSceneSetup.Art("ui_icon_clock");
             icon.preserveAspect = true;
             icon.enabled = icon.sprite != null;
+            icon.raycastTarget = false;
         }
-        raidBadgeText = ReferenceUiVisuals.Text(raidBadgeBg.transform, "Label", "", 12, Color.white, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(clock ? 28 : 8, 0), new Vector2(-8, 0), true);
+        raidBadgeText = ReferenceUiVisuals.Text(raidBadgeBg.transform, "Label", "", compact ? 11 : 12, Color.white, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, new Vector2(compact ? 22 : clock ? 28 : 8, 0), new Vector2(compact ? -5 : -8, 0), true);
         raidBadgeText.textWrappingMode = TextWrappingModes.NoWrap;
         raidBadgeText.enableAutoSizing = true;
         raidBadgeText.fontSizeMin = 8f;
-        raidBadgeText.fontSizeMax = 12f;
+        raidBadgeText.fontSizeMax = compact ? 11f : 12f;
+        raidBadgeText.raycastTarget = false;
         raidBadgeBg.gameObject.SetActive(false);
     }
 
@@ -233,7 +241,32 @@ public sealed class IslandHud : MonoBehaviour
         return h > 0 ? L.T($"{h} sa {m} dk", $"{h}h {m}m") : L.T($"{m} dk", $"{m}m");
     }
 
-    /// <summary>Rozet metni (testler de okur): baskın yoksa boş.</summary>
+    private const float CompactPillWidth = 104f;
+
+    /// <summary>Kompakt süre: "14s 48dk" / "48dk" (EN "14h 48m").</summary>
+    public static string ShortSpan(double seconds)
+    {
+        long minutes = (long)Math.Ceiling(Math.Max(0d, seconds) / 60d);
+        if (minutes < 1) minutes = 1;
+        long h = minutes / 60, m = minutes % 60;
+        return h > 0 ? L.T($"{h}s {m}dk", $"{h}h {m}m") : L.T($"{m}dk", $"{m}m");
+    }
+
+    /// <summary>Kompakt hap metni (FeatureConfig.raidPillCompact): sakin "14s 48dk", uyarı "Geliyor 24dk", canlı "BASKIN 12dk".</summary>
+    public static string RaidPillText(IslandSaveData save, long now)
+    {
+        if (!FeatureConfig.Instance.raidPillCompact) return RaidBadgeText(save, now);
+        if (save == null || save.nextRaidTicks <= 0) return "";
+        string span = ShortSpan(IslandRaidScheduler.SecondsLeft(save, now));
+        switch (IslandRaidScheduler.PhaseAt(save, now))
+        {
+            case IslandRaidScheduler.Phase.Live: return L.T($"BASKIN {span}", $"RAID {span}");
+            case IslandRaidScheduler.Phase.Warning: return L.T($"Geliyor {span}", $"Soon {span}");
+            default: return span;
+        }
+    }
+
+    /// <summary>Rozet metni (uzun biçim; testler ve dokunma açıklaması): baskın yoksa boş.</summary>
     public static string RaidBadgeText(IslandSaveData save, long now)
     {
         if (save == null || save.nextRaidTicks <= 0) return "";
@@ -252,7 +285,7 @@ public sealed class IslandHud : MonoBehaviour
     {
         var save = IslandSession.Save;
         long now = IslandRepair.Now;
-        string text = RaidBadgeText(save, now);
+        string text = RaidPillText(save, now);
         bool idle = raid.Phase == IslandRaidManager.State.Idle;
         bool show = text.Length > 0 && idle && !placing;
         if (raidBadgeBg.gameObject.activeSelf != show) raidBadgeBg.gameObject.SetActive(show);
@@ -260,6 +293,12 @@ public sealed class IslandHud : MonoBehaviour
         {
             raidBadgeText.text = text;
             var phase = IslandRaidScheduler.PhaseAt(save, now);
+            if (FeatureConfig.Instance.raidPillCompact)
+            {
+                // Uyarı/canlı metni daha uzun: hap sola doğru genişler (sağ kenar sabit)
+                float width = phase == IslandRaidScheduler.Phase.None ? CompactPillWidth : CompactPillWidth + 30f;
+                raidBadgeBg.rectTransform.offsetMin = new Vector2(-width - 6f, raidBadgeBg.rectTransform.offsetMin.y);
+            }
             raidBadgeBg.color = phase == IslandRaidScheduler.Phase.Live ? new Color(0.78f, 0.2f, 0.16f, 0.95f)
                 : phase == IslandRaidScheduler.Phase.Warning ? new Color(0.72f, 0.42f, 0.12f, 0.95f) : new Color(0.12f, 0.3f, 0.36f, 0.92f);
         }
@@ -299,6 +338,13 @@ public sealed class IslandHud : MonoBehaviour
         if (phase == IslandRaidScheduler.Phase.Warning)
             Toast(L.T($"Korsanlar {Span(IslandRaidScheduler.SecondsLeft(save, now))} sonra {IslandRaidScheduler.BeachName(save.raidBeach)} kumsalına çıkar.",
                 $"Pirates land on beach {IslandRaidScheduler.BeachName(save.raidBeach)} in {Span(IslandRaidScheduler.SecondsLeft(save, now))}."));
+        else if (save != null && save.nextRaidTicks > 0)
+        {
+            // 13 Kasım: kompakt hapın açıklaması dokununca
+            string left = Span(IslandRaidScheduler.SecondsLeft(save, now));
+            Toast(L.T($"Sonraki akına kalan süre: {left}. Korsanlar 30 dk önce görünür.", $"Time until the next raid: {left}. Pirates show up 30 minutes early."));
+            toastUntil = Time.unscaledTime + 3.5f;
+        }
         else Toast(L.T("Ada sakin. Baskın 8 saatte bir gelir; 30 dk önce haber verilir.", "The isle is calm. Raids come every ~8 hours with 30 minutes' warning."));
     }
 
@@ -340,6 +386,15 @@ public sealed class IslandHud : MonoBehaviour
         root.transform.SetParent(safe, false);
         var rt = (RectTransform)root.transform;
         dock = root;
+        if (cfg.islandRadialMenu)
+        {
+            // 13 Kasım: Ana Üs'ün radyal menü bileşeni, adaya özgü öğelerle (İNŞA ET · AKIN · KADRO). Kap tüm güvenli alanı
+            // kaplar (ana düğme alt-ortaya bağlanır); kap gizlenince menü topluca gizlenir. Kap dokunuş yakalamaz.
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            BuildRadialMenu(rt);
+            return;
+        }
         if (cfg.islandCompactDock)
         {
             // AŞAMA 3 §3D: iki küçük ikonlu düğme alt köşelerde (Ana Üs dock ailesi: koyu İNŞA ET, altın AKIN); ortası boş, ada görünür.
@@ -364,6 +419,47 @@ public sealed class IslandHud : MonoBehaviour
         button.onClick.AddListener(() => { buildUi?.Close(); prepOpen = true; Refresh(); });
     }
 
+    /// <summary>Ada radyal menüsü (Ana Üs bileşeni): sol İNŞA ET, ortada vurgulu AKIN (Akın numarası pulu), sağda KADRO.</summary>
+    private void BuildRadialMenu(RectTransform container)
+    {
+        radial = RadialDockMenu.Create(container, RadialDockMenu.IslandPrefKey);
+        radial.Register(new RadialItem
+        {
+            id = "build", label = () => L.T("İNŞA ET", "BUILD"), offset = new Vector2(-96f, 54f),
+            iconProvider = () => CampaignSceneSetup.Art("ui_icon_hammer"),
+            onClick = OpenBuildMenu,
+        });
+        radial.Register(new RadialItem
+        {
+            id = "raid", label = () => L.T("AKIN", "RAID"), offset = new Vector2(0f, 122f), emphasised = true,
+            iconProvider = () => CampaignSceneSetup.Art("ui_icon_sword"),
+            infoBadgeProvider = () => DockAkin().ToString(),
+            onClick = OpenRaidBoard,
+        });
+        radial.Register(new RadialItem
+        {
+            id = "staff", label = () => L.T("KADRO", "STAFF"), offset = new Vector2(96f, 54f),
+            iconProvider = () => SpriteManager.Instance != null ? SpriteManager.Instance.GetSprite("ui_builder_avatar") : null,
+            faceColor = new Color(0.12f, 0.30f, 0.36f, 1f),   // deniz (ada ailesi)
+            onClick = OpenStaff,
+        });
+        radial.FinishSetup();
+    }
+
+    /// <summary>Alt menüde gösterilen Akın numarası (seçili, kapıdan geçebilen en yüksek).</summary>
+    private int DockAkin() => Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin));
+
+    private void OpenRaidBoard()
+    {
+        if (raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        buildUi?.Close();
+        prepOpen = true;
+        Refresh();
+    }
+
+    /// <summary>Ada radyal menüsü (testler).</summary>
+    public RadialDockMenu Radial => radial;
+
     private static Button CompactDockButton(RectTransform parent, string name, string label, bool gold, string art, bool left, FeatureConfig cfg)
     {
         float w = cfg.compactDockWidth;
@@ -386,6 +482,7 @@ public sealed class IslandHud : MonoBehaviour
     /// <summary>AŞAMA 2 §2: sol kenarda, üst çubuğun altında küçük yuvarlak KADRO düğmesi (adayı örtmez); kadro panelini açar.</summary>
     private void BuildStaffButton()
     {
+        if (FeatureConfig.Instance.islandRadialMenu) return;   // KADRO radyal menüde (sol üstteki düğme adacığın üstüne biniyordu)
         var bg = ReferenceUiVisuals.Image(safe, "StaffButton", new Vector2(0, 1), new Vector2(0, 1), new Vector2(8, -134), new Vector2(68, -74),
             new Color(0.12f, 0.3f, 0.36f, 0.92f));
         bg.sprite = ReferenceUiVisuals.SolidPillSprite();
@@ -675,11 +772,14 @@ public sealed class IslandHud : MonoBehaviour
             new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 76), new Vector2(0, 118), 16);
         resultAgain = ReferenceUiVisuals.Button(card.transform, "Again", L.T("TEKRAR", "AGAIN"), false,
             new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 42), new Vector2(0, 72), 14);
-        resultHome = ReferenceUiVisuals.Button(card.transform, "Home", L.T("ANA ÜS", "BASE"), false,
+        // 13 Kasım: Akın adadan başlar → sonuç ekranı adaya dönmeyi teklif eder (Ana Üs'e üst çubuktaki ANA ÜS ile gidilir).
+        bool toIsland = FeatureConfig.Instance.raidResultReturnToIsland;
+        resultHome = ReferenceUiVisuals.Button(card.transform, toIsland ? "ReturnIsland" : "Home", toIsland ? L.T("ADAYA DÖN", "BACK TO ISLE") : L.T("ANA ÜS", "BASE"), false,
             new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 8), new Vector2(0, 38), 14);
         resultNext.onClick.AddListener(() => { raid.ReturnToIdle(); prepOpen = true; selectedAkin = Mathf.Min(MaxSelectable(), raid.Akin + 1); Refresh(); });
         resultAgain.onClick.AddListener(() => { raid.ReturnToIdle(); prepOpen = true; selectedAkin = raid.Akin; Refresh(); });
-        resultHome.onClick.AddListener(GoHome);
+        if (toIsland) resultHome.onClick.AddListener(ReturnToIsland);
+        else resultHome.onClick.AddListener(GoHome);
         resultPanel.SetActive(false);
     }
 
@@ -733,6 +833,22 @@ public sealed class IslandHud : MonoBehaviour
         Toast(L.T("Akın yarıda kalır. Çıkmak için tekrar dokun.", "The raid will be abandoned. Tap again to leave."));
     }
 
+    /// <summary>
+    /// Sonuç ekranından ada (üs) görünümüne dönüş: bulutlar ekranı örter, savaş temizlenir ve kamera üs kadrajına döner,
+    /// sonra bulutlar açılır. Bulut geçişi kapalıysa ya da başka bir geçiş sürüyorsa doğrudan döner.
+    /// </summary>
+    public void ReturnToIsland()
+    {
+        if (raid.Phase != IslandRaidManager.State.Won && raid.Phase != IslandRaidManager.State.Lost) return;
+        void Back()
+        {
+            raid.ReturnToIdle();
+            prepOpen = false;
+            Refresh();
+        }
+        if (!SceneCloudTransition.BeginInPlace(Back, Progression.Island.BattleCameraSeconds + 0.15f)) Back();
+    }
+
     private void GoHome()
     {
         IslandSession.Clear();
@@ -775,7 +891,8 @@ public sealed class IslandHud : MonoBehaviour
         if (idle)
         {
             int n = selectedAkin;
-            akinDockLabel.text = L.T($"AKIN {Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin))}", $"RAID {Mathf.Min(MaxSelectable(), Mathf.Max(1, selectedAkin))}");
+            if (akinDockLabel != null) akinDockLabel.text = L.T($"AKIN {DockAkin()}", $"RAID {DockAkin()}");
+            radial?.RefreshBadges();
             if (prepOpen)
             {
                 bool can = raid.CanStart(n);

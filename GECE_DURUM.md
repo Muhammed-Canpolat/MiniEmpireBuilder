@@ -1,6 +1,26 @@
+# GECE_DURUM — Otonom çalışma (13 Kasım 2026, 2. oturum: oyun testi geri bildirimi)
+
+DURUM: TAMAMLANDI (2. oturum)
+ŞU ANKİ İŞ: (yok)
+SIRADAKİ İŞ: kullanıcı cihazda dener; "18" yazısının yeri sorulacak (D29 notu)
+TESTLER: ada/radyal/UiNight/ekonomi/baştan oynatma/Nov13 grupları 150/150; görüntüler Docs/playtest/feedback13
+
+2. OTURUM (13 Kasım geri bildirimi, kararlar D24–D30):
+- [x] 1 Akın sonu: ADAYA DÖN + yerinde bulut geçişi (D27)
+- [x] 2 Ada radyal menü (İNŞA ET · AKIN pul · KADRO) (D25)
+- [x] 3 Kompakt akın sayacı + dokunma açıklaması (D26)
+- [x] 4 KADRO menüye taşındı; NW adacığı Z0, bulut kapsaması yeniden pişirildi + test/görsel (D24)
+- [x] 5 Ada kadrajı: ağaç tepeleri + alt pay 0,10 (D28)
+- [x] 6 Ana Üs alt barı: arma + rozet hizası (D29); "18" bulunamadı (kullanıcının görselinde de alt barda yok) → soruldu
+- [x] 7 Veri kaynağı aynı (test iki yönde karşılaştırır) + baştan oynatma J1–J6
+- [x] 8 2x reklam sınırsız, öneri eşiği Ana Üs 4 (D30); AI_README güncellendi
+
+---
+# (önceki) 1. oturum
+
 # GECE_DURUM — Otonom gece çalışması (13 Kasım 2026)
 
-DURUM: TAMAMLANDI
+DURUM (1. oturum): TAMAMLANDI
 SON AKTİVİTE: 2026-11-13 21:00
 ŞU ANKİ İŞ: (yok) — rapor: REPORT.md
 SIRADAKİ İŞ: sabah gözden geçirme (REPORT.md §1 ⚠️ ve §6)

@@ -322,17 +322,15 @@ public class UiNightTests
         var pill = safe.Find("RaidBadge");
         Assert.NotNull(pill.Find("ClockIcon"), "saat ikonu");
         Assert.IsTrue(pill.gameObject.activeSelf, "baskın planlıyken hap görünür");
-        StringAssert.StartsWith(L("Sonraki akın", "Next raid"), TextOf(pill.Find("Label")));
+        // 13 Kasım: kompakt hap "8s 54dk" (eskiden "Sonraki akın: 8 sa 54 dk")
+        StringAssert.EndsWith(L("dk", "m"), TextOf(pill.Find("Label")));
 
-        // Kompakt dock
+        // 13 Kasım: alt menü Ana Üs'ün radyal bileşeni (İNŞA ET · AKIN · KADRO); ana düğme alt-orta, ada güney adacıkları köşelerde
         var dock = safe.Find("Dock");
-        var build = (RectTransform)dock.Find("BuildButton"); var akin = (RectTransform)dock.Find("AkinButton");
-        Assert.LessOrEqual(build.rect.height, 60f, "düğme yüksekliği ≤ 60"); Assert.LessOrEqual(akin.rect.height, 60f);
-        Assert.LessOrEqual(build.rect.width, 140f);
-        Assert.NotNull(build.Find("Icon")); Assert.NotNull(akin.Find("Icon"), "ikonlu düğmeler");
-        Assert.IsFalse(ScreenRect(build).Overlaps(ScreenRect(akin)));
-        float top = ((RectTransform)dock).offsetMax.y / 844f;   // referans tuval yüksekliği
-        Assert.LessOrEqual(top, (float)Field(Config, "islandViewBottomHudFraction") + 0.005f, "dock adanın güney ucunu örtmez");
+        var main = (RectTransform)dock.Find("RadialMainBtn");
+        Assert.NotNull(main, "adada radyal ana düğme");
+        float top = (main.anchoredPosition.y + main.sizeDelta.y * 0.5f) / 844f;   // referans tuval yüksekliği
+        Assert.LessOrEqual(top, 0.13f, "kapalı menü yalnız alt-ortayı kaplar");
         yield return null;
         yield return Capture("N3_island_topbar_dock_pill");
     }

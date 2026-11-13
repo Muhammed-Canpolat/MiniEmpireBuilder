@@ -136,3 +136,50 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   kaldırıldığından testler `StoneRoadTilemap` yokluğunu bekler. `ShadowsRemainSoftAfterMovesAndReloads` bundan sonra gerçek bir
   ölçümde (Topçu Kulesi köşesi komşu zeminin %30'u parlaklıkta) kalıyor; eşik **gevşetilmedi** (denendi, ikinci ölçüt de
   tutmadı → yanlış alarm değil). Gözle bakılmalı.
+
+---
+# 13 Kasım 2026 (2. oturum) — oyun testi geri bildirimi
+
+## D24 — Bölge–hücre eşlemesi ve bulut kapsaması
+- **Bulgu:** NW adacığı (KADRO düğmesinin altındaki kara) `ZoneAt`'te Z3'e (Altın Burnu, haritanın öbür ucu) bağlıydı; r6 hücresi
+  dikdörtgen dışında kalıp Z0 sayılıyordu. Pişirme ızgarası 1–2. sütunları hiç örneklemediği için adacıkta bulut yoktu →
+  bulutsuz arazi "bölge bulutların altında" diyordu. Diğer üç adacığın kenar hücreleri tesadüfen doğru bölgeye düşüyordu.
+- **Karar:** Adacık dikdörtgenleri adacığın tüm kara hücrelerini kapsar; **NW adacığı Z0** (kale yaylasının batı komşusu, baştan
+  açık; oyuncu onu zaten açık görüyordu). Bölge bulutları artık açgözlü kapsamayla pişirilir: her kilitli kara hücresi kendi
+  bölgesinin bulut çekirdeği altında, hiçbir bulut çekirdeği başka bölgenin kara hücresine taşmaz (`IslandZoneCloud.CoreCovers`,
+  ölçek 1,25–1,75 → 0,78; dar şeritlerde taşmasız olana dek 0,62 / 0,5). `Nov13FeedbackTests` tüm hücreleri denetler ve `F4_zone_map_debug.png` görselini üretir.
+- **Alternatif:** NW adacığını Z3'te bırakıp üstüne bulut koymak (tasarım belgesi §4). Seçilmedi: Altın Burnu ile coğrafi bağı yok.
+
+## D25 — Adada radyal menü (Ana Üs bileşeni)
+- **Karar:** `RadialDockMenu.Create` + `Register` + `FinishSetup` ile aynı bileşen; ada öğeleri İNŞA ET · AKIN (vurgulu) · KADRO.
+  Akın numarası AKIN düğmesinin sağ üst kenarında altın pul (`RadialItem.infoBadgeProvider`). Sol üstteki KADRO düğmesi kalktı
+  (menüye taşındı). Açık/kapalı durumu ayrı anahtar `MEB_IslandRadialOpen`. Geri alma: `FeatureConfig.islandRadialMenu=false`.
+
+## D26 — Kompakt akın sayacı
+- **Karar:** Kum saati + "14s 48dk" (104×26, eskiden 188×32 "Sonraki akın: 14 sa 48 dk"); uyarı/canlı evrede "Geliyor 24dk" /
+  "BASKIN 12dk" (hap sola 30 genişler). Dokununca "Sonraki akına kalan süre: …" açıklaması. `RaidBadgeText` uzun biçim korunur
+  (testler, açıklama). Geri alma: `raidPillCompact=false`.
+
+## D27 — Akın sonucunda ADAYA DÖN
+- **Karar:** Ada sonuç ekranında (Akın ve canlı baskın; zafer ve yenilgi) "ANA ÜS" yerine "ADAYA DÖN": sahne yüklemeden bulut
+  örtüsü (`SceneCloudTransition.BeginInPlace`) → savaş temizlenir, kamera üs kadrajına döner → bulutlar açılır. Ana Üs'e üst
+  çubuktaki ANA ÜS ile gidilir. Sefer/Sonsuz/İstila sonuç ekranlarına dokunulmadı. Geri alma: `raidResultReturnToIsland=false`.
+
+## D28 — Ada kadrajı
+- **Karar:** `LandBounds` kuzey kıyısındaki ağaç tepelerini (+3,7 u) kapsar; alt HUD payı 0,08 → 0,10 (radyal ana düğme). Telefonlarda
+  kadraj genişliğe bağlı olduğundan boy değişmez; 3:4 / 10:16 tablette ~%6 uzaklaşır.
+
+## D29 — Ana Üs ana menü düğmesi
+- **Karar:** Kalkandaki elmas kaldırıldı; arma = arkada çapraz iki kılıç (`ui_icon_sword` + aynası) + önde kalkan. Kırmızı uyarı
+  noktası artık dairenin 45° kenarında (`EdgeBadgePosition`, r·0,72); eskiden kare sınırın köşesine asılı olduğu için havada duruyordu.
+  Aynı düzeltme bütün radyal öğe rozetlerinde geçerli.
+- **"18" yazısı:** Kullanıcının görselinin alt barı büyütülerek incelendi: solda yalnız aslanlı kalkan, perçin ve düğüm plakası var;
+  görseldeki tek "18" üst bardaki elmas sayısı (geçerli öğe). Test ortamında da alt barda yazı yok. Kaldırılacak bir öğe bulunamadı;
+  `Nov13FeedbackTests` alt %15'te tek başına sayı olmadığını bekçi olarak denetler. Kullanıcıya yeri soruldu.
+
+## D30 — Önceki rapordaki kararlar (kullanıcı)
+- **2x zafer reklamı sınırı kaldırıldı** (D17 geri alındı): V2'de de `victoryDoubleAdsPerDay = 0` (sınırsız). Gerekçe (kullanıcı):
+  reklam izlenmesi bizim için iyi, zararı yok.
+- **"Üsse dön, güçlendir" önerisi Ana Üs ≤ 4** (`VictoryReferenceView.EarlyDefeatMaxBase`); Ana Üs 2–4'te metin "kahramanını,
+  kulelerini ve Ana Üs'ü yükselt" (Okçu Kulesi cümlesi yalnız Ana Üs 1'de).
+- Topçu Kulesi köşe gölgesi: kullanıcı sonra bakacak (açık bulgu olarak kalır).

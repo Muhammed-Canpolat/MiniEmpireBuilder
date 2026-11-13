@@ -381,13 +381,19 @@ public static class IslandLayout
     /// <summary>Orta çayırın bölünme sütunları: c ≤ batı → Z2, c ≥ doğu → Z1 (r15–22).</summary>
     public const int MeadowSplitWest = 8, MeadowSplitEast = 14;
 
-    /// <summary>Hücrenin bölgesi (0..5); belge §4 tablosu. Adacıklar ilgili bölgeye bağlıdır.</summary>
+    /// <summary>
+    /// Hücrenin bölgesi (0..5); belge §4 tablosu. Adacıklar BÜTÜN olarak komşu bölgeye bağlıdır (dikdörtgenler adacığın tüm kara
+    /// hücrelerini kapsar; <c>IslandZoneMapTests</c> her adacığın tek bölgede olduğunu denetler).
+    /// 13 Kasım düzeltmesi: NW adacığı eskiden Z3'e (Altın Burnu, haritanın öbür ucu) bağlıydı ve r6 hücresi dışarıda kalıp Z0
+    /// sayılıyordu; üstelik pişirme ızgarası 1–2. sütunları örneklemediği için üstünde hiç bulut yoktu → bulutsuz görünen arazi
+    /// "bulutların altında" diyordu. Artık NW adacığı Z0 (kale yaylasının batı komşusu, baştan açık).
+    /// </summary>
     public static int ZoneAt(int c, int r)
     {
-        if (c >= 1 && c <= 2 && r >= 4 && r <= 5) return 3;        // NW adacığı → Z3
-        if (c >= 19 && c <= 20 && r >= 10 && r <= 11) return 1;     // E adacığı → Z1
-        if (c >= 1 && c <= 2 && r >= 29 && r <= 30) return 2;       // SW adacığı → Z2
-        if (c >= 18 && c <= 19 && r >= 29 && r <= 30) return 4;     // SE adacığı → Z4
+        if (c >= 1 && c <= 2 && r >= 4 && r <= 6) return 0;         // NW adacığı → Z0 (5 hücre: r4–5 c1–2, r6 c1)
+        if (c >= 19 && c <= 20 && r >= 9 && r <= 11) return 1;      // E adacığı → Z1 (r9 c20 dahil)
+        if (c >= 1 && c <= 3 && r >= 29 && r <= 30) return 2;       // SW adacığı → Z2 (r30 c3 dahil)
+        if (c >= 18 && c <= 20 && r >= 29 && r <= 30) return 4;     // SE adacığı → Z4 (r30 c20 dahil)
         if (c >= 15 && c <= 17 && r >= 2 && r <= 8) return 3;
         // Hazır köy (Kale, evler, Okçuluk, Ağıl) Z0'da kalır: açılışta bulut yalnız kenar kuşağını örter.
         // Orta çayır (r15–22) bölünür: batısı Z2'ye, doğusu Z1'e (12 Kasım 2026 kararı: Z1/Z2 yalnız şerit/yardan ibaretti,

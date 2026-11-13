@@ -22,7 +22,7 @@ public sealed class FeatureConfig : ScriptableObject
     /// <summary>Üst çubuğa ayrılan ekran yüksekliği oranı.</summary>
     public float islandViewTopHudFraction = 0.07f;
     /// <summary>Alt düğmelere ayrılan ekran yüksekliği oranı.</summary>
-    public float islandViewBottomHudFraction = 0.08f;
+    public float islandViewBottomHudFraction = 0.10f;   // 13 Kasım: radyal ana düğme (alt-orta ~%12) için 0,08 → 0,10
 
     [Header("Bulut geçişi (Ana Üs ↔ Ada)")]
     public bool cloudTransition = true;
@@ -95,6 +95,14 @@ public sealed class FeatureConfig : ScriptableObject
     /// <summary>Ada kompakt dock düğme yüksekliği (referans px, 390×844).</summary>
     public float compactDockHeight = 54f;
     public float compactDockWidth = 124f;
+
+    [Header("13 Kasım geri bildirimi")]
+    /// <summary>Adada Ana Üs'ün radyal menüsü (İNŞA ET · AKIN · KADRO); kapalıysa kompakt dock + sol üst KADRO.</summary>
+    public bool islandRadialMenu = true;
+    /// <summary>Akın sayacı küçük hap: kum saati + "14s 48dk"; dokununca açıklama (kapalıysa uzun "Sonraki akın: …").</summary>
+    public bool raidPillCompact = true;
+    /// <summary>Adadan başlatılan Akın'ın sonuç ekranında "ANA ÜS" yerine "ADAYA DÖN" (bulutlu geçişle ada görünümüne).</summary>
+    public bool raidResultReturnToIsland = true;
 
     [Header("Ekonomi (AŞAMA 4)")]
     /// <summary>Etkin altın ekonomisi profili: Resources/Config/ altındaki EconomyConfig asset adı ("Economy_V2" ya da "Economy_Legacy").</summary>
