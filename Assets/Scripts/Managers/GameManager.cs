@@ -1021,6 +1021,8 @@ public class GameManager : MonoBehaviour
         while (t < 0.4f)
         {
             t += Time.deltaTime;
+            // Kararma sürerken başka bir geçiş sahneyi değiştirdiyse (örtü yok edildi) bu geçiş iptal: çifte yükleme olmasın.
+            if (img == null) yield break;
             img.color = new Color(0, 0, 0, Mathf.Clamp01(t / 0.4f));
             yield return null;
         }

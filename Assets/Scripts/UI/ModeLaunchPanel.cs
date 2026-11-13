@@ -54,6 +54,11 @@ public sealed class ModeLaunchPanel : MonoBehaviour
         ribbonImage.preserveAspect = true;
         var titleLabel = ReferenceUiVisuals.Text(ribbonImage.transform, "Title", title, 17, ReferenceUiVisuals.Light,
             TextAlignmentOptions.Center, new Vector2(0.15f, 0.2f), new Vector2(0.85f, 0.9f), Vector2.zero, Vector2.zero, true);
+        // Uzun başlık ("ADA TÜCCARI") kurdeleden taşmasın: tek satır, gerekirse küçülür.
+        titleLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        titleLabel.enableAutoSizing = true;
+        titleLabel.fontSizeMin = 11f;
+        titleLabel.fontSizeMax = 17f;
         var shadow = titleLabel.gameObject.AddComponent<Shadow>();
         shadow.effectColor = new Color(0.08f, 0.05f, 0.02f, 0.85f);
         shadow.effectDistance = new Vector2(1.6f, -1.6f);

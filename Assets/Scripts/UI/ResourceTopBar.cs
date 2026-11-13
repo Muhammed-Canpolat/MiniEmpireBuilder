@@ -139,9 +139,9 @@ public sealed class ResourceTopBar : MonoBehaviour
         int amount = IslandEconomy.TraderPackAmount, cost = IslandEconomy.TraderPackCost, left = IslandEconomy.TraderPacksLeft;
         int perDay = Economy.Active.traderPacksPerDay;
         string body = L.T(
-            $"Gezgin tüccar Ana Üs altını karşılığında erzak getirir.\n\n<b>Paket:</b> {amount} Et ya da {amount} Odun\n<b>Bedel:</b> {cost} altın\n<b>Bugün kalan:</b> {left}/{perDay}\n\nAltının: {NumberFormat.Short(GameManager.Instance != null ? GameManager.Instance.Gold : 0, 10000)}",
+            $"Ada'ya uğrayan gezgin tüccar Ana Üs altını karşılığında erzak getirir.\n\n<b>Paket:</b> {amount} Et ya da {amount} Odun\n<b>Bedel:</b> {cost} altın\n<b>Bugün kalan:</b> {left}/{perDay}\n\nAltının: {NumberFormat.Short(GameManager.Instance != null ? GameManager.Instance.Gold : 0, 10000)}",
             $"A travelling trader brings supplies for Main Base gold.\n\n<b>Pack:</b> {amount} Meat or {amount} Wood\n<b>Cost:</b> {cost} gold\n<b>Left today:</b> {left}/{perDay}\n\nYour gold: {NumberFormat.Short(GameManager.Instance != null ? GameManager.Instance.Gold : 0, 10000)}");
-        ModeLaunchPanel.Show(L.T("ADA TÜCCARI", "ISLAND TRADER"), body, L.T("KAPAT", "CLOSE"), true, null, "ui_ribbon_purple", 60f,
+        ModeLaunchPanel.Show(L.T("TÜCCAR", "TRADER"), body, L.T("KAPAT", "CLOSE"), true, null, "ui_ribbon_purple", 60f,
             container =>
             {
                 bool can = left > 0 && GameManager.Instance != null && GameManager.Instance.Gold >= cost;
