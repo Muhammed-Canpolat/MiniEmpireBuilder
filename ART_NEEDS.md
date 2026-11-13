@@ -60,3 +60,16 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
 - **Ada ikonu** (radyal menü ADA düğmesi): 128×128, palmiyeli/kumsallı küçük ada, Tiny Swords stilinde. Şu an yer tutucu:
   kale sprite'ı + ağaç, deniz rengi zemin (`UI/RadialDockMenu.cs`).
 - **Ses:** ada baskın borusu (`AudioLibrary.raidHorn` boş), ayrı sakin ada müziği (şu an Ana Üs çalma listesi).
+
+## 3. oturum (13 Kasım 2026) ihtiyaçları
+- **Geri al simgesi** (GERİ AL düğmesi, `UI/UndoMoveButton.cs`): 64×64 kıvrık geri ok, altın/krem, Tiny Swords UI stili.
+  Şimdi: `ui_icon_play` 180° döndürülmüş.
+- **Ağ (net) sprite'ı** (Ağ Oku yeteneği, düşmanın üstünde 2,5 sn duran ağ): 96×96 saydam, kahverengi ip ızgarası, kenarlarda
+  düğümler, 3–4 karelik "kapanma" animasyonu + fırlatma sırasında açık ağ (64×64). Şimdi: kodla çizilmiş ip çizgileri (geçici).
+- **Ok yağmuru hedef halkası**: 128×128 kırmızı/altın kesikli daire (yerde). Şimdi: Tiny Swords `cursor_brackets` + dolgu.
+- **Yetenek ikonları** (akın düğmeleri, 64×64): Ok Yağmuru (yukarıdan düşen oklar), Ateşli Ok (alevli ok), Ağ (ağ), Harita
+  (dürülmüş harita), Oto (dönen oklar/A). Şimdi: mevcut kılıç/kalkan/saat ikonları + metin.
+- **Ses efektleri:** ok isabeti, ateş tutuşma, ağ fırlatma, ok yağmuru ıslığı (şu an `AudioLibrary`'de karşılığı olanlar çalınır,
+  yoksa sessiz).
+- **Ana Üs animasyonu:** madenci kazma karesi (Tiny Swords Pawn "interact pickaxe" var, adada kullanılıyor; Ana Üs madenci
+  sprite'ı farklı ise eşlenmeli), koyun otlama kareleri Ana Üs koyun dekorunda.

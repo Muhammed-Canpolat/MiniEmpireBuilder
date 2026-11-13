@@ -375,6 +375,7 @@ public static class DarkFantasyHudPolish
     private static void StyleInfoPanel(Transform panel)
     {
         if (panel == null) return;
+        if (panel.Find("Ribbon") != null) return;   // 3. oturum (2.4): FancyInfoPanel kendi stiliyle gelir
         var panelRect = panel as RectTransform;
         panelRect.anchorMin = new Vector2(0, 0);
         panelRect.anchorMax = new Vector2(1, 0);

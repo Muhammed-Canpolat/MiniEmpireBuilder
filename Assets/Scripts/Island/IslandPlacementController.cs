@@ -65,8 +65,18 @@ public sealed class IslandPlacementHost : IPlacementHost
         string reason;
         if (MovingId != null)
         {
+            var before = IslandEconomy.Find(MovingId);
+            int oldCol = before != null ? before.col : StartCell.x, oldRow = before != null ? before.row : StartCell.y;
             if (!IslandEconomy.TryMove(MovingId, col, row, out reason)) { village.Toast?.Invoke(reason); return false; }
             village.OnMoved(IslandEconomy.Find(MovingId));
+            // 3. oturum (2.5): Ana Üs'teki gibi süslü GERİ AL (aynı bileşen); eski yere geri taşır
+            string id = MovingId;
+            var safe = GameObject.Find("IslandCanvas")?.transform.Find("SafeArea");
+            UndoMoveButton.Show(safe, () =>
+            {
+                if (IslandEconomy.TryMove(id, oldCol, oldRow, out string why)) IslandVillage.Instance?.OnMoved(IslandEconomy.Find(id));
+                else IslandVillage.Instance?.Toast?.Invoke(why);
+            });
             return true;
         }
         var entry = IslandEconomy.TryStartBuild(Kind, col, row, ShortfallGems > 0, out reason);

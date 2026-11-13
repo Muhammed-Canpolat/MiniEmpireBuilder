@@ -1,3 +1,58 @@
+# GECE_DURUM — Otonom çalışma (13 Kasım 2026, 3. oturum: oyun testi geri bildirimi 2 + Google Play hazırlığı)
+
+DURUM: SÜRÜYOR (3. oturum)
+ŞU ANKİ İŞ: AŞAMA 1.1 akın haritası
+SIRADAKİ İŞ: 1.2 rozet
+Kararlar: DECISIONS.md D31+ · Başlangıç commit'i: ce2f308
+
+3. OTURUM İŞ LİSTESİ:
+- [ ] 1.1 Akın haritası eski görüntü
+- [ ] 1.2 Takılı bildirim rozeti (tüm menü rozetleri)
+- [ ] 1.3 "Ağaç, Altın Taşı ya da Çayır var" hayalet engel + migration + debug görsel
+- [ ] 1.4 Ana Üs yerleşim çakışmaları
+- [ ] 2.1 Radyal menü %20-25 küçük, alt bar boş süs yuvaları
+- [ ] 2.2 Üst bar sıralaması (config)
+- [ ] 2.3 Akın sayacı "10sa 0dk / 45dk / 30sn"
+- [ ] 2.4 Ortak yükseltme penceresi
+- [ ] 2.5 Süslü Geri Al + adada taşıma
+- [ ] 3.1 Ana Üs animasyonları
+- [ ] 3.2 Okçu noktaları
+- [ ] 3.3 Akın yetenek butonları + efektler
+- [ ] 4 Google Play hazırlığı (PLAY_RELEASE, DATA_SAFETY, PRIVACY_POLICY, STORE_LISTING, AAB)
+- [ ] SON: görüntüler, baştan oynatma, REPORT.md
+
+ENGELLENENLER:
+- (yok)
+
+## Referans görseller — 3. oturum (kullanıcının mesajı; tek referans bu tariflerdir)
+
+### Görsel A — Ana Üs (dikey ~1280×2048, Development Build)
+- **Üst bar** (süslü koyu ahşap/metal, altın köşeler, Kelt düğüm): soldan altın sikke "9309", mavi elmas "20", işçi ikonu "4/4",
+  ortada aşağı sarkan kalkan arma "15 / ANA ÜS", sağında et "76", odun kütüğü "261", en sağda kalkan çerçeveli altın dişli.
+  → İstenen sıra: Altın, Odun, Et, Elmas, İnşaatçı (2.2).
+- **Sol kenar:** yuvarlak altın çerçeveli "GÜNLÜK" (takvim) ve "GÖREV" (parşömen) düğmeleri.
+- **Alan:** çitli dikdörtgen çayır. Üst köşelerde iki taş gözcü kulesi (içinde okçu), üst ortada mavi çatılı ev; sol tarafta
+  iki taş bina (yassı kahverengi çatı) üst üste, hemen altlarında mavi çatılı ev → **taş bina ile alt ev değiyor** (1.4);
+  ortada manastır/kilise; sağ üstte 4 koyun + 9 çalı (hareketsiz); merkezde büyük kale (Ana Üs, kapıda askerler); sağda ev;
+  sol orta kırmızı çatılı ev, altında mavi çatılı kilise; ortada maden (altın kayalar, küçük kırmızı kulübe, 2 işçi, külçeler);
+  maden altında kahraman şövalye (kılıç+kalkan) ile sarı bayrak **iç içe** (1.4); sağda iki ev yan yana; alt köşelerde iki
+  okçuluk alanı (hedef tahtalı, çitli) — **sol alttaki fener okçuluk alanının üstünde** (1.4), yanlarında kırmızı sancaklar ve
+  fenerler; alt ortada ev. Bazı binaların üstünde "z z" uyku işaretleri. Çit dışında çamlar, çalılar, taşlar.
+- **Alt bar:** koyu ahşap şerit; ortada büyük yuvarlak altın çerçeveli ana düğme (çapraz kılıç + kalkan arması), sağ üst
+  kenarında kırmızı rozet (**takılı**, 1.2). Şeridin solunda ve sağında aslanlı kalkan süsleri ve iki boş düğüm plakası
+  (**işlevsiz süs yuvaları**, 2.1). Ana düğme çok büyük (ekran genişliğinin ~%19'u).
+
+### Görsel B — Ada üssü
+- **Üst bar:** soldan "ANA ÜS" düğmesi, altın harf "CANPOLAT" (ada adı), altın "9309", elmas "20", et "76", odun "261", dişli.
+  → İstenen sıra: Ana Üs, Ada adı, Altın, Odun, Et, Elmas (2.2).
+- **Sayaç:** sağ üstte kum saatli hap "10s 0dk" ("s" saniye gibi okunuyor → "10sa 0dk", 2.3).
+- **Ada:** kuzeyde kayalık plato üzerinde mavi taş kale, yanında işçi ve okçu; sol üstte ayrı adacıkta gözcü kulesi, sağda
+  ayrı adacıkta ikinci gözcü kulesi; taş yarlarla ayrılmış orta teras: kulübe (oduncu), ev, okçuluk alanı, altın taşı;
+  koyunlar; ortada ev + et; güney yarısında açılmış geniş çayır ve yoğun çam/sarı ağaç ormanı; alt köşelerde iki küçük
+  adacık; bulut örtüsü yalnız kenarlarda.
+- **Alt:** ortada büyük yuvarlak radyal ana düğme (adanın alt ucunu kapatıyor; %20-25 küçülecek, 2.1).
+
+---
 # GECE_DURUM — Otonom çalışma (13 Kasım 2026, 2. oturum: oyun testi geri bildirimi)
 
 DURUM: TAMAMLANDI (2. oturum)

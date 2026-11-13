@@ -355,52 +355,30 @@ public sealed class IslandBuildUi
 
     private void BuildPanel()
     {
-        var panel = NineSlice(safe, "BuildingPanel", new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.40f), Vector2.zero, Vector2.zero, "ui_paper", Color.white, 2.4f);
-        panel.raycastTarget = true;
-        panelRoot = panel.gameObject;
-        var ribbon = NineSlice(panel.transform, "Ribbon", new Vector2(0.1f, 1f), new Vector2(0.9f, 1f), new Vector2(0, -34), new Vector2(0, 20), "ui_ribbon", Color.white, 3f);
-        panelTitle = ReferenceUiVisuals.Text(ribbon.transform, "Title", "", 20, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(40, 8), new Vector2(-40, -4), true);
-        var close = ReferenceUiVisuals.Button(panel.transform, "Close", "X", false, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-42, -40), new Vector2(-12, -12), 14);
-        close.onClick.AddListener(Close);
-
-        panelIcon = ReferenceUiVisuals.Image(panel.transform, "Icon", new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -150), new Vector2(128, -42), Color.white);
-        panelIcon.preserveAspect = true;
-        panelRole = ReferenceUiVisuals.Image(panel.transform, "Role", new Vector2(0, 1), new Vector2(0, 1), new Vector2(98, -152), new Vector2(132, -118), Color.white);
-        panelRole.preserveAspect = true;
-        panelBody = ReferenceUiVisuals.Text(panel.transform, "Body", "", 19, Ink, TextAlignmentOptions.TopLeft,
-            new Vector2(0, 0.38f), new Vector2(1, 1), new Vector2(138, 0), new Vector2(-18, -48), false, true);
-        panelBody.textWrappingMode = TextWrappingModes.Normal;
-        panelBody.enableAutoSizing = true;
-        panelBody.fontSizeMin = 12f;
-
-        // Maliyet satırı: Odun / Et / süre
-        panelWoodIcon = ReferenceUiVisuals.Image(panel.transform, "WoodIcon", new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(18, -6), new Vector2(50, 26), Color.white);
+        // 3. oturum (2.4): pencere ortak bileşenden (FancyInfoPanel); Ana Üs de aynısını kullanır. Ad ve yerleşim değişmedi.
+        var v = FancyInfoPanel.Build(safe, "BuildingPanel", new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.40f));
+        panelRoot = v.root;
+        panelTitle = v.title;
+        v.close.onClick.AddListener(Close);
+        panelIcon = v.icon;
+        panelRole = v.role;
+        panelBody = v.body;
+        panelWoodIcon = v.costIconA;
         panelWoodIcon.sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.woodIcon : null;
-        panelWoodIcon.preserveAspect = true;
-        panelWood = ReferenceUiVisuals.Text(panel.transform, "Wood", "", 16, Ink, TextAlignmentOptions.Left,
-            new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(52, -4), new Vector2(120, 24), false, true);
-        panelMeatIcon = ReferenceUiVisuals.Image(panel.transform, "MeatIcon", new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(124, -6), new Vector2(156, 26), Color.white);
+        panelWood = v.costA;
+        panelMeatIcon = v.costIconB;
         panelMeatIcon.sprite = IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.meatIcon : null;
-        panelMeatIcon.preserveAspect = true;
-        panelMeat = ReferenceUiVisuals.Text(panel.transform, "Meat", "", 16, Ink, TextAlignmentOptions.Left,
-            new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(158, -4), new Vector2(226, 24), false, true);
-        panelTime = ReferenceUiVisuals.Text(panel.transform, "Time", "", 15, Ink, TextAlignmentOptions.Right,
-            new Vector2(0.5f, 0.38f), new Vector2(1, 0.38f), new Vector2(0, -4), new Vector2(-18, 24), false, true);
-        panelNote = ReferenceUiVisuals.Text(panel.transform, "Note", "", 12, new Color(0.55f, 0.2f, 0.1f), TextAlignmentOptions.Center,
-            new Vector2(0, 0.24f), new Vector2(1, 0.38f), new Vector2(18, 0), new Vector2(-18, -2), false, true);
-
-        // İşçi satırı
-        workersLabel = ReferenceUiVisuals.Text(panel.transform, "Workers", "", 14, Ink, TextAlignmentOptions.Left,
-            new Vector2(0, 0.24f), new Vector2(0.5f, 0.38f), new Vector2(18, 0), new Vector2(0, -2), false, true);
-        workerMinus = ReferenceUiVisuals.Button(panel.transform, "WorkerMinus", "-", false, new Vector2(0.5f, 0.24f), new Vector2(0.5f, 0.24f), new Vector2(0, 0), new Vector2(40, 34), 16);
-        workerPlus = ReferenceUiVisuals.Button(panel.transform, "WorkerPlus", "+", false, new Vector2(0.5f, 0.24f), new Vector2(0.5f, 0.24f), new Vector2(46, 0), new Vector2(86, 34), 16);
+        panelMeat = v.costB;
+        panelTime = v.time;
+        panelNote = v.note;
+        workersLabel = v.workers;
+        workerMinus = v.workerMinus;
+        workerPlus = v.workerPlus;
         workerMinus.onClick.AddListener(() => ChangeWorkers(-1));
         workerPlus.onClick.AddListener(() => ChangeWorkers(+1));
-
-        primary = TsButton(panel.transform, "Primary", "", false, new Vector2(0.04f, 0), new Vector2(0.52f, 0), new Vector2(0, 12), new Vector2(0, 62), 16, out primaryLabel);
-        secondary = TsButton(panel.transform, "Secondary", "", false, new Vector2(0.54f, 0), new Vector2(0.96f, 0), new Vector2(0, 12), new Vector2(0, 62), 16, out secondaryLabel);
-        tertiary = TsButton(panel.transform, "Tertiary", "", true, new Vector2(0.04f, 0), new Vector2(0.96f, 0), new Vector2(0, 68), new Vector2(0, 112), 15, out tertiaryLabel);
+        primary = v.primary; primaryLabel = v.primaryLabel;
+        secondary = v.secondary; secondaryLabel = v.secondaryLabel;
+        tertiary = v.tertiary; tertiaryLabel = v.tertiaryLabel;
         primary.onClick.AddListener(OnPrimary);
         secondary.onClick.AddListener(OnSecondary);
         tertiary.onClick.AddListener(OnTertiary);

@@ -53,7 +53,11 @@ public sealed class RadialDockMenu : MonoBehaviour
     public const string PrefKey = "MEB_RadialOpen";
     /// <summary>Ada menüsünün açık/kapalı durumu (Ana Üs'ten ayrı tutulur).</summary>
     public const string IslandPrefKey = "MEB_IslandRadialOpen";
-    private const float MainSize = 92f, MainCenterY = 56f;
+    /// <summary>
+    /// 3. oturum (2.1): ana düğme 92 → 72, vurgulu öğe 70 → 56, diğerleri 60 → 48 (≈%20–22 küçük; 48 birim ≈ 48 dp en küçük dokunma
+    /// alanı, referans 390×844). Yay da aynı oranda daralır (<see cref="OffsetScale"/>).
+    /// </summary>
+    public const float MainSize = 72f, MainCenterY = 46f, ItemSize = 48f, EmphasisSize = 56f, OffsetScale = 0.8f;
 
     public static RadialDockMenu Current { get; private set; }
 
@@ -275,7 +279,7 @@ public sealed class RadialDockMenu : MonoBehaviour
 
     private void BuildItem(RadialItem item)
     {
-        float size = item.emphasised ? 70f : 60f;
+        float size = item.emphasised ? EmphasisSize : ItemSize;
         if (item.button == null)
         {
             item.button = ReferenceUiVisuals.Button(hud, "Radial_" + item.id, item.label(), false,
@@ -454,7 +458,7 @@ public sealed class RadialDockMenu : MonoBehaviour
     {
         float t = item.t;
         float e = EaseOutBack(Mathf.Clamp01(t));
-        item.rt.anchoredPosition = Vector2.LerpUnclamped(main.anchoredPosition, main.anchoredPosition + item.offset, e);
+        item.rt.anchoredPosition = Vector2.LerpUnclamped(main.anchoredPosition, main.anchoredPosition + item.offset * OffsetScale, e);
         item.visual.localScale = Vector3.one * Mathf.Max(0.001f, e);
         item.group.alpha = Mathf.Clamp01(t * 2.2f);
     }
@@ -519,20 +523,13 @@ public sealed class RadialDockMenu : MonoBehaviour
         if (mainDot != null) mainDot.SetActive(any && !IsOpen);
     }
 
-    /// <summary>Boşta inşaatçı varken bütçeye uyan bir yükseltme var mı (ucuz kontrol).</summary>
-    private static int BuildBadge()
-    {
-        var gm = GameManager.Instance;
-        var data = gm?.PlayerData;
-        if (data == null || !gm.HasFreeBuilder) return 0;
-        foreach (var placed in data.placedBuildings)
-        {
-            if (placed == null || placed.level >= Progression.MaxLevel) continue;
-            if (!Enum.TryParse(placed.buildingType, out BuildingType type)) continue;
-            if (gm.Gold >= Progression.UpgradeCost(type, placed.level + 1)) return 1;
-        }
-        return 0;
-    }
+    /// <summary>
+    /// 3. oturum (1.2): İNŞA ET rozeti yalnız İnşa Et menüsünde gerçekten yapılabilecek bir şey varken yanar: kilidi açık,
+    /// kurulu sayısı sınırın altında, altını yeten bir yapı ve boşta inşaatçı. Eski kontrol "seviyesi 15'in altında ve altını
+    /// yeten herhangi bir bina" diyordu: zaten yükselen binayı, Ana Üs tavanına dayanmış binayı da sayıp rozeti takılı bırakıyordu
+    /// (yükseltme İnşa Et menüsünden yapılmaz; binaya dokunarak yapılır).
+    /// </summary>
+    public static int BuildBadge() => BaseBadges.CanBuildNew() ? 1 : 0;
 
     /// <summary>Ada baskını uyarı/canlı evresindeyse rozet.</summary>
     private static int IslandBadge()

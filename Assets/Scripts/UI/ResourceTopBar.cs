@@ -53,18 +53,101 @@ public sealed class ResourceTopBar : MonoBehaviour
         var component = bar.gameObject.AddComponent<ResourceTopBar>();
         component.mode = Mode.Island;
         var catalog = IslandVisualCatalog.Instance;
-        float w = (chipsTo - chipsFrom) / 4f;
-        Vector2 Lo(int i) => new Vector2(chipsFrom + i * w + 0.002f, 0.14f);
-        Vector2 Hi(int i) => new Vector2(chipsFrom + (i + 1) * w - 0.002f, 0.86f);
-        component.Gold = MakeChip(bar, "GoldPill", "gold", CampaignSceneSetup.Art("ui_icon_coin"), Lo(0), Hi(0));
-        component.Gem = MakeChip(bar, "GemPill", "gem", GemIcon.Sprite, Lo(1), Hi(1));
+        component.Gold = MakeChip(bar, "GoldPill", "gold", CampaignSceneSetup.Art("ui_icon_coin"), Vector2.zero, Vector2.zero);
+        component.Gem = MakeChip(bar, "GemPill", "gem", GemIcon.Sprite, Vector2.zero, Vector2.zero);
         component.Gem.button.onClick.AddListener(GemShopUI.Open);
         component.Gem.button.gameObject.AddComponent<GemCounter>().Bind(component.Gem.text);
-        component.Meat = MakeChip(bar, "MeatPill", "meat", catalog != null ? catalog.meatIcon : null, Lo(2), Hi(2));
-        component.Wood = MakeChip(bar, "WoodPill", "wood", catalog != null ? catalog.woodIcon : null, Lo(3), Hi(3));
+        component.Meat = MakeChip(bar, "MeatPill", "meat", catalog != null ? catalog.meatIcon : null, Vector2.zero, Vector2.zero);
+        component.Wood = MakeChip(bar, "WoodPill", "wood", catalog != null ? catalog.woodIcon : null, Vector2.zero, Vector2.zero);
+        // 3. oturum (2.2): sıra FeatureConfig.islandTopBarOrder (varsayılan Altın · Odun · Et · Elmas)
+        var rects = new System.Collections.Generic.Dictionary<string, RectTransform>
+        {
+            { "gold", component.Gold.rect }, { "gem", component.Gem.rect }, { "meat", component.Meat.rect }, { "wood", component.Wood.rect },
+        };
+        var order = Order(FeatureConfig.Instance.islandTopBarOrder, DefaultIslandOrder);
+        Place(rects, order, chipsFrom, chipsTo, 0.14f, 0.86f);
         component.BuildToast(bar);
         component.Refresh(true);
         return component;
+    }
+
+    // ==================== 3. oturum (2.2): config'ten sıra ====================
+
+    public static readonly string[] DefaultBaseOrder = { "gold", "wood", "meat", "gem", "builder" };
+    public static readonly string[] DefaultIslandOrder = { "gold", "wood", "meat", "gem" };
+
+    /// <summary>Geçerli (bilinen, tekrarsız) kimlik sırası; config boşsa varsayılan.</summary>
+    public static System.Collections.Generic.List<string> Order(string[] configured, string[] fallback)
+    {
+        var known = new System.Collections.Generic.HashSet<string> { "gold", "wood", "meat", "gem", "builder" };
+        var result = new System.Collections.Generic.List<string>();
+        foreach (var id in configured != null && configured.Length > 0 ? configured : fallback)
+            if (!string.IsNullOrEmpty(id) && known.Contains(id) && !result.Contains(id)) result.Add(id);
+        return result.Count > 0 ? result : new System.Collections.Generic.List<string>(fallback);
+    }
+
+    /// <summary>Öğeleri [from, to] yatay aralığına eşit genişlikte sırayla yerleştirir; sırada olmayanlar gizlenir.</summary>
+    private static void Place(System.Collections.Generic.Dictionary<string, RectTransform> rects, System.Collections.Generic.List<string> order,
+        float from, float to, float yMin, float yMax)
+    {
+        foreach (var pair in rects) if (pair.Value != null) pair.Value.gameObject.SetActive(order.Contains(pair.Key));
+        var shown = order.FindAll(id => rects.ContainsKey(id) && rects[id] != null);
+        if (shown.Count == 0) return;
+        float w = (to - from) / shown.Count;
+        for (int i = 0; i < shown.Count; i++)
+        {
+            var rt = rects[shown[i]];
+            rt.anchorMin = new Vector2(from + i * w + 0.002f, yMin);
+            rt.anchorMax = new Vector2(from + (i + 1) * w - 0.002f, yMax);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+    }
+
+    /// <summary>Ada üst barında görünen sıra (test/rapor).</summary>
+    public System.Collections.Generic.List<string> VisibleOrder()
+    {
+        var chips = new System.Collections.Generic.List<Chip> { Gold, Gem, Meat, Wood };
+        chips.RemoveAll(c => c == null || !c.rect.gameObject.activeSelf);
+        chips.Sort((a, b) => a.rect.anchorMin.x.CompareTo(b.rect.anchorMin.x));
+        return chips.ConvertAll(c => c.id);
+    }
+
+    /// <summary>
+    /// Ana Üs üst barı: Altın/Elmas/İnşaatçı hapları (BaseHudRedesign) ve Et/Odun çipleri FeatureConfig.baseTopBarOrder sırasıyla;
+    /// ilk yarı (yukarı yuvarlanır) armanın solunda [0,02–0,415], kalanı sağında [0,585–0,86] (en sağda ayar dişlisi).
+    /// </summary>
+    public static void LayoutBase(Transform hud)
+    {
+        if (hud == null) return;
+        var bar = hud.GetComponentInChildren<ResourceTopBar>(true);
+        var rects = new System.Collections.Generic.Dictionary<string, RectTransform>
+        {
+            { "gold", hud.Find("GoldPill") as RectTransform }, { "gem", hud.Find("GemPill") as RectTransform },
+            { "builder", hud.Find("BuilderPill") as RectTransform },
+            { "meat", bar != null && bar.Meat != null ? bar.Meat.rect : null }, { "wood", bar != null && bar.Wood != null ? bar.Wood.rect : null },
+        };
+        var order = Order(FeatureConfig.Instance.baseTopBarOrder, DefaultBaseOrder);
+        int left = (order.Count + 1) / 2;
+        Place(rects, order.GetRange(0, left), 0.02f, 0.415f, 0.934f, 0.980f);
+        var right = order.GetRange(left, order.Count - left);
+        var rightRects = new System.Collections.Generic.Dictionary<string, RectTransform>();
+        foreach (var id in right) if (rects.TryGetValue(id, out var r)) rightRects[id] = r;
+        Place(rightRects, right, 0.585f, 0.86f, 0.934f, 0.980f);
+        foreach (var id in right) if (rects[id] != null) rects[id].gameObject.SetActive(true);
+    }
+
+    /// <summary>Ana Üs üst barında soldan sağa görünen sıra (test/rapor).</summary>
+    public static System.Collections.Generic.List<string> BaseVisibleOrder(Transform hud)
+    {
+        var bar = hud.GetComponentInChildren<ResourceTopBar>(true);
+        var items = new System.Collections.Generic.List<(string id, RectTransform rt)>
+        {
+            ("gold", hud.Find("GoldPill") as RectTransform), ("gem", hud.Find("GemPill") as RectTransform), ("builder", hud.Find("BuilderPill") as RectTransform),
+            ("meat", bar != null && bar.Meat != null ? bar.Meat.rect : null), ("wood", bar != null && bar.Wood != null ? bar.Wood.rect : null),
+        };
+        items.RemoveAll(x => x.rt == null || !x.rt.gameObject.activeSelf);
+        items.Sort((a, b) => a.rt.anchorMin.x.CompareTo(b.rt.anchorMin.x));
+        return items.ConvertAll(x => x.id);
     }
 
     private static Chip MakeChip(Transform parent, string name, string id, Sprite iconSprite, Vector2 min, Vector2 max)

@@ -183,3 +183,65 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **"Üsse dön, güçlendir" önerisi Ana Üs ≤ 4** (`VictoryReferenceView.EarlyDefeatMaxBase`); Ana Üs 2–4'te metin "kahramanını,
   kulelerini ve Ana Üs'ü yükselt" (Okçu Kulesi cümlesi yalnız Ana Üs 1'de).
 - Topçu Kulesi köşe gölgesi: kullanıcı sonra bakacak (açık bulgu olarak kalır).
+
+---
+# 13 Kasım 2026 (3. oturum) — oyun testi geri bildirimi 2 + Google Play hazırlığı
+
+## D31 — Akın haritası eski görüntü (1.1)
+- **Kök neden:** HARİTA düğmesi sahnenin canlı kamerasını kullanıyor (önbellek/RenderTexture yok), ama savunmaya girerken
+  `IslandSceneSetup.RefreshZones` bütün bölge bulutlarını kapatıyordu: kilitli bölgeler "açılmış, el değmemiş ada" gibi görünüyordu.
+  Ayrıca HARİTA kadrajı eski "harita ortası, 22 u genişlik" sabitiydi (Faz A dönemi); üs görünümündeki kadrajla (LandBounds) aynı değildi.
+- **Karar:** Savunmada kilitli bölge bulutları kapanmaz, %45 saydam kalır (`ZoneCloudBattleAlpha`; düşmanlar altında görünür ve seçilir).
+  Sabit kadraj açıkken HARİTA = üs görünümü kadrajı (`ComputeFixedView`). Piyonlar savunmada yine binalara saklanır (tasarım; haritada işçi yok).
+  Test: `Session3Tests.RaidMapShowsTheCurrentIslandStateInTheBaseFrame` (kesilmiş ağaç + açık/kapalı bölge + kadraj, iki açılış).
+- **Alternatif:** Bulutları savunmada tamamen göstermek (düşman bulut altında kaybolur) — seçilmedi.
+
+## D32 — Menü rozetleri (1.2)
+- **Kök neden:** İNŞA ET rozeti "seviyesi 15 altında ve altını yeten herhangi bir bina" diyordu: zaten yükselen binayı, Ana Üs tavanına
+  dayanmış binayı sayıyor; üstelik yükseltme İnşa Et menüsünden değil binaya dokunarak yapılıyor. Her şey kurulu olsa da rozet yanıyordu.
+- **Karar:** İNŞA ET rozeti yalnız menüde gerçekten yapılabilecek bir şey varken: kilidi açık, kurulu < sınır, altın yeter, boşta inşaatçı
+  (`BaseBadges.CanBuildNew`, bedel tek yerden `BuildMenuController.MenuCost`). Ana düğme noktası öğe rozetlerinin toplamı (0,5 sn'de bir).
+  GÜNLÜK/GÖREV noktaları artık olay beklemeden saniyede bir koşuldan hesaplanır (gün dönümünde de doğru). ADA rozeti zaten koşula bağlı (baskın evresi).
+- **Alternatif:** Yükseltilebilir bina için de İNŞA ET rozeti — seçilmedi (menüde karşılığı yok, "takılı rozet" algısını sürdürür).
+
+## D33 — Ada hayalet engelleri (1.3)
+- **Kök neden:** Koyun çayırı (8–11 × 17–19) her zaman "doğa" engeliydi; kesilebilir ağaç modunda (varsayılan) çayır sahnede hiç çizilmiyor,
+  koyunlar Ağıl çevresinde. Orta çayır (Z1/Z2) açılınca oyuncu düz çime bina koyamıyor, "Ağaç, altın taşı ya da çayır var" alıyordu.
+  Kesilen ağaçlar ve altın taşları doğru eşleniyordu (test bunu da denetler).
+- **Karar:** Çayır yalnız görünür olduğu eski modda engel (`IslandGrid.MeadowBlocks`). Yüklemede göç `IslandRepair.CleanGhosts`: tanınmayan/Kale
+  türü, harita dışı, kopya kimlikli, görevi olmayan şantiye kayıtlarını ve ağaç hücresi olmayan kesik-ağaç anahtarlarını siler (idempotent).
+  Hata ayıklama görseli `PlaytestOutput/session3/S1_3_cell_debug.png` (ada görüntüsü + hücre nedenleri). Test: Nature olan her hücrede
+  görünür ağaç/altın taşı olmalı.
+
+## D34 — Ana Üs görsel çakışmaları (1.4)
+- **Bulgu:** Ana Üs zaten ortak doluluk ızgarasını kullanıyor (`BaseOccupancyGrid`, yüklemede onarım) ama hücre ayak izine bakıyor; çatılar ve
+  büyük sprite'lar ayak izinden taşıyor (Topçu Kulesi ↔ altındaki yapı, Kışla ↔ fener, Manastır ↔ kamp). Kahraman kamp bayrağının tam
+  ortasında doğuyordu ve kampı engel saymıyordu.
+- **Karar:** `BaseVisualBounds` (sprite ağının sıkı sınırı; gölge/işaret/karakter hariç) ile yüklemeden 0,5 sn sonra `RepairVisualLayout`:
+  sıra Ana Üs + kamp (sabit) → maden → binalar/kulübeler → dekor; çakışan, ayak izi geçerli ve görseli boş en yakın yere taşınır.
+  Yerleştirme/taşıma da görsel çakışmayı geçersiz sayar. Kahraman bayrağın 2,3 u solunda doğar, kamp + dekorlar yürüme engeli.
+  Test: kalabalık Ana Üs 15 (her türden sınır kadar bina + fener + bayrak) → çakışma yok, ikinci onarım bir şey taşımaz.
+
+## D35 — Radyal menü boyutu ve alt bar (2.1)
+- **Karar:** Ana düğme 92 → 72, vurgulu 70 → 56, diğerleri 60 → 48 (≈%20–22; 48 birim ≈ 48 dp, referans 390×844), yay ×0,8. Ana Üs ve Ada
+  aynı sabitler (`RadialDockMenu.MainSize/ItemSize/EmphasisSize`). Alt şeritteki çerçeve görseli (aslanlı kalkanlar + boş düğüm plakaları)
+  kaldırıldı; şerit koyu tahta + altın üst kenar + perçin.
+
+## D36 — Üst bar sırası (2.2)
+- **Karar:** `FeatureConfig.baseTopBarOrder` = gold, wood, meat, gem, builder (ilk 3 armanın solu, 2 sağı); `islandTopBarOrder` = gold, wood,
+  meat, gem (ANA ÜS düğmesi ve ada adından sonra). Yerleşim tek yerde (`ResourceTopBar.LayoutBase` / `BuildIsland`), veri kaynağı aynı.
+  Listede olmayan öğe gizlenir.
+
+## D37 — Akın sayacı biçimi (2.3)
+- **Karar:** ≥1 sa "10sa 0dk", <1 sa "45dk", <1 dk "30sn" (EN 10h 0m / 45m / 30s). Uzun biçim "10 sa 0 dk", "30 sn".
+
+## D38 — Ortak süslü bina penceresi (2.4) ve GERİ AL (2.5)
+- **Karar:** Adadaki pencere `FancyInfoPanel` bileşenine çıkarıldı (nesne adları aynı); Ana Üs bina penceresi de bunu kullanır: kurdele başlık,
+  bina sprite'ı, "Seviye N / 15", mevcut → sonraki değerler (değişen satırda yeşil "→ yeni"), altın ikonu + bedel (yetmezse kırmızı),
+  saat ikonu + süre, not (Ana Üs için sonraki açılım), YÜKSELT → Sv N ve TAŞI düğmeleri. Kahraman penceresi dokunulmadı (kapsam: binalar).
+- **GERİ AL:** `UndoMoveButton` (altın kenarlı koyu hap, altın halkalı ikon, 4 sn süre çizgisi); Ana Üs ve Ada aynı bileşen. Adada taşıma
+  sonrası da çıkar ve binayı eski hücresine döndürür. Geri ok simgesi şimdilik "oynat" ikonunun 180° dönmüşü (ART_NEEDS).
+
+## D39 — Çalışma biçimi
+- Unity batchmode koşusu tek seferde birkaç dakika sürdüğü için her iş derlenir, testleri aşama sonunda gruplar halinde koşturulur;
+  commit'ler iş başına ayrıdır. Takılan bir test (test çalıştırıcının sahnesini kapatan yardımcı) bulundu ve düzeltildi.

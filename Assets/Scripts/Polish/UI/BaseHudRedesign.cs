@@ -129,6 +129,7 @@ public static class BaseHudRedesign
         }
 
         ResourceTopBar.AttachBase(hud);
+        if (FeatureConfig.Instance.sharedTopBar) ResourceTopBar.LayoutBase(hud);   // 3. oturum (2.2): sıra config'ten
 
         // Seviye yalnız armada: altındaki çubuk ve "Sev. N için…" yazısı gösterilmez.
         foreach (string name in new[] { "BaseLevelTrack", "BaseLevelCaption" })
@@ -187,13 +188,10 @@ public static class BaseHudRedesign
     private static void AddRadialBand(RectTransform dock)
     {
         if (dock == null || dock.Find("RadialBand") != null) return;
-        var dark = ReferenceUiVisuals.Image(dock, "RadialBand", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
+        ReferenceUiVisuals.Image(dock, "RadialBand", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
             new Color(0.05f, 0.035f, 0.02f, 0.55f));
-        var strip = OrnateStrip(false);
-        if (strip == null) return;
-        var ornament = ReferenceUiVisuals.Image(dark.rectTransform, "RadialOrnament", Vector2.zero, Vector2.one,
-            new Vector2(-2f, 0f), new Vector2(2f, -4f), new Color(1f, 1f, 1f, 0.85f));
-        ornament.sprite = strip;
+        // 3. oturum (2.1): alt çerçeve şeridi (aslanlı kalkanlar + boş düğüm plakaları) kaldırıldı: işlevsiz boş yuvalar gibi
+        // görünüyordu. Şerit sade: koyu tahta + altın üst kenar + perçinler; ana düğme ortada tek odak.
     }
 
     /// <summary>Simge üstte, yazı altta; orta düğme daha büyük ve dock'tan hafif taşar.</summary>

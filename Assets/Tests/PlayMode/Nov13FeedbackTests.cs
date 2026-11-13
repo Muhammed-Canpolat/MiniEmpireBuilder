@@ -77,22 +77,22 @@ public class Nov13FeedbackTests
     private static object Hud => Prop(Setup, "Hud");
     private static object Raid => Prop(Setup, "Raid");
 
-    private static string TextOf(Component c)
+    internal static string TextOf(Component c)
     {
         var tmp = c.GetComponent("TextMeshProUGUI");
         return (string)tmp.GetType().GetProperty("text").GetValue(tmp);
     }
 
-    private static Rect ScreenRect(RectTransform rt)
+    internal static Rect ScreenRect(RectTransform rt)
     {
         var c = new Vector3[4];
         rt.GetWorldCorners(c);
         return Rect.MinMaxRect(c[0].x, c[0].y, c[2].x, c[2].y);
     }
 
-    private static IEnumerable<object> RadialItems(Component menu) => ((IEnumerable)Prop(menu, "Items")).Cast<object>();
-    private static object RadialItem(Component menu, string id) => RadialItems(menu).First(i => (string)Field(i, "id") == id);
-    private static void ClickRadial(Component menu, string id) =>
+    internal static IEnumerable<object> RadialItems(Component menu) => ((IEnumerable)Prop(menu, "Items")).Cast<object>();
+    internal static object RadialItem(Component menu, string id) => RadialItems(menu).First(i => (string)Field(i, "id") == id);
+    internal static void ClickRadial(Component menu, string id) =>
         ((UnityEngine.UI.Button)Field(RadialItem(menu, id), "button")).onClick.Invoke();
 
     // ==================== 4. BÖLGE – HÜCRE EŞLEMESİ ====================
@@ -249,10 +249,10 @@ public class Nov13FeedbackTests
         Assert.IsTrue((bool)Prop(menu, "IsOpen"), "ilk açılışta açık");
         menu.GetType().GetMethod("RefreshBadges").Invoke(menu, null);
         Assert.AreEqual("7", (string)Prop(RadialItem(menu, "raid"), "InfoBadgeText"), "AKIN düğmesinde Akın numarası pulu");
-        // Ana Üs ile aynı bileşen ve boyutlar: ana düğme 92, vurgulu 70, diğerleri 60
-        Assert.AreEqual(92f, ((RectTransform)Prop(menu, "MainButton")).sizeDelta.x, 0.1f);
-        Assert.AreEqual(70f, ((RectTransform)Prop(RadialItem(menu, "raid"), "Rect")).sizeDelta.x, 0.1f);
-        Assert.AreEqual(60f, ((RectTransform)Prop(RadialItem(menu, "staff"), "Rect")).sizeDelta.x, 0.1f);
+        // Ana Üs ile aynı bileşen ve boyutlar (3. oturum 2.1: ana düğme 72, vurgulu 56, diğerleri 48)
+        Assert.AreEqual(72f, ((RectTransform)Prop(menu, "MainButton")).sizeDelta.x, 0.1f);
+        Assert.AreEqual(56f, ((RectTransform)Prop(RadialItem(menu, "raid"), "Rect")).sizeDelta.x, 0.1f);
+        Assert.AreEqual(48f, ((RectTransform)Prop(RadialItem(menu, "staff"), "Rect")).sizeDelta.x, 0.1f);
         yield return new WaitForSecondsRealtime(0.5f);
         yield return Capture("F2_island_radial_open", 1080, 1920);
 
@@ -298,7 +298,7 @@ public class Nov13FeedbackTests
         var pill = (RectTransform)IslandSafe.Find("RaidBadge");
         Assert.IsTrue(pill.gameObject.activeSelf);
         Assert.NotNull(pill.Find("ClockIcon"), "kum saati ikonu");
-        Assert.AreEqual(L("14s 48dk", "14h 48m"), TextOf(pill.Find("Label")), "kısa biçim");
+        Assert.AreEqual(L("14sa 48dk", "14h 48m"), TextOf(pill.Find("Label")), "kısa biçim");
         Assert.LessOrEqual(pill.rect.width, 110f, "hap küçük (eskiden 188)");
         Assert.LessOrEqual(pill.rect.height, 28f);
         pill.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
@@ -504,7 +504,7 @@ public class Nov13FeedbackTests
         File.WriteAllText(Path.Combine(Folder, "journey.txt"), log.ToString());
     }
 
-    private static IEnumerator GoIslandFromBase()
+    internal static IEnumerator GoIslandFromBase()
     {
         var baseMenu = (Component)T("RadialDockMenu").GetProperty("Current").GetValue(null);
         ClickRadial(baseMenu, "island");
@@ -521,7 +521,7 @@ public class Nov13FeedbackTests
         yield return new WaitForSecondsRealtime(0.8f);
     }
 
-    private static IEnumerator WaitScene(string scene)
+    internal static IEnumerator WaitScene(string scene)
     {
         float deadline = Time.realtimeSinceStartup + 20f;
         while ((SceneManager.GetActiveScene().name != scene || T("SceneCloudTransition").GetProperty("Active").GetValue(null) != null)
@@ -533,7 +533,7 @@ public class Nov13FeedbackTests
 
     // ==================== YARDIMCILAR ====================
 
-    private static IEnumerator LoadBase(int mainBase, int meat = 0, int wood = 0, int gold = 6345, int gems = 111)
+    internal static IEnumerator LoadBase(int mainBase, int meat = 0, int wood = 0, int gold = 6345, int gems = 111)
     {
         var managerType = T("GameManager");
         var gm = managerType.GetProperty("Instance").GetValue(null) as Component;
@@ -553,6 +553,7 @@ public class Nov13FeedbackTests
         Call("IslandNameRules", "Apply", island, "Kartal Adası");   // ad penceresi akışı bu testin konusu değil
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(gm, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(gm, null);
+        managerType.GetMethod("CheckUnlockBuildings", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(gm, null);   // gerçek oyundaki gibi: Ana Üs seviyesine göre türler açık
         SceneManager.LoadScene("BaseScene");
         for (int i = 0; i < 45; i++) yield return null;
         yield return new WaitForSecondsRealtime(0.5f);
@@ -580,7 +581,7 @@ public class Nov13FeedbackTests
         CaptureCamera(name, (Camera)Prop(Setup, "WorldCamera"), w, h, true);
     }
 
-    private static void CaptureCamera(string name, Camera camera, int w, int h, bool island)
+    internal static void CaptureCamera(string name, Camera camera, int w, int h, bool island, string folder = null)
     {
         var texture = new RenderTexture(w, h, 24);
         var rect = camera.rect;
@@ -610,7 +611,7 @@ public class Nov13FeedbackTests
         var pixels = new Texture2D(w, h, TextureFormat.RGB24, false);
         pixels.ReadPixels(new Rect(0, 0, w, h), 0, 0);
         pixels.Apply();
-        File.WriteAllBytes(Path.Combine(Folder, name + ".png"), pixels.EncodeToPNG());
+        File.WriteAllBytes(Path.Combine(folder ?? Folder, name + ".png"), pixels.EncodeToPNG());
         Object.Destroy(pixels);
         RenderTexture.active = previous;
         camera.targetTexture = null;

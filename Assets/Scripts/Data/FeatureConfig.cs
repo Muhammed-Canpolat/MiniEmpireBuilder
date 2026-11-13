@@ -88,6 +88,13 @@ public sealed class FeatureConfig : ScriptableObject
     public int islandRenameGemStep = 50;
     /// <summary>Üst çubuk çip sayıları: bu değerden büyük sayılar kısaltılır (12.4K).</summary>
     public int topBarShortFrom = 10000;
+    /// <summary>
+    /// 3. oturum (2.2): üst bar öğe sırası (soldan sağa; kimlikler: gold, wood, meat, gem, builder). Ana Üs'te ilk yarı armanın
+    /// solunda, kalanı sağında; Ada'da ANA ÜS düğmesi ve ada adından sonra. Listede olmayan öğe gizlenir. Tek bileşen:
+    /// <see cref="ResourceTopBar"/> (aynı veri kaynağı); sahneler yalnız bu listeyle ayrışır.
+    /// </summary>
+    public string[] baseTopBarOrder = { "gold", "wood", "meat", "gem", "builder" };
+    public string[] islandTopBarOrder = { "gold", "wood", "meat", "gem" };
     /// <summary>Baskın hapı: saat ikonu + "Sonraki akın: 8 sa 54 dk" (kapalıysa "Sakin · …").</summary>
     public bool raidPillClock = true;
     /// <summary>Kart Atölyesi paneli kısa tuvalde (3:4) ekrana sığacak kadar ölçeklenir.</summary>
@@ -99,7 +106,7 @@ public sealed class FeatureConfig : ScriptableObject
     [Header("13 Kasım geri bildirimi")]
     /// <summary>Adada Ana Üs'ün radyal menüsü (İNŞA ET · AKIN · KADRO); kapalıysa kompakt dock + sol üst KADRO.</summary>
     public bool islandRadialMenu = true;
-    /// <summary>Akın sayacı küçük hap: kum saati + "14s 48dk"; dokununca açıklama (kapalıysa uzun "Sonraki akın: …").</summary>
+    /// <summary>Akın sayacı küçük hap: kum saati + "14sa 48dk"; dokununca açıklama (kapalıysa uzun "Sonraki akın: …").</summary>
     public bool raidPillCompact = true;
     /// <summary>Adadan başlatılan Akın'ın sonuç ekranında "ANA ÜS" yerine "ADAYA DÖN" (bulutlu geçişle ada görünümüne).</summary>
     public bool raidResultReturnToIsland = true;

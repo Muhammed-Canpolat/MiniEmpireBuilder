@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
@@ -186,9 +186,26 @@ public class PlacementController : MonoBehaviour
     {
         var map = BaseMapManager.Instance;
         if (map == null) return false;
-        return _movingObject != null
+        bool cellsOk = _movingObject != null
             ? map.CanPlaceObjectAt(_movingObject, center)
             : map.CanPlaceBuildingAt(_placingBuildingType, center);
+        if (!cellsOk) return false;
+        // 3. oturum (1.4): çatılar/büyük sprite'lar başka yapının görseline girmesin
+        Rect visual;
+        GameObject self = null;
+        if (_movingObject != null && _movingObject.gameObject != null)
+        {
+            self = _movingObject.gameObject;
+            visual = BaseVisualBounds.Of(self);
+            visual.position += (Vector2)(center - self.transform.position);
+        }
+        else if (_ghostRenderer != null && _ghostObj != null)
+        {
+            visual = BaseVisualBounds.RendererRect(_ghostRenderer);
+            visual.position += (Vector2)(center - _ghostObj.transform.position);
+        }
+        else return true;
+        return !BaseVisualBounds.OverlapsAny(visual, self, _ghostObj);
     }
 
     /// <summary>Taşınan nesnenin (bina ya da kulübe) ya da yeni binanın kapladığı alan.</summary>
@@ -392,36 +409,16 @@ public class PlacementController : MonoBehaviour
             CancelPlacement, false, 96f);
     }
 
+    /// <summary>3. oturum (2.5): ortak süslü GERİ AL düğmesi (Ada da aynısını kullanır).</summary>
     private void ShowUndo(PlacedMapObject moved, Vector3 previous)
     {
-        if (_undoToast != null) Destroy(_undoToast);
         var safe = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
-        if (safe == null) return;
-        _undoToast = new GameObject("MoveUndoToast", typeof(RectTransform), typeof(Image), typeof(Button));
-        _undoToast.transform.SetParent(safe, false);
-        var rect = _undoToast.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
-        rect.sizeDelta = new Vector2(190f, 44f);
-        rect.anchoredPosition = new Vector2(0f, 106f);
-        _undoToast.GetComponent<Image>().color = ReferenceUiVisuals.Hex(0x2A2118);
-        var captured = _undoToast;
-        _undoToast.GetComponent<Button>().onClick.AddListener(() =>
+        var button = UndoMoveButton.Show(safe, () =>
         {
-            if (moved?.gameObject != null) BaseMapManager.Instance?.MoveObjectTo(moved, previous);
-            if (captured != null) Destroy(captured);
+            if (moved?.gameObject != null && BaseMapManager.Instance != null && BaseMapManager.Instance.MoveObjectTo(moved, previous))
+                BaseBuildingVisual.SpawnDust(previous + Vector3.down * 0.4f, 110);
         });
-        var text = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
-        text.transform.SetParent(_undoToast.transform, false);
-        var textRect = text.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = textRect.offsetMax = Vector2.zero;
-        var label = text.GetComponent<TextMeshProUGUI>();
-        label.text = L.T("Geri al", "Undo");
-        label.fontSize = 18f;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = ReferenceUiVisuals.Gold;
-        Destroy(captured, 3f);
+        _undoToast = button != null ? button.gameObject : null;
     }
 
     private Vector3 CalculateGhostScale(BuildingType type, Sprite sprite)

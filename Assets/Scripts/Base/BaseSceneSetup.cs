@@ -366,13 +366,15 @@ public class BaseSceneSetup : MonoBehaviour
             iconBuild, L.T("İnşa Et", "Build"), new Color(0.2f, 0.55f, 0.85f), buttonBg);
 
         // --- Info Panels (Building + Hero) ---
-        GameObject buildingInfoPanel = CreatePanel(canvasObj.transform, "BuildingInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-        TextMeshProUGUI bName = CreateText(buildingInfoPanel.transform, "Name", L.T("Bina Adı", "Building"), new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.95f), 45, TextAlignmentOptions.Center, Color.white);
-        TextMeshProUGUI bLvl = CreateText(buildingInfoPanel.transform, "Level", L.T("Seviye 1", "Level 1"), new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.8f), 35, TextAlignmentOptions.Center, Color.yellow);
-        TextMeshProUGUI bStats = CreateText(buildingInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.65f), 28, TextAlignmentOptions.TopLeft, Color.white);
-        Button bUpBtn = CreateButton(buildingInfoPanel.transform, "UpBtn", L.T("Yükselt", "Upgrade"), new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
-        TextMeshProUGUI bCost = bUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
-        Button bClose = CreateButton(buildingInfoPanel.transform, "CloseBtn", "X", new Vector2(0.85f, 0.85f), new Vector2(0.95f, 0.95f), Color.red);
+        // 3. oturum (2.4): bina penceresi adadakiyle aynı süslü bileşen (FancyInfoPanel); eski düz koyu kutu kalktı.
+        var fancyBuilding = FancyInfoPanel.Build(canvasObj.transform, "BuildingInfo", new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.40f));
+        GameObject buildingInfoPanel = fancyBuilding.root;
+        TextMeshProUGUI bName = fancyBuilding.title;
+        TextMeshProUGUI bLvl = fancyBuilding.level;
+        TextMeshProUGUI bStats = fancyBuilding.body;
+        Button bUpBtn = fancyBuilding.primary;
+        TextMeshProUGUI bCost = fancyBuilding.primaryLabel;
+        Button bClose = fancyBuilding.close;
 
         GameObject heroInfoPanel = CreatePanel(canvasObj.transform, "HeroInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
         TextMeshProUGUI hName = CreateText(heroInfoPanel.transform, "Name", "Kahraman", new Vector2(0.1f, 0.85f), new Vector2(0.84f, 0.96f), 37, TextAlignmentOptions.Center, Color.white);
@@ -390,6 +392,7 @@ public class BaseSceneSetup : MonoBehaviour
             heroInfoPanel, hName, hLvl, hStats, hCost, hUpBtn, hClose,
             battleBtn, buildBtn
         );
+        uiScript.UseFancyBuildingPanel(fancyBuilding);
 
         DarkFantasyHudPolish.PolishBase(_mainCanvas, hudRoot.transform);
     }
@@ -883,10 +886,13 @@ public class BaseSceneSetup : MonoBehaviour
         visual.color = tint;
         visual.sortingOrder = order;
     }
+    /// <summary>Kahramanın kamp bayrağına göre başlangıç yeri (bayrak 2×2 hücrenin ortasında; kahraman solunda durur).</summary>
+    public static readonly Vector2 HeroCampOffset = new Vector2(-2.3f, -0.4f);
+
     private void SpawnHero()
     {
         _heroObj = new GameObject("Hero");
-        Vector2 camp = BaseWorldLayout.Get("camp").center;
+        Vector2 camp = BaseWorldLayout.Get("camp").center + HeroCampOffset;   // 3. oturum (1.4): bayrağın yanında, üstünde değil
         _heroObj.transform.position = new Vector3(camp.x, camp.y, -0.5f);
         _heroObj.transform.localScale = Vector3.one;
 
@@ -1003,6 +1009,9 @@ public class BaseSceneSetup : MonoBehaviour
     {
         for (int frame = 0; frame < 4; frame++) yield return null;
         if (BaseMapManager.Instance != null) BaseMapManager.Instance.RepairLayout();
+        // 3. oturum (1.4): sprite'lar (animasyon ilk kare, gölge) otursun; sonra görsel çakışma onarımı
+        yield return new WaitForSecondsRealtime(0.5f);   // açılış ölçek animasyonları bitsin
+        if (BaseMapManager.Instance != null) BaseMapManager.Instance.RepairVisualLayout();
     }
 
     private System.Collections.IEnumerator LogBaseWidthAfterSpawn()

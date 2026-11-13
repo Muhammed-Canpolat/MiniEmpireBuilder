@@ -200,7 +200,7 @@ public sealed class IslandHud : MonoBehaviour
     /// <summary>Sağ üstte baskın rozeti: "Sakin · 3 sa 12 dk" / "Baskın geliyor · 24 dk" / "BASKIN! · savun". Dokununca (pencere açıksa) savunma başlar.</summary>
     private void BuildRaidBadge()
     {
-        // 13 Kasım: kompakt hap (kum saati + "14s 48dk", 104×26); eski uzun hap 188×32 idi ve adanın sağ üstünü örtüyordu.
+        // 13 Kasım: kompakt hap (kum saati + "14sa 48dk", 104×26); eski uzun hap 188×32 idi ve adanın sağ üstünü örtüyordu.
         bool compact = FeatureConfig.Instance.raidPillCompact;
         raidBadgeBg = ReferenceUiVisuals.Image(safe, "RaidBadge", new Vector2(1, 1), new Vector2(1, 1),
             compact ? new Vector2(-CompactPillWidth - 6, -86) : new Vector2(-196, -90), compact ? new Vector2(-6, -60) : new Vector2(-8, -58),
@@ -235,24 +235,29 @@ public sealed class IslandHud : MonoBehaviour
 
     private static string Span(double seconds)
     {
-        long minutes = (long)Math.Ceiling(Math.Max(0d, seconds) / 60d);
-        if (minutes < 1) minutes = 1;
+        seconds = Math.Max(0d, seconds);
+        long secs = Math.Max(1L, (long)Math.Ceiling(seconds)); if (secs < 60) return L.T($"{secs} sn", $"{secs}s");
+        long minutes = (long)Math.Ceiling(seconds / 60d);
         long h = minutes / 60, m = minutes % 60;
         return h > 0 ? L.T($"{h} sa {m} dk", $"{h}h {m}m") : L.T($"{m} dk", $"{m}m");
     }
 
     private const float CompactPillWidth = 104f;
 
-    /// <summary>Kompakt süre: "14s 48dk" / "48dk" (EN "14h 48m").</summary>
+    /// <summary>
+    /// Kompakt süre (3. oturum 2.3): 1 saat ve üstü "10sa 0dk", 1 saatin altında "45dk", 1 dakikanın altında "30sn"
+    /// (EN "10h 0m" / "45m" / "30s"). Eskiden saat "s" ile yazılıyordu ("10s 0dk": saniye gibi okunuyordu).
+    /// </summary>
     public static string ShortSpan(double seconds)
     {
-        long minutes = (long)Math.Ceiling(Math.Max(0d, seconds) / 60d);
-        if (minutes < 1) minutes = 1;
+        seconds = Math.Max(0d, seconds);
+        long secs = Math.Max(1L, (long)Math.Ceiling(seconds)); if (secs < 60) return L.T($"{secs}sn", $"{secs}s");
+        long minutes = (long)Math.Ceiling(seconds / 60d);
         long h = minutes / 60, m = minutes % 60;
-        return h > 0 ? L.T($"{h}s {m}dk", $"{h}h {m}m") : L.T($"{m}dk", $"{m}m");
+        return h > 0 ? L.T($"{h}sa {m}dk", $"{h}h {m}m") : L.T($"{m}dk", $"{m}m");
     }
 
-    /// <summary>Kompakt hap metni (FeatureConfig.raidPillCompact): sakin "14s 48dk", uyarı "Geliyor 24dk", canlı "BASKIN 12dk".</summary>
+    /// <summary>Kompakt hap metni (FeatureConfig.raidPillCompact): sakin "14sa 48dk", uyarı "Geliyor 24dk", canlı "BASKIN 12dk".</summary>
     public static string RaidPillText(IslandSaveData save, long now)
     {
         if (!FeatureConfig.Instance.raidPillCompact) return RaidBadgeText(save, now);

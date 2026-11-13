@@ -135,6 +135,85 @@ public class BaseWorldUI : MonoBehaviour
         mineStoredText = null;
     }
 
+    private FancyInfoPanel.View fancy;
+
+    /// <summary>3. oturum (2.4): bina penceresi ortak süslü bileşen; TAŞI düğmesi ve ikonlu maliyet satırı bu görünümle gelir.</summary>
+    public void UseFancyBuildingPanel(FancyInfoPanel.View view)
+    {
+        fancy = view;
+        if (fancy == null) return;
+        fancy.secondary.onClick.AddListener(OnMoveClicked);
+        fancy.tertiary.gameObject.SetActive(false);
+        fancy.panel.rectTransform.SetAsLastSibling();
+    }
+
+    private void OnMoveClicked()
+    {
+        var map = BaseMapManager.Instance;
+        var obj = map != null ? FindMapObject(selectedSlotId) : null;
+        if (obj == null || PlacementController.Instance == null) return;
+        CloseAllPanels();
+        PlacementController.Instance.BeginMove(obj);
+    }
+
+    private static PlacedMapObject FindMapObject(string slotId)
+    {
+        var map = BaseMapManager.Instance;
+        if (map == null || string.IsNullOrEmpty(slotId)) return null;
+        foreach (var o in map.MapObjects) if (o != null && o.id == slotId && o.gameObject != null) return o;
+        return null;
+    }
+
+    /// <summary>Bina sahnedeki görünür en büyük yapı sprite'ı (karakterler hariç): pencere simgesi.</summary>
+    private static Sprite BuildingSprite(string slotId)
+    {
+        var obj = FindMapObject(slotId);
+        if (obj == null) return null;
+        SpriteRenderer best = null; float area = 0f;
+        foreach (var sr in obj.gameObject.GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (sr.sprite == null || sr.color.a < 0.5f || sr.GetComponent<Animator>() != null) continue;
+            if (sr.name.IndexOf("shadow", System.StringComparison.OrdinalIgnoreCase) >= 0) continue;
+            float a = sr.bounds.size.x * sr.bounds.size.y;
+            if (a > area) { area = a; best = sr; }
+        }
+        return best != null ? best.sprite : null;
+    }
+
+    /// <summary>Süslü pencerenin ek alanları: seviye, simge, mevcut → sonraki, ikonlu maliyet + süre, not, düğmeler.</summary>
+    private void FillFancy(BuildingType type, string slotId, BuildingData typeData, BuildingData building, GameManager.UpgradeBlock block,
+        BuilderTaskSave task, int cost, string duration)
+    {
+        if (fancy == null) return;
+        var gm = GameManager.Instance;
+        // Başlık = ad (kurdele), seviye satırı = "Seviye N / 15" (simgenin sağında); gövde onun altından başlar
+        fancy.body.rectTransform.offsetMax = new Vector2(-18f, -70f);
+        var icon = BuildingSprite(slotId);
+        if (icon != null) fancy.icon.sprite = icon;
+        fancy.icon.enabled = fancy.icon.sprite != null;
+        bool canGrow = typeData.isUnlocked && task == null && building.level < Progression.MaxLevel && block != GameManager.UpgradeBlock.MaxLevel;
+        string current = GetBuildingStatsText(building);
+        fancy.body.text = canGrow ? FancyInfoPanel.CompareStats(current, GetBuildingStatsText(gm.CreateLevelData(type, building.level + 1))) : current;
+        FancyInfoPanel.SetCost(fancy, CampaignSceneSetup.Art("ui_icon_coin"), cost, gm.Gold >= cost, null, 0, true,
+            duration, canGrow);
+        fancy.timeIcon.gameObject.SetActive(canGrow);
+        if (canGrow && (block == GameManager.UpgradeBlock.None || block == GameManager.UpgradeBlock.NoGold))
+            upgradeCostText.text = block == GameManager.UpgradeBlock.NoGold
+                ? L.T($"ALTIN TAMAMLA → Sv {building.level + 1}", $"TOP UP → Lv {building.level + 1}")
+                : L.T($"YÜKSELT → Sv {building.level + 1}", $"UPGRADE → Lv {building.level + 1}");
+        string note = type == BuildingType.MainBase ? GetNextMainBaseUnlock(building.level) : "";
+        if (block == GameManager.UpgradeBlock.MaxLevel && building.level < Progression.MaxLevel)
+            note = L.T("Ana Üs yükseldikçe bu yapı da yükselebilir.", "This building can grow as the Main Base levels up.");
+        fancy.note.text = note ?? "";
+        bool movable = typeData.isUnlocked && type != BuildingType.MainBase && FindMapObject(slotId) != null;
+        fancy.secondary.gameObject.SetActive(movable);
+        fancy.secondaryLabel.text = L.T("TAŞI", "MOVE");
+        fancy.secondary.interactable = movable;
+        // Birincil düğme genişliği: TAŞI yoksa tam genişlik
+        var prt = fancy.primary.GetComponent<RectTransform>();
+        prt.anchorMax = new Vector2(movable ? 0.52f : 0.96f, 0f);
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -316,6 +395,7 @@ public class BaseWorldUI : MonoBehaviour
         if (buildingLevelText != null)
             buildingLevelText.text = !typeData.isUnlocked ? L.T("KİLİTLİ", "LOCKED")
                 : L.T("Seviye ", "Level ") + $"{building.level} / {Progression.MaxLevel}";
+        if (fancy != null) fancy.level.text = buildingLevelText != null ? buildingLevelText.text : "";
 
         if (buildingStatsText != null)
             buildingStatsText.text = GetBuildingStatsText(building);
@@ -360,6 +440,7 @@ public class BaseWorldUI : MonoBehaviour
             if (buttonImage != null) buttonImage.color = canUpgrade ? Color.white : new Color(0.65f, 0.65f, 0.65f, 0.75f);
         }
 
+        FillFancy(type, slotId, typeData, building, block, task, cost, duration);
         var next = buildingInfoPanel?.transform.Find("NextUnlock")?.GetComponent<TextMeshProUGUI>();
         if (next != null)
             next.text = type == BuildingType.MainBase ? GetNextMainBaseUnlock(building.level) : "";
