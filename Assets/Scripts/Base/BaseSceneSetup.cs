@@ -402,6 +402,7 @@ public class BaseSceneSetup : MonoBehaviour
         {
             if (canvas == null || canvas.gameObject == null) continue;
             if (canvas.gameObject.name == "BaseCanvas") continue;
+            if (canvas.gameObject.name == "SceneCloudTransition") continue;   // bulut geçişi örtüsü kendini bitirir
 
             canvas.gameObject.SetActive(false);
         }

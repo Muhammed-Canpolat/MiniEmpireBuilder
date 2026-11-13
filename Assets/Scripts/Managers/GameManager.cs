@@ -954,7 +954,7 @@ public class GameManager : MonoBehaviour
         IsInBattle = false;
         BattleSession.Clear();
         IslandSession.Begin();
-        StartCoroutine(FadeAndLoadScene("BattleScene"));
+        if (!SceneCloudTransition.BeginIfEnabled("BattleScene")) StartCoroutine(FadeAndLoadScene("BattleScene"));
         return true;
     }
 
@@ -963,7 +963,7 @@ public class GameManager : MonoBehaviour
         IsInBattle = false;
         BattleSession.Clear();
         IslandSession.Clear();
-        StartCoroutine(FadeAndLoadScene("BaseScene"));
+        if (!SceneCloudTransition.BeginIfEnabled("BaseScene")) StartCoroutine(FadeAndLoadScene("BaseScene"));
         Debug.Log("[GameManager] Üs dünyasına geçiliyor...");
     }
 
