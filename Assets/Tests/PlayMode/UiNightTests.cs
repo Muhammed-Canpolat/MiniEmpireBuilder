@@ -436,6 +436,7 @@ public class UiNightTests
         }
         yield return CaptureOverlay("N3_card_workshop_panel", 1080, 1920);
         yield return CaptureOverlay("N3_card_workshop_panel_3x4", 1080, 1440);
+        yield return CaptureOverlay("N3F_workshop_fixed", 1080, 1920);
         Call("CardWorkshopPanel", "Close");
     }
 
