@@ -1,9 +1,9 @@
 # GECE_DURUM — Otonom gece çalışması (13 Kasım 2026)
 
 DURUM: DEVAM EDİYOR
-SON AKTİVİTE: 2026-11-13 16:40
-ŞU ANKİ İŞ: AŞAMA 3F — Ana Üs radyal alt menü + atölye kozmetik (ajan)
-SIRADAKİ İŞ: AŞAMA 4 ekonomi (EconomyConfig Legacy/V2, Sonsuz kule bedeli + kart seçimi, Ada Tüccarı) → SON
+SON AKTİVİTE: 2026-11-13 17:20
+ŞU ANKİ İŞ: AŞAMA 4 — ekonomi (Sonsuz kule bedeli + kart seçimi hatası, EconomyConfig Legacy/V2, Ada Tüccarı) (ajan)
+SIRADAKİ İŞ: SON — sınırsız elmas kapalı baştan oynatma, REPORT.md, eski 5 testin güncellenmesi
 
 TAMAMLANANLAR:
 - AŞAMA 0 analiz → PLAN_ADA.md (e1d1b4c)
@@ -11,6 +11,7 @@ TAMAMLANANLAR:
 - AŞAMA 1: müzik (6eb2989), sabit kamera (ad14e72, 0173606), bulut geçişi (1f32657); Island testleri 107/107
 - AŞAMA 2: boş başlangıç/bedava hak/bilgi, kadro, ağaç/koyun, Akın ölçeği, kayıt v10 (a8f82cc, 5851b4d); Island 115/115; ilk 30 dk: Docs/playtest/gece/first30_island.md
 - AŞAMA 3A–E,G: ortak üst bar, ada adı (v11), sayaç, ada düğmeleri, atölye ikonları (be03bf2..475fbdb); 146 testten 144 (2 bilinen eski)
+- AŞAMA 3F: radyal alt menü + atölye kozmetik (b7ee615, d3b84ce, 11fd74f); RadialMenuTests 8/8
 
 ENGELLENENLER:
 - (henüz yok)
