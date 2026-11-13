@@ -193,3 +193,9 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 ## 12 Kasım 2026: Kart Atölyesi
 - Ana Üs 5 binası (House2), Et + altınla 7 kart (3 Sıradan + Nadir Keskin Oklar/Zırh Delici/Gök Avcısı + Destansı Kalkan Kıran).
   Kullanım hakkı modeli (1 savaş = 1 hak, yenilgide de). Kayıt v8. Ayrıntı: `Docs/design/card_workshop.md` sonundaki uygulama notu.
+
+## 13 Kasım 2026: Ana Üs bağları (Faz F: Kışla + Köylü Evi)
+- `BuildingType.Barracks/House` (enum sonuna), açılış `Progression.BarracksUnlock {7,11}` / `HouseUnlock {3,9}`, bedel çarpanı 0,65 / 0,4; elmasla alınmaz. Kayıt v9 (tür girdileri `EnsureBaseBondEntries`).
+- Sefer savaşında `Battle/AllyLancer.cs` (`AllyBarracks` + `AllyLancer`): kurulu her Kışla 1 + ⌊L/5⌋ mavi Lancer, yalnız Ana Üs'ün 3,5 u çevresini korur, 15 sn'de yeniden doğar; hasar `DamageSource.Ally`.
+  Yakın dövüşçü düşman vuruş menzilindeki Lancer'a vurur (`EnemyController.FindBestTarget`). Köylü Evi `GameManager.GetGoldMineStorageCapacity` içinde maden deposunu büyütür.
+- Bot: `PLAYTEST_NO_BARRACKS=1` Kışla/Ev kurmaz (eşlenik ölçüm), `PLAYTEST_SEEDS=N` tohum sayısı. Ayrıntı ve ölçümler: `Docs/design/island_base_v2.md` §22.

@@ -716,3 +716,60 @@ E2 ile Faz E tamamlandı (Kışla/Manastır/Damar/Z3–Z5 §20'de). Commit'ler: 
 - **Görüntüler** (`PlaytestOutput/island/E2_*.png`; seçilenler `Docs/playtest/island_v2_phaseE2_*.png`): 01 Kademe II dizilişi, 02 Kademe III, 03 bosslar (Kasap/Şövalye/Ejder yan yana), 04 Akın 12 siyah tekne + yetenek düğmeleri, 05 Kademe II dalgası kumsalda, 06–08 Akın 20 Batık Şövalye (savaş/yakın/iskelet çağırışı),
   09 Akın 30 sarı tekne, 10–11 Kızıl Ejder (savaş/yakın), 12–13 Akın Panosu 30/20.
 - **Bilinen eksikler:** Mavna süs topları yok; Sıradan bot hedefleri tutmuyor (Faz C'den kalma); yetenek düğmeleri simgesiz (yalnız yazı); Ejder'in koni ateşi Tiny Swords `Fire` karelerinden dizilir (özel koni sprite'ı yok); ağ ve yanma için ayrı durum simgesi yok; ölçüm her Akın için 2 koşu.
+## §22 Faz F uygulama notu (13 Kasım 2026): Ana Üs Kışlası + Köylü Evi
+Faz F ile sefer tarafı bağları tamamlandı (v1 §7 tablosu). Commit'ler: görseller `fe6180e`, veri/kayıt `0655dad`, savaş `22856eb`, Ana Üs arayüzü `a1f256c`, sonraki commit'ler ölçüm anahtarı + testler + belge.
+- **Veri (`GameData.cs`):** `BuildingType` sonuna `Barracks`, `House` (CardWorkshop'tan sonra; eski türlerin sayısal değeri değişmedi), `DamageSource` sonuna `Ally`. `Progression` kökünde: `BarracksUnlock {7,11}`, `BarracksCostFactor 0,65`,
+  `AllyLancerHp/Damage(L) = 70/6·(1+0,15(L−1))`, `AllyLancerCount(L) = 1+⌊L/5⌋`, `AllyHitInterval 1`, `AllyGuardRadius 3,5`, `AllyHomeRadius 2,1`, `AllyRespawn 15`; `HouseUnlock {3,9}`, `HouseCostFactor 0,4`, `HouseStorageBonus(L) = 0,05+0,005(L−1)`.
+  Kurulum bedeli `Progression.BuildCost(type)` = 1. seviyeye yükseltme bedeli (Kışla 100, Ev 60 altın); yalnız altınla (elmasla satın alma yok), inşaat süresi diğer yapılar gibi 60 sn varsayılanı, hızlandırma mevcut inşaatçı/`GemActions` yolunda (dokunulmadı).
+- **Kayıt v9:** `PlayerSaveData.EnsureBaseBondEntries` tür girdilerini ekler (yeni oyun, `RebuildBuildingData`, v8 göçü): Ana Üs seviyesi açılış seviyesindeyse açık/seviye 1, değilse kilitli. Mevcut veriye dokunulmaz.
+- **Köylü Evi:** `GameManager.GetGoldMineStorageCapacity()` = `(200+150(L−1))·(1+Σ ev bonusu)`; ev başına bonus yerleşik evin kendi seviyesinden (`placedBuildings`), üretim hızı (`goldPerSecond`) değişmez. İki ev L15: +%24.
+- **Kışla Lancer'ları (`Battle/AllyLancer.cs`):** `AllyBarracks` sefer savaşında (`BattleSession.IsCampaign`; Sonsuz/İstila dahil) kurulu her Kışla için 1+⌊L/5⌋ Lancer doğurur (iki Kışla toplanır), `AllyLancer` Ana Üs'ün 3,5 u içindeki en yakın boştaki karadaki düşmana gider (her Lancer bir düşman, uçan yok, sisle gizli düşman yok),
+  bölge dışına çıkan hedefi bırakır, 1 vuruş/sn `DamageSource.Ally`; ölünce 15 sn sonra yeniden doğar (`AllyBarracks.Advance`, test edilebilir). Görsel Ada Lancer'ının Tiny Swords kareleri (`IslandVisualCatalog` `blue_lancer_*`; yeni çizim yok), ölçek 1,2 (kahramanla aynı boy).
+  `EnemyController`: vuruş menzili ≤2,5 u olan, uçmayan düşman menzilindeki Lancer'a vurur (kahraman kuralından sonra, rol seçiminden önce); menzilliler Ana Üs'e devam eder. Ward'lı bossa Lancer hasarı kule gibi (×kalkan çarpanı) sayılır; Bombacı'yı öldürürse "kule" sayılır.
+  `DamageSource.Ally` kahraman payına girmez (payda büyür). Kart etkileri (`TowerHitMultiplier`) Lancer'a uygulanmaz.
+- **Ana Üs arayüzü:** `BuildMenuController` 6 sütun (Okçu, Topçu, Manastır, Kart Atölyesi, **Köylü Evi, Kışla**; yazılar otomatik küçülür), `DarkFantasyHudPolish` 6 sütun düzeni, bina adı/rengi (`BaseMapManager`, `BaseWorldUI`), bilgi paneli metinleri, "sonraki Ana Üs seviyesi açar" listesi, `SpriteManager`, yerleşim slotları `barracks_1/2`, `house_1/2` (`BaseWorldLayout`; ev 2×3, kışla 3×3; örtüşme testi geçer).
+  Katalog: `BuildBaseVisualCatalog.AddBaseBondVisuals` (Tiny Swords `Barracks.png`, `House1.png`, 5 renk; boşta kalan iki sprite) batchmode ile koşuldu. `GameNotifications` değişmedi (inşaat bitiş bildirimi bina adını `GetBuildingDisplayName`'den alır); `DevMenu` değişmedi (ANA ÜS +1 ile açılış seviyeleri sınanır).
+- **Bot:** `PlaytestBot.CreateProfile` Kışla/Ev'i açıldığı Ana Üs'te kurar (seviye = Ana Üs−1; 2. Kışla/Ev Ana Üs 11/9'dan itibaren Ana Üs−2). Telemetri: `allyDamageShare`, `barracks`, `lancersSpawned`, `lancerDeaths`.
+  Ölçüm anahtarları: `PLAYTEST_SEEDS=N` (varsayılan 3), `PLAYTEST_NO_BARRACKS=1` (Kışla/Ev kurmaz = Faz F öncesine eşlenik; aynı kod, aynı tohumlar).
+- **Ölçüm (3 tur; `PlaytestBotTests`, bot hızı ×4, ham tablolar `PlaytestOutput/phaseF/*_table.txt`):**
+  Tur 0 (temel, kod değişmeden; okçu 8+2/sev ve Kart Atölyesi dahil) · Tur 1 (Kışla'lı, tam takım, 3 tohum) · Tur 2 (eşlenik: Kışla'lı ve Kışla'sız, 6 tohum, Bölge 4–6 + Sıradan 5–6 + Yalnız-kahraman 3–4 + Yalnız-kule 4) · Tur 3 (Lancer hasarı 6→4 denemesi, 6 tohum, Tur 2 altkümesi).
+
+  **İyi bot (combined), medyan; "hedef" round2.md C-metrics (S5 = boss aşaması):**
+
+  | Bölge (Ana Üs) | hedef kazanma S1 / S5 | hedef taban canı S5 | hedef kahraman payı | 11 Kas round2 sonu S5 kazanma / pay | Tur 0 temel S1 / S5 kazanma | Tur 0 S5 can / pay | Tur 1 Kışla'lı S1 / S5 | Tur 1 S5 can / pay (Lancer payı) |
+  |---|---|---|---|---|---|---|---|---|
+  | R1 (1–3) | ≥%95 / 75 | 0,45 | ≥%20 | 100 / 0,87 | 100 / 67 | 0,54 / 0,76 | 100 / 100 | 0,70 / 0,84 (0) |
+  | R2 (3–5) | ≥%95 / 72 | 0,40 | ≥%20 | 33 / 0,68 | 100 / 67 | 0,41 / 0,59 | 100 / 33 | 0,00 / 0,64 (0) |
+  | R3 (6–8) | ≥%95 / 68 | 0,35 | %30–50 | 100 / 0,60 | 100 / 100 | 1,00 / 0,49 | 100 / 100 | 1,00 / 0,51 (0,08) |
+  | R4 (9–11) | ≥%92 / 65 | 0,30 | %30–50 | 100 / 0,50 | 100 / 100 | 1,00 / 0,45 | 100 / 100 | 1,00 / 0,43 (0,06) |
+  | R5 (12–14) | ≥%90 / 62 | 0,25 | %30–50 | 100 / 0,43 | 100 / 100 | 1,00 / 0,44 | 100 / 100 | 0,97 / 0,33 (0,07) |
+  | R6 (14–15) | ≥%90 / 60 | 0,20 | %30–50 | 100 / 0,33 | 100 / 100 | 1,00 / 0,36 | 100 / 100 | 1,00 / 0,29 (0,12) |
+
+  Tur 0 ile 11 Kasım round2 sonu arasında (okçu değişikliği + Kart Atölyesi) kazanma oranı aynı (R3–R6 S5 %100) ve kahraman payı R1–R3'te 0,09–0,11 düştü, R4–R6'da ±0,07 içinde: okçu eğimi sapma yaratmadı. **Not:** 3 tohumla her hücre 33 puanlık adımlarla ölçülür; Kışla'nın kilitli olduğu R1–R2'de bile S5 %67↔%33 oynuyor (Tur 0 R2 67, Tur 1 R2 33): bu gürültüdür, ±5 puan 3 tohumla doğrulanamaz.
+
+  **Eşlenik tur (Tur 2, 6 tohum; Kışla'sız → Kışla'lı), Ana Üs = bölge S5 Ana Üs'ü:**
+
+  | Profil | Bölge | kazanma % | medyan taban canı | kahraman payı | Lancer payı |
+  |---|---|---|---|---|---|
+  | İyi S5 | R4 | 100 → 100 | 0,45 → 0,91 | 0,49 → 0,45 | 0 → 0,09 |
+  | İyi S5 | R5 | 100 → 100 | 1,00 → 1,00 | 0,38 → 0,34 | 0 → 0,09 |
+  | İyi S5 | R6 | 100 → 100 | 1,00 → 1,00 | 0,33 → 0,31 | 0 → 0,10 |
+  | İyi S1 | R4 / R5 / R6 | 100 → 100 (üçü) | 0,87→1,00 / 1,00 / 1,00 | 0,62→0,59 / 0,60→0,52 / 0,55→0,55 | 0 → 0,16 / 0,22 / 0,18 |
+  | Sıradan S5 | R5 | **33 → 100** | 0,00 → 0,75 | 0,53 → 0,38 | 0 → 0,24 |
+  | Sıradan S5 | R6 | **0 → 83** | 0,00 → 0,55 | 0,51 → 0,36 | 0 → 0,25 |
+  | Yalnız-kahraman S5 | R3 / R4 | 0 / 0 → 0 / **33** | 0 | 1,00 → 0,79 / 0,56 | 0 → 0,21 / 0,44 |
+  | Yalnız-kule S5 | R4 | 0 → 33 (4/6 zaman aşımı; Faz F öncesi de vardı: Tur 0 R4 medyan 10 dk) | 0 → 0,99 | 1,00 → 0,11 | 0 → 0,27 |
+
+  Tur 3 (Lancer hasarı 6→4, aynı 6 tohum): iyi S5 R4/R5/R6 hep %100, pay 0,43/0,38/0,31; Sıradan R5/R6 %100/%83 (değişmedi); Yalnız-kahraman R3/R4 %0/**%67**; Yalnız-kule R4 %33; Lancer payı yalnız 0,44→0,37 düştü. Hasarın 4'e inmesi sonuçları hareket ettirmedi (Lancer'ın asıl etkisi hasarı değil, düşmanı Ana Üs'ten uzak tutan ve vuruş yiyen can havuzu olması); sapma zaten tohum gürültüsü içinde olduğundan **ayar geri alındı, `AllyLancerDamage` belge değeri 6'da kaldı.**
+- **Değerlendirme / sapmalar (düzeltilmedi, kullanıcı kararı gerekir):**
+  - **Kazanma ±5 puan:** iyi botun combined kazanması Kışla'dan önce de R3–R6 S5'te %100'dü (hedef ≥%60–68) ve medyan taban canı 0,45–1,00 (hedef 0,20–0,35): bot "beklenen oyuncu"dan güçlü, tavan etkisiyle Kışla bu hücreleri oynatamıyor (100→100). Yani tablo "korunuyor" ama anlamlı bir sınama değil. İnsan oyuncu ölçümü yok; cihaz denemesi öneririm.
+  - **Kahraman payı R3+ %30–50:** iyi bot S5'te Kışla'lı 0,51 / 0,43 / 0,33 / 0,29 (Tur 1), 0,45 / 0,34 / 0,31 (Tur 2, R4–R6); Kışla payı 2–4 puan düşürüyor. R6 S5 Tur 1'de 0,29 (eşiğin 1 puan altı, gürültü içinde; Tur 2 0,31). S1'de pay 0,48–0,75 (Kışla'sız da 0,48–0,73).
+  - **Sıradan oyuncu çok yükseliyor (R5 33→100, R6 0→83):** Kışla seyrek/zayıf oynayanı Ana Üs'te ayakta tutuyor; bu profil için tabloda hedef yok, ama Sıradan botun 11 Kasım'da boss'ta ~%28 olması "biraz düşük" diye işaretlenmişti (MORNING_REPORT) → Kışla bunu düzeltiyor, fakat iyi bot zaten tavanda olduğundan "ortalama oyuncu" (iki profil arası) R5–R6'da hedef %60–75'in üstüne çıkar (~%90+). Cihazda gözlenmeli; ayar kolu `AllyLancerCount` / `AllyRespawn` (hasar değil).
+  - **Yalnız-kahraman R4 %33 (hedef ≤%20), yalnız-kule R4 %33 (hedef ≤%30):** 6 tohumda 2 galibiyet, binom gürültüsü içinde (gerçek oran %20 iken ≥2/6 olasılığı ≈%35); Tur 3'te %67'ye çıkması da gürültü. Kışla'sız bu hücreler %0'dı: Kışla "yapı yok" oyuncuyu da bir ölçüde korur.
+  - Bot 2. Kışla'yı Ana Üs−2 seviyesinde kuruyor (gerçek oyuncu Ana Üs 11'de bu seviyeye ancak çok altın harcayarak gelir): R4–R6'da 5–6 Lancer test edildi (en kötü durum). Yalnız tek Kışla ile ölçülmedi.
+- **Yapılmayanlar:** `Tools/economy_sim.py` Köylü Evi ile yeniden koşulmadı (ev yalnız depoyu büyütür; üretim değişmez); Kışla yıkılması/onarımı sefer savaşında yok (sefer yapıları savaşa girmez); Lancer'a Manastır şifası (`AllyLancer.Heal` var, sefer Manastırı bağlanmadı); 2. Kışla için ayrı bayrak/toplanma noktası yok.
+- **Testler:** `BaseBarracksTests` (12): açılış seviyeleri ve en çok bina sayısı, bedel çarpanları (L2–L15), enum değerleri, Lancer sayı/can/hasar formülleri (L1–L15), koruma yarıçapı (bölge dışı düşman avlanmaz, içi vurulur, kaynak `Ally`), 15 sn yeniden doğma, yakın dövüşçü Lancer'a vurur, iki Kışla toplanır, Kışla yok = Lancer yok,
+  ev deposu bonusu + üretim değişmez, v8 kaydı göçü + gidiş-dönüş, sahnede Kışla + Lancer ve inşa menüsü ekran görüntüleri. Sonuç: `BaseBarracksTests;CardWorkshopTests;LumberShipmentTests;BuilderSystemTests;IslandSaveTests;GridPlacementTests;ProgressionTests;SaveSystemTests;BattleStructureTests;GemEconomyTests` + `BasePresentationTests.BuildingFootprints…` **50/50**; `^Island` **102/102** (ayrı koşu; kayıt kirlenmesi giderildikten sonra).
+- **Test notu (kayıt kirlenmesi):** `GameManager` sahne geçişlerinde yaşar ve `OnApplicationQuit`'te son oyuncu verisini gerçek kayda yazar. Ana Üs 11–12 kuran bir test sınıfı (bu fazın ilk sürümü) kapanışta gerçek kaydı Ana Üs 11 + Kışla ile bırakıyor, sonraki `^Island` koşusunda `IslandEconomySimTests` (etkin Kıyı Kalesi = Ana Üs) "Ağıl Sv6, beklenen 5" diye düşüyordu (tek başına temiz kayıtta geçer; E2'deki "sıra etkisi" de bu olabilir).
+  `BaseBarracksTests` artık `[OneTimeTearDown]`'da test GameManager'ını yok eder (kayıt değişmez, doğrulandı). `CardWorkshopTests` aynı kalıbı kullanıyor, dokunulmadı.
+- **Görüntüler** (`PlaytestOutput/phaseF/`; seçilenler `Docs/playtest/island_v2_phaseF_*.png`): `lancers_idle` (3 Lancer Ana Üs'ün altında), `lancers_fight` (iki Orc'a karşı), `base` (Kışla L10 mor kademe + iki Köylü Evi), `buildmenu` (6 sütunlu inşa menüsü).
