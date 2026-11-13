@@ -67,6 +67,8 @@ public class IslandPhaseCTests
         island.GetType().GetField("keepLevel").SetValue(island, keep);
         island.GetType().GetField("highestAkin").SetValue(island, highest);
         island.GetType().GetField("tutorialStep").SetValue(island, 4);
+        // AŞAMA 2: yeni ada boş başlar; bu denge testleri eski tarz hazır köyü (kuleler dahil) ölçer.
+        Type("IslandEconomy").GetMethod("EnsureSeeded").Invoke(null, new[] { island, (object)Math.Max(1, keep) });
         save.GetType().GetField("island").SetValue(save, island);
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(manager, null);

@@ -54,6 +54,7 @@ public partial class IslandReviewScreenshots
 
     private static object Prop(object target, string name) => target.GetType().GetProperty(name).GetValue(target);
 
+    /// <summary>Ada görüntüsü: eski tarz tohumlanmış köy (AŞAMA 2 öncesi görüntüler hazır köyü gösterir).</summary>
     private IEnumerator LoadIsland(int keep = 0, int highest = 0)
     {
         var dev = Type("DevSettings").GetProperty("Enabled");
@@ -72,6 +73,10 @@ public partial class IslandReviewScreenshots
             island.GetType().GetField("highestAkin").SetValue(island, highest);
             island.GetType().GetField("tutorialStep").SetValue(island, 4);
             save.GetType().GetField("island").SetValue(save, island);
+        }
+        {
+            var island = save.GetType().GetField("island").GetValue(save);
+            Type("IslandEconomy").GetMethod("EnsureSeeded").Invoke(null, new[] { island, (object)Math.Max(1, keep) });
         }
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(manager, null);
@@ -297,7 +302,10 @@ public partial class IslandReviewScreenshots
 
         // Kontrol listesi sayıları (kit §10 / v2 §10): ağaç, çalı, kaya, su kayası, koyun, piyon, bulut
         Assert.GreaterOrEqual(UnityEngine.Object.FindObjectsByType(Type("IslandTree"), FindObjectsSortMode.None).Length, 24);
-        Assert.GreaterOrEqual(UnityEngine.Object.FindObjectsByType(Type("IslandSheep"), FindObjectsSortMode.None).Length, 4);
+        // AŞAMA 2 §3: koyunlar yalnız Ağıl çevresinde (hazır köyde 1 Ağıl × sheepPerPasture)
+        var featureConfig = Type("FeatureConfig").GetProperty("Instance").GetValue(null);
+        Assert.GreaterOrEqual(UnityEngine.Object.FindObjectsByType(Type("IslandSheep"), FindObjectsSortMode.None).Length,
+            (int)featureConfig.GetType().GetField("sheepPerPasture").GetValue(featureConfig));
         Assert.GreaterOrEqual(UnityEngine.Object.FindObjectsByType(Type("IslandPawn"), FindObjectsSortMode.None).Length, 3);
         Assert.GreaterOrEqual(UnityEngine.Object.FindObjectsByType(Type("IslandCloud"), FindObjectsSortMode.None).Length, 2);
         Assert.GreaterOrEqual(UnityEngine.Object.FindObjectsByType(Type("IslandZoneCloud"), FindObjectsInactive.Include, FindObjectsSortMode.None).Length, 5);

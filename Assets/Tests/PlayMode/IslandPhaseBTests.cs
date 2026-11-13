@@ -229,6 +229,17 @@ public class IslandPhaseBTests
     [Test]
     public void WorkerAssignmentFillsLowestRatioAndHonorsManualOverrides()
     {
+        // Eski (kadro v1) dağılım: kale piyonları havuza sayılır. Kadro v2 IslandFreshStartTests'te; burada bayrak geçici kapalı.
+        var config = T("FeatureConfig").GetProperty("Instance").GetValue(null);
+        var staffFlag = config.GetType().GetField("islandStaffV2");
+        bool staffWas = (bool)staffFlag.GetValue(config);
+        staffFlag.SetValue(config, false);
+        try { LegacyWorkerAssignment(); }
+        finally { staffFlag.SetValue(config, staffWas); }
+    }
+
+    private void LegacyWorkerAssignment()
+    {
         long t0 = 636_000_000_000_000_000L;
         var island = SeededIsland(t0);
         var lumber = FindEntry(island, "Lumber"); var pasture = FindEntry(island, "Pasture");
@@ -335,7 +346,11 @@ public class IslandPhaseBTests
 
     // ==================== SAHNEDE İNŞA / YÜKSELTME / TOPLAMA / BÖLGE ====================
 
-    internal static IEnumerator LoadIsland(Action<object> configure, int keep, Action<bool> setDev)
+    /// <summary>
+    /// Adayı sahnede açar. Varsayılan: eski tarz (v10 öncesi) tohumlanmış köy — AŞAMA 2'den önce yazılmış testler hazır köyü varsayar
+    /// (Ev, Oduncu, Okçuluk, Ağıl, 2 Kule; bu türlerin ilk yapım hakkı kullanılmış). <paramref name="fresh"/>: yeni oyuncu adası (yalnız kale).
+    /// </summary>
+    internal static IEnumerator LoadIsland(Action<object> configure, int keep, Action<bool> setDev, bool fresh = false)
     {
         var dev = T("DevSettings").GetProperty("Enabled");
         setDev((bool)dev.GetValue(null));
@@ -348,6 +363,7 @@ public class IslandPhaseBTests
         var island = Field(save, "island");
         Set(island, "keepLevel", keep);
         Set(island, "tutorialStep", 4);
+        if (!fresh) Call("IslandEconomy", "EnsureSeeded", island, Math.Max(1, keep));
         configure?.Invoke(island);
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(manager, null);

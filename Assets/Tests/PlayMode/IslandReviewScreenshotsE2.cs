@@ -81,7 +81,13 @@ public partial class IslandReviewScreenshots
         Type("IslandBot").GetMethod("Attach").Invoke(null, new object[] { Setup, BotProfile(profile) });
         BattleCamera();
         Time.timeScale = 1f;
+        // Görüntü testi: AŞAMA 2 Akın ölçeği (kule seviyesiyle ×1,4'e kadar) kapalı; boss anı eski zorlukla yakalanır.
+        var featureConfig = Type("FeatureConfig").GetProperty("Instance").GetValue(null);
+        var scaling = featureConfig.GetType().GetField("islandTowerScaling");
+        bool scalingWas = (bool)scaling.GetValue(featureConfig);
+        scaling.SetValue(featureConfig, false);
         raid.GetType().GetMethod("StartAkin").Invoke(raid, new object[] { akin });
+        scaling.SetValue(featureConfig, scalingWas);   // ölçek Akın başında okundu
         yield return new WaitForSecondsRealtime(0.9f);
         Time.timeScale = 6f;
         float deadline = Time.realtimeSinceStartup + maxRealSeconds;
