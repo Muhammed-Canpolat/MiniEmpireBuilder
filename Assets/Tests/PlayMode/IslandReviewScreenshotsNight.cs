@@ -49,7 +49,10 @@ public partial class IslandReviewScreenshots
             camera.aspect = aspect;
             yield return null;   // IslandSceneSetup.Update en-boy değişimini yakalar
             yield return null;
-            foreach (var corner in new[] { new Vector3(0, 0), new Vector3(22, 0), new Vector3(0, 36), new Vector3(22, 36) })
+            // Kadraj kara sınırına (adacıklar dahil) oturur: kara dikdörtgeninin dört köşesi görünmeli
+            var land = (Rect)controllerType.GetMethod("LandBounds").Invoke(null, null);
+            Assert.Greater(land.width, 15f, "kara sınırı makul");
+            foreach (var corner in new[] { new Vector3(land.xMin, land.yMin), new Vector3(land.xMax, land.yMin), new Vector3(land.xMin, land.yMax), new Vector3(land.xMax, land.yMax) })
             {
                 var v = camera.WorldToViewportPoint(corner);
                 Assert.That(v.x, Is.InRange(-0.001f, 1.001f), $"aspect {aspect:0.000} köşe {corner} x={v.x}");

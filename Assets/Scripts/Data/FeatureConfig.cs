@@ -16,11 +16,13 @@ public sealed class FeatureConfig : ScriptableObject
     [Header("Ada sabit kamera")]
     public bool islandFixedCamera = true;
     /// <summary>Adanın iki yanındaki deniz payı (adanın genişliğinin oranı, her yan).</summary>
-    public float islandViewSeaMargin = 0.05f;
+    public float islandViewSeaMargin = 0.02f;
+    /// <summary>Kadraj dünya (22×36) yerine kara hücrelerinin sınırına göre (adacıklar dahil) hesaplanır.</summary>
+    public bool islandViewFitLand = true;
     /// <summary>Üst çubuğa ayrılan ekran yüksekliği oranı.</summary>
     public float islandViewTopHudFraction = 0.07f;
     /// <summary>Alt düğmelere ayrılan ekran yüksekliği oranı.</summary>
-    public float islandViewBottomHudFraction = 0.11f;
+    public float islandViewBottomHudFraction = 0.08f;
 
     [Header("Bulut geçişi (Ana Üs ↔ Ada)")]
     public bool cloudTransition = true;

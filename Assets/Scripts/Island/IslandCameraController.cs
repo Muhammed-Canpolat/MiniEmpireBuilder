@@ -49,17 +49,35 @@ public sealed class IslandCameraController : MonoBehaviour
     /// Sabit kadraj boyu: ada iki yanda deniz payıyla genişliğe sığar, yükseklik üst çubuk/alt düğme payları düşülmüş
     /// bandına sığar; ikisinin büyüğü. Merkez adanın ortası, dikey olarak bant ortasına oturtulur.
     /// </summary>
+    /// <summary>Kara hücrelerinin dünya sınırı (adacıklar dahil; deniz hariç). Kadraj buna göre hesaplanır.</summary>
+    public static Rect LandBounds()
+    {
+        if (landBounds.HasValue) return landBounds.Value;
+        int minC = int.MaxValue, maxC = int.MinValue, minR = int.MaxValue, maxR = int.MinValue;
+        for (int r = 0; r < IslandLayout.Height; r++)
+            for (int c = 0; c < IslandLayout.Width; c++)
+                if (IslandLayout.IsLand(c, r)) { minC = Mathf.Min(minC, c); maxC = Mathf.Max(maxC, c); minR = Mathf.Min(minR, r); maxR = Mathf.Max(maxR, r); }
+        if (minC > maxC) { landBounds = new Rect(0f, 0f, IslandLayout.Width, IslandLayout.Height); return landBounds.Value; }
+        // World(col,row) = (col, Height-row): satır büyüdükçe y küçülür; hücre 1 u. Kıyı köpüğü için yarım hücre pay.
+        float xMin = minC - 0.5f, xMax = maxC + 1.5f;
+        float yMin = IslandLayout.Height - maxR - 1.5f, yMax = IslandLayout.Height - minR + 0.5f;
+        landBounds = Rect.MinMaxRect(Mathf.Max(0f, xMin), Mathf.Max(0f, yMin), Mathf.Min(IslandLayout.Width, xMax), Mathf.Min(IslandLayout.Height, yMax));
+        return landBounds.Value;
+    }
+    private static Rect? landBounds;
+
     public static void ComputeFixedView(float aspect, out Vector2 center, out float size)
     {
         var config = FeatureConfig.Instance;
         aspect = Mathf.Max(0.3f, aspect);
+        var land = config.islandViewFitLand ? LandBounds() : new Rect(0f, 0f, IslandLayout.Width, IslandLayout.Height);
         float usable = Mathf.Clamp(1f - config.islandViewTopHudFraction - config.islandViewBottomHudFraction, 0.3f, 1f);
-        float widthFit = IslandLayout.Width * 0.5f * (1f + 2f * config.islandViewSeaMargin) / aspect;
-        float heightFit = IslandLayout.Height * 0.5f / usable;
+        float widthFit = land.width * 0.5f * (1f + 2f * config.islandViewSeaMargin) / aspect;
+        float heightFit = land.height * 0.5f / usable;
         size = Mathf.Max(widthFit, heightFit);
         // Bandın ortası (alt pay + usable/2) viewport'ta 0.5 değilse dünya merkezini ona göre kaydır
         float bandCenter = config.islandViewBottomHudFraction + usable * 0.5f;
-        center = new Vector2(IslandLayout.Width * 0.5f, IslandLayout.Height * 0.5f - (bandCenter - 0.5f) * 2f * size);
+        center = new Vector2(land.center.x, land.center.y - (bandCenter - 0.5f) * 2f * size);
     }
 
     public void ApplyFixedView()
