@@ -42,8 +42,38 @@ public sealed class IslandCameraController : MonoBehaviour
 
     public Vector2 BattleCenter => new Vector2(IslandLayout.Width * 0.5f, IslandLayout.Height * 0.5f + 1.2f);   // üst HUD ≈3 u pay
 
+    /// <summary>Savaş dışında sabit kadraj (FeatureConfig.islandFixedCamera): kaydırma/zum yok.</summary>
+    public static bool FixedView => FeatureConfig.Instance.islandFixedCamera;
+
+    /// <summary>
+    /// Sabit kadraj boyu: ada iki yanda deniz payıyla genişliğe sığar, yükseklik üst çubuk/alt düğme payları düşülmüş
+    /// bandına sığar; ikisinin büyüğü. Merkez adanın ortası, dikey olarak bant ortasına oturtulur.
+    /// </summary>
+    public static void ComputeFixedView(float aspect, out Vector2 center, out float size)
+    {
+        var config = FeatureConfig.Instance;
+        aspect = Mathf.Max(0.3f, aspect);
+        float usable = Mathf.Clamp(1f - config.islandViewTopHudFraction - config.islandViewBottomHudFraction, 0.3f, 1f);
+        float widthFit = IslandLayout.Width * 0.5f * (1f + 2f * config.islandViewSeaMargin) / aspect;
+        float heightFit = IslandLayout.Height * 0.5f / usable;
+        size = Mathf.Max(widthFit, heightFit);
+        // Bandın ortası (alt pay + usable/2) viewport'ta 0.5 değilse dünya merkezini ona göre kaydır
+        float bandCenter = config.islandViewBottomHudFraction + usable * 0.5f;
+        center = new Vector2(IslandLayout.Width * 0.5f, IslandLayout.Height * 0.5f - (bandCenter - 0.5f) * 2f * size);
+    }
+
+    public void ApplyFixedView()
+    {
+        ComputeFixedView(cam.aspect, out var center, out float size);
+        cam.orthographicSize = size;
+        cam.transform.position = new Vector3(center.x, center.y, cam.transform.position.z);
+    }
+
+    private bool IsFixed => FixedView && !InBattle && !FullFrame;
+
     public void SetDefaultView()
     {
+        if (FixedView) { ApplyFixedView(); return; }
         cam.orthographicSize = Mathf.Max(0.1f, FullSize * Progression.Island.CameraDefaultZoom);
         // Kale görünümde üstte: açılış kaleden (üst-orta) başlar.
         var center = IslandLayout.CastleCenter + new Vector2(0f, -5.5f);
@@ -53,6 +83,7 @@ public sealed class IslandCameraController : MonoBehaviour
 
     public void SetFullView()
     {
+        if (FixedView) { ApplyFixedView(); return; }
         cam.orthographicSize = FullSize;
         cam.transform.position = new Vector3(IslandLayout.Width * 0.5f, IslandLayout.Height * 0.5f, cam.transform.position.z);
         ClampView();
@@ -174,6 +205,7 @@ public sealed class IslandCameraController : MonoBehaviour
         if (cam == null || moving) return;
         if (InBattle) { UpdateBattleFollow(); return; }
         if (Locked) return;
+        if (IsFixed) { ClampView(); return; }   // sabit kadraj: giriş okunmaz
         HandleInput();
         ClampView();
     }
@@ -219,7 +251,7 @@ public sealed class IslandCameraController : MonoBehaviour
     /// <summary>Yerleştirmede hayalet ekran kenarına yaklaşınca kamerayı kaydırır (Ana Üs EdgeScroll ile aynı kural).</summary>
     public void EdgeScroll(Vector2 screenPoint)
     {
-        if (cam == null) return;
+        if (cam == null || IsFixed) return;   // sabit kadrajda kenar kaydırması yok
         Rect view = cam.pixelRect;
         float marginX = view.width * BaseCameraController.EdgeFraction, marginY = view.height * BaseCameraController.EdgeFraction;
         float dx = 0f, dy = 0f;
@@ -239,7 +271,7 @@ public sealed class IslandCameraController : MonoBehaviour
     /// <summary>Alt panel açılınca seçilen yapı panelin üstünde kalsın: dünya noktasını ekranın üst yarısına (viewportY) süzer.</summary>
     public void FocusUpper(Vector2 world, float viewportY = 0.74f, float seconds = 0.3f)
     {
-        if (cam == null || InBattle || Locked) return;
+        if (cam == null || InBattle || Locked || IsFixed) return;
         float size = cam.orthographicSize;
         float halfWidth = size * cam.aspect;
         float x = ClampAxis(world.x, halfWidth, -BoundsPad, IslandLayout.Width + BoundsPad, IslandLayout.Width * 0.5f);
@@ -251,7 +283,7 @@ public sealed class IslandCameraController : MonoBehaviour
     /// <summary>Dünya noktası görüş alanının iç %80'inde değilse kamerayı ona ortalar.</summary>
     public void EnsureVisible(Vector2 world)
     {
-        if (cam == null) return;
+        if (cam == null || IsFixed) return;
         Vector3 viewport = cam.WorldToViewportPoint(new Vector3(world.x, world.y, 0f));
         if (viewport.x > 0.1f && viewport.x < 0.9f && viewport.y > 0.1f && viewport.y < 0.9f) return;
         cam.transform.position = new Vector3(world.x, world.y, cam.transform.position.z);
@@ -260,6 +292,7 @@ public sealed class IslandCameraController : MonoBehaviour
 
     public void ZoomBy(float factor, Vector2 screenPoint)
     {
+        if (IsFixed) return;
         Vector3 before = cam.ScreenToWorldPoint(screenPoint);
         float full = FullSize;
         cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * factor, full * Progression.Island.CameraMinZoom, full);
@@ -275,6 +308,7 @@ public sealed class IslandCameraController : MonoBehaviour
     {
         float full = FullSize;
         if (full <= 0f) return;
+        if (IsFixed && !moving) { ApplyFixedView(); return; }
         if (!Locked && !moving)
             cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, full * Progression.Island.CameraMinZoom, full);
         float halfHeight = cam.orthographicSize, halfWidth = halfHeight * cam.aspect;
