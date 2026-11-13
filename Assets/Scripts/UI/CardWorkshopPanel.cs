@@ -124,6 +124,27 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         return button;
     }
 
+    /// <summary>AŞAMA 3 §3E: düğmenin soluna ikon koyar, yazıyı sağa iter (sayı/etiket çıplak kalmaz).</summary>
+    private static void ButtonIcon(Button button, TextMeshProUGUI label, Sprite sprite, float size = 18f, string name = "Icon")
+    {
+        var icon = ReferenceUiVisuals.Image(button.transform, name, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(6f, -size / 2f), new Vector2(6f + size, size / 2f), Color.white);
+        icon.sprite = sprite;
+        icon.preserveAspect = true;
+        icon.enabled = sprite != null;
+        if (label == null) return;
+        label.rectTransform.offsetMin = new Vector2(size + 8f, label.rectTransform.offsetMin.y);
+        label.rectTransform.offsetMax = new Vector2(-10f, label.rectTransform.offsetMax.y);   // yazı düğme kenarına değmesin
+        label.fontSizeMax = Mathf.Min(label.fontSizeMax, 11f);
+    }
+
+    private static void Header(Transform parent, string name, string text, float x, float y, float w, TextAlignmentOptions align = TextAlignmentOptions.Left)
+    {
+        var tx = Tx(parent, name, text, 11, InkMuted, x, y, w, 15f, align, true, true);
+        tx.characterSpacing = 1.2f;
+        tx.textWrappingMode = TextWrappingModes.NoWrap;
+    }
+
     private static void Dim(Button button, bool enabled)
     {
         button.interactable = enabled;
@@ -148,9 +169,46 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         else panel.color = ReferenceUiVisuals.Panel;
         panel.raycastTarget = true;
         panel.transform.localScale = Vector3.one * 0.9f;
-        panel.transform.DOScale(1f, 0.18f).SetEase(Ease.OutBack).SetLink(panel.gameObject);
+        panel.transform.DOScale(FitFor(CanvasSize().x, CanvasSize().y), 0.18f).SetEase(Ease.OutBack).SetLink(panel.gameObject);
         content = panel.rectTransform;
+        FitScale();
         Rebuild();
+    }
+
+    /// <summary>AŞAMA 3 §3E: panel 366×770 sabit; 3:4 gibi kısa tuvallerde (≈497×662) ekrana sığacak kadar küçülür. Ölçü tuval boyudur (px değil).</summary>
+    public static float FitFor(float canvasWidth, float canvasHeight)
+    {
+        if (!FeatureConfig.Instance.workshopPanelFit || canvasWidth <= 0f || canvasHeight <= 0f) return 1f;
+        return Mathf.Min(1f, canvasHeight * 0.97f / PanelHeight, canvasWidth * 0.99f / PanelWidth);
+    }
+
+    /// <summary>Tuval boyu: kök tuvalin rect'i; henüz hesaplanmadıysa CanvasScaler formülüyle (ref 390×844, match 0,5).</summary>
+    private Vector2 CanvasSize()
+    {
+        var canvas = GetComponentInParent<Canvas>();
+        var rect = canvas != null ? canvas.rootCanvas.GetComponent<RectTransform>().rect : default;
+        if (rect.width > 1f && rect.height > 1f) return rect.size;
+        float factor = Mathf.Sqrt(Screen.width / 390f * (Screen.height / 844f));
+        return factor > 0f ? new Vector2(Screen.width / factor, Screen.height / factor) : new Vector2(390f, 844f);
+    }
+
+    /// <summary>Tuval boyu değişti (döndürme/test): paneli yeniden sığdırır.</summary>
+    public void Refit() => FitScale();
+
+    /// <summary>Ekran/hedef doku boyu (px) verilince ölçeği CanvasScaler formülüyle (ref 390×844, match 0,5) hesaplar (testler/ekran görüntüsü).</summary>
+    public void RefitForPixels(float pixelWidth, float pixelHeight)
+    {
+        float factor = Mathf.Sqrt(pixelWidth / 390f * (pixelHeight / 844f));
+        if (content == null || factor <= 0f) return;
+        content.localScale = Vector3.one * FitFor(pixelWidth / factor, pixelHeight / factor);
+    }
+
+    private Vector2 lastCanvas;
+    private void FitScale()
+    {
+        if (content == null) return;
+        lastCanvas = CanvasSize();
+        content.localScale = Vector3.one * FitFor(lastCanvas.x, lastCanvas.y);
     }
 
     private readonly List<GameObject> dynamic = new List<GameObject>();
@@ -209,7 +267,8 @@ public sealed class CardWorkshopPanel : MonoBehaviour
             $"x{CardWorkshop.UsesPerCraft} uses per craft · 1 battle = 1 use · spent on defeat too"), 12, InkMuted, 22f, 92f, w - 44f, 18f, TextAlignmentOptions.Left, true);
 
         // Üretim kuyruğu
-        Tx(p, "QueueTitle", L.T("ÜRETİM", "PRODUCTION"), 13, Ink, 22f, 114f, 120f, 18f, TextAlignmentOptions.Left, true, true);
+        Tx(p, "QueueTitle", L.T("ÜRETİM KUYRUĞU", "PRODUCTION QUEUE"), 13, Ink, 22f, 114f, 170f, 18f, TextAlignmentOptions.Left, true, true);
+        Header(p, "SpeedUpHeader", L.T("HIZLANDIR", "SPEED UP"), w - 196f, 117f, 160f, TextAlignmentOptions.Center);
         int slots = Mathf.Max(1, CardWorkshop.QueueSlots);
         var queue = CardWorkshop.Queue;
         for (int i = 0; i < slots; i++) QueueRow(p, i, i < queue.Count ? queue[i] : null, 134f + i * 58f);
@@ -243,14 +302,16 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         var card = (BattleCard)job.card;
         Pic(paper.transform, "Icon", CampaignSceneSetup.Art(BattleCards.IconName(card)), 8f, 8f, 34f, 34f);
         Tx(paper.transform, "Name", $"{BattleCards.Name(card)} ×{job.uses}", 14, Ink, 48f, 2f, 120f, 18f, TextAlignmentOptions.Left, true);
-        var time = Tx(paper.transform, "Time", Progression.FormatDuration(CardWorkshop.SecondsLeft(job)), 13, InkMuted, 48f, 19f, 120f, 16f, TextAlignmentOptions.Left, true);
+        Pic(paper.transform, "ClockIcon", CampaignSceneSetup.Art("ui_icon_clock"), 48f, 19f, 15f, 15f);
+        var time = Tx(paper.transform, "Time", Progression.FormatDuration(CardWorkshop.SecondsLeft(job)), 13, InkMuted, 66f, 19f, 102f, 16f, TextAlignmentOptions.Left, true);
         var bar = ReferenceUiVisuals.Image(paper.transform, "BarBg", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(48f, -47f), new Vector2(168f, -37f), new Color(0.25f, 0.17f, 0.1f, 0.85f));
         var fill = ReferenceUiVisuals.Image(bar.transform, "Fill", Vector2.zero, new Vector2(CardWorkshop.Progress01(job), 1f), new Vector2(1f, 1f), new Vector2(-1f, -1f), new Color(0.35f, 0.72f, 0.3f));
         timers.Add((job, fill, time));
         int adsLeft = AdRewards.WorkshopAdsLeft;
         int captured = index;
         var ad = TsButton(paper.transform, "Ad", L.T($"REKLAM\n{adsLeft}/{GemEconomy.DailyWorkshopAds}", $"AD\n{adsLeft}/{GemEconomy.DailyWorkshopAds}"), false,
-            w - 36f - 160f, 4f, 92f, 44f, 11, out _);
+            w - 36f - 160f, 4f, 92f, 44f, 11, out var adLabel);
+        ButtonIcon(ad, adLabel, CampaignSceneSetup.Art("ui_icon_play"), 20f);
         Dim(ad, adsLeft > 0);
         ad.onClick.AddListener(() => RewardedAds.Show("workshop_finish", ok =>
         {
@@ -258,8 +319,8 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         }));
         int gems = CardWorkshop.FinishGemCost(index);
         var gem = TsButton(paper.transform, "Gem", gems > 0 ? gems.ToString() : L.T("BEDAVA", "FREE"), true, w - 36f - 62f, 6f, 54f, 40f, 13, out var gemLabel);
-        gemLabel.rectTransform.offsetMin = new Vector2(gems > 0 ? 18f : 4f, 3f);
-        if (gems > 0) GemConfirm.AddGemIcon(gem.transform);
+        if (gems > 0) ButtonIcon(gem, gemLabel, GemIcon.Sprite, 16f, "GemIcon");   // ikon + sayı (çıplak sayı yok)
+        else gemLabel.rectTransform.offsetMin = new Vector2(4f, 3f);
         gem.onClick.AddListener(() =>
         {
             int cost = CardWorkshop.FinishGemCost(captured);
@@ -322,27 +383,38 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         bool tierOpen = CardWorkshop.IsUnlocked(card);
         bool free = CardWorkshop.FirstCraftFree(card);
         int meat = CardWorkshop.MeatCost(card), gold = CardWorkshop.GoldCost(card), seconds = CardWorkshop.CraftSeconds(card);
-        float rowY = 64f;
+        // AŞAMA 3 §3E: başlıklı bölümler (MALİYET · SÜRE) + her fiyat ikonlu
+        Header(paper.transform, "CostHeader", L.T("MALİYET", "COST"), 12f, 62f, 120f);
+        Header(paper.transform, "TimeHeader", L.T("SÜRE", "TIME"), 152f, 62f, 80f);
+        float rowY = 78f;
         Pic(paper.transform, "MeatIcon", IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.meatIcon : null, 12f, rowY, 24f, 24f);
         bool meatShort = IslandEconomy.Meat < meat;
-        Tx(paper.transform, "MeatCost", meat.ToString(), 15, meatShort ? Warn : Ink, 40f, rowY, 52f, 24f, TextAlignmentOptions.Left, true);
-        Pic(paper.transform, "GoldIcon", CampaignSceneSetup.Art("ui_icon_coin"), 94f, rowY, 24f, 24f);
+        Tx(paper.transform, "MeatCost", meat.ToString(), 15, meatShort ? Warn : Ink, 38f, rowY, 40f, 24f, TextAlignmentOptions.Left, true);
+        Pic(paper.transform, "GoldIcon", CampaignSceneSetup.Art("ui_icon_coin"), 80f, rowY, 24f, 24f);
         bool goldShort = GameManager.Instance != null && GameManager.Instance.Gold < gold;
-        Tx(paper.transform, "GoldCost", gold.ToString(), 15, goldShort ? Warn : Ink, 122f, rowY, 56f, 24f, TextAlignmentOptions.Left, true);
-        Pic(paper.transform, "ClockIcon", CampaignSceneSetup.Art("ui_icon_clock"), 180f, rowY, 24f, 24f);
-        Tx(paper.transform, "Time", Progression.FormatDuration(seconds), 14, Ink, 208f, rowY, 70f, 24f, TextAlignmentOptions.Left, true);
-        Tx(paper.transform, "Uses", $"+{CardWorkshop.UsesPerCraft}", 15, new Color(0.15f, 0.5f, 0.2f), inner - 56f, rowY, 46f, 24f, TextAlignmentOptions.Right, true);
-        if (free) Tx(paper.transform, "Free", L.T("İLK ÜRETİM BEDAVA · 30 sn", "FIRST CRAFT FREE · 30 s"), 12, new Color(0.15f, 0.5f, 0.2f), 12f, rowY + 26f, inner - 24f, 16f, TextAlignmentOptions.Left, true);
+        Tx(paper.transform, "GoldCost", gold.ToString(), 15, goldShort ? Warn : Ink, 106f, rowY, 44f, 24f, TextAlignmentOptions.Left, true);
+        Pic(paper.transform, "ClockIcon", CampaignSceneSetup.Art("ui_icon_clock"), 152f, rowY, 22f, 24f);
+        Tx(paper.transform, "Time", Progression.FormatDuration(seconds), 14, Ink, 176f, rowY, 56f, 24f, TextAlignmentOptions.Left, true);
+        // "+N kullanım": kart/parşömen ikonu + metin (çıplak sayı yok)
+        Pic(paper.transform, "UsesIcon", CampaignSceneSetup.Art("ui_scroll"), 236f, rowY, 20f, 24f);
+        Tx(paper.transform, "Uses", L.T($"+{CardWorkshop.UsesPerCraft} kullanım", $"+{CardWorkshop.UsesPerCraft} uses"), 12, new Color(0.15f, 0.5f, 0.2f), 258f, rowY, inner - 262f, 24f, TextAlignmentOptions.Left, true);
+        float hintY = rowY + 26f;
+        if (free) Tx(paper.transform, "Free", L.T("İLK ÜRETİM BEDAVA · 30 sn", "FIRST CRAFT FREE · 30 s"), 12, new Color(0.15f, 0.5f, 0.2f), 12f, hintY, inner - 24f, 16f, TextAlignmentOptions.Left, true);
         else if (meatShort && tierOpen)
-            Tx(paper.transform, "MeatHint", L.T($"Et eksik ({meat - IslandEconomy.Meat}): Martı Adası Ağılı · ya da {CardWorkshop.MeatShortfallGems(card)} elmas",
-                $"Meat short ({meat - IslandEconomy.Meat}): Gull Isle Pasture · or {CardWorkshop.MeatShortfallGems(card)} gems"), 12, Warn, 12f, rowY + 26f, inner - 24f, 16f, TextAlignmentOptions.Left, true);
+        {
+            Tx(paper.transform, "MeatHint", L.T($"Et eksik ({meat - IslandEconomy.Meat}): Ağıl'dan ya da", $"Meat short ({meat - IslandEconomy.Meat}): Pasture or"), 12, Warn, 12f, hintY, 160f, 16f, TextAlignmentOptions.Left, true);
+            Pic(paper.transform, "HintGemIcon", GemIcon.Sprite, 176f, hintY - 1f, 18f, 18f);
+            Tx(paper.transform, "HintGems", CardWorkshop.MeatShortfallGems(card).ToString(), 13, Warn, 196f, hintY, 50f, 16f, TextAlignmentOptions.Left, true);
+        }
 
         string block = CardWorkshop.CraftBlockReason(card);
-        var craft = TsButton(paper.transform, "Craft", block != null ? block.ToUpperInvariant() : L.T("ÜRET", "CRAFT"), false, 12f, rowY + 46f, inner * 0.5f - 16f, 44f, 15, out _);
+        float buttonsY = hintY + 22f;
+        var craft = TsButton(paper.transform, "Craft", block != null ? block.ToUpperInvariant() : L.T("ÜRET", "CRAFT"), false, 12f, buttonsY + 2f, inner * 0.5f - 16f, 44f, 15, out _);
         Dim(craft, block == null);
         craft.onClick.AddListener(() => BeginCraft(card, false));
         int adsLeft = AdRewards.WorkshopAdsLeft;
-        var adCraft = TsButton(paper.transform, "CraftAd", L.T($"REKLAMLA\nÜRET · {adsLeft}/{GemEconomy.DailyWorkshopAds}", $"CRAFT\nWITH AD · {adsLeft}/{GemEconomy.DailyWorkshopAds}"), true, inner * 0.5f + 4f, rowY + 44f, inner * 0.5f - 16f, 48f, 12, out _);
+        var adCraft = TsButton(paper.transform, "CraftAd", L.T($"REKLAMLA ÜRET ({adsLeft}/{GemEconomy.DailyWorkshopAds})", $"CRAFT WITH AD ({adsLeft}/{GemEconomy.DailyWorkshopAds})"), true, inner * 0.5f + 4f, buttonsY, inner * 0.5f - 16f, 48f, 12, out var adCraftLabel);
+        ButtonIcon(adCraft, adCraftLabel, CampaignSceneSetup.Art("ui_icon_play"), 22f);
         Dim(adCraft, block == null && adsLeft > 0);
         adCraft.onClick.AddListener(() => BeginCraft(card, true));
     }
@@ -390,6 +462,7 @@ public sealed class CardWorkshopPanel : MonoBehaviour
 
     private void Update()
     {
+        if ((CanvasSize() - lastCanvas).sqrMagnitude > 0.25f) FitScale();
         if (Time.unscaledTime < nextTick) return;
         nextTick = Time.unscaledTime + 0.25f;
         foreach (var (job, fill, time) in timers)
