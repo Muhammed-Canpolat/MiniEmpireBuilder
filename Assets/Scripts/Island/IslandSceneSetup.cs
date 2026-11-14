@@ -101,6 +101,8 @@ public sealed class IslandSceneSetup : MonoBehaviour
         Archer = IslandArcher.Create(archerLevel, keep, 0);
         Archer.AutoFire = IslandSession.AutoFireUnlocked(keep) && (IslandSession.Save?.autoFire ?? false);
         IslandAbilities.Attach(Archer);
+        // 6. oturum (3.2): Okçu Kaptan ancak Okçuluk Alanı tamamlanınca adada (öğreticiyle kurulur, binadan çıkıp yürür).
+        if (!IslandEconomy.HasArcheryReady(IslandSession.Save)) Archer.gameObject.SetActive(false);
         BuildPostMarkers();
 
         Raid = gameObject.AddComponent<IslandRaidManager>();
@@ -115,6 +117,27 @@ public sealed class IslandSceneSetup : MonoBehaviour
         RefreshZones();
         CameraController.SetDefaultView();
         Ready = true;
+    }
+
+    /// <summary>6. oturum (3.2): Okçuluk Alanı bitti → okçu binanın kapısında belirir ve ilk atış yerine koşar.</summary>
+    public void RevealArcher()
+    {
+        if (Archer == null || Archer.gameObject.activeSelf) return;
+        var save = IslandSession.Save;
+        Vector2 door = Archer.transform.position;
+        if (save?.placed != null)
+            foreach (var b in save.placed)
+                if (b != null && b.level >= 1 && b.kind == nameof(IslandLayout.BuildingKind.Archery))
+                {
+                    var spot = new IslandLayout.BuildingSpot { kind = IslandLayout.BuildingKind.Archery, col = b.col, row = b.row,
+                        w = IslandLayout.Building(IslandLayout.BuildingKind.Archery).w, h = IslandLayout.Building(IslandLayout.BuildingKind.Archery).h };
+                    door = IslandLayout.World(spot.DoorCell);
+                    break;
+                }
+        Archer.transform.position = new Vector3(door.x, door.y, Archer.transform.position.z);
+        Archer.gameObject.SetActive(true);
+        Archer.MoveToPost(0);
+        BattleVfxManager.Instance?.SpawnSpark(door);
     }
 
     private GameObject Spawn(string resourcePath)

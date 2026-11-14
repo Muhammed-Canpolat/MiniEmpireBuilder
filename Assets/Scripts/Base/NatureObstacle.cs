@@ -39,11 +39,16 @@ public sealed class NatureObstacle : MonoBehaviour
         : kind == NatureKind.Bush ? L.T("Çalı", "Bush")
         : kind == NatureKind.Rock ? L.T("Kaya", "Rock") : L.T("Kütük", "Stump");
 
-    private void OnEnable() => ByCell[_cell] = this;
+    private void OnEnable()
+    {
+        ByCell[_cell] = this;
+        if (GameManager.Instance != null) GameManager.Instance.OnBuilderTaskCompleted += OnTaskCompleted;   // 6. oturum (4.2)
+    }
 
     private void OnDisable()
     {
         if (ByCell.TryGetValue(_cell, out var current) && current == this) ByCell.Remove(_cell);
+        if (GameManager.Instance != null) GameManager.Instance.OnBuilderTaskCompleted -= OnTaskCompleted;
     }
 
     /// <summary>Hücre dikdörtgeninde doğa nesnesi var mı?</summary>
@@ -57,6 +62,71 @@ public sealed class NatureObstacle : MonoBehaviour
     }
 
     /// <summary>Altın harcayıp nesneyi kaldırır ve kayda yazar. Altın yetmezse false.</summary>
+    /// <summary>6. oturum (4.2): görev kimliği (inşaatçı "remove" görevinin slotId'si).</summary>
+    public string TaskSlot => "nature:" + Id;
+
+    /// <summary>
+    /// Süreli temizleme: sıraya girer; inşaatçı boşalınca altın ödenir, inşaatçı gelip temizler (süre FeatureConfig'ten), bitince ödül.
+    /// Bitiş GameManager'da kayda yazılır (oyun kapalıyken de), sahnedeki nesne <see cref="OnTaskCompleted"/> ile söner.
+    /// </summary>
+    public bool RequestClear()
+    {
+        var gm = GameManager.Instance;
+        if (gm == null || NatureClear.IsQueued(Id) || gm.TaskForSlot(TaskSlot) != null) return false;
+        var size = NatureClear.SizeOf(kind);
+        NatureClear.Enqueue(Id, transform, size, () =>
+        {
+            if (this == null) return null;
+            if (!gm.HasFreeBuilder) return false;
+            if (!gm.SpendGold(RemoveCost))
+            {
+                BaseSceneSetup.Instance?.ShowHudToast(L.T("Yeterli altın yok", "Not enough gold"));
+                return null;
+            }
+            bool ok = BuilderSystem.Instance != null
+                ? BuilderSystem.Instance.TryStartTask("Kaldırma", NatureClear.SecondsFor(size), transform.position, null, TaskSlot)
+                : gm.StartBuilderTask("remove", "Kaldırma", NatureClear.SecondsFor(size), transform.position, TaskSlot);
+            if (!ok) { gm.AddGold(RemoveCost); return false; }
+            return true;
+        }, () => GameManager.TaskProgress(gm.TaskForSlot(TaskSlot)));
+        return true;
+    }
+
+
+    private void OnTaskCompleted(BuilderTaskSave task)
+    {
+        if (task == null || task.slotId != TaskSlot) return;
+        NatureClear.Finish(Id, transform.position, RewardText(kind));
+        ByCell.Remove(cell);
+        Destroy(gameObject);
+    }
+
+    /// <summary>Ödülü verir (GameManager görev bitişinde çağırır; sahne olmasa da).</summary>
+    public static string GrantReward(NatureKind kind)
+    {
+        var c = FeatureConfig.Instance;
+        switch (kind)
+        {
+            case NatureKind.Tree: IslandEconomy.AddWood(c.clearRewardTreeWood); break;
+            case NatureKind.Stump: IslandEconomy.AddWood(c.clearRewardStumpWood); break;
+            case NatureKind.Bush: IslandEconomy.AddMeat(c.clearRewardBushMeat); break;
+            default: GameManager.Instance?.AddGold(c.clearRewardRockGold); break;
+        }
+        return RewardText(kind);
+    }
+
+    public static string RewardText(NatureKind kind)
+    {
+        var c = FeatureConfig.Instance;
+        switch (kind)
+        {
+            case NatureKind.Tree: return L.T($"+{c.clearRewardTreeWood} Odun", $"+{c.clearRewardTreeWood} Wood");
+            case NatureKind.Stump: return L.T($"+{c.clearRewardStumpWood} Odun", $"+{c.clearRewardStumpWood} Wood");
+            case NatureKind.Bush: return L.T($"+{c.clearRewardBushMeat} Et", $"+{c.clearRewardBushMeat} Meat");
+            default: return L.T($"+{c.clearRewardRockGold} Altın", $"+{c.clearRewardRockGold} Gold");
+        }
+    }
+
     public bool TryRemove()
     {
         var gm = GameManager.Instance;

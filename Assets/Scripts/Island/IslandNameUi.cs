@@ -195,14 +195,14 @@ public sealed class IslandNameUi : MonoBehaviour
     public bool TryApply()
     {
         if (!IslandNameRules.Validate(field.text, out string clean, out string error)) { errorText.text = error; return false; }
-        int cost = IslandNameRules.NextCost(save);
+        int cost = mode == Mode.First ? 0 : IslandNameRules.NextCost(save);
         var gm = GameManager.Instance;
         if (cost > 0)
         {
             if (gm == null || gm.Gems < cost) { Close(); GemShopUI.Open(); return false; }
             if (!gm.SpendGems(cost)) { errorText.text = L.T("Elmas yetmiyor.", "Not enough gems."); return false; }
         }
-        IslandNameRules.Apply(save, clean);
+        IslandNameRules.ApplyNaming(save, clean, mode == Mode.First);
         gm?.SaveGame();
         var done = onApplied;
         Close();

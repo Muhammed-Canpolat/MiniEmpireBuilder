@@ -65,6 +65,8 @@ public sealed class IslandBuildUi
         return card.free.gameObject.activeSelf ? card.free.text.Replace("\n", " ") : card.wood.text + "/" + card.meat.text;
     }
     public string MenuCardInfoText(IslandLayout.BuildingKind kind) => cards.Find(c => c.kind == kind)?.info.text;
+    /// <summary>6. oturum (3.2): öğretici bu kartın çevresini açık bırakır.</summary>
+    public RectTransform MenuCardRect(IslandLayout.BuildingKind kind) => cards.Find(c => c.kind == kind)?.paper?.rectTransform;
 
     private static Sprite Ui(string name)
     {
@@ -284,17 +286,26 @@ public sealed class IslandBuildUi
             }
             else
             {
-                card.free.text = L.T("İLK YAPIM\nBEDAVA", "FIRST BUILD\nFREE");
+                card.free.text = L.T("ÜCRETSİZ", "FREE");
                 card.free.color = new Color(0.55f, 1f, 0.55f);
             }
-            bool showCost = !free && !lockedByKeep;
+            // 6. oturum (3.2): altın bedeli (Oduncu/Ağıl ucuz). Odun/Et yoksa yalnız altın gösterilir.
+            int gold = buildable && !free && !lockedByKeep ? IslandEconomy.BuildGold(card.kind) : 0;
+            if (gold > 0 && cost.wood + cost.meat == 0)
+            {
+                card.free.gameObject.SetActive(true);
+                card.free.text = L.T($"{gold} ALTIN", $"{gold} GOLD");
+                card.free.color = GameManager.Instance != null && GameManager.Instance.Gold < gold ? new Color(1f, 0.5f, 0.4f) : new Color(1f, 0.85f, 0.4f);
+            }
+            bool showCost = !free && !lockedByKeep && cost.wood + cost.meat > 0;
+            if (gold > 0 && showCost) card.info.text = "";
             card.wood.gameObject.SetActive(showCost); card.meat.gameObject.SetActive(showCost);
             card.woodIcon.gameObject.SetActive(showCost); card.meatIcon.gameObject.SetActive(showCost);
             card.wood.text = !buildable ? "-" : cost.wood.ToString();
             card.meat.text = !buildable ? "-" : cost.meat.ToString();
             card.wood.color = save != null && save.wood < cost.wood ? new Color(1f, 0.5f, 0.4f) : new Color(1f, 0.95f, 0.78f);
             card.meat.color = save != null && save.meat < cost.meat ? new Color(1f, 0.5f, 0.4f) : new Color(1f, 0.95f, 0.78f);
-            card.info.text = KindPurpose(card.kind);
+            card.info.text = gold > 0 && showCost ? L.T($"+ {gold} altın · ", $"+ {gold} gold · ") + KindPurpose(card.kind) : KindPurpose(card.kind);
             string blocked = KindBlockedReason(card.kind);
             card.state.text = $"{have}/{max}";
             card.paper.color = blocked == null ? Color.white : new Color(0.7f, 0.7f, 0.7f);
@@ -397,6 +408,7 @@ public sealed class IslandBuildUi
 
     public void Close()
     {
+        zoneHighlight?.Hide(); zoneHighlight = null;
         mode = Mode.None; targetId = null;
         SelectionManager.Release(this);
         if (menuRoot != null) menuRoot.SetActive(false);
@@ -415,7 +427,40 @@ public sealed class IslandBuildUi
 
     public void ShowCastle() { mode = Mode.Castle; targetId = null; ShowPanel(); }
 
-    public void ShowZone(int zone) { mode = Mode.Zone; targetZone = zone; targetId = null; ShowPanel(); }
+    public void ShowZone(int zone)
+    {
+        mode = Mode.Zone; targetZone = zone; targetId = null;
+        // 6. oturum (4.1): Ana Üs ile aynı sistem — bölgenin tamamı vurgulanır.
+        zoneHighlight?.Hide();
+        var cells = ZoneCells(zone);
+        zoneHighlight = AreaHighlight.Show(cells, c =>
+        {
+            Vector2 top = IslandLayout.World(c.x, c.y), bottom = IslandLayout.World(c.x + 1, c.y + 1);
+            return Rect.MinMaxRect(top.x, bottom.y, bottom.x, top.y);
+        }, IslandFx.FxSorting - 2, "ZoneHighlight");
+        ShowPanel();
+    }
+
+    private AreaHighlight zoneHighlight;
+    public AreaHighlight ZoneHighlight => zoneHighlight;
+
+    /// <summary>Bölgenin hücreleri (IslandLayout.ZoneAt).</summary>
+    public static System.Collections.Generic.List<Vector2Int> ZoneCells(int zone)
+    {
+        var list = new System.Collections.Generic.List<Vector2Int>();
+        for (int r = 0; r < IslandLayout.Height; r++)
+            for (int c = 0; c < IslandLayout.Width; c++)
+                if (IslandLayout.ZoneAt(c, r) == zone) list.Add(new Vector2Int(c, r));
+        return list;
+    }
+
+    private static int ZoneTrees(System.Collections.Generic.List<Vector2Int> cells)
+    {
+        var set = new System.Collections.Generic.HashSet<Vector2Int>(cells);
+        int n = 0;
+        foreach (var t in IslandTree.All) if (t != null && !t.Cleared && set.Contains(t.Cell)) n++;
+        return n;
+    }
 
     /// <summary>AŞAMA 2 §3: ağaç paneli (kes onayı ya da "üretim ağacı" bilgisi).</summary>
     public void ShowTree(Vector2Int cell) { mode = Mode.Tree; targetTree = cell; targetId = null; ShowPanel(); }
@@ -492,7 +537,7 @@ public sealed class IslandBuildUi
 
     // ==================== PANEL İÇERİĞİ ====================
 
-    private enum PrimaryAction { None, Upgrade, Explore, Akin, ClearTree, ClearNature }
+    private enum PrimaryAction { None, Upgrade, Explore, Akin, ClearTree, ClearNature, KeepUpgrade }
     private PrimaryAction primaryAction;
     private enum TertiaryAction { None, Collect, FinishNow, Flag }
     private TertiaryAction tertiaryAction;
@@ -553,6 +598,7 @@ public sealed class IslandBuildUi
         else
         {
             AppendStats(body, entry, kind, level);
+            AppendNext(body, kind, level);   // 6. oturum (3.3): mevcut → sonraki
             if (IslandEconomy.IsProducer(kind)) SetupWorkers(entry, kind);
         }
         panelBody.text = body.ToString();
@@ -588,7 +634,7 @@ public sealed class IslandBuildUi
 
         string blocked = IslandEconomy.UpgradeBlockedReason(entry);
         string primaryText = null; bool primaryOn = false;
-        if (kind != IslandLayout.BuildingKind.Archery)
+        if (kind != IslandLayout.BuildingKind.Castle)   // 6. oturum (3.3): Okçuluk Alanı da kendi bedeliyle yükselir (= okçu seviyesi)
         {
             var cost = IslandEconomy.UpgradeCost(entry);
             if (!taskHere) SetCost(cost.wood, cost.meat, Progression.FormatDuration(cost.seconds), blocked == null || IslandEconomy.BuilderBusy || IslandEconomy.InDefense || entry.level < Progression.Island.MaxBuildingLevel(IslandEconomy.Keep));
@@ -608,6 +654,33 @@ public sealed class IslandBuildUi
         bool canMove = !IslandEconomy.InDefense;
         SetButtons(primaryText, primaryOn, L.T("TAŞI", "MOVE"), canMove, tertiaryText, tertiaryOn);
         secondaryIsMove = true;
+    }
+
+    /// <summary>6. oturum (3.3): bir sonraki seviyenin kazandırdıkları (yeşil). Tavan Kıyı Kalesi seviyesidir.</summary>
+    private static void AppendNext(System.Text.StringBuilder body, IslandLayout.BuildingKind kind, int level)
+    {
+        if (level >= Progression.MaxLevel) return;
+        int n = level + 1;
+        string line = null;
+        switch (kind)
+        {
+            case IslandLayout.BuildingKind.Lumber:
+                line = L.T($"Tam kadro {Progression.Island.WoodPerHour(level):0} → {Progression.Island.WoodPerHour(n):0} Odun/sa", $"Full crew {Progression.Island.WoodPerHour(level):0} → {Progression.Island.WoodPerHour(n):0} wood/h"); break;
+            case IslandLayout.BuildingKind.Pasture:
+                line = L.T($"Tam kadro {Progression.Island.MeatPerHour(level):0} → {Progression.Island.MeatPerHour(n):0} Et/sa", $"Full crew {Progression.Island.MeatPerHour(level):0} → {Progression.Island.MeatPerHour(n):0} meat/h"); break;
+            case IslandLayout.BuildingKind.House:
+                line = L.T($"Piyon {Progression.Island.HousePawns(level)} → {Progression.Island.HousePawns(n)}", $"Pawns {Progression.Island.HousePawns(level)} → {Progression.Island.HousePawns(n)}"); break;
+            case IslandLayout.BuildingKind.Tower:
+                line = L.T($"Hasar {Progression.TowerDamage(BuildingType.ArcherTower, level) * Progression.TowerUnits(BuildingType.ArcherTower, level):0} → {Progression.TowerDamage(BuildingType.ArcherTower, n) * Progression.TowerUnits(BuildingType.ArcherTower, n):0}",
+                    $"Damage {Progression.TowerDamage(BuildingType.ArcherTower, level) * Progression.TowerUnits(BuildingType.ArcherTower, level):0} → {Progression.TowerDamage(BuildingType.ArcherTower, n) * Progression.TowerUnits(BuildingType.ArcherTower, n):0}"); break;
+            case IslandLayout.BuildingKind.Archery:
+                line = L.T($"Okçu hasarı {Progression.Island.ArcherDamage(level):0.#} → {Progression.Island.ArcherDamage(n):0.#} · can {Progression.Island.ArcherHp(level):0} → {Progression.Island.ArcherHp(n):0}",
+                    $"Archer damage {Progression.Island.ArcherDamage(level):0.#} → {Progression.Island.ArcherDamage(n):0.#} · HP {Progression.Island.ArcherHp(level):0} → {Progression.Island.ArcherHp(n):0}"); break;
+            case IslandLayout.BuildingKind.Barracks:
+                line = L.T($"Lancer {Progression.Island.LancerCount(level)} → {Progression.Island.LancerCount(n)} · can {Progression.Island.LancerHp(level):0} → {Progression.Island.LancerHp(n):0}",
+                    $"Lancers {Progression.Island.LancerCount(level)} → {Progression.Island.LancerCount(n)} · HP {Progression.Island.LancerHp(level):0} → {Progression.Island.LancerHp(n):0}"); break;
+        }
+        if (line != null) body.AppendLine(L.T("Sonraki: ", "Next: ") + "<color=#2E7D32>" + line + "</color>");
     }
 
     private void AppendStats(System.Text.StringBuilder body, IslandPlacedBuilding entry, IslandLayout.BuildingKind kind, int level)
@@ -714,10 +787,29 @@ public sealed class IslandBuildUi
         panelBody.text = L.T($"Kale canı {Progression.Island.CastleHp(keep):0}\nCüzdan: Odun {save.wood}/{IslandEconomy.WoodCap}, Et {save.meat}/{IslandEconomy.MeatCap}\nPiyon {IslandEconomy.PawnPool(save.placed)} · Ev başına +2",
             $"Keep HP {Progression.Island.CastleHp(keep):0}\nWallet: Wood {save.wood}/{IslandEconomy.WoodCap}, Meat {save.meat}/{IslandEconomy.MeatCap}\nPawns {IslandEconomy.PawnPool(save.placed)} · +2 per house");
         workerMinus.gameObject.SetActive(false); workerPlus.gameObject.SetActive(false); workersLabel.text = "";
-        panelNote.text = L.T("Kıyı Kalesi, Ana Üs seviyesini izler.", "The keep follows the Main Base level.");
-        SetCost(0, 0, null, false);
-        primaryAction = PrimaryAction.Akin; tertiaryAction = TertiaryAction.None;
-        SetButtons(L.T("AKIN PANOSU", "RAID BOARD"), true, null, false, null, false);
+        // 6. oturum (3.3): Kıyı Kalesi kendi bedeli/süresiyle yükselir; Ana Üs yalnız kilit. Mevcut → sonraki nitelikler.
+        int target = keep + 1;
+        string blocked = IslandEconomy.KeepUpgradeBlockedReason();
+        var task = save.task;
+        bool upgrading = task != null && task.Active && task.kind == "upgrade" && task.buildingId == IslandEconomy.CastleTaskId;
+        if (keep < Progression.MaxLevel)
+            panelBody.text += "\n" + L.T($"Sonraki (Sv {target}): can {Progression.Island.CastleHp(keep):0} → <color=#2E7D32>{Progression.Island.CastleHp(target):0}</color>, Odun tavanı → {Progression.Island.WalletWood(target)}, en yüksek Akın {Progression.Island.MaxAkin(keep)} → {Progression.Island.MaxAkin(target)}",
+                $"Next (Lv {target}): HP {Progression.Island.CastleHp(keep):0} → <color=#2E7D32>{Progression.Island.CastleHp(target):0}</color>, wood cap → {Progression.Island.WalletWood(target)}, top raid {Progression.Island.MaxAkin(keep)} → {Progression.Island.MaxAkin(target)}");
+        panelNote.text = upgrading ? L.T("Yükseltme sürüyor", "Upgrade in progress") : blocked ?? L.T($"Sv {target} için Ana Üs Sv {Progression.Island.KeepRequiredMainBase(target)} yeter", $"Lv {target} needs Main Base Lv {Progression.Island.KeepRequiredMainBase(target)}");
+        tertiaryAction = TertiaryAction.None;
+        if (keep >= Progression.MaxLevel || upgrading)
+        {
+            SetCost(0, 0, null, false);
+            primaryAction = PrimaryAction.Akin;
+            SetButtons(L.T("AKIN PANOSU", "RAID BOARD"), true, null, false, null, false);
+        }
+        else
+        {
+            var cost = IslandEconomy.KeepUpgradeCost(target);
+            SetCost(cost.wood, cost.meat, Progression.FormatDuration(cost.seconds), true);
+            primaryAction = PrimaryAction.KeepUpgrade;
+            SetButtons(L.T($"YÜKSELT → Sv {target}", $"UPGRADE → Lv {target}"), blocked == null, null, false, null, false);
+        }
         secondaryIsMove = false;
     }
 
@@ -785,6 +877,12 @@ public sealed class IslandBuildUi
         bool open = IslandGrid.ZoneOpen(zone, save.zoneMask);
         panelBody.text = open ? L.T("Bölge açık. ", "Zone is open. ") + ZoneBenefit(zone)
             : L.T("Bulutların altında: ", "Hidden under clouds: ") + ZoneBenefit(zone);
+        // 6. oturum (4.1): koşul, büyüklük ve kaynak (Ana Üs arazi kartıyla aynı bilgiler)
+        var zoneCells = ZoneCells(zone);
+        if (!open)
+            panelBody.text += "\n" + L.T($"Koşul: Kıyı Kalesi Sv.{Progression.Island.ZoneKeep[zone]}", $"Requires: Keep Lv.{Progression.Island.ZoneKeep[zone]}")
+                + (IslandEconomy.Keep >= Progression.Island.ZoneKeep[zone] ? L.T(" <color=#2E7D32>(karşılandı)</color>", " <color=#2E7D32>(met)</color>") : "") + "\n"
+                + L.T($"Alan: +{zoneCells.Count} hücre · {ZoneTrees(zoneCells)} ağaç kaynağı", $"Area: +{zoneCells.Count} cells · {ZoneTrees(zoneCells)} trees");
         panelNote.text = "";
         primaryAction = PrimaryAction.None; tertiaryAction = TertiaryAction.None;
         secondaryIsMove = false;
@@ -823,6 +921,15 @@ public sealed class IslandBuildUi
                 var cost = IslandEconomy.UpgradeCost(entry);
                 bool useGems = !IslandEconomy.CanSpend(cost.wood, cost.meat);
                 if (!IslandEconomy.TryStartUpgrade(entry.id, useGems, out reason)) { Toast?.Invoke(reason); return; }
+                IslandVillage.Instance?.RebuildPawns();
+                RefreshPanel();
+                break;
+            }
+            case PrimaryAction.KeepUpgrade:
+            {
+                var c = IslandEconomy.KeepUpgradeCost(IslandEconomy.Keep + 1);
+                bool useGems = !IslandEconomy.CanSpend(c.wood, c.meat);
+                if (!IslandEconomy.TryStartKeepUpgrade(useGems, out reason)) { Toast?.Invoke(reason); return; }
                 IslandVillage.Instance?.RebuildPawns();
                 RefreshPanel();
                 break;

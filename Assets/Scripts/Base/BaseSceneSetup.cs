@@ -693,7 +693,7 @@ public class BaseSceneSetup : MonoBehaviour
         // Eski kayıtlarda taban = mevcut seviye; zaten temizlenmiş alan temiz kalır.
         if (saveData != null && saveData.natureBaselineLevel <= 0) saveData.natureBaselineLevel = currentLevel;
         var baseline = BaseWorldLayout.CleanAtLevel(saveData != null ? saveData.natureBaselineLevel : currentLevel);
-        var clean = BaseWorldLayout.CleanAtLevel(currentLevel);
+        var clean = BaseWorldLayout.CleanForTier(LandExpansion.OpenedTier);
         var random = new System.Random(76143);
         var centers = new System.Collections.Generic.List<Vector2>();
         for (int i = 0; i < 18; i++)
@@ -784,7 +784,7 @@ public class BaseSceneSetup : MonoBehaviour
 
     public void ClearUnlockedLand(int level)
     {
-        var clean = BaseWorldLayout.CleanAtLevel(level);
+        var clean = BaseWorldLayout.CleanForTier(LandExpansion.OpenedTier);   // 6. oturum (4.1)
         RefreshLockedShade(clean);
         // Doğa nesneleri genişlemede silinmez: yerleştirmeyi engeller, altın karşılığı kaldırılır (NatureObstacle).
         if (_naturalBoundaryRoot != null)
@@ -1209,6 +1209,7 @@ public class BaseSceneSetup : MonoBehaviour
         if (BaseWorldLayout.Buildable.Contains(new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y)))
             && BaseMapManager.Instance != null && !BaseMapManager.Instance.IsBuildablePosition(worldPos))
         {
+            if (LandExpansion.ShowFor(worldPos)) return;   // 6. oturum (4.1): alanın tamamı + koşul + büyüklük + AÇ
             if (_lockedLandToastRoutine != null) StopCoroutine(_lockedLandToastRoutine);
             _lockedLandToastRoutine = StartCoroutine(ShowLockedLandToast());
             return;
@@ -1307,6 +1308,7 @@ public class BaseSceneSetup : MonoBehaviour
 
         if (BaseMapManager.Instance != null && !BaseMapManager.Instance.IsBuildablePosition(worldPos))
         {
+            if (LandExpansion.ShowFor(worldPos)) return;
             if (_lockedLandToastRoutine != null) StopCoroutine(_lockedLandToastRoutine);
             _lockedLandToastRoutine = StartCoroutine(ShowLockedLandToast());
             return;
@@ -1372,8 +1374,7 @@ public class BaseSceneSetup : MonoBehaviour
     {
         int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
         int next = BaseWorldLayout.NextLandLevel(level);
-        return ShowToastRoutine(next == 0 ? L.T("Kalıcı doğal sınır", "Permanent natural border")
-            : L.T($"Ana Üs Sev. {next} ile temizlenir", $"Cleared at Main Base Lv. {next}"));
+        return ShowToastRoutine(L.T("Kalıcı doğal sınır", "Permanent natural border"));
     }
 
     private System.Collections.IEnumerator ShowToastRoutine(string message)
@@ -1411,33 +1412,53 @@ public class BaseSceneSetup : MonoBehaviour
             : obj.objectType == MapObjectType.Fence ? L.T("Çit", "Fence") : L.T("Nesne", "Object");
         bool builderFree = BuilderSystem.Instance == null || BuilderSystem.Instance.HasAvailableBuilder();
         var subject = obj.gameObject.GetComponent<SpriteRenderer>();
-        BuildRemoveCard(title, subject != null ? subject.sprite : null,
-            builderFree ? L.T("Bir inşaatçı gelip temizler", "A builder comes to clear it") : L.T("İnşaatçı şu an meşgul", "Builder is busy"), !builderFree,
-            CampaignSceneSetup.Art("ui_icon_clock"), L.T("5 sn", "5 s"), true, builderFree, () =>
+        // 6. oturum (4.2): büyük kart yerine küçük eylem menüsü; süre öğenin büyüklüğüne göre (config).
+        var size = obj.objectType == MapObjectType.Tree ? NatureClear.Size.Tree : NatureClear.Size.Rock;
+        var items = new System.Collections.Generic.List<WorldActionMenu.Item>
+        {
+            new WorldActionMenu.Item
             {
-                BaseMapManager.Instance?.RequestRemoveObject(obj);
-                HideRemovePrompt();
-            }, obj.gameObject.transform.position);
+                id = "clear", icon = CampaignSceneSetup.Art("ui_icon_hammer"), label = L.T("KALDIR", "CLEAR"),
+                costIcon = CampaignSceneSetup.Art("ui_icon_clock"), costText = NatureClear.TimeText(size),
+                action = () =>
+                {
+                    if (!builderFree) { ShowHudToast(L.T("İnşaatçı şu an meşgul", "Builder is busy")); return; }
+                    BaseMapManager.Instance?.RequestRemoveObject(obj);
+                    HideRemovePrompt();
+                },
+            },
+        };
+        var safe = _mainCanvas != null ? _mainCanvas.transform.Find("SafeArea") : null;
+        WorldActionMenu.Show(safe, () => subject != null ? subject.bounds : new Bounds(obj.gameObject.transform.position, Vector3.one),
+            Camera.main, items, "RemoveActions", obj, subject);
     }
 
     /// <summary>Doğa nesnesi kartı: "Kaldır (X altın)" ve vazgeç; altın yetmezse düğme kapalı.</summary>
     private void ShowNaturePrompt(NatureObstacle nature)
     {
+        // 6. oturum (4.2): büyük kart yerine öğenin hemen üstünde açılan küçük eylem menüsü (dekor/bina menüsüyle aynı aile).
         if (nature == null) return;
         HideRemovePrompt();
         _removeTarget = null;
-        SelectionManager.Select(RemovePromptToken, HideRemovePrompt);   // 4. oturum (1.2)
         int cost = nature.RemoveCost;
-        bool canAfford = GameManager.Instance != null && GameManager.Instance.PlayerData != null
-            && GameManager.Instance.PlayerData.gold >= cost;
-        var subject = nature.GetComponent<SpriteRenderer>();
-        BuildRemoveCard(nature.DisplayName, subject != null ? subject.sprite : null,
-            canAfford ? L.T("Yer açmak için kaldır", "Clear it to free the land") : L.T("Yeterli altın yok", "Not enough gold"), !canAfford,
-            CampaignSceneSetup.Art("ui_icon_coin"), cost.ToString(), canAfford, canAfford, () =>
+        var size = NatureClear.SizeOf(nature.kind);
+        var items = new System.Collections.Generic.List<WorldActionMenu.Item>
+        {
+            new WorldActionMenu.Item
             {
-                if (nature != null) nature.TryRemove();
-                HideRemovePrompt();
-            }, nature.transform.position);
+                id = "clear", icon = CampaignSceneSetup.Art("ui_icon_hammer"), label = L.T("KALDIR", "CLEAR"),
+                costIcon = CampaignSceneSetup.Art("ui_icon_coin"), costText = $"{cost} · {NatureClear.TimeText(size)}",
+                action = () =>
+                {
+                    if (GameManager.Instance != null && GameManager.Instance.Gold < cost) { ShowHudToast(L.T("Yeterli altın yok", "Not enough gold")); return; }
+                    if (!nature.RequestClear()) ShowHudToast(L.T("Zaten sırada", "Already queued"));
+                    else if (GameManager.Instance != null && !GameManager.Instance.HasFreeBuilder) ShowHudToast(L.T("İnşaatçı boşalınca başlar", "Starts when a builder is free"));
+                },
+            },
+        };
+        var safe = _mainCanvas != null ? _mainCanvas.transform.Find("SafeArea") : null;
+        var sr = nature.GetComponent<SpriteRenderer>();
+        WorldActionMenu.Show(safe, () => sr != null ? sr.bounds : new Bounds(nature.transform.position, Vector3.one), Camera.main, items, "NatureActions", nature, sr);
     }
 
     /// <summary>

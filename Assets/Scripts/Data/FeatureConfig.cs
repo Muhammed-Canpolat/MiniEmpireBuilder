@@ -44,6 +44,28 @@ public sealed class FeatureConfig : ScriptableObject
     /// <summary>Okçuluk Alanı kurulum bedeli (ilk yapım bedava; adet 1).</summary>
     public int archeryPlaceWood = 80;
     public int archeryPlaceMeat = 0;
+    /// <summary>
+    /// 6. oturum (3.2): ada binalarının ALTIN kurulum bedeli (index = IslandLayout.BuildingKind: Kale, Ev, Oduncu, Ağıl, Okçuluk, Kule,
+    /// Kışla, Manastır). Oduncu ve Ağıl ucuz (ilk üretim zinciri; Odun/Et henüz yok), diğerleri pahalı. Gerekçe ECONOMY.md §13.
+    /// "İlk yapım bedava" kuralı kalktı; yalnız öğreticideki ilk Okçuluk Alanı ücretsiz.
+    /// </summary>
+    public int[] islandBuildGold = { 0, 250, 100, 100, 0, 350, 600, 900 };
+
+    /// <summary>6. oturum (AŞAMA 5): savaş kartı açma reklamı günlük hakkı (savaş başına en çok 3 kart × 3 savaş).</summary>
+    public int dailyBattleCardAds = 9;
+
+    [Header("Temizleme (6. oturum 4.2): süre öğenin büyüklüğüne göre, ödüller")]
+    public float clearSecondsBush = 3f;
+    public float clearSecondsStump = 4f;
+    public float clearSecondsRock = 5f;
+    public float clearSecondsTree = 10f;
+    /// <summary>Ana Üs doğa temizliği ödülleri (ada temizliği kendi değerlerini kullanır).</summary>
+    public int clearRewardTreeWood = 12;
+    public int clearRewardStumpWood = 6;
+    public int clearRewardBushMeat = 2;
+    public int clearRewardRockGold = 8;
+    /// <summary>Aynı türün ikinci ve sonraki kurulumlarında altına ek olarak Odun/Et liste bedeli (Progression.Island.PlaceCost) istenir.</summary>
+    public bool islandRepeatNeedsResources = true;
 
     [Header("Ada kadrosu (AŞAMA 2 §2)")]
     /// <summary>Üretim binası kendi işçisiyle gelir; ek yuvalar Ev kapasitesinden dolar; görünen işçi = atanmış işçi.</summary>
@@ -68,7 +90,13 @@ public sealed class FeatureConfig : ScriptableObject
     public float akinScalePerTowerLevel = 0.015f;
     public float akinScalePerKeep = 0.02f;
     public int akinScaleKeepBase = 5;
-    public float akinScaleMin = 0.7f;
+    /// <summary>
+    /// 6. oturum (3.4): ada seviyeleri 1'den başlıyor. Kıyı Kalesi akinScaleKeepBase'in ALTINDA her seviye için düşman gücü bu kadar daha düşer
+    /// (Kale 1: 0,8 − 4×0,075 = 0,5). Gerekçe: Okçu Sv1 hasarı Sv5'in 0,625'i → düşman canı da aynı oranda (0,5/12 = 0,8/19,2): ilk akınlar,
+    /// eski "Kale 5'le açılan" ada kadar zor; kale canı düşük olduğu için tekne sayısı/dalga aynı kalır.
+    /// </summary>
+    public float akinScalePerKeepBelow = 0.075f;
+    public float akinScaleMin = 0.5f;
     public float akinScaleMax = 1.15f;
 
     [Header("AŞAMA 3 · arayüz")]

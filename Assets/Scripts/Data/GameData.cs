@@ -412,8 +412,11 @@ public static class Progression
         /// <summary>Oto-ateş: Kıyı Kalesi seviyesi bu değere ulaşınca açılır (DevSettings açıkken test için hep açık).</summary>
         public const int AutoFireUnlockKeepLevel = 5;
         public const float AutoFireRateMult = 0.75f;          // elle en hızlı atışın 0,75'i
-        /// <summary>MVP: ada yükseltmesi henüz yok; Kale ve Okçu seviyesi Ana Üs seviyesini izler (Faz 2'de kalkar).</summary>
-        public const bool KeepFollowsMainBase = true;
+        /// <summary>6. oturum (3.3): ada seviyeleri Ana Üs'ten BAĞIMSIZ (1'den başlar, kendi bedeli/süresiyle yükselir). Ana Üs yalnız kilit:
+        /// Kıyı Kalesi Sv.N için Ana Üs Sv.N+1 (<see cref="KeepRequiredMainBase"/>).</summary>
+        public const bool KeepFollowsMainBase = false;
+        /// <summary>Kıyı Kalesi'ni <paramref name="targetKeep"/> seviyesine çıkarmak için gereken Ana Üs seviyesi (Sv.2 → Ana Üs 5 = ada açılışı).</summary>
+        public static int KeepRequiredMainBase(int targetKeep) => Mathf.Max(UnlockMainBaseLevel, targetKeep + 1);
 
         // Kale / Okçu
         public static float CastleHp(int k) => 300f + 80f * (Mathf.Max(1, k) - 1);
@@ -614,7 +617,8 @@ public static class Progression
                 case IslandLayout.BuildingKind.Tower: return (0.5f, 0.1f);
                 case IslandLayout.BuildingKind.Barracks: return (0.35f, 0.25f);   // Faz E1 (§5)
                 case IslandLayout.BuildingKind.Monastery: return (0.4f, 0.15f);
-                default: return (1f, 0.3f);   // Kale (KK Ana Üs'ü izlediği sürece kullanılmaz)
+                case IslandLayout.BuildingKind.Archery: return (0.6f, 0.2f);   // 6. oturum (3.3): Okçuluk Alanı = okçu seviyesi
+                default: return (1f, 0.3f);   // Kıyı Kalesi
             }
         }
         private static int Round10(float value) => Mathf.Max(0, Mathf.RoundToInt(value / 10f) * 10);

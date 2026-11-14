@@ -413,3 +413,17 @@ Simülasyon: `python Tools/economy_sim_v2.py --seeds 40` (yukarıdaki SIM bloğu
 - **Gerçek para:** 100 / 550 / 1.250 elmas (taban 100 = 0,99 USD'ye göre +%10 / +%25 bonus). 550 elmas ≈ 32 saatlik inşaat hızlandırması.
 - **Altın değerli kalıyor mu?** Evet: elmasla altın, oynayarak kazanmaktan kestirme değildir (aynı saat değeri); büyük paket bile tek bir Ana Üs
   yükseltmesini karşılar, süre hâlâ inşaatçı/sürelerle sınırlı.
+
+
+## 13. 6. oturum: ada kurulum bedelleri (3.2) — `FeatureConfig.islandBuildGold`
+| Bina | Altın | İkinci+ kurulumda ayrıca (Odun/Et) | Gerekçe |
+|---|---|---|---|
+| Okçuluk Alanı | 0 (ilk, öğretici) | 80 Odun | savunma şart; tek adet |
+| Oduncu Kampı | 100 | 300 / 60 | ilk üretim zinciri; ada Odun'suz başlar |
+| Ağıl | 100 | 600 / 0 | Et kıt; ilk ağıl ucuz |
+| Ev | 250 | 40 / 0 | işçi kapasitesi (üretimi ölçekler) |
+| Gözcü Kulesi | 350 | 60 / 10 | savunma |
+| Kışla | 600 | 150 / 40 | Kale 3 |
+| Manastır | 900 | 400 / 80 | Kale 6 |
+- Ada Ana Üs 5'te açılır; o noktada SIM medyan cüzdanı ~250–650 altın (Ana Üs 5–6 bedeli 600–850). Oduncu + Ağıl (200) ilk oturumda alınabilir,
+  pahalılar birkaç savaşlık birikim ister — ada altını "boş" bırakmaz, Ana Üs yükseltmesiyle hafifçe yarışır. Yükseltmeler Odun/Et ile (değişmedi).

@@ -193,8 +193,7 @@ public class BaseMapManager : MonoBehaviour
     public void RefreshBuildableArea(int mapWidth, int mapHeight)
     {
         ClearBuildableVisualRoots();
-        _buildableRect = BaseWorldLayout.CleanAtLevel(GameManager.Instance != null
-            ? GameManager.Instance.GetMainBaseLevel() : 1);
+        _buildableRect = BaseWorldLayout.CleanForTier(LandExpansion.OpenedTier);   // 6. oturum (4.1): elle açılan genişlemeler
 
         BuildBuildableGround();
         BuildBuildableFence();
@@ -929,7 +928,8 @@ public class BaseMapManager : MonoBehaviour
         }
 
         obj.isBeingRemoved = true;
-        const float duration = 5f;
+        // 6. oturum (4.2): süre öğenin büyüklüğüne göre (FeatureConfig): ağaç 10 sn, kaya 5 sn.
+        float duration = NatureClear.SecondsFor(obj.objectType == MapObjectType.Tree ? NatureClear.Size.Tree : NatureClear.Size.Rock);
 
         // İnşaatçıya görev at — callback: nesneyi yok et + altın ver
         bool started = BuilderSystem.Instance == null ||

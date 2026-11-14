@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class BaseWorldLayout
@@ -17,6 +17,14 @@ public static class BaseWorldLayout
         int expansions = Progression.ColorTier(level);
         if (expansions >= 4) return Buildable;
         return new RectInt(Buildable.xMin, 12 - expansions * 2, Buildable.width, 14 + expansions * 4);
+    }
+
+    /// <summary>6. oturum (4.1): <paramref name="tier"/> genişleme açıkken temiz alan (0 = başlangıç, 4 = tüm alan).</summary>
+    public static RectInt CleanForTier(int tier)
+    {
+        if (tier < 0) return new RectInt(Buildable.xMin, 12, 0, 0);
+        if (tier >= 4) return Buildable;
+        return new RectInt(Buildable.xMin, 12 - tier * 2, Buildable.width, 14 + tier * 4);
     }
 
     /// <summary>Bir sonraki arazi genişlemesinin olacağı Ana Üs seviyesi (yoksa 0).</summary>

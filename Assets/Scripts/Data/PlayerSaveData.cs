@@ -11,6 +11,8 @@ public class PlayerSaveData
     public int saveVersion = 0;
     /// <summary>6. oturum (2.4, v12): işlenmiş gerçek para satın almaları ("ürün|işlemKimliği"); aynı işlem iki kez elmas vermez.</summary>
     public List<string> iapLedger = new List<string>();
+    /// <summary>6. oturum (4.1): açılmış Ana Üs arazi genişlemesi (0..4). -1 = eski kayıt: Ana Üs kademesi kadar açık sayılır (LandExpansion.OpenedTier).</summary>
+    public int landOpened = -1;
     // Genel
     public int gold = 50;                   // Başlangıç altını
     public int gems = 0;                    // Elmas (değerli para birimi)
@@ -97,6 +99,9 @@ public class PlayerSaveData
     // Ödüllü reklam günlük hakları (AdRewards; gün = yyyyMMdd) ve Kraliyet günlük elması.
     public int adSpeedupDay;
     public int adSpeedupCount;
+    // 6. oturum (AŞAMA 5): savaş kartı reklamı günlük hakkı (yeni alan; eski kayıtta 0 = bugün hiç izlenmedi, göç gerekmez).
+    public int adCardDay;
+    public int adCardCount;
     // Kereste Sevkiyatı: günlük sayaç (gün = GameClock.TodayId). Eski kayıtta 0 gelir.
     public int lumberShipDay;
     public int lumberShipCount;
@@ -130,6 +135,7 @@ public class PlayerSaveData
     {
         PlayerSaveData data = new PlayerSaveData();
         data.saveVersion = CurrentVersion;
+        data.landOpened = 0;   // 6. oturum (4.1): yeni oyunda genişlemeler elle açılır
         data.timingVersion = TimingConfig.Instance.version;
         // İlk görüşte madende biraz altın: rehberin "madene dokun" adımı boşa çıkmasın.
         data.goldMineStoredGold = 40;
@@ -212,7 +218,7 @@ public class PlayerSaveData
         return data;
     }
 
-    public const int CurrentVersion = 12;
+    public const int CurrentVersion = 13;
 
     /// <summary>Kışla ve Köylü Evi türleri kayıtta yoksa ekler (v9; eski kayıt göçü ve yeni oyun): açılış seviyesindeyse açık, yoksa kilitli.</summary>
     public static void EnsureBaseBondEntries(PlayerSaveData data)
@@ -321,6 +327,10 @@ public class IslandSaveData
     public int nameChanges;         // yapılan ad değişikliği sayısı (ilk adlandırma yeni oyuncuda 1. değişiklik)
     public int nameSeal;            // IslandNameRules.Seal(islandName, nameChanges)
     public bool nameOffered;        // ada adı sorusu/teklifi gösterildi
+    // v13 (6. oturum 3.1–3.3): ilk giriş tanıtımı, zorunlu Okçuluk öğreticisi, ada seviyeleri Ana Üs'ten bağımsız.
+    public bool introSeen;          // ilk giriş tanıtımı izlendi (eski kayıtta adaya girmişse göçte true)
+    public int buildTutorial;       // 0 başlamadı · 1 İNŞA ET'e bas · 2 Okçuluk Alanı'nı seç · 3 yerleştir · 4 inşa sürüyor · 5 bitti
+    public bool levelsIndependent;  // v13: keepLevel/archerLevel artık Ana Üs'ü izlemez (göçte bir kez sabitlendi)
     // v7 / Faz B (island_base_v2 §9, §17): yerleştirilmiş binalar, bölge maskesi, Usta görevi. Eski kayıtta boş/varsayılan: hazır köy tohumlanır.
     public bool villageSeeded;      // hazır köy placed listesine yazıldı mı (v6'dan geçişte ilk açılışta yapılır)
     public List<IslandPlacedBuilding> placed = new List<IslandPlacedBuilding>();
@@ -789,6 +799,14 @@ public static class SaveSystem
             if (data.saveVersion < 12)
             {
                 data.saveVersion = 12;
+                Save(data);
+            }
+            // v13 (6. oturum 3.1–3.3): adaya daha önce girmiş oyuncu tanıtımı/öğreticiyi görmez; ada seviyeleri bugünkü (Ana Üs'ü izleyen)
+            // etkin değerde sabitlenir ve bundan sonra bağımsız ilerler (kimse seviye kaybetmez). Adaya hiç girmemiş eski kayıt: ilk giriş akışı.
+            if (data.saveVersion < 13)
+            {
+                IslandEconomy.MigrateV13(data.island, data.buildings?.Find(e => e.buildingType == BuildingType.MainBase)?.level ?? 1);
+                data.saveVersion = 13;
                 Save(data);
             }
             MigrateTimings(data);

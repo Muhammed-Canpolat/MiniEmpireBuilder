@@ -13,6 +13,21 @@ public static class AdRewards
 
     // ==================== İNŞAAT −30 DK ====================
 
+    // 6. oturum (AŞAMA 5): savaş kartı reklamı (günlük hak; yerel gece yarısı yenilenir)
+    public static int CardAdsToday => Data == null || Data.adCardDay != Today ? 0 : Data.adCardCount;
+    public static int CardAdsLeft => Mathf.Max(0, FeatureConfig.Instance.dailyBattleCardAds - CardAdsToday);
+    public static bool CardAdAvailable => CardAdsLeft > 0;
+    public static void ConsumeCardAd()
+    {
+        var data = Data;
+        if (data == null) return;
+        if (data.adCardDay != Today) { data.adCardDay = Today; data.adCardCount = 0; }
+        data.adCardCount++;
+        GameManager.Instance?.SaveGame();
+    }
+    /// <summary>Günlük hakların yenilenmesine kalan saniye (yerel gece yarısı).</summary>
+    public static double SecondsToDailyReset => (GameClock.LocalNow.Date.AddDays(1) - GameClock.LocalNow).TotalSeconds;
+
     public static int SpeedupAdsToday => Data == null || Data.adSpeedupDay != Today ? 0 : Data.adSpeedupCount;
     public static int SpeedupAdsLeft => Mathf.Max(0, GemEconomy.DailySpeedupAds - SpeedupAdsToday);
 

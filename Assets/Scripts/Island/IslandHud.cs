@@ -101,7 +101,7 @@ public sealed class IslandHud : MonoBehaviour
         raid.StateChanged += _ => Refresh();
         raid.TutorialChanged += Refresh;
         Refresh();
-        if (FeatureConfig.Instance.islandNaming) StartCoroutine(OfferNameSoon());
+        StartCoroutine(FirstEntryFlow());
     }
 
     // ==================== KURULUM ====================
@@ -190,14 +190,35 @@ public sealed class IslandHud : MonoBehaviour
         IslandNameUi.Open(IslandSession.Save, IslandNameUi.Mode.Rename, () => Refresh());
     }
 
-    /// <summary>Ada ilk açıldığında (ve eski kayıtta bir kez) ad sorusu/teklifi.</summary>
-    private System.Collections.IEnumerator OfferNameSoon()
+    /// <summary>
+    /// 6. oturum (3.1): ilk girişte tanıtım → "Adanızın adı ne olsun?" → Okçuluk öğreticisi (3.2). Daha önce girilmiş adada yalnız (bir kez)
+    /// ad teklifi. Kök neden (adın hiç sorulmaması): eskiden <c>DevSettings.Enabled</c> iken (editör + Development APK'da varsayılan AÇIK)
+    /// teklif hiç gösterilmiyordu; artık yalnız otomatik test koşusunda (batchmode, OfferInDev kapalı) atlanır.
+    /// </summary>
+    private System.Collections.IEnumerator FirstEntryFlow()
     {
-        yield return new WaitForSecondsRealtime(1.2f);
+        yield return new WaitForSecondsRealtime(0.6f);
         while (raid != null && (raid.Phase != IslandRaidManager.State.Idle || placing)) yield return null;
-        if (DevSettings.Enabled && !IslandNameUi.OfferInDev) yield break;
-        var mode = IslandNameUi.OfferFor(IslandSession.Save);
-        if (mode.HasValue && !IslandNameUi.IsOpen) IslandNameUi.Open(IslandSession.Save, mode.Value, () => Refresh());
+        var save = IslandSession.Save;
+        if (Application.isBatchMode && !IslandNameUi.OfferInDev) { IslandBuildTutorial.Resume(this); yield break; }
+        if (IslandIntro.ShouldPlay(save))
+        {
+            bool done = false;
+            IslandIntro.Play(save, () => done = true);
+            while (!done) yield return null;
+            if (FeatureConfig.Instance.islandNaming && !IslandNameUi.IsOpen)
+            {
+                bool named = false;
+                IslandNameUi.Open(save, IslandNameUi.Mode.First, () => { named = true; Refresh(); });
+                while (!named && IslandNameUi.IsOpen) yield return null;
+            }
+            IslandBuildTutorial.Resume(this);
+            yield break;
+        }
+        IslandBuildTutorial.Resume(this);
+        if (!FeatureConfig.Instance.islandNaming) yield break;
+        var mode = IslandNameUi.OfferFor(save);
+        if (mode.HasValue && !IslandNameUi.IsOpen) IslandNameUi.Open(save, mode.Value, () => Refresh());
     }
 
     // ==================== ZAMANLI BASKIN (Faz D) ====================
@@ -362,6 +383,7 @@ public sealed class IslandHud : MonoBehaviour
     public void StartRaidDefense()
     {
         if (raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        if (!IslandEconomy.HasArcheryReady(IslandSession.Save)) { OpenRaidBoard(); return; }
         if (IslandRaidScheduler.PhaseAt(IslandSession.Save, IslandRepair.Now) != IslandRaidScheduler.Phase.Live) { OnRaidBadge(); return; }
         buildUi?.Close();
         prepOpen = false;
@@ -462,6 +484,8 @@ public sealed class IslandHud : MonoBehaviour
     private void OpenRaidBoard()
     {
         if (raid.Phase != IslandRaidManager.State.Idle || placing) return;
+        if (!IslandEconomy.HasArcheryReady(IslandSession.Save))   // 6. oturum (3.2)
+        { Toast(L.T("Önce Okçuluk Alanı'nı kur: okçun olmadan akın savunulamaz.", "Build the Archery Range first: no archer, no defense.")); return; }
         buildUi?.Close();
         prepOpen = true;
         Refresh();
@@ -538,9 +562,71 @@ public sealed class IslandHud : MonoBehaviour
             village.BuildingTapped = id => { buildUi.ShowBuilding(id); FocusBuilding(id); };
             village.CastleTapped = () => { buildUi.ShowCastle(); setup.CameraController.FocusUpper(IslandLayout.CastleCenter); };
             village.ZoneTapped = zone => { buildUi.ShowZone(zone); setup.CameraController.FocusUpper(setup.ZoneCenter(zone)); };
-            village.TreeTapped = cell => buildUi.ShowTree(cell);   // AŞAMA 2 §3
-            village.NatureTapped = item => buildUi.ShowNature(item.kind, item.cell);   // 4. oturum (1.4)
+            // 6. oturum (4.2): ağaç/çalı/kaya → öğenin üstünde küçük eylem menüsü + süreli temizleme (Ana Üs ile aynı sistem).
+            village.TreeTapped = cell =>
+            {
+                var tree = IslandTree.At(cell);
+                if (tree == null) { buildUi.ShowTree(cell); return; }
+                var cfg = IslandEconomy.Config;
+                ShowClearMenu("tree:" + cell, tree.transform, tree.Renderer, NatureClear.Size.Tree, cfg.clearTreeGold + " ·",
+                    () => IslandEconomy.ClearTreeBlockedReason(cell.x, cell.y),
+                    () => village.ClearTree(cell, out _), L.T($"+{cfg.clearTreeWood} Odun", $"+{cfg.clearTreeWood} Wood"));
+            };
+            village.NatureTapped = item =>
+            {
+                var size = item.kind == IslandNatureClear.Kind.Bush ? NatureClear.Size.Bush : NatureClear.Size.Rock;
+                string reward = item.kind == IslandNatureClear.Kind.Bush ? L.T($"+{IslandNatureClear.BushWood} Odun", $"+{IslandNatureClear.BushWood} Wood")
+                    : L.T($"+{IslandNatureClear.RockGold} Altın", $"+{IslandNatureClear.RockGold} Gold");
+                string cost = item.kind == IslandNatureClear.Kind.Bush ? IslandNatureClear.BushGold + " ·" : "";
+                ShowClearMenu(IslandNatureClear.Key(item.kind, item.cell), item.root, item.renderer, size, cost,
+                    () => IslandNatureClear.BlockedReason(item.kind, item.cell),
+                    () => IslandNatureClear.TryClear(item.kind, item.cell, out _), reward);
+            };
         }
+    }
+
+    /// <summary>Küçük KALDIR menüsü; seçilince iş sıraya girer, Usta boşalınca yürüyüp keser (süre config'ten), bitince bedel/ödül işlenir.</summary>
+    private void ShowClearMenu(string key, Transform target, SpriteRenderer sr, NatureClear.Size size, string costPrefix,
+        System.Func<string> blocked, System.Func<bool> perform, string reward)
+    {
+        if (target == null) return;
+        buildUi?.Close();
+        var items = new System.Collections.Generic.List<WorldActionMenu.Item>
+        {
+            new WorldActionMenu.Item
+            {
+                id = "clear", icon = CampaignSceneSetup.Art("ui_icon_hammer"), label = L.T("KALDIR", "CLEAR"),
+                costIcon = string.IsNullOrEmpty(costPrefix) ? null : CampaignSceneSetup.Art("ui_icon_coin"),
+                costText = (string.IsNullOrEmpty(costPrefix) ? "" : costPrefix + " ") + NatureClear.TimeText(size),
+                action = () =>
+                {
+                    string why = blocked();
+                    if (why != null) { Toast(why); return; }
+                    float startAt = -1f;
+                    NatureClear.Enqueue(key, target, size, () =>
+                    {
+                        if (target == null) return null;
+                        if (IslandEconomy.BuilderBusy || IslandEconomy.InDefense) return false;
+                        string w = blocked();
+                        if (w != null) { Toast(w); return null; }
+                        startAt = Time.realtimeSinceStartup;
+                        var pawn = IslandVillage.Instance != null ? IslandVillage.Instance.BuilderPawn : null;
+                        if (pawn != null) { pawn.gameObject.SetActive(true); pawn.SetSite(target.position); }
+                        return true;
+                    }, () => startAt < 0f ? 0f : (Time.realtimeSinceStartup - startAt) / NatureClear.SecondsFor(size)).onComplete = () =>
+                    {
+                        var pawn = IslandVillage.Instance != null ? IslandVillage.Instance.BuilderPawn : null;
+                        if (pawn != null) pawn.SetSite(null);
+                        Vector3 at = target != null ? target.position : Vector3.zero;
+                        bool ok = perform();
+                        NatureClear.Finish(key, at, ok ? reward : null);
+                        Refresh();
+                    };
+                },
+            },
+        };
+        var cam = IslandSceneSetup.Instance != null ? IslandSceneSetup.Instance.WorldCamera : Camera.main;
+        WorldActionMenu.Show(safe, () => sr != null ? sr.bounds : new Bounds(target.position, Vector3.one), cam, items, "IslandClearActions", target, sr);
     }
 
     public void OpenBuildMenu()

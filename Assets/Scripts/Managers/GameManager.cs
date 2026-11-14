@@ -771,6 +771,17 @@ public class GameManager : MonoBehaviour
             else if (task.kind == "upgrade" && task.slotId == ApprenticeTaskSlot) CompleteApprenticeUpgrade();
             else if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
                 ApplyInstanceUpgrade(task.slotId, type);
+            else if (task.kind == "remove" && task.slotId != null && task.slotId.StartsWith("nature:"))
+            {
+                // 6. oturum (4.2): süreli doğa temizliği — kayda yazılır ve ödül verilir (sahne kapalı olsa da).
+                string id = task.slotId.Substring("nature:".Length);
+                if (PlayerData.removedNatureIds == null) PlayerData.removedNatureIds = new List<string>();
+                if (!PlayerData.removedNatureIds.Contains(id))
+                {
+                    PlayerData.removedNatureIds.Add(id);
+                    if (Enum.TryParse(id.Split('_')[0], out NatureKind natureKind)) NatureObstacle.GrantReward(natureKind);
+                }
+            }
             else if (task.kind == "build")
             {
                 // 6. oturum (1.1): inşası biten bina ancak şimdi tür seviyesine/bonuslara katılır.

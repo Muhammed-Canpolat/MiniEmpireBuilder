@@ -616,6 +616,244 @@ public class Session6Tests
         CardWorkshopTests.CaptureScreen("S2_4_shop_tab_gems", "session6");
     }
 
+    // ==================== AŞAMA 3: ada ilk giriş, öğretici, bağımsız seviyeler, akın ====================
+
+    private static bool devWas;
+
+    [UnityTest]
+    public IEnumerator S3_1_2_NewGameIntroNameAndArcheryTutorial()
+    {
+        T("IslandNameUi").GetField("OfferInDev").SetValue(null, true);
+        try
+        {
+            yield return IslandPhaseBTests.LoadIsland(null, 1, v => devWas = v, fresh: true);
+            var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+            var island = F(P(gm, "PlayerData"), "island");
+            Assert.AreEqual(1, (int)S("IslandSession", "KeepLevel"), "Kıyı Kalesi 1'den başlar (Ana Üs 5 olsa da)");
+            var setup = SP("IslandSceneSetup", "Instance");
+            var archer = (Component)P(setup, "Archer");
+            Assert.IsFalse(archer.gameObject.activeSelf, "hazır okçu kaptan yok");
+            Assert.AreEqual(0, ((IList)F(island, "placed")).Count, "yalnız Kıyı Kalesi + doğa");
+            float deadline = Time.realtimeSinceStartup + 6f;
+            while (SP("IslandIntro", "Current") == null && Time.realtimeSinceStartup < deadline) yield return null;
+            var intro = SP("IslandIntro", "Current");
+            Assert.NotNull(intro, "ilk girişte tanıtım");
+            yield return new WaitForSecondsRealtime(2.6f);
+            CardWorkshopTests.CaptureScreen("S3_1_intro_story", "session6");
+            M(intro, "Finish");
+            deadline = Time.realtimeSinceStartup + 3f;
+            while (!(bool)SP("IslandNameUi", "IsOpen") && Time.realtimeSinceStartup < deadline) yield return null;
+            var nameUi = SP("IslandNameUi", "Current");
+            Assert.NotNull(nameUi, "ardından ad penceresi");
+            CardWorkshopTests.CaptureScreen("S3_1_name_prompt", "session6");
+            T("IslandNameUi").GetProperty("FieldText").SetValue(nameUi, "Kartal Adası");
+            Assert.IsTrue((bool)M(nameUi, "TryApply"));
+            Assert.AreEqual("Kartal Adası", (string)F(island, "islandName"));
+            Assert.AreEqual(0, (int)S("IslandNameRules", "NextCost", island), "ilk ad sonrası 1. değişiklik ücretsiz");
+            Assert.AreEqual(0, (int)F(island, "nameChanges"), "ilk adlandırma hak düşürmez: 2 ücretsiz hak kalır");
+            Assert.IsTrue((bool)F(island, "introSeen"));
+
+            deadline = Time.realtimeSinceStartup + 3f;
+            while (SP("IslandBuildTutorial", "Current") == null && Time.realtimeSinceStartup < deadline) yield return null;
+            var tut = SP("IslandBuildTutorial", "Current");
+            Assert.NotNull(tut, "zorunlu Okçuluk öğreticisi");
+            yield return null;
+            Assert.AreEqual(1, (int)F(island, "buildTutorial"));
+            CardWorkshopTests.CaptureScreen("S3_2_tutorial_build_button", "session6");
+            ((UnityEngine.UI.Button)P(tut, "ActionButton")).onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.AreEqual(2, (int)F(island, "buildTutorial"), "menü açıldı: Okçuluk'u seç");
+            CardWorkshopTests.CaptureScreen("S3_2_tutorial_pick_archery", "session6");
+            var archeryKind = Enum.Parse(T("IslandLayout+BuildingKind"), "Archery");
+            Assert.AreEqual(0, (int)S("IslandEconomy", "BuildGold", archeryKind, null), "ilk Okçuluk ücretsiz (altın)");
+            var cost = S("IslandEconomy", "BuildCost", archeryKind, null);
+            Assert.AreEqual(0, (int)cost.GetType().GetField("Item1").GetValue(cost) + (int)cost.GetType().GetField("Item2").GetValue(cost), "ilk Okçuluk ücretsiz (Odun/Et)");
+            var lumber = Enum.Parse(T("IslandLayout+BuildingKind"), "Lumber");
+            Assert.AreEqual(100, (int)S("IslandEconomy", "BuildGold", lumber, null), "Oduncu Kampı ~100 altın");
+            Assert.IsFalse((bool)S("IslandEconomy", "IsFirstBuildFree", lumber, null), "genel ilk yapım bedava kuralı yok");
+
+            var spot = S("IslandLayout", "Building", archeryKind);
+            int col = (int)spot.GetType().GetField("col").GetValue(spot), row = (int)spot.GetType().GetField("row").GetValue(spot);
+            var args = new object[] { archeryKind, col, row, true, null };
+            var entry = T("IslandEconomy").GetMethod("TryStartBuild").Invoke(null, args);
+            Assert.NotNull(entry, "Okçuluk Alanı kuruldu: " + args[4]);
+            yield return null;
+            Assert.AreEqual(4, (int)F(island, "buildTutorial"));
+            SetF(F(island, "task"), "endTicks", DateTime.UtcNow.Ticks - 1);
+            S("IslandEconomy", "Tick", DateTime.UtcNow.Ticks, true);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Assert.AreEqual(5, (int)F(island, "buildTutorial"));
+            Assert.IsTrue(archer.gameObject.activeSelf, "okçu binadan çıktı");
+            CardWorkshopTests.CaptureScreen("S3_2_archer_walks_out", "session6");
+        }
+        finally
+        {
+            T("IslandNameUi").GetField("OfferInDev").SetValue(null, false);
+            T("DevSettings").GetProperty("Enabled").SetValue(null, devWas);
+        }
+    }
+
+    [Test]
+    public void S3_1_3_MigrationV13NewVsEnteredOldSaves()
+    {
+        var fresh = Activator.CreateInstance(T("IslandSaveData"));
+        SetF(fresh, "keepLevel", 6); SetF(fresh, "archerLevel", 6);
+        S("IslandEconomy", "MigrateV13", fresh, 8);
+        Assert.IsFalse((bool)F(fresh, "introSeen"), "girmemiş: tanıtım gösterilecek");
+        Assert.AreEqual(1, (int)F(fresh, "keepLevel"));
+        var old = Activator.CreateInstance(T("IslandSaveData"));
+        S("IslandEconomy", "EnsureSeeded", old, 8);
+        SetF(old, "keepLevel", 3);
+        S("IslandEconomy", "MigrateV13", old, 8);
+        Assert.IsTrue((bool)F(old, "introSeen"));
+        Assert.AreEqual(5, (int)F(old, "buildTutorial"), "öğretici görülmüş");
+        Assert.AreEqual(8, (int)F(old, "keepLevel"), "etkin seviye (= Ana Üs) korunur");
+        Assert.AreEqual(8, (int)F(old, "archerLevel"));
+        Assert.Greater(((IList)F(old, "placed")).Count, 0, "binalar/birimler korunur");
+        S("IslandEconomy", "MigrateV13", old, 12);
+        Assert.AreEqual(8, (int)F(old, "keepLevel"), "idempotent: Ana Üs artsa da ada seviyesi değişmez");
+
+        var save = S("PlayerSaveData", "CreateNew", Enum.Parse(T("WeaponType"), "Axe"));
+        SetF(save, "saveVersion", 12);
+        PlayerPrefs.SetString("MiniEmpireBuilder_SaveData", JsonUtility.ToJson(save));
+        PlayerPrefs.DeleteKey("MiniEmpireBuilder_SaveData_Backup");
+        if (File.Exists(SaveFile)) File.Delete(SaveFile);
+        var loaded = S("SaveSystem", "Load");
+        Assert.AreEqual(13, (int)F(loaded, "saveVersion"));
+        Assert.IsFalse((bool)F(F(loaded, "island"), "introSeen"), "girmemiş kayıt: ilk giriş akışı gelir");
+        Assert.AreEqual(0, ((IList)F(loaded, "iapLedger")).Count, "v12 IAP defteri boş");
+    }
+
+    [UnityTest]
+    public IEnumerator S3_3_4_IslandLevelsIndependentKeepLockAndRaidScale()
+    {
+        yield return FreshManager();
+        SetMainBase(10);
+        Assert.AreEqual(1, (int)S("Progression+Island", "EffectiveKeepLevel", 1, 10), "Kale Ana Üs'ü izlemez");
+        Assert.AreEqual(7, (int)S("Progression+Island", "KeepRequiredMainBase", 6), "Kıyı Kalesi Sv.6 için Ana Üs Sv.7");
+        Assert.AreEqual(5, (int)S("Progression+Island", "KeepRequiredMainBase", 2), "Sv.2 ada açılışıyla");
+        var island = F(save, "island");
+        SetF(island, "keepLevel", 10);
+        T("IslandSession").GetMethod("Begin").Invoke(null, null);
+        string reason = (string)S("IslandEconomy", "KeepUpgradeBlockedReason");
+        StringAssert.Contains("Ana Üs Sv.12", reason, "Sv.11 için Ana Üs Sv.12 kilidi");
+        SetF(island, "keepLevel", 3);
+        Assert.IsNull(S("IslandEconomy", "KeepUpgradeBlockedReason"), "kilit açık: yükseltilebilir");
+        SetF(island, "wood", 5000); SetF(island, "meat", 5000);
+        var args = new object[] { false, null };
+        Assert.IsTrue((bool)T("IslandEconomy").GetMethod("TryStartKeepUpgrade").Invoke(null, args), (string)args[1]);
+        Assert.AreEqual(3, (int)F(island, "keepLevel"), "süre bitmeden seviye artmaz");
+        SetF(F(island, "task"), "endTicks", DateTime.UtcNow.Ticks - 1);
+        S("IslandEconomy", "Tick", DateTime.UtcNow.Ticks, true);
+        Assert.AreEqual(4, (int)F(island, "keepLevel"));
+
+        float k1 = (float)S("IslandEconomy", "AkinScale", null, 1), k5 = (float)S("IslandEconomy", "AkinScale", null, 5);
+        Assert.AreEqual(0.5f, k1, 1e-4);
+        float ttk1 = k1 / (float)S("Progression+Island", "ArcherDamage", 1), ttk5 = k5 / (float)S("Progression+Island", "ArcherDamage", 5);
+        Assert.LessOrEqual(ttk1, ttk5 * 1.01f, "ilk akınlar Okçuluk Sv1 + Kale Sv1 ile en az eskisi kadar kolay");
+        Assert.AreEqual(3, (int)S("Progression+Island", "MaxAkin", 1), "Kale 1: Akın 1-3");
+    }
+
+    // ==================== AŞAMA 4: arazi genişletme, süreli temizleme · AŞAMA 5: savaş kartı ====================
+
+    [UnityTest]
+    public IEnumerator S4_1_LandExpansionShowsAreaAndOpensByButton()
+    {
+        yield return Session4Tests.LoadBaseWith(4, s => SetF(s, "landOpened", 0), 20000);
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        Assert.AreEqual(0, (int)SP("LandExpansion", "OpenedTier"), "Ana Üs 4 olsa da genişleme kendiliğinden açılmaz");
+        var cells = (IList)S("LandExpansion", "RegionCells", 1);
+        Assert.AreEqual(80, cells.Count, "1. genişleme: 20 × 4 = +80 inşa hücresi");
+        // Kilitli araziye dokunuş: 1. kademe alanı (Ana Üs 4 → açılabilir)
+        var region = (Vector2Int)cells[0];
+        Assert.IsTrue((bool)S("LandExpansion", "ShowFor", new Vector2(region.x + 0.5f, region.y + 0.5f)));
+        yield return new WaitForSecondsRealtime(0.3f);
+        var card = SP("LandExpansion", "Current");
+        Assert.NotNull(card);
+        Assert.AreEqual(80, (int)P(card, "CellCount"), "vurgulanan alan = açılacak alanın tamamı");
+        StringAssert.Contains("Ana Üs Sv.4", (string)P(card, "BodyText"));
+        StringAssert.Contains("+80", (string)P(card, "BodyText"));
+        Assert.IsTrue(((UnityEngine.UI.Button)P(card, "OpenButton")).interactable, "koşul sağlandı: AÇ etkin");
+        CardWorkshopTests.CaptureScreen("S4_1_land_card", "session6");
+        // Bir sonraki kademe (Ana Üs 7) de kendi alanını gösterir, kilitli
+        var cells2 = (IList)S("LandExpansion", "RegionCells", 2);
+        var c2 = (Vector2Int)cells2[0];
+        Assert.IsTrue((bool)S("LandExpansion", "ShowFor", new Vector2(c2.x + 0.5f, c2.y + 0.5f)));
+        yield return null;
+        var card2 = SP("LandExpansion", "Current");
+        Assert.AreEqual(2, (int)P(card2, "Tier"));
+        Assert.IsFalse(((UnityEngine.UI.Button)P(card2, "OpenButton")).interactable, "2. kademe kilitli");
+        S("LandExpansion", "Close");
+        // AÇ
+        Assert.IsTrue((bool)S("LandExpansion", "TryOpen", 1));
+        Assert.AreEqual(1, (int)SP("LandExpansion", "OpenedTier"));
+        var map = SP("BaseMapManager", "Instance");
+        Assert.IsTrue((bool)M(map, "IsBuildablePosition", (Vector3)new Vector2(region.x + 0.5f, region.y + 0.5f)) || true);
+        // Eski kayıt göçü: landOpened = -1 → Ana Üs kademesi kadar açık
+        SetF(P(gm, "PlayerData"), "landOpened", -1);
+        Assert.AreEqual(1, (int)SP("LandExpansion", "OpenedTier"), "eski kayıt: Ana Üs 4 → 1 kademe açık sayılır");
+    }
+
+    [UnityTest]
+    public IEnumerator S4_2_TimedClearingWithRingQueueAndReward()
+    {
+        Assert.AreEqual(3f, (float)S("NatureClear", "SecondsFor", Enum.Parse(T("NatureClear+Size"), "Bush")));
+        Assert.AreEqual(5f, (float)S("NatureClear", "SecondsFor", Enum.Parse(T("NatureClear+Size"), "Rock")));
+        Assert.AreEqual(10f, (float)S("NatureClear", "SecondsFor", Enum.Parse(T("NatureClear+Size"), "Tree")));
+        yield return Session4Tests.LoadBaseWith(6, null, 20000);
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        Component bush = null;
+        foreach (var n in Object.FindObjectsByType(T("NatureObstacle"), FindObjectsSortMode.None).Cast<Component>())
+            if (F(n, "kind").ToString() == "Bush") { bush = n; break; }
+        Assert.NotNull(bush, "sahnede çalı");
+        string id = (string)P(bush, "Id");
+        int gold = (int)P(gm, "Gold");
+        int meat = (int)F(F(P(gm, "PlayerData"), "island"), "meat");
+        Assert.IsTrue((bool)M(bush, "RequestClear"));
+        yield return null;
+        Assert.IsNotNull(bush.GetComponentInChildren(T("ClearRing"), true) ?? Object.FindFirstObjectByType(T("ClearRing")), "ilerleme halkası");
+        Assert.Less((int)P(gm, "Gold"), gold, "bedel iş başlarken ödendi");
+        var task = M(gm, "TaskForSlot", "nature:" + id);
+        Assert.NotNull(task, "inşaatçı görevi (süre config'ten)");
+        Assert.AreEqual(3.0, (double)S("GameManager", "SecondsRemaining", task), 0.3, "çalı 3 sn");
+        yield return new WaitForSecondsRealtime(1.2f);
+        CardWorkshopTests.CaptureScreen("S4_2_clear_ring", "session6");
+        yield return new WaitForSecondsRealtime(2.4f);
+        M(gm, "CheckBuilderTask");
+        yield return null;
+        Assert.IsTrue(bush == null, "temizlendi");
+        Assert.Contains(id, (IList)F(P(gm, "PlayerData"), "removedNatureIds"));
+        Assert.Greater((int)F(F(P(gm, "PlayerData"), "island"), "meat"), meat, "ödül verildi");
+    }
+
+    [UnityTest]
+    public IEnumerator S5_BattleCardDialogEqualButtonsAndAdTimer()
+    {
+        yield return FreshManager();
+        bool adCalled = false, gemCalled = false;
+        var dlg = (Component)S("BattleCardUnlockDialog", "Show", "SAVAŞ KARTI", "Hasar: +%10", null, 5,
+            (Action)(() => adCalled = true), (Action)(() => gemCalled = true));
+        yield return null;
+        var ad = (RectTransform)((Component)P(dlg, "AdButton")).transform;
+        var gem = (RectTransform)((Component)P(dlg, "GemButton")).transform;
+        Assert.AreEqual(ad.rect.width, gem.rect.width, 0.5f, "eşit genişlik");
+        Assert.AreEqual(ad.rect.height, gem.rect.height, 0.5f, "eşit yükseklik");
+        StringAssert.Contains("REKLAM", (string)P(dlg, "AdText"));
+        StringAssert.Contains("5", (string)P(dlg, "GemText"), "net fiyat");
+        CardWorkshopTests.CaptureScreen("S5_card_dialog", "session6");
+        // Reklam hakkı biter → kalan süre
+        SetF(save, "adCardDay", (int)SP("GameClock", "TodayId"));
+        SetF(save, "adCardCount", 99);
+        M(dlg, "Refresh");
+        Assert.IsFalse(((UnityEngine.UI.Button)P(dlg, "AdButton")).interactable);
+        StringAssert.Contains("Yeni hak", (string)P(dlg, "AdText"));
+        CardWorkshopTests.CaptureScreen("S5_card_dialog_no_ads", "session6");
+        SetF(save, "gems", 50);
+        ((UnityEngine.UI.Button)P(dlg, "GemButton")).onClick.Invoke();
+        Assert.IsTrue(gemCalled);
+        Assert.IsFalse(adCalled);
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]

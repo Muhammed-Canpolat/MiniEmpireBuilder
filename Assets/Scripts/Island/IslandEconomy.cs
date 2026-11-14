@@ -212,6 +212,34 @@ public static class IslandEconomy
 
     public static int KindBit(IslandLayout.BuildingKind kind) => 1 << (int)kind;
 
+    /// <summary>Adaya girilmiş mi (köy kuruldu ya da ilerleme var).</summary>
+    public static bool Entered(IslandSaveData save) =>
+        save != null && (save.villageSeeded || save.highestAkin > 0 || save.tutorialStep > 0 || (save.placed != null && save.placed.Count > 0));
+
+    /// <summary>
+    /// v13 göçü (6. oturum): girilmiş adada tanıtım/öğretici görülmüş sayılır; Kıyı Kalesi ve Okçu seviyesi o anki ETKİN değerde
+    /// (Ana Üs'ü izleyen: max(kayıt, Ana Üs)) sabitlenir. Girilmemiş adada seviyeler 1'den başlar. İdempotent.
+    /// </summary>
+    public static void MigrateV13(IslandSaveData save, int mainBaseLevel)
+    {
+        if (save == null || save.levelsIndependent) return;
+        bool entered = Entered(save);
+        if (entered)
+        {
+            save.introSeen = true;
+            save.buildTutorial = 5;
+            int keep = Mathf.Clamp(Mathf.Max(save.keepLevel, mainBaseLevel), 1, Progression.MaxLevel);
+            save.keepLevel = keep;
+            save.archerLevel = keep;
+        }
+        else
+        {
+            save.keepLevel = 1;
+            save.archerLevel = 1;
+        }
+        save.levelsIndependent = true;
+    }
+
     /// <summary>Kayıttaki türlerin (ve hep Kale'nin) bit maskesi: v10 göçü ve hazır köy bunu "ilk yapım kullanıldı" sayar.</summary>
     public static int OwnedKindsMask(IList<IslandPlacedBuilding> placed)
     {
@@ -225,8 +253,27 @@ public static class IslandEconomy
     /// <summary>Bu türün ilk yapımı hâlâ bedava mı (bayrak açık ve bit yazılmamış).</summary>
     public static bool IsFirstBuildFree(IslandLayout.BuildingKind kind, IslandSaveData save = null)
     {
+        // 6. oturum (3.2): yalnız ilk Okçuluk Alanı (öğretici) bedava; genel "ilk yapım bedava" kuralı kaldırıldı.
         save = save ?? Save;
-        return save != null && Config.islandStartFresh && kind != IslandLayout.BuildingKind.Castle && (save.freeBuildMask & KindBit(kind)) == 0;
+        return save != null && Config.islandStartFresh && kind == IslandLayout.BuildingKind.Archery && (save.freeBuildMask & KindBit(kind)) == 0;
+    }
+
+    /// <summary>6. oturum (3.2): kurulum ALTIN bedeli (FeatureConfig.islandBuildGold); ilk Okçuluk 0.</summary>
+    public static int BuildGold(IslandLayout.BuildingKind kind, IslandSaveData save = null)
+    {
+        if (IsFirstBuildFree(kind, save)) return 0;
+        var table = Config.islandBuildGold;
+        int i = (int)kind;
+        return table != null && i < table.Length ? Mathf.Max(0, table[i]) : 0;
+    }
+
+    /// <summary>Tamamlanmış (seviye ≥ 1) Okçuluk Alanı var mı: Okçu Kaptan ancak o zaman adada.</summary>
+    public static bool HasArcheryReady(IslandSaveData save)
+    {
+        if (save?.placed == null) return false;
+        foreach (var b in save.placed)
+            if (b != null && b.level >= 1 && b.kind == nameof(IslandLayout.BuildingKind.Archery)) return true;
+        return false;
     }
 
     /// <summary>Liste bedeli: <see cref="Progression.Island.PlaceCost"/>; Okçuluk Alanı (bayrak açıkken) FeatureConfig'ten.</summary>
@@ -237,8 +284,15 @@ public static class IslandEconomy
     }
 
     /// <summary>Şu anki kurulum bedeli: ilk yapım bedavaysa (0, 0), değilse liste bedeli.</summary>
-    public static (int wood, int meat) BuildCost(IslandLayout.BuildingKind kind, IslandSaveData save = null) =>
-        IsFirstBuildFree(kind, save) ? (0, 0) : ListPrice(kind);
+    public static (int wood, int meat) BuildCost(IslandLayout.BuildingKind kind, IslandSaveData save = null)
+    {
+        if (IsFirstBuildFree(kind, save)) return (0, 0);
+        // 6. oturum (3.2): türün ilk kurulumu yalnız altınla (Oduncu/Ağıl Odun-Et üretmeden kurulabilsin); sonrakiler + Odun/Et liste bedeli.
+        save = save ?? Save;
+        bool first = save != null && CountOf(kind, save.placed) == 0;
+        if (first || !Config.islandRepeatNeedsResources) return kind == IslandLayout.BuildingKind.Archery ? ListPrice(kind) : (0, 0);
+        return ListPrice(kind);
+    }
 
     /// <summary>Menüden kurulabilen tür mü (Kale hiç; Okçuluk yalnız boş başlangıç bayrağıyla).</summary>
     public static bool Buildable(IslandLayout.BuildingKind kind) =>
@@ -643,7 +697,9 @@ public static class IslandEconomy
     {
         var c = Config;
         if (!c.islandTowerScaling) return 1f;
-        float scale = c.akinScaleBase + c.akinScalePerTowerLevel * TowerLevelSum(placed) + c.akinScalePerKeep * (keep - c.akinScaleKeepBase);
+        int delta = keep - c.akinScaleKeepBase;
+        float keepTerm = delta >= 0 ? c.akinScalePerKeep * delta : c.akinScalePerKeepBelow * delta;   // 6. oturum (3.4)
+        float scale = c.akinScaleBase + c.akinScalePerTowerLevel * TowerLevelSum(placed) + keepTerm;
         return Mathf.Clamp(scale, c.akinScaleMin, c.akinScaleMax);
     }
 
@@ -687,11 +743,41 @@ public static class IslandEconomy
     {
         if (b == null) return L.T("Bina yok", "No building");
         var kind = KindOf(b);
-        if (kind == IslandLayout.BuildingKind.Archery) return L.T("Okçu, Kıyı Kalesi ile yükselir", "The archer levels with the keep");
         if (b.level < 1) return L.T("İnşaat sürüyor", "Under construction");
         if (b.level >= Progression.Island.MaxBuildingLevel(Keep))
             return L.T($"Kıyı Kalesi {Keep}: tavan", $"Keep {Keep}: level cap");
         return BlockedReason();
+    }
+
+    // ==================== KIYI KALESİ YÜKSELTMESİ (6. oturum 3.3) ====================
+    public const string CastleTaskId = "Castle";
+
+    public static (int wood, int meat, int seconds) KeepUpgradeCost(int targetLevel) =>
+        (Progression.Island.UpgradeWood(IslandLayout.BuildingKind.Castle, targetLevel),
+         Progression.Island.UpgradeMeat(IslandLayout.BuildingKind.Castle, targetLevel), Progression.Island.BuildSeconds(targetLevel));
+
+    /// <summary>Kale yükseltmesi neden başlatılamaz (null = başlatılabilir). Ana Üs kilidi: Sv.N için Ana Üs Sv.N+1.</summary>
+    public static string KeepUpgradeBlockedReason()
+    {
+        var save = Save;
+        if (save == null) return L.T("Kayıt yok", "No save");
+        int target = Keep + 1;
+        if (Keep >= Progression.MaxLevel) return L.T("En yüksek seviye", "Max level");
+        int need = Progression.Island.KeepRequiredMainBase(target);
+        if (IslandSession.MainBaseLevel < need)
+            return L.T($"Kıyı Kalesi Sv.{target} için Ana Üs Sv.{need} gerekir", $"Keep Lv.{target} requires Main Base Lv.{need}");
+        return BlockedReason();
+    }
+
+    public static bool TryStartKeepUpgrade(bool useGems, out string reason)
+    {
+        reason = KeepUpgradeBlockedReason();
+        if (reason != null) return false;
+        var cost = KeepUpgradeCost(Keep + 1);
+        if (!TrySpendWithGems(cost.wood, cost.meat, useGems)) { reason = L.T("Kaynak yetersiz", "Not enough resources"); return false; }
+        StartTask("upgrade", CastleTaskId, 0, Keep + 1, cost.seconds);
+        GameManager.Instance?.SaveGame();
+        return true;
     }
 
     public static bool TryStartUpgrade(string id, bool useGems, out string reason)
@@ -717,7 +803,11 @@ public static class IslandEconomy
         if (!Buildable(kind) || list.wood + list.meat <= 0 && kind != IslandLayout.BuildingKind.House)
         { reason = L.T("Bu bina kurulamaz", "This building cannot be built"); return null; }
         var cost = BuildCost(kind);
+        int gold = BuildGold(kind);
+        var gm = GameManager.Instance;
+        if (gold > 0 && (gm == null || gm.Gold < gold)) { reason = L.T($"Altın yetersiz ({gold})", $"Not enough gold ({gold})"); return null; }
         if (!TrySpendWithGems(cost.wood, cost.meat, useGems)) { reason = L.T("Kaynak yetersiz", "Not enough resources"); return null; }
+        if (gold > 0) gm.SpendGold(gold);
         if (Config.islandStartFresh) Save.freeBuildMask |= KindBit(kind);   // ilk yapım hakkı inşaat başlarken kullanılır
         var entry = new IslandPlacedBuilding
         {
@@ -794,7 +884,14 @@ public static class IslandEconomy
             switch (done.kind)
             {
                 case "build": if (entry != null) { entry.level = 1; entry.lastTick = task.endTicks; } break;
-                case "upgrade": if (entry != null) entry.level = Mathf.Max(entry.level, done.targetLevel); break;
+                case "upgrade":
+                    if (done.buildingId == CastleTaskId) save.keepLevel = Mathf.Max(save.keepLevel, done.targetLevel);   // 6. oturum (3.3)
+                    else if (entry != null)
+                    {
+                        entry.level = Mathf.Max(entry.level, done.targetLevel);
+                        if (KindOf(entry) == IslandLayout.BuildingKind.Archery) save.archerLevel = Mathf.Max(save.archerLevel, entry.level);
+                    }
+                    break;
                 case "zone":
                     save.zoneMask |= 1 << done.zone;
                     if (done.zone == Progression.Island.VeinZone) { save.veinTick = task.endTicks; save.veinStock = 0f; }   // damar bu andan çalışır

@@ -232,6 +232,7 @@ public sealed class ShopTabView : MonoBehaviour
 
     private void OnPurchaseFinished(string productId, bool ok, string message)
     {
+        if (this == null) return;
         GemActions.Toast(message);
         if (ok) AudioManager.Instance?.PlaySfx("levelUp");
         Refresh();
@@ -263,6 +264,13 @@ public sealed class ShopTabView : MonoBehaviour
 
     public void Refresh()
     {
+        if (this == null)
+        {
+            // Sahne kapandı: kalıcı IapService'teki abonelik temizlenir (yok edilmiş metne dokunulmaz).
+            var iapSvc = FindFirstObjectByType<IapService>();
+            if (iapSvc != null) { iapSvc.Changed -= Refresh; iapSvc.PurchaseFinished -= OnPurchaseFinished; }
+            return;
+        }
         var gm = GameManager.Instance;
         foreach (var p in packs)
         {

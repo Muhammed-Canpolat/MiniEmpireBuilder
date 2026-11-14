@@ -584,3 +584,57 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - Fiyat metni mağazadan; yazı tipinde olmayan para simgesi (₺ gibi) ISO koduna çevrilir (`ShopTabView.SafePrice`) — kare görünmez.
 - Üst bardaki eski Elmas Dükkânı'nın "YAKINDA" karoları aynı ürünlere bağlandı.
 - Ürün kimlikleri ve kullanıcı adımları PLAY_RELEASE.md §9.
+
+## D77 — Adaya ilk giriş: tanıtım + ad (6. oturum 3.1)
+- **Neden tetiklenmedi (kök neden):** `IslandHud.OfferNameSoon` içinde `if (DevSettings.Enabled && !OfferInDev) yield break;` vardı. `DevSettings.Enabled`
+  editörde ve **Development APK'da varsayılan AÇIK** → cihazdaki test derlemesinde ad sorusu hiç gelmiyor, ada "Martı Adası" kalıyordu. Ayrıca v10 göçü
+  eski kayıtlarda `freshStart=false` yaptığı için girmemiş eski kayıtta bile "ilk ad" yerine "teklif" kipi seçilecekti.
+- **Karar:** kapı yalnız otomatik test koşusunda (batchmode, `OfferInDev` kapalı). İlk giriş `island.introSeen` (kayıt **v13**) ile: `Island/IslandIntro.cs`
+  (bulutlar dört yana açılır, ada görünür, kâğıt kartta 2 cümle hikâye, DEVAM) → `IslandNameUi.Mode.First` "Adanızın adı ne olsun?" → öğretici (D78).
+  İlk adlandırma değişiklik hakkından düşmez: ardından 2 ücretsiz değişiklik, sonra 50, 100, 150… elmas.
+- **Göç (v13):** adaya girilmiş kayıt (köy kurulmuş/akın/öğretici/bina) tanıtımı ve öğreticiyi görmüş sayılır; ad sorulmadıysa bir kez teklif edilir.
+  Girilmemiş eski kayıt yeni oyuncu gibi tam akışı görür. Test: `Session6Tests.S3_1_2`, `S3_1_3` (göç + v12 JSON yükleme).
+
+## D78 — Ada başlangıcı ve zorunlu Okçuluk öğreticisi (6. oturum 3.2)
+- İlk girişte yalnız Kıyı Kalesi + doğa: Okçu Kaptan Okçuluk Alanı TAMAMLANANA dek adada yok (`IslandEconomy.HasArcheryReady`); boş adada Ada Ustası da
+  görev başlayana dek görünmez. Okçu yokken akın panosu/savunma açılmaz ("Önce Okçuluk Alanı'nı kur").
+- `Island/IslandBuildTutorial.cs` (adım kayıtta `buildTutorial`): 1) ekran kararır, yalnız öğreticinin İNŞA ET düğmesi + ok + metin; 2) menüde Okçuluk Alanı
+  kartı dışındaki her yer kararır (dört şerit + ok); 3) yerleştirme (karartma yok, üstte metin); 4) inşa sürüyor; 5) okçu binanın kapısında belirir ve ilk
+  atış yerine koşar ("Okçu Kaptan hazır!"). Menü kapatılır/yerleştirme iptal edilirse 1'e döner. Okçuluk zaten varsa (eski/hazır köy) öğretici atlanır.
+- **"İlk yapım bedava" kalktı;** yalnız ilk Okçuluk Alanı ücretsiz. Kurulum ALTIN bedeli `FeatureConfig.islandBuildGold`: Oduncu 100, Ağıl 100, Ev 250,
+  Gözcü Kulesi 350, Kışla 600, Manastır 900; aynı türün 2.+ kurulumu ayrıca eski Odun/Et liste bedelini ister (ECONOMY §13).
+- Eski kayıtlar: binalar, birimler, bedava hak maskesi korunur (yalnız Okçuluk dışı türlerde bedava hak artık yok).
+
+## D79 — Ada seviyeleri Ana Üs'ten bağımsız (6. oturum 3.3)
+- `Progression.Island.KeepFollowsMainBase = false`: Kıyı Kalesi ve Okçu (= Okçuluk Alanı seviyesi) 1'den başlar, kendi Odun/Et bedeli ve Usta süresiyle
+  yükselir. Ana Üs yalnız KİLİT: **Kıyı Kalesi Sv.N için Ana Üs Sv.N+1** (`KeepRequiredMainBase`, en az 5 = ada açılışı). Diğer ada binalarının tavanı
+  zaten Kıyı Kalesi seviyesi (`MaxBuildingLevel`), böylece Ana Üs → Kale → binalar zinciri tek yönlü.
+- Kale paneli: YÜKSELT → Sv N (bedel, süre, kilit nedeni), sonraki seviyenin can/Odun tavanı/en yüksek Akın'ı; bina panelleri "Sonraki: …" (yeşil).
+  Okçuluk Alanı artık yükseltilebilir; bitince `archerLevel` = bina seviyesi.
+- **Göç (adil):** girilmiş adada seviyeler o anki ETKİN değerde (Ana Üs'ü izleyen = max(kayıt, Ana Üs)) sabitlenir, kimse seviye kaybetmez; bundan
+  sonra bağımsız ilerler. Gerekçe: oyuncu o seviyeyi görmüş ve onunla savaşmıştı; düşürmek ceza olurdu. Girilmemiş adada 1'den başlar.
+
+## D80 — Akın eğrisi yeni başlangıca göre (6. oturum 3.4)
+- `AkinScale`: Kıyı Kalesi 5'in altındaki her seviye için −0,075 (`akinScalePerKeepBelow`; Kale 1 → 0,5, tavan altı 0,5). Okçu Sv1 hasarı Sv5'in
+  0,625'i; düşman canı 0,5/0,8 = 0,625 oranında düştüğü için "öldürme süresi" eski Kale 5 başlangıcıyla aynı (test `S3_3_4`). Kale 1'de Akın 1–3.
+
+## D81 — Arazi genişletme şeffaf ve elle (6. oturum 4.1)
+- Önce: Ana Üs 4/7/10/13'te arazi kendiliğinden açılıyordu; kilitli araziye dokununca yalnız "Ana Üs Sv.4 ile temizlenir" yazıyordu.
+- **Karar:** `Base/LandExpansion.cs` + ortak `Systems/AreaHighlight.cs`. Kilitli araziye dokununca o hücrenin AİT OLDUĞU kademenin tüm alanı (kenarları
+  altın, nabızlı hafif dolgu) vurgulanır; kart: koşul (Ana Üs Sv.N, sağlanınca ✓), büyüklük (+80 inşa hücresi), içindeki kaynaklar (ağaç/kaya/çalı),
+  AÇ düğmesi. Koşul sağlansa da alan kendiliğinden açılmaz; AÇ → bulut dağılma animasyonu → alan, çit ve kamera yenilenir. Sonraki kademeler de
+  dokununca kendi alanını gösterir (kilitli; "önce yakındaki alanı aç"). Durum `PlayerSaveData.landOpened` (yeni oyunda 0; eski kayıtta -1 → Ana Üs
+  kademesi kadar açık sayılır, kimsenin arazisi kapanmaz). Seviye afişi "YENİ ARAZİ AÇILABİLİR" der.
+- Ada: bölge paneli aynı vurguyu ve "Koşul: Kıyı Kalesi Sv.N ✓ · Alan: +N hücre · N ağaç" bilgisini kullanır; açma zaten Usta görevi + bulut dağılması.
+
+## D82 — Süreli temizleme ve küçük eylem menüsü (6. oturum 4.2)
+- Büyük "Kaldır / Vazgeç" kartı yerine öğenin hemen üstünde `WorldActionMenu` (dekor/bina menüsüyle aynı aile): KALDIR + bedel/süre hapı.
+- `Systems/NatureClear.cs`: süre `FeatureConfig` (çalı 3, kütük 4, kaya 5, ağaç 10 sn); iş sıraya girer, işçi boşalınca başlar (halka gri "SIRADA");
+  öğenin üstünde radyal ilerleme halkası + kalan saniye; bitince toz efekti + ödül yazısı. Ana Üs: inşaatçı görevi ("nature:<id>", oyun kapalıyken de
+  ilerler; bitiş GameManager'da kayda yazılır, ödül orada verilir: ağaç +12 Odun, kütük +6 Odun, çalı +2 Et, kaya +8 Altın — config). Ada: Ada Ustası
+  yürüyüp keser (gerçek zaman), bedel/ödül mevcut ada kuralları. Ana Üs harita ağaç/kaya nesneleri de aynı menü ve config süreleriyle.
+
+## D83 — Savaş kartı açma penceresi (6. oturum AŞAMA 5)
+- `UI/BattleCardUnlockDialog.cs`: Tiny Swords kâğıt + kurdele, kart simgesi + açıklama; altta EŞİT boyutlu iki düğme: mavi "▶ REKLAM İZLE (kalan hak)"
+  (`ui_icon_play`) ve altın "💎 N İLE AÇ" (elmas simgesi + net fiyat; yetmezse kırmızı → Elmas Dükkânı). Günlük kart reklamı hakkı
+  `FeatureConfig.dailyBattleCardAds` = 9 (savaş başına 3 kart × 3 savaş); bitince düğme pasif, "Yeni hak 3sa 12dk" (yerel gece yarısı).

@@ -12,6 +12,8 @@ using UnityEngine;
 public sealed class IslandVillage : MonoBehaviour
 {
     public static IslandVillage Instance { get; private set; }
+    /// <summary>6. oturum (4.2): temizleme işine giden Ada Ustası.</summary>
+    public IslandPawn BuilderPawn => builderPawn;
 
     public Transform PawnsRoot { get; private set; }
     public IslandBuilding Castle { get; private set; }
@@ -361,6 +363,8 @@ public sealed class IslandVillage : MonoBehaviour
         var keepDoor = IslandLayout.World(IslandLayout.Building(IslandLayout.BuildingKind.Castle).DoorCell);
         builderPawn = IslandPawn.Create(workersRoot, catalog, IslandPawn.Job.Builder, keepDoor + new Vector2(-1.4f, -0.1f));
         if (builderAt.HasValue) builderPawn.transform.position = builderAt.Value;
+        // 6. oturum (3.2): boş adada (bina yok, görev yok) hazır işçi görünmez; Usta ilk görevle kaleden çıkar.
+        if ((save.placed == null || save.placed.Count == 0) && (save.task == null || !save.task.Active)) builderPawn.gameObject.SetActive(false);
         var idleByHouse = new Dictionary<string, int>();
         foreach (var row in IslandEconomy.StaffRoster(save.placed))
         {
@@ -707,6 +711,7 @@ public sealed class IslandVillage : MonoBehaviour
         marker.root.transform.position = new Vector3(top.x, top.y, 0f);
         int left = Mathf.CeilToInt((float)IslandEconomy.TaskSecondsLeft);
         marker.text.text = left >= 3600 ? $"{left / 3600}:{left % 3600 / 60:00}:{left % 60:00}" : $"{left / 60}:{left % 60:00}";
+        if (builderPawn != null && !builderPawn.gameObject.activeSelf) builderPawn.gameObject.SetActive(true);
         if (builderPawn != null && (force || marker.key != key)) builderPawn.SetSite(siteFeet);
         marker.key = key;
     }

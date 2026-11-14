@@ -861,18 +861,18 @@ public class CampaignSceneSetup : MonoBehaviour
             if (BattleCards.ChosenFromStock(card)) { BattleCards.Deselect(card); refresh(); return; }   // atölye seçimi geri alınır (hak savaşta düşer)
             if (BattleCards.IsUnlocked(card)) { toast(L.T($"{BattleCards.Description(card)} kartı bu savaş için açık.", $"{BattleCards.Description(card)} card is active for this battle.")); return; }
             if (BattleCards.TryUnlockWithoutAd(card)) { refresh(); return; }
-            // Elmasla hemen aç ya da reklam izle.
-            GemConfirm.Show(L.T("SAVAŞ KARTI", "BATTLE CARD"),
-                L.T($"{BattleCards.Description(card)} bu savaş için +%{BattleCards.BonusPercent}.", $"{BattleCards.Description(card)} +{BattleCards.BonusPercent}% for this battle."),
-                GemEconomy.BattleCardCost, L.T("AÇ", "UNLOCK"), () =>
-                {
-                    if (BattleCards.UnlockWithGems(card)) refresh();
-                }, null, false, L.T("REKLAM İZLE", "WATCH AD"), () => RewardedAds.Show("battle_card", ok =>
+            // 6. oturum (AŞAMA 5): eşit boyutlu "▶ REKLAM İZLE" ve "💎 N İLE AÇ"; reklam hakkı bitince kalan süre.
+            BattleCardUnlockDialog.Show(L.T("SAVAŞ KARTI", "BATTLE CARD"),
+                L.T($"{BattleCards.Description(card)}: bu savaş için +%{BattleCards.BonusPercent}.", $"{BattleCards.Description(card)}: +{BattleCards.BonusPercent}% for this battle."),
+                Art(CardIcon(card)), GemEconomy.BattleCardCost,
+                () => RewardedAds.Show("battle_card", ok =>
                 {
                     if (!ok) return;
+                    AdRewards.ConsumeCardAd();
                     BattleCards.UnlockFromAd(card);
                     refresh();
-                }));
+                }),
+                () => { if (BattleCards.UnlockWithGems(card)) refresh(); });
         });
     }
 

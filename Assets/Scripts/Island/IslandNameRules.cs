@@ -124,9 +124,12 @@ public static class IslandNameRules
     public static int NextCost(IslandSaveData save) => GemEconomy.IslandRenameCost(EffectiveChanges(save));
 
     /// <summary>Adı yazar, sayacı artırır, mührü yeniler, teklifi işaretler. Doğrulama çağıranda yapılır.</summary>
-    public static void Apply(IslandSaveData save, string cleanName)
+    public static void Apply(IslandSaveData save, string cleanName) => ApplyNaming(save, cleanName, false);
+
+    public static void ApplyNaming(IslandSaveData save, string cleanName, bool firstNaming)
     {
-        int changes = EffectiveChanges(save) + 1;
+        // 6. oturum (3.1): ilk adlandırma değişiklik hakkından düşmez → sonra 2 ücretsiz değişiklik, sonra 50, 100, 150… elmas.
+        int changes = EffectiveChanges(save) + (firstNaming ? 0 : 1);
         save.islandName = cleanName;
         save.nameChanges = changes;
         save.nameOffered = true;
