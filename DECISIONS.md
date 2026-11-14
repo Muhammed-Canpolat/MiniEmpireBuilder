@@ -525,3 +525,15 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   Savaşçı/Ana Üs/Çırak kartları (`BattleHudRedesign.StyleCard`) ve ada kale barı bunu kullanır; eski Slider/Filled görüntü yalnız değer kaynağı.
   Dünya: `HealthBar` aynı kural (sol pivotlu sprite, aynı iz süreleri) — karakter, düşman, kule, Ana Üs, ada yapıları hepsi bu bileşen.
 - Test `Session6Tests.S1_3_*`; görüntü `Docs/playtest/session6/S1_2_3_battle_rings_bars.png`.
+
+## D71 — Uzun yürüyüşte animasyon kesintisiz (6. oturum 1.4)
+- **Kök neden 1 (asıl):** savaşta kahramanın asıl SpriteRenderer'ı `BattleActorPresentation` tarafından `forceRenderingOff` ile gizleniyor, büyütülmüş
+  kopyası çiziliyor. `BattleCosmeticObserver` ise kahraman Animator'ına `CullUpdateTransforms` veriyordu: görünmeyen renderer'da Animator sprite yazmayı
+  bırakıyor → ilk kareler oynuyor, yürüyüş uzayınca kare donuyor, karakter kayıyor gibi görünüyordu. **Çözüm:** kahraman Animator'ı `AlwaysAnimate`.
+  Aynı gizleme yalnız tek kareli düşmanlarda (`EnemyMotion`, Animator yok) var; diğer Animator'lar görünür renderer kullanıyor.
+- **Kök neden 2:** Tiny Swords içe aktarımında Run/Idle dahil TÜM kliplerde `m_LoopTime: 0`. Animator durumu süre bitince son karede kalıyordu
+  (Okçu/Lancer/Monk/Pawn/Koyun yürüme-bekleme, çırak, ada/Ana Üs işçileri). **Çözüm:** adı Run/Idle/Interact/Walk/Move/Grass içeren ve ortam döngüleri
+  (çalı, ağaç Idle, ateş, su kayası, ördek, su sıçraması, altın taşı Static) 181 klipte döngü açıldı. Tek seferlikler (Attack, Death, Hit, Guard, Shoot,
+  Chopped, Explosion, Dust, Heal) dokunulmadı. Dungeon canavarları (ada düşmanları) zaten döngülüydü; tek kareli düşmanlar kodla yürür (EnemyMotion).
+- Test `Session6Tests.S1_4_*`: katalogdaki ve Resources'taki tüm denetleyicilerde yürüme/bekleme klipleri döngülü; savaşta 5 sn yürüyüşün son 1,5 sn'sinde
+  kahraman kareleri değişmeye devam ediyor.

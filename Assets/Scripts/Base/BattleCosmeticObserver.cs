@@ -59,12 +59,14 @@ public sealed class BattleCosmeticObserver : MonoBehaviour
         }
 
         // HeroController creates its Animator in Start, which can run after our first scan.
+        // 6. oturum (1.4): kahramanın asıl SpriteRenderer'ı forceRenderingOff ile gizli (BattleActorPresentation büyütülmüş kopyayı çizer).
+        // CullUpdateTransforms görünmeyen renderer'da sprite yazımını durduruyordu: yürüyüş uzayınca kare donuyor, karakter "kayıyordu".
+        // Animator her zaman çalışmalı.
         if (hero != null)
         {
             var heroAnimator = hero.GetComponent<Animator>();
-            if (heroAnimator != null &&
-                heroAnimator.cullingMode != AnimatorCullingMode.CullUpdateTransforms)
-                heroAnimator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            if (heroAnimator != null && heroAnimator.cullingMode != AnimatorCullingMode.AlwaysAnimate)
+                heroAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         }
 
         // Kule askerleri: garnizon BattleManager'da kurulur, ateşi TowerController tetikler.

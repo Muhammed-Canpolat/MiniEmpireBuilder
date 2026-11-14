@@ -242,6 +242,72 @@ public class Session6Tests
         battle.GetType().GetMethod("BattleLost", System.Reflection.BindingFlags.Public | flags)?.Invoke(battle, null);
     }
 
+    // ==================== 1.4 Uzun yürüyüşte animasyon kesintisiz ====================
+
+    [Test]
+    public void S1_4_LocomotionClipsOfAllMoverControllersLoop()
+    {
+        var bad = new List<string>();
+        int checkedClips = 0;
+        void Check(RuntimeAnimatorController c)
+        {
+            if (c == null) return;
+            foreach (var clip in c.animationClips)
+            {
+                if (clip == null) continue;
+                string n = clip.name;
+                bool loco = n.Contains("Run") || n.Contains("Idle") || n.Contains("Move") || n.Contains("Walk") || n.Contains("Interact");
+                if (!loco) continue;
+                checkedClips++;
+                if (!clip.isLooping) bad.Add($"{c.name}/{n}");
+            }
+        }
+        var catalog = SP("BaseVisualCatalog", "Instance");
+        foreach (var f in catalog.GetType().GetFields())
+        {
+            if (f.FieldType == typeof(RuntimeAnimatorController)) Check((RuntimeAnimatorController)f.GetValue(catalog));
+            if (f.FieldType == typeof(RuntimeAnimatorController[]))
+                foreach (var c in (RuntimeAnimatorController[])f.GetValue(catalog) ?? new RuntimeAnimatorController[0]) Check(c);
+        }
+        foreach (var c in Resources.LoadAll<RuntimeAnimatorController>("")) Check(c);
+        for (int level = 1; level <= 15; level += 3) Check((RuntimeAnimatorController)S("HeroLook", "Controller", level));
+        Assert.Greater(checkedClips, 20, "denetlenen yürüme/bekleme klibi");
+        Assert.IsEmpty(bad, "döngüsü kapalı yürüme/bekleme klipleri: " + string.Join(", ", bad));
+    }
+
+    [UnityTest]
+    public IEnumerator S1_4_HeroKeepsRunningAnimationOnLongWalk()
+    {
+        yield return Session4Tests.StartBattle(1, 2);
+        var hero = Object.FindFirstObjectByType(T("HeroController")) as Component;
+        var animator = hero.GetComponent<Animator>();
+        var sr = hero.GetComponent<SpriteRenderer>();
+        Assert.NotNull(animator, "kahraman Animator'ı");
+        foreach (var joy in Object.FindObjectsByType(T("VirtualJoystick"), FindObjectsSortMode.None)) ((Behaviour)joy).enabled = false;
+        float t0 = Time.time;
+        var lateSprites = new HashSet<Sprite>();
+        var diag = new List<string>();
+        int dirFlip = 0;
+        while (Time.time - t0 < 5f)
+        {
+            // Uzun yürüyüş: 5 sn boyunca sürekli hareket (kenara dayanırsa yön değiştirir)
+            if ((int)((Time.time - t0) / 1.5f) != dirFlip) dirFlip = (int)((Time.time - t0) / 1.5f);
+            M(hero, "SetMoveInput", dirFlip % 2 == 0 ? new Vector2(1f, 0.2f) : new Vector2(-1f, -0.2f));
+            if (Time.time - t0 > 3.5f) lateSprites.Add(sr.sprite);
+            var st = animator.GetCurrentAnimatorStateInfo(0);
+            diag.Add($"{Time.time - t0:0.00} run={st.IsName("Run")} idle={st.IsName("Idle")} atk={st.IsName("Attack")} n={st.normalizedTime:0.00} loop={st.loop} spr={(sr.sprite != null ? sr.sprite.name : "-")} en={animator.enabled} sp={animator.speed} ts={Time.timeScale} clip={(animator.GetCurrentAnimatorClipInfo(0).Length > 0 ? animator.GetCurrentAnimatorClipInfo(0)[0].clip.name : "-")} pos={hero.transform.position}");
+            yield return null;
+        }
+        File.WriteAllLines(Path.Combine(Folder, "S1_4_diag.txt"), diag);
+        var state = animator.GetCurrentAnimatorStateInfo(0);
+        Assert.IsTrue(state.loop, "Run durumu döngülü klip oynatıyor");
+        Assert.Greater(lateSprites.Count, 2, "3,5 sn sonra da kareler değişiyor (kayma yok)");
+        M(hero, "SetMoveInput", Vector2.zero);
+        var battle = Object.FindFirstObjectByType(T("BattleManager"));
+        battle.GetType().GetMethod("BattleLost", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+            | System.Reflection.BindingFlags.Instance)?.Invoke(battle, null);
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]
