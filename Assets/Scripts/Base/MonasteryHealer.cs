@@ -6,7 +6,10 @@ using UnityEngine;
 /// </summary>
 public sealed class MonasteryHealer : MonoBehaviour
 {
-    private const float Range = 4f;
+    public const float Range = 4f;
+    private RangeRing ring;
+    private float ringUntil;
+    private HeroController heroRef;
     private const float Interval = 3f;
     private float HealFraction => Progression.MonasteryHealFraction(Level);
     private float nextHeal;
@@ -18,12 +21,25 @@ public sealed class MonasteryHealer : MonoBehaviour
     {
         structure = GetComponent<BattleStructure>();
         nextHeal = Time.time + Interval;
+        // 6. oturum (1.2): iyileştirme menzili çemberi (yeşilimsi), kulelerle aynı kural: kurulunca 2,5 sn ve kahraman yaklaşınca.
+        if (structure != null)
+        {
+            ring = RangeRing.Attach(gameObject, () => Origin, Range, new Color(0.55f, 0.95f, 0.6f, 0.35f), 30);
+            ringUntil = Time.time + 2.5f;
+        }
     }
 
-    private Vector2 Origin => structure != null ? structure.BasePoint : (Vector2)transform.position;
+    /// <summary>Menzil merkezi = yapının görsel/mantıksal merkezi (TowerController ile aynı kural).</summary>
+    public Vector2 Origin => structure != null ? structure.RangeCenter : (Vector2)transform.position;
 
     private void Update()
     {
+        if (ring != null)
+        {
+            if (heroRef == null) heroRef = FindFirstObjectByType<HeroController>();
+            bool near = heroRef != null && Vector2.Distance(heroRef.transform.position, Origin) < 3.2f;
+            ring.SetVisible(!(structure != null && structure.IsDestroyed) && (near || Time.time < ringUntil));
+        }
         if (Time.time < nextHeal) return;
         nextHeal = Time.time + Interval;
         if (structure != null && structure.IsDestroyed) return;
@@ -46,7 +62,7 @@ public sealed class MonasteryHealer : MonoBehaviour
         foreach (var other in BattleStructure.All)
         {
             if (other == null || other == structure || other.IsDestroyed || other.HealthPercent >= 1f) continue;
-            if (Vector2.Distance(Origin, other.BasePoint) > Range) continue;
+            if (Vector2.Distance(Origin, other.RangeCenter) > Range) continue;
             other.Heal(other.MaxHealth * HealFraction);
             healed = true;
         }

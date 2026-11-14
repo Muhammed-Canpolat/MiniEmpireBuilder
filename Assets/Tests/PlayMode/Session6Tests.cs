@@ -167,4 +167,64 @@ public class Session6Tests
         lancers = (IList)T("AllyBarracks").GetMethod("BarracksLevels").Invoke(null, new[] { save });
         Assert.AreEqual(3, lancers[0]);
     }
+
+    // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
+
+    [UnityTest]
+    public IEnumerator S1_2_RangeRingCenteredAndEqualInFourDirections()
+    {
+        yield return FreshManager();
+        foreach (string kind in new[] { "ArcherTower", "CannonTower", "Monastery" })
+        {
+            // Savaştaki gibi: taban noktası yuvanın 0,45 altında, görsel 2,4 birim yüksek, açılışta Y ölçeği 0,2 → 1.
+            var go = new GameObject("TestTower_" + kind);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f / 1.6f);
+            go.transform.position = new Vector3(2f, 1.2f, 0f);
+            go.transform.localScale = new Vector3(1.6f, 1.6f * 0.2f, 1f);
+            var structure = go.AddComponent(T("BattleStructure"));
+            M(structure, "Initialize", Enum.Parse(T("BuildingType"), kind), 3, null, new Vector2(2f, 0f), 2.4f);
+            Component comp = kind == "Monastery" ? go.AddComponent(T("MonasteryHealer")) : go.AddComponent(T("TowerController"));
+            yield return null;                       // Start: halka kurulur (yapı hâlâ ezik)
+            go.transform.localScale = new Vector3(1.6f, 1.6f, 1f);   // açılış animasyonu biter
+            yield return null;
+            yield return null;
+
+            Vector2 center = (Vector2)P(structure, "RangeCenter");
+            Assert.AreEqual(new Vector2(2f, 1.2f), center, $"{kind}: merkez = taban + görsel yüksekliğin yarısı (kulenin ortası)");
+            var ringComp = go.GetComponent(T("RangeRing"));
+            Assert.NotNull(ringComp, kind + ": menzil çemberi yok");
+            var ring = (GameObject)P(ringComp, "Ring");
+            float radius = (float)P(ringComp, "Radius");
+            Assert.AreEqual(center.x, ring.transform.position.x, 1e-3, kind + ": çember merkezi X");
+            Assert.AreEqual(center.y, ring.transform.position.y, 1e-3, kind + ": çember merkezi Y (eskiden kulenin çok altında)");
+            // Çizilen her kesik çizgi uç noktası merkezden aynı uzaklıkta (kuzey = güney = doğu = batı).
+            float min = float.MaxValue, max = 0f, north = 0f, south = 0f;
+            foreach (var line in ring.GetComponentsInChildren<LineRenderer>())
+                for (int i = 0; i < line.positionCount; i++)
+                {
+                    Vector2 w = line.transform.TransformPoint(line.GetPosition(i));
+                    float d = Vector2.Distance(w, center);
+                    min = Mathf.Min(min, d); max = Mathf.Max(max, d);
+                    north = Mathf.Max(north, w.y - center.y); south = Mathf.Max(south, center.y - w.y);
+                }
+            Assert.AreEqual(radius, min, 0.01f, kind + ": çember yarıçapı (en yakın nokta)");
+            Assert.AreEqual(radius, max, 0.01f, kind + ": çember yarıçapı (en uzak nokta)");
+            Assert.AreEqual(north, south, 0.05f, kind + ": kuzey ve güney kenarı eşit");
+
+            if (kind != "Monastery")
+            {
+                Assert.AreEqual(center, (Vector2)P(comp, "RangeOrigin"), "hedefleme merkezi = çember merkezi");
+                Assert.AreEqual(radius, (float)P(comp, "AttackRange"), 1e-4, "hedefleme yarıçapı = çember yarıçapı");
+                foreach (var dir in new[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right })
+                {
+                    Assert.IsTrue((bool)S("TowerController", "InRange", center, radius, center + dir * (radius - 0.02f)), $"{kind} {dir}: içeride");
+                    Assert.IsFalse((bool)S("TowerController", "InRange", center, radius, center + dir * (radius + 0.02f)), $"{kind} {dir}: dışarıda");
+                }
+            }
+            else Assert.AreEqual(center, (Vector2)P(comp, "Origin"), "iyileştirme merkezi = çember merkezi");
+            Object.Destroy(go);
+            yield return null;
+        }
+    }
 }

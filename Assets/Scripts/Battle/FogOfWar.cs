@@ -61,9 +61,9 @@ public sealed class FogOfWar : MonoBehaviour
         if (hero != null && hero.CurrentHealth > 0f) Add(hero.transform.position, HeroRadius);
         foreach (var tower in towers)
             if (tower != null && !tower.IsDestroyed)
-                Add(tower.transform.position, tower.AttackRange + TowerExtraRadius);
+                Add(tower.RangeOrigin, tower.AttackRange + TowerExtraRadius);
         foreach (var monastery in monasteries)
-            if (monastery != null) Add(monastery.transform.position, MonasteryRadius);
+            if (monastery != null) Add(monastery.Origin, MonasteryRadius);
     }
 
     private void Add(Vector3 position, float radius)

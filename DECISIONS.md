@@ -504,3 +504,14 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   türetiliyor) → migration gerekmez; eski kayıtta süren inşa da doğru sayılır. "build" görevi bitince tür seviyeleri yeniden hesaplanır.
 - Okuyanlar: GameManager (tür seviyesi, savaş kule seviyesi, ev bonusu), BattleManager, AllyBarracks, CardWorkshop, savaş ipucu.
   Kahraman/Çırak (2.2) ve ada (3.3) aynı ilkeyle.
+
+## D69 — Menzil çemberi = hedefleme merkezi ve yarıçapı (6. oturum 1.2)
+- **Kök neden (ekran görüntüsü: çember kulenin çok altında):** halka `DashedCircle(transform, …)` ile ölçeği tweenlenen kulenin ÇOCUĞU olarak, kule
+  açılış animasyonunda (Y ölçeği 0,2) taban noktasına konuyordu. Ölçek 1'e büyüyünce yerel ofset ×5 oldu → merkez kulenin ~2 birim altına kaydı;
+  kuzey kenarı kulenin hemen üstünde, güney kenarı çok aşağıda kaldı. Hedefleme ise tabandan (BasePoint) ölçüyordu: çember ile hasar uyuşmuyordu.
+- **Karar:** `BattleStructure.RangeCenter` = taban + görsel yüksekliğin yarısı (kulenin görsel/mantıksal ortası). Okçu/Topçu hedeflemesi
+  (`TowerController.RangeOrigin`, `InRange` tek kural), Manastır iyileştirmesi, sis görüşü ve çember aynı merkezi kullanır. Çember `Battle/RangeRing.cs`:
+  ebeveynsiz, ölçeği 1, her karede merkeze yazılır; yarıçap = saldırı menzili (dünya birimi). Manastır'a da (yeşil, 4 birim) çember eklendi; kulelerle
+  aynı görünürlük kuralı (kurulunca 2,5 sn + kahraman yaklaşınca). Ada okçusunda çember çizilmiyor (v2 kararı) — dokunulmadı.
+- Test `Session6Tests.S1_2`: Y ölçeği 0,2 → 1 sonrası çember merkezi = RangeCenter; tüm kesik uçları merkezden aynı uzaklıkta; K/G/D/B'de
+  yarıçap−0,02 içeride, +0,02 dışarıda.

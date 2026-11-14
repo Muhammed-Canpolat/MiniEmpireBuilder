@@ -19,7 +19,7 @@ public class TowerController : MonoBehaviour
     private float lastAttackTime;
     private int level = -1;
     private BattleStructure structure;
-    private GameObject rangeRing;
+    private RangeRing rangeRing;
     private float ringUntil;
     private HeroController hero;
 
@@ -27,6 +27,9 @@ public class TowerController : MonoBehaviour
     public bool IsDestroyed => structure != null && structure.IsDestroyed;
     public float AttackRange => attackRange;
     public BuildingType Type => towerType;
+    /// <summary>Menzil merkezi: hedefleme, çember ve sis görüşü aynı noktayı kullanır.</summary>
+    public Vector2 RangeOrigin => structure != null ? structure.RangeCenter : (Vector2)transform.position;
+    public RangeRing Ring => rangeRing;
 
     /// <summary>Kule, onu sağlayan Ana Üs binasının seviyesiyle kurulur.</summary>
     public void Initialize(BuildingType type, int towerLevel)
@@ -56,11 +59,8 @@ public class TowerController : MonoBehaviour
                 attackCooldown = 1f / Mathf.Max(0.1f, towerData.attackSpeed);
             }
         }
-        rangeRing = BattleWorldMarkers.DashedCircle(transform, attackRange,
-            new Color(0.94f, 0.76f, 0.29f, 0.35f), 36);
-        // Halka yapının tabanında olsun (kök görselin ortasında).
-        if (structure != null)
-            rangeRing.transform.position = new Vector3(structure.BasePoint.x, structure.BasePoint.y, 0.05f);
+        // 6. oturum (1.2): halka hedeflemeyle aynı merkez ve yarıçap (RangeCenter, attackRange); ölçekli kuleden bağımsız.
+        rangeRing = RangeRing.Attach(gameObject, () => RangeOrigin, attackRange, new Color(0.94f, 0.76f, 0.29f, 0.35f), 36);
         ringUntil = Time.time + RingAfterBuildSeconds;
     }
 
@@ -94,7 +94,7 @@ public class TowerController : MonoBehaviour
     private void UpdateThaw()
     {
         if (hero == null) hero = FindFirstObjectByType<HeroController>();
-        Vector2 origin = structure != null ? structure.BasePoint : (Vector2)transform.position;
+        Vector2 origin = RangeOrigin;
         bool near = hero != null && !hero.IsDowned
             && Vector2.Distance(hero.transform.position, origin) <= Progression.RegionMechanics.ThawRadius;
         if (thawRing == null)
@@ -125,7 +125,7 @@ public class TowerController : MonoBehaviour
 
     private void Update()
     {
-        if (IsDestroyed) return;
+        if (IsDestroyed) { if (rangeRing != null) rangeRing.SetVisible(false); return; }
         UpdateRing();
         if (IsFrozen) { UpdateThaw(); return; }
         if (tintTargets != null) Thaw();
@@ -141,10 +141,12 @@ public class TowerController : MonoBehaviour
     {
         if (rangeRing == null) return;
         if (hero == null) hero = FindFirstObjectByType<HeroController>();
-        bool near = hero != null && Vector2.Distance(hero.transform.position, transform.position) < RingRevealDistance;
-        bool show = near || Time.time < ringUntil;
-        if (rangeRing.activeSelf != show) rangeRing.SetActive(show);
+        bool near = hero != null && Vector2.Distance(hero.transform.position, RangeOrigin) < RingRevealDistance;
+        rangeRing.SetVisible(near || Time.time < ringUntil);
     }
+
+    /// <summary>Menzil kuralı (tek yer): merkezden öklid uzaklığı ≤ yarıçap; dört yönde eşit.</summary>
+    public static bool InRange(Vector2 origin, float range, Vector2 point) => Vector2.Distance(origin, point) <= range + 1e-4f;
 
     /// <summary>Topçu uçan düşmanı hedefleyemez (Okçu ve kahraman hedefleyebilir).</summary>
     public static bool CanTarget(BuildingType tower, EnemyController enemy) =>
@@ -153,14 +155,14 @@ public class TowerController : MonoBehaviour
     private EnemyController FindNearestEnemy()
     {
         EnemyController nearest = null;
-        Vector2 origin = structure != null ? structure.BasePoint : (Vector2)transform.position;
+        Vector2 origin = RangeOrigin;
         // Lanetli Türbe karanlığı (Bölge 5) menzili geçici daraltır.
         float nearestDist = attackRange * CursedShrine.RangeMultiplierAt(origin);
         foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
         {
             if (enemy.IsDead || !CanTarget(towerType, enemy) || !FogOfWar.IsVisible(enemy.transform.position)) continue;
             float dist = Vector2.Distance(origin, enemy.transform.position);
-            if (dist < nearestDist)
+            if (dist <= nearestDist && InRange(origin, attackRange * CursedShrine.RangeMultiplierAt(origin), enemy.transform.position))
             {
                 nearestDist = dist;
                 nearest = enemy;

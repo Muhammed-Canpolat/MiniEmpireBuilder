@@ -18,6 +18,13 @@ public sealed class BattleStructure : MonoBehaviour
     public int Level { get; private set; }
     public BattleBuildSlot Slot { get; private set; }
     public Vector2 BasePoint { get; private set; }
+    /// <summary>Görselin dinlenme yüksekliği (taban → tepe, dünya birimi).</summary>
+    public float VisualHeight { get; private set; }
+    /// <summary>
+    /// 6. oturum (1.2): menzil merkezi = yapının görsel VE mantıksal merkezi (taban noktasının görsel yüksekliğin yarısı kadar üstü).
+    /// Hedefleme, iyileştirme, menzil çemberi ve sis görüşü bunu kullanır (sprite pivotu/tabanı değil).
+    /// </summary>
+    public Vector2 RangeCenter => new Vector2(BasePoint.x, BasePoint.y + VisualHeight * 0.5f);
     public float MaxHealth { get; private set; } = 100f;
     public float CurrentHealth { get; private set; } = 100f;
     public bool IsDestroyed => CurrentHealth <= 0f;
@@ -37,6 +44,7 @@ public sealed class BattleStructure : MonoBehaviour
         Level = Mathf.Max(1, level);
         Slot = slot;
         BasePoint = basePoint;
+        VisualHeight = Mathf.Max(0f, visualHeight);
         body = GetComponent<SpriteRenderer>();
         var data = GameManager.Instance != null ? GameManager.Instance.CreateLevelData(type, Level) : null;
         MaxHealth = (data != null && data.maxHealth > 0f ? data.maxHealth : 100f)
