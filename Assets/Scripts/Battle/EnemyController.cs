@@ -236,6 +236,28 @@ public class EnemyController : MonoBehaviour
     /// <summary>Sabit ara noktalar: düşman sırayla bu noktalara yürür, kale menzile girince durur.</summary>
     public void SetRoute(Vector2[] points) { route = points; routeIndex = 0; }
 
+    // ---- 7. oturum (D93): sefer haritası yolu. lane == null iken eski davranış (kenarlardan serbest yürüyüş). ----
+    private BattleRoute lane;
+    private float laneS, laneOffset;
+    /// <summary>Düşman yoldan en çok bu kadar uzaktaki (yol noktasına göre) hedefe sapar: yol kenarındaki kule/kahraman/Lancer.</summary>
+    public const float LaneLeash = 3.0f;
+    public BattleRoute Lane => lane;
+    /// <summary>Yolda ilerleyiş (0 köprü … 1 Ana Üs).</summary>
+    public float LaneProgress => lane == null ? 0f : laneS / Mathf.Max(0.01f, lane.Length);
+    /// <summary>Yoldaki konumu (şerit kayması dahil).</summary>
+    public Vector2 LanePoint => lane == null ? (Vector2)transform.position : lane.PointAt(laneS) + lane.NormalAt(laneS) * laneOffset;
+
+    /// <summary>Yolu izle: konum yola izdüşürülür; <paramref name="offset"/> şerit kayması (yan yana yürüyüş, ±0,35).</summary>
+    public void SetLane(BattleRoute path, float offset)
+    {
+        lane = path;
+        laneOffset = offset;
+        laneS = path != null ? path.Project(transform.position, out _) : 0f;
+    }
+
+    /// <summary>Hedef yol kenarında mı (yoldaki konumdan LaneLeash + pay). Yol yoksa hep true.</summary>
+    private bool NearLane(Vector2 point, float extra = 0f) => lane == null || Vector2.Distance(point, LanePoint) <= LaneLeash + extra;
+
     /// <summary>Can ve hasarı çarpanla ölçekler (ada Akın ölçeği, AŞAMA 2 §4); can dolu başlar.</summary>
     public void ScaleStats(float hpMult, float damageMult)
     {
@@ -563,6 +585,7 @@ public class EnemyController : MonoBehaviour
             // Bombacı: kışkırtmayı yok sayar; kuleyi (her mesafeden) ya da kule yoksa Ana Üs'ü hedefler.
             if (fuseEndsAt >= 0f) return;
             var tower = NearestTower(position);
+            if (tower != null && !NearLane(tower.BasePoint, 0.8f)) tower = null;   // 7. oturum: yalnız yol kenarındaki kule
             if (tower != null) SetTarget(tower.transform, tower.BasePoint, StructureRadius);
             else if (mainBaseTransform != null) SetTarget(mainBaseTransform, mainBaseTransform.position, BaseRadius);
             return;
@@ -572,7 +595,7 @@ public class EnemyController : MonoBehaviour
         float heroDistance = heroAlive ? Vector2.Distance(position, hero.transform.position) : float.MaxValue;
 
         // Ortak kurallar: kışkırtılmışsa kahraman; kahraman dibindeyse (vuruş menzili) kahraman.
-        if (heroAlive && (Time.time < provokedUntil || heroDistance <= attackRange + 0.3f))
+        if (heroAlive && (Time.time < provokedUntil || heroDistance <= attackRange + 0.3f) && NearLane(hero.transform.position, 0.5f))
         {
             SetTarget(hero.transform, hero.transform.position, 0f);
             return;
@@ -581,7 +604,7 @@ public class EnemyController : MonoBehaviour
         if (attackRange <= AllyLancerAggroMaxRange && !IsFlying)
         {
             var ally = AllyLancer.NearestTo(position, attackRange + 0.3f);
-            if (ally != null) { SetTarget(ally.transform, ally.Position, 0f); return; }
+            if (ally != null && NearLane(ally.Position, 0.5f)) { SetTarget(ally.transform, ally.Position, 0f); return; }
         }
 
         switch (EnemyRole)
@@ -590,12 +613,12 @@ public class EnemyController : MonoBehaviour
             {
                 Transform prey = null;
                 float best = HunterAggro;
-                if (heroAlive && heroDistance <= best) { prey = hero.transform; best = heroDistance; }
+                if (heroAlive && heroDistance <= best && NearLane(hero.transform.position)) { prey = hero.transform; best = heroDistance; }
                 var apprentice = FindFirstObjectByType<BattleApprentice>();
                 if (apprentice != null && apprentice.CurrentHealth > 0f)
                 {
                     float d = Vector2.Distance(position, apprentice.transform.position);
-                    if (d < best) { prey = apprentice.transform; best = d; }
+                    if (d < best && NearLane(apprentice.transform.position)) { prey = apprentice.transform; best = d; }
                 }
                 if (prey != null) { SetTarget(prey, prey.position, 0f); return; }
                 break;
@@ -605,7 +628,7 @@ public class EnemyController : MonoBehaviour
             {
                 float reach = EnemyRole == Role.Breaker ? BreakerReach : BesiegerReach;
                 var structure = NearestStructure(position, reach);
-                if (structure != null) { SetTarget(structure.transform, structure.BasePoint, StructureRadius); return; }
+                if (structure != null && NearLane(structure.BasePoint, 0.8f)) { SetTarget(structure.transform, structure.BasePoint, StructureRadius); return; }
                 break;
             }
             case Role.Siege:
@@ -710,6 +733,13 @@ public class EnemyController : MonoBehaviour
     {
         if (currentTarget == null) return;
         if (DistanceToTarget <= attackRange) return;
+        // 7. oturum (D93): yol izleme. Ana Üs'e giderken yoldan ayrılmaz; yol kenarındaki hedefe sapınca hedef yoksa yola döner.
+        // Maden yağmacısı (RaidTarget) yoldan ayrılıp yürünebilir karadan madene gider (GridSteer, aşağıdaki genel yol).
+        if (lane != null && currentTarget == mainBaseTransform)
+        {
+            LaneMove(moveSpeed * SpeedMultiplier * Time.deltaTime);
+            return;
+        }
         Vector3 aim = targetPoint;
         if (route != null && currentTarget == mainBaseTransform)
         {
@@ -735,6 +765,38 @@ public class EnemyController : MonoBehaviour
             spriteRenderer.flipX = direction.x > 0; // Düşmanlar sağdan gelirse sola baksın
     }
     private GridSteer steer;
+
+    /// <summary>Yolda ilerle; yoldan uzaktaysa (hedefe sapmıştı) önce yoldaki noktasına dön. Işınlanınca (≥5 birim) yol konumu yeniden bulunur.</summary>
+    private void LaneMove(float step)
+    {
+        Vector2 pos = transform.position;
+        Vector2 lanePoint = LanePoint;
+        float off = Vector2.Distance(pos, lanePoint);
+        if (off > 5f)
+        {
+            laneS = Mathf.Max(0f, lane.Project(pos, out _));
+            lanePoint = LanePoint;
+            off = Vector2.Distance(pos, lanePoint);
+        }
+        Vector2 next;
+        if (off > 0.35f)
+        {
+            if (IsFlying) next = Vector2.MoveTowards(pos, lanePoint, step);
+            else
+            {
+                steer = steer ?? new GridSteer(BattleWalkGrid.Shared);
+                next = steer.Step(pos, lanePoint, step, out _);
+            }
+        }
+        else
+        {
+            laneS = Mathf.Min(lane.Length, laneS + step);
+            next = LanePoint;
+        }
+        Vector2 delta = next - pos;
+        transform.position = new Vector3(next.x, next.y, transform.position.z);
+        if (spriteRenderer != null && Mathf.Abs(delta.x) > 0.0005f) spriteRenderer.flipX = delta.x > 0;
+    }
 
     // ==================== SALDIRI ====================
 

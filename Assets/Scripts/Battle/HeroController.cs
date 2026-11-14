@@ -182,6 +182,8 @@ public class HeroController : MonoBehaviour
         // Binaların içinden geçme: ayak noktası engellerin dışına itilir.
         Vector2 feet = (Vector2)next + FeetOffset;
         Vector2 resolved = BattleObstacles.Resolve(feet, FeetRadius);
+        // 7. oturum (D93): bölge haritasında su/uçuruma girilmez (kıyı boyunca kayar).
+        resolved = BattleTerrain.KeepOnLand((Vector2)transform.position + FeetOffset, resolved, FeetRadius * 0.7f);
         transform.position = new Vector3(resolved.x - FeetOffset.x, resolved.y - FeetOffset.y, next.z);
 
         if (spriteRenderer != null && Mathf.Abs(direction.x) > 0.01f)

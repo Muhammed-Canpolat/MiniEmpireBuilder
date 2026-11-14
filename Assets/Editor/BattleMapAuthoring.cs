@@ -172,7 +172,7 @@ public static class BattleMapAuthoring
                 map.atmosphere = BattleAtmosphere.Ruins;
                 map.decor = new[]
                 {
-                    Decor("Çam", pines, 12, 2.5f, 3.0f, true, 0.5f, 0.9f, true, true),
+                    Decor("Çam", pines, 14, 2.5f, 3.0f, true, 0.5f, 0.9f, true, true),
                     Decor("Çalı", bushes, 8, 0.7f, 0.95f),
                     Decor("Kaya", rocks, 6, 0.55f, 0.8f),
                     Decor("Yıkık duvar", Sprites(Prop("ruin_wall")), 3, 1.1f, 1.3f, true, 1.5f, 0.8f),
@@ -188,9 +188,9 @@ public static class BattleMapAuthoring
                 map.atmosphere = BattleAtmosphere.Fog;
                 map.decor = new[]
                 {
-                    Decor("Çam", pines, 14, 2.5f, 3.1f, true, 0.5f, 0.9f, true, true),
-                    Decor("Güz ağacı", autumn, 12, 2.0f, 2.5f, true, 0.5f, 0.9f, true, true),
-                    Decor("Çalı", bushes, 8, 0.7f, 0.95f),
+                    Decor("Çam", pines, 24, 2.5f, 3.1f, true, 0.5f, 0.7f, true, true),
+                    Decor("Güz ağacı", autumn, 18, 2.0f, 2.5f, true, 0.5f, 0.7f, true, true),
+                    Decor("Çalı", bushes, 10, 0.7f, 0.95f),
                 };
                 map.landmarks = new[]
                 {
@@ -207,7 +207,7 @@ public static class BattleMapAuthoring
                 };
                 map.landmarks = new[]
                 {
-                    Landmark("Maden girişi", Sprite(Prop("mine_entrance")), 2.2f, new Vector2(side * 5.2f, 18.5f), new Vector2(-side * 5.2f, 18.5f), new Vector2(side * 5.2f, 10f)),
+                    Landmark("Maden girişi", Sprite(Prop("mine_entrance")), 2.6f, new Vector2(side * 5.2f, 18.5f), new Vector2(-side * 5.2f, 18.5f), new Vector2(side * 5.2f, 10f)),
                     Landmark("Sarı Ev", Sprite(Building("Yellow", "House3")), 2.1f, new Vector2(-side * 5.6f, 13.5f), new Vector2(-side * 5.6f, 7f), new Vector2(side * 5.6f, 7f)),
                     Landmark("Sarı Kule", Sprite(Building("Yellow", "Tower")), 2.4f, new Vector2(side * 5.8f, 4.0f), new Vector2(-side * 5.8f, -2.4f), new Vector2(side * 5.8f, -2.4f)),
                 };
@@ -218,7 +218,7 @@ public static class BattleMapAuthoring
                 map.decor = new[]
                 {
                     Decor("Buzlu kaya", Sprites(Prop("ice_rock")), 7, 0.9f, 1.2f, true, 0.9f, 0.8f),
-                    Decor("Karlı ağaç", autumn, 6, 2.0f, 2.4f, true, 0.5f, 0.9f, true, true, frost),
+                    Decor("Karlı ağaç", autumn, 9, 2.0f, 2.4f, true, 0.5f, 0.9f, true, true, frost),
                     Decor("Kaya", rocks, 7, 0.6f, 0.9f, false, 0.6f, 0.5f, false, false, frost),
                 };
                 map.landmarks = new[]

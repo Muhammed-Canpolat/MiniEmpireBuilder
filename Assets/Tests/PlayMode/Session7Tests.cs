@@ -106,4 +106,205 @@ public class Session7Tests
             Assert.AreEqual(5, slotSets.Distinct().Count(), $"B{region}: yuva düzenleri farklı");
         }
     }
+
+    // ==================== B: SAVAŞ KURULUMU ====================
+
+    private static Component Battle => Object.FindFirstObjectByType(T("BattleManager")) as Component;
+
+    /// <summary>Kameradan (UI dahil) görüntü; kamerayı verilen merkeze/boya taşıyıp geri alır.</summary>
+    internal static void Shot(string name, Vector2? center = null, float? size = null, int w = 720, int h = 1440)
+    {
+        var cam = Camera.main;
+        var follow = cam.GetComponent(T("BattleCameraFollow")) as Behaviour;
+        bool wasOn = follow != null && follow.enabled;
+        if (follow != null) follow.enabled = false;
+        var pos = cam.transform.position; float old = cam.orthographicSize;
+        if (center.HasValue) cam.transform.position = new Vector3(center.Value.x, center.Value.y, pos.z);
+        if (size.HasValue) cam.orthographicSize = size.Value;
+        Session4Tests.CaptureUi("../session7/" + name, w, h);
+        cam.transform.position = pos; cam.orthographicSize = old;
+        if (follow != null) follow.enabled = wasOn;
+    }
+
+    /// <summary>Her bölgenin 1. seviyesi: harita kuruldu, Ana Üs yolun sonunda, yuvalar yerleşimdeki yerlerde, düşman köprüden girip yolu izliyor.</summary>
+    [UnityTest]
+    public IEnumerator B1_EachRegionBuildsItsMapAndEnemiesFollowTheRoad()
+    {
+        var lines = new List<string>();
+        for (int region = 1; region <= 6; region++)
+        {
+            yield return Session4Tests.StartBattle(region, 1, 15);
+            var builder = Object.FindFirstObjectByType(T("BattleMapBuilder")) as Component;
+            Assert.NotNull(builder, $"B{region}: harita kuruldu");
+            Assert.IsTrue((bool)SP("BattleTerrain", "Active"), "arazi etkin");
+            var layout = SP("BattleManager", "MapLayout");
+            Assert.NotNull(layout, "yerleşim");
+            var baseCtrl = Object.FindFirstObjectByType(T("MainBaseController")) as Component;
+            Assert.Less(Vector2.Distance(baseCtrl.transform.position, (Vector2)F(layout, "basePosition")), 0.01f, "Ana Üs yerleşimdeki yerde");
+            var slots = Object.FindObjectsByType(T("BattleBuildSlot"), FindObjectsSortMode.None).Cast<Component>().ToList();
+            var expected = (Vector2[])F(layout, "slots");
+            Assert.AreEqual(expected.Length, slots.Count, "yuva sayısı");
+            foreach (var e in expected)
+                Assert.IsTrue(slots.Any(sl => Vector2.Distance(sl.transform.position, e) < 0.05f), $"yuva {e} sahnede");
+            var decor = (IList)builder.GetType().GetField("Decor").GetValue(builder);
+            var landmarks = (IList)builder.GetType().GetField("Landmarks").GetValue(builder);
+            lines.Add($"B{region}: süs {decor.Count}, yapı {landmarks.Count}, yuva {slots.Count}");
+            Assert.Greater(decor.Count, 8, "süsler yerleşti");
+            Shot($"B1_region{region}_overview", new Vector2(0f, 11f), 15.5f, 600, 1200);
+            // Düşman: köprüden doğar, yolu izler
+            var battle = Battle;
+            var enemyType = T("EnemyType");
+            var enemy = battle.GetType().GetMethod("SpawnVariantAt").Invoke(battle,
+                new object[] { Enum.Parse(enemyType, "Zombie"), new Vector3(0f, 28.4f, 0f), Enum.Parse(T("EnemyVariant"), "None") }) as Component;
+            Assert.NotNull(enemy);
+            Assert.NotNull(P(enemy, "Lane"), "düşman yola bağlı");
+            float maxOff = 0f;
+            var route = P(enemy, "Lane");
+            for (int i = 0; i < 40; i++)
+            {
+                yield return new WaitForSeconds(0.1f);
+                if (enemy == null) break;
+                route.GetType().GetMethod("Project").Invoke(route, new object[] { (Vector2)enemy.transform.position, 0f });
+                var args = new object[] { (Vector2)enemy.transform.position, 0f };
+                route.GetType().GetMethod("Project").Invoke(route, args);
+                maxOff = Mathf.Max(maxOff, (float)args[1]);
+            }
+            Assert.Less(maxOff, 0.6f, $"B{region}: düşman yoldan sapmıyor (en çok {maxOff:0.00})");
+            Assert.Greater((float)P(enemy, "LaneProgress"), 0.05f, "yolda ilerliyor");
+        }
+        File.WriteAllLines(Path.Combine(Folder, "B1_maps.txt"), lines);
+    }
+
+    private static object SP(string type, string member) => Session6Tests.SP(type, member);
+
+    /// <summary>Yalnız dünya (UI'sız) görüntü: kamerayı verilen merkez/boya alıp çizer.</summary>
+    internal static void ShotWorld(string name, Vector2 center, float size, int w, int h)
+    {
+        var cam = Camera.main;
+        var pos = cam.transform.position; float old = cam.orthographicSize; float aspect = cam.aspect;
+        var rt = new RenderTexture(w, h, 24);
+        cam.targetTexture = rt; cam.aspect = (float)w / h;
+        cam.transform.position = new Vector3(center.x, center.y, pos.z); cam.orthographicSize = size;
+        cam.Render();
+        RenderTexture.active = rt;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0); tex.Apply();
+        File.WriteAllBytes(Path.Combine(Folder, name + ".png"), tex.EncodeToPNG());
+        RenderTexture.active = null; cam.targetTexture = null; cam.aspect = aspect;
+        cam.transform.position = pos; cam.orthographicSize = old;
+        Object.Destroy(tex); rt.Release(); Object.Destroy(rt);
+    }
+
+    private static Component SpawnAt(string type, Vector2 at)
+    {
+        var battle = Battle;
+        return battle.GetType().GetMethod("SpawnVariantAt").Invoke(battle,
+            new object[] { Enum.Parse(T("EnemyType"), type), new Vector3(at.x, at.y, 0f), Enum.Parse(T("EnemyVariant"), "None") }) as Component;
+    }
+
+    private static bool OnLand(Vector2 p) => (bool)S("BattleTerrain", "IsLand", p);
+
+    /// <summary>
+    /// Madeni Koru (her bölgenin 3. seviyesi): maden yerleşimdeki yerde, Tiny Swords sprite'ı ve can barıyla (beyaz kare yok); yağmacı düşman
+    /// yoldan ayrılıp madene KARA üstünden yürür ve vurur; yağmacı olmayan yoldan sapmaz.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator B2_DefendMineRaidersDetourOverLandToTheMine()
+    {
+        var lines = new List<string>();
+        for (int region = 1; region <= 6; region++)
+        {
+            yield return Session4Tests.StartBattle(region, 3, 15);
+            var battle = Battle;
+            var layout = SP("BattleManager", "MapLayout");
+            var mine = P(battle, "DefendedMine") as Component;
+            Assert.NotNull(mine, $"B{region}: maden kuruldu");
+            Vector2 minePos = (Vector2)F(layout, "minePosition");
+            Assert.Less(Vector2.Distance(mine.transform.position, minePos), 0.6f, "maden yerleşimdeki yerde (görsel tabanı 0,5 yukarı)");
+            var sr = mine.GetComponent<SpriteRenderer>();
+            Assert.NotNull(sr.sprite, "maden sprite'ı (beyaz kare değil)");
+            Assert.IsFalse(Session4Tests.NullSpriteRenderers().Any(n => n.Contains("Mine")), "madende boş sprite yok");
+            Assert.NotNull(mine.GetType().GetField("healthBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(mine), "maden can barı");
+            // Yağmacı: yolun maden hizasındaki noktasında doğar, RaidTarget = maden
+            var route = ((Array)P(layout, "Routes")).GetValue(0);
+            var args = new object[] { minePos, 0f };
+            float s = (float)route.GetType().GetMethod("Project").Invoke(route, args);
+            Vector2 start = (Vector2)route.GetType().GetMethod("PointAt").Invoke(route, new object[] { Mathf.Max(0f, s - 2.5f) });
+            var raider = SpawnAt("Zombie", start);
+            raider.GetType().GetProperty("RaidTarget").SetValue(raider, mine);
+            float health = (float)P(mine, "CurrentHealth");
+            bool allLand = true; float closest = float.MaxValue;
+            Time.timeScale = 2f;
+            for (int i = 0; i < 160 && raider != null; i++)
+            {
+                yield return new WaitForSeconds(0.1f);
+                if (raider == null) break;
+                Vector2 p = raider.transform.position;
+                if (!OnLand(p)) allLand = false;
+                closest = Mathf.Min(closest, Vector2.Distance(p, minePos));
+                if ((float)P(mine, "CurrentHealth") < health) break;
+            }
+            Time.timeScale = 1f;
+            bool hit = (float)P(mine, "CurrentHealth") < health;
+            lines.Add($"B{region}: maden {minePos}, yağmacı en yakın {closest:0.0}, vurdu {hit}, hep karada {allLand}");
+            Assert.IsTrue(allLand, $"B{region}: sapma rotası yürünebilir kara üstünden");
+            Assert.IsTrue(hit, $"B{region}: yağmacı madene ulaşıp vurdu (en yakın {closest:0.0})");
+            ShotWorld($"B2_region{region}_mine", minePos + new Vector2(0f, 1f), 6f, 540, 800);
+        }
+        File.WriteAllLines(Path.Combine(Folder, "B2_mine.txt"), lines);
+    }
+
+    /// <summary>Kahraman su/uçurum üstüne yürüyemez (kıyı boyunca kayar); yapılardan geçemez.</summary>
+    [UnityTest]
+    public IEnumerator B3_HeroStaysOnWalkableLand()
+    {
+        yield return Session4Tests.StartBattle(1, 1, 15);
+        var hero = Object.FindFirstObjectByType(T("HeroController")) as Component;
+        var move = hero.GetType().GetMethod("SetMoveInput");
+        foreach (var dir in new[] { Vector2.left, Vector2.right, Vector2.down })
+        {
+            float t = 0f;
+            while (t < 3.5f)
+            {
+                move.Invoke(hero, new object[] { dir });
+                Vector2 feet = (Vector2)hero.transform.position + new Vector2(0f, -0.25f);
+                Assert.IsTrue(OnLand(feet), $"kahraman karada ({feet}, yön {dir})");
+                t += Time.deltaTime;
+                yield return null;
+            }
+        }
+        move.Invoke(hero, new object[] { Vector2.zero });
+        Vector2 last = hero.transform.position;
+        Assert.Greater(last.y, -6f, "aşağı uçurumdan düşmedi");
+    }
+
+    /// <summary>Boss seviyesi: boss köprüden girer ve yolu izler (rota en uzun); Zamana Karşı: sayaç çalışır.</summary>
+    [UnityTest]
+    public IEnumerator B4_BossFollowsTheLongRouteAndTimeTrialCounts()
+    {
+        yield return Session4Tests.StartBattle(1, 5, 15);
+        var layout = SP("BattleManager", "MapLayout");
+        Assert.AreEqual("Boss", F(layout, "kind").ToString());
+        var boss = SpawnAt("Troll", new Vector2(0f, 28.4f));
+        var lane = P(boss, "Lane");
+        Assert.NotNull(lane, "boss yola bağlı");
+        float maxOff = 0f;
+        Time.timeScale = 3f;
+        for (int i = 0; i < 30; i++)
+        {
+            yield return new WaitForSeconds(0.1f);
+            var args = new object[] { (Vector2)boss.transform.position, 0f };
+            lane.GetType().GetMethod("Project").Invoke(lane, args);
+            maxOff = Mathf.Max(maxOff, (float)args[1]);
+        }
+        Time.timeScale = 1f;
+        Assert.Less(maxOff, 0.6f, "boss yoldan sapmıyor");
+        yield return Session4Tests.StartBattle(2, 4, 15);
+        var battle = Battle;
+        Assert.IsTrue((bool)P(battle, "HasTimeLimit"), "Zamana Karşı");
+        yield return new WaitForSeconds(4f);
+        float remaining = (float)P(battle, "TimeRemaining");
+        Assert.Less(remaining, 180f, "sayaç akıyor");
+        Assert.AreEqual(2, ((Array)P(SP("BattleManager", "MapLayout"), "Routes")).Length, "4. seviye çatallı yol");
+    }
 }

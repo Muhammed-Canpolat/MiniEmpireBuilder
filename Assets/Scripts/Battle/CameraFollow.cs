@@ -57,6 +57,25 @@ public class BattleCameraFollow : MonoBehaviour
         }
     }
 
+    /// <summary>7. oturum: bölge haritası — kamera merkezinin gidebileceği alan harita sınırından türetilir (dikey uzun ada).</summary>
+    public void SetupBounds(Transform newTarget, Rect world)
+    {
+        target = newTarget;
+        float camHeight = cam.orthographicSize, camWidth = camHeight * cam.aspect;
+        minX = world.xMin + camWidth; maxX = world.xMax - camWidth;
+        minY = world.yMin + camHeight; maxY = world.yMax - camHeight;
+        if (minX > maxX) minX = maxX = world.center.x;
+        if (minY > maxY) minY = maxY = world.center.y;
+        hasBounds = true;
+        if (target != null)
+        {
+            Vector3 startPos = target.position + offset;
+            startPos.x = Mathf.Clamp(startPos.x, minX, maxX);
+            startPos.y = Mathf.Clamp(startPos.y, minY, maxY);
+            transform.position = startPos;
+        }
+    }
+
     private void LateUpdate()
     {
         if (target == null || !hasBounds) return;

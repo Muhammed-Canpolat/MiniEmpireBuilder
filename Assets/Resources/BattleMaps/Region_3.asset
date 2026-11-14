@@ -111,7 +111,7 @@ MonoBehaviour:
     - {x: 5.2, y: 18.5}
     - {x: -5.2, y: 18.5}
     - {x: 5.2, y: 10}
-    height: 2.2
+    height: 2.6
     tint: {r: 1, g: 1, b: 1, a: 1}
     blocksMovement: 1
   - name: "Sar\u0131 Ev"

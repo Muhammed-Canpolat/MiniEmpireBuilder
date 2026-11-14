@@ -704,3 +704,24 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 ## D91 — Eksik bölge süsleri kodla üretildi (geçici)
 - `Tools/campaign_art/battle_props.py`: yıkık kale/kule/duvar (Tiny Swords Kırmızı Kale → gri taş, testere kesik + moloz), maden girişi
   (Tiny Swords kayaları 2× + karanlık ağız + ahşap çerçeve), buzlu kaya, kemik/kafatası, lav gölü. Resources/BattleMaps/Props. ART_NEEDS #9.
+
+## D92 — Savaş haritası kurulumu (7. oturum AŞAMA 2)
+- `BattleMapBuilder`: deniz (kamera arka planı + dalga yayları), sığ su halkası (karaya uzaklıktan yumuşak doku), Tiny Swords karo zemin
+  (generate.py land() kuralının birebir aynısı: altı boş kara hücresinin altına uçurum satırı 5, çim sütun 5–8 / satır 0–3), toprak yol
+  (rotalar boyunca disk damgası: koyu kenar + toprak + taş benekleri, 24 px/birim tek doku), üst köprü (kalas + direk), bölge yapıları
+  (adaylar; tutmazsa aynı tarafta en yakın uygun yer taraması, genişlik ≤ 4,2) ve süsler (tohumlu, yol/yuva+kule görseli/üs/maden/köprü dışı).
+  Engel süsler (ağaç gövdesi, büyük kaya, lav gölü, yapılar) `BattleObstacles`'a yazılır → kahraman, Çırak, Lancer ve yol bulma tanır.
+- Ana Üs (0,0), kahraman/yuva/maden konumları seviye varlığından. Kamera sınırı harita + köprü (`BattleCameraFollow.SetupBounds`).
+- Harita yoksa (sefer dışı eski "Level N" savaşı) eski düzen aynen çalışır. Sonsuz Sefer kat temasının bölgesini (türe göre seviye, boss
+  katında 5.), İstila Bölge 6 boss yerleşimini kullanır.
+
+## D93 — Düşman yolu izler; sapma kuralları
+- Her düşman (çağrılanlar dahil) en yakın yola bağlanır (`EnemyController.SetLane`, ±0,32 şerit kayması); köprüden doğar, çatallı yolda kollar sırayla.
+- Ana Üs'e giderken yoldan ayrılmaz. Yalnız yolun **3 birim** yakınındaki (yoldaki konumuna göre) hedefe sapar: yol kenarındaki kule (Kuşatıcı/Yıkıcı/
+  Bombacı), kahraman/Çırak (Avcı, kışkırtma, dipte), Lancer. Hedef uzaklaşınca/ölünce yola geri döner (yolda kaldığı yerden). Gerekçe: yakın
+  dövüşçünün yol kenarı kuleye/kahramana hiç vuramaması rolleri (Yıkıcı, Avcı) işlevsiz bırakırdı; 3 birim yuva mesafesine (2,15–3,3) göre seçildi.
+- Madeni Koru yağmacısı yoldan ayrılıp **yürünebilir kara** üstünden (ortak A*: `BattleWalkGrid` artık su/uçurumu da kapalı sayar) madene gider.
+- Kahraman ve Çırak su/uçuruma giremez (`BattleTerrain.KeepOnLand`, kıyı boyunca kayar). Cadı ışınlanması karaya, Bölge 5 türbeleri karada ve
+  yoldan 2,2+ uzakta (biri üst, biri alt yarıda).
+- Test: `Session7Tests.B1` (6 bölge: harita, yuvalar, düşman sapma ≤ 0,6), `B2` (6 bölge maden sapması karadan + vuruş), `B3` (kahraman karada),
+  `B4` (boss yolu, zamana karşı sayacı, çatal).

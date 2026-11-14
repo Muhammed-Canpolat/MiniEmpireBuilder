@@ -84,6 +84,11 @@ public class BattleManager : MonoBehaviour
         Instance = this;
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this) { MapLayout = null; }
+    }
+
     private void Start()
     {
         BattlePauseWatcher.Install();   // 6. oturum (1.5): arka plana alınınca duraklat + DEVAM
@@ -137,14 +142,29 @@ public class BattleManager : MonoBehaviour
     /// Savaş sahnesini kodla oluştur — test için
     /// İleride prefab'larla değiştirilecek
     /// </summary>
+    /// <summary>7. oturum (D92): bu savaşın bölge haritası yerleşimi (yoksa eski merkez-üs düzeni).</summary>
+    public static BattleLevelLayout MapLayout { get; private set; }
+    public BattleMapBuilder MapBuilder { get; private set; }
+    private int laneSpawnIndex;
+
     private void SetupBattleScene()
     {
         var sm = SpriteManager.Instance;
 
-        // === ZEMIN ===
+        // === 7. oturum (D92): BÖLGE HARİTASI — Sefer Haritası'ndaki adanın dikey sürümü ===
+        MapLayout = null;
+        if (BattleMapCatalog.TryGetFor(out var regionMap, out var levelLayout))
+        {
+            MapLayout = levelLayout;
+            MapBuilder = BattleMapBuilder.Build(regionMap, levelLayout);
+        }
+        else BattleTerrain.Clear();
+
+        // === ZEMIN (eski düzen) ===
         Sprite ground = BattleSession.Region?.groundTile ?? sm?.GetSprite("ground_battle_tile_01")
                         ?? Resources.Load<Sprite>("Sprites/ground_battle_tile_01");
-        if (ground != null)
+        if (MapLayout != null) { /* zemin harita kurucusunda */ }
+        else if (ground != null)
         {
             var groundObject = new GameObject("BattleGround");
             groundObject.transform.position = new Vector3(0, 0, 1);
@@ -168,7 +188,7 @@ public class BattleManager : MonoBehaviour
 
         // === ÇEVRE DEKORASYONU (Rastgele) ===
         // Geniş bir alana (örn: -15 to 15) rastgele kaya, çalı, kuru ot yerleştirelim.
-        int propCount = 60; // Etrafa yayılacak obje sayısı
+        int propCount = MapLayout != null ? 0 : 60; // Etrafa yayılacak obje sayısı (haritada süsler bölge setinden)
         for (int i = 0; i < propCount; i++)
         {
             float rx = Random.Range(-15f, 15f);
@@ -215,12 +235,12 @@ public class BattleManager : MonoBehaviour
             if (sm != null)
             {
                 baseObj = CreateSpriteObject("AnaUs", sm.MainBase,
-                    Vector3.zero, new Vector3(0.60f, 0.60f, 1f));
+                    BasePosition, new Vector3(0.60f, 0.60f, 1f));
             }
             else
             {
                 baseObj = CreateSimpleSprite("AnaUs", new Color(0.85f, 0.75f, 0.2f),
-                    Vector3.zero, new Vector3(1.5f, 1.5f, 1f));
+                    BasePosition, new Vector3(1.5f, 1.5f, 1f));
             }
 
             baseObj.AddComponent<MainBaseController>();
@@ -356,9 +376,18 @@ public class BattleManager : MonoBehaviour
             return;
         // Ana Üs görseli yaklaşık x∈[-1.9, 1.9], y∈[-1.0, 1.6] kaplar (BattleActorPresentation).
         // Yuvalar (yarıçap 0.95 + alt etiket) bu alanın dışında. Sayı bölgeye göre 3–5.
+        if (MapLayout != null && MapLayout.slots != null && MapLayout.slots.Length > 0)
+        {
+            // 7. oturum (D90): yuvalar seviye yerleşiminden (yolun iki yanında, zikzağı izleyerek).
+            foreach (var position in MapLayout.slots)
+                CreateBuildSlot(position, BuildingType.ArcherTower, archerBattleBuildCost);
+            return;
+        }
         foreach (var position in SlotLayout(SlotCount))
             CreateBuildSlot(position, BuildingType.ArcherTower, archerBattleBuildCost);
     }
+
+    private static Vector3 BasePosition => MapLayout != null ? (Vector3)MapLayout.basePosition : Vector3.zero;
 
     private static int SlotCount =>
         CampaignCatalog.BattleSlotCount(BattleSession.IsCampaign ? BattleSession.RegionId : 1);
@@ -379,8 +408,8 @@ public class BattleManager : MonoBehaviour
     }
 
     /// <summary>Kahraman üssün önünde, hiçbir yuvanın tetik alanında olmadan başlar.</summary>
-    private static Vector3 HeroSpawnPosition => SlotCount <= 3
-        ? new Vector3(2.2f, -2.2f, 0f) : new Vector3(0f, -2.4f, 0f);
+    private static Vector3 HeroSpawnPosition => MapLayout != null ? (Vector3)MapLayout.heroSpawn
+        : SlotCount <= 3 ? new Vector3(2.2f, -2.2f, 0f) : new Vector3(0f, -2.4f, 0f);
 
     /// <summary>Bu türden şu ana kadar kaç kule kuruldu (savaştaki sıra = binanın seviye sırası).</summary>
     private int BuiltCount(BuildingType type)
@@ -600,7 +629,8 @@ public class BattleManager : MonoBehaviour
             foreach (var enemy in wave.enemies) incomingCount += enemy.count;
             OnWaveIncoming?.Invoke(incomingCount);
             // Dalganın geleceği taraflar seçilir ve 3 sn önceden oklarla gösterilir.
-            waveEdges = PickWaveEdges(Progression.WaveSpawnSides(BattleSession.IsCampaign ? BattleSession.RegionId : 1));
+            // 7. oturum: haritada düşmanlar hep üst köprüden (yolun başı) gelir.
+            waveEdges = MapLayout != null ? new[] { 0 } : PickWaveEdges(Progression.WaveSpawnSides(BattleSession.IsCampaign ? BattleSession.RegionId : 1));
             if (BattleVfxManager.Instance != null) BattleVfxManager.Instance.ShowSpawnWarning(waveEdges, 3f);
 
             // Ekranda DALGA X banner'ını göster
@@ -683,6 +713,16 @@ public class BattleManager : MonoBehaviour
 
     private void SpawnEnemy(EnemyType type, EnemyVariant variant = EnemyVariant.None, int forcedEdge = -1)
     {
+        if (MapLayout != null)
+        {
+            // 7. oturum (D93): yolun başında (üst köprü) doğar; çatallı yolda kollar sırayla.
+            var routes = MapLayout.Routes;
+            var lane = routes[laneSpawnIndex++ % routes.Length];
+            var start = lane.PointAt(Random.Range(0f, 0.6f));
+            var spawned = SpawnVariantAt(type, new Vector3(start.x, start.y, 0f), variant);
+            if (spawned != null) spawned.SetLane(lane, Random.Range(-0.32f, 0.32f));
+            return;
+        }
         Vector3 spawnPos = Vector3.zero;
         BattleSceneSetup setup = FindFirstObjectByType<BattleSceneSetup>();
 
@@ -742,6 +782,8 @@ public class BattleManager : MonoBehaviour
                 : GameManager.Instance?.PlayerData?.currentBattleLevel ?? 1;
             enemy.Initialize(type, battleLevel, mainBaseTransform);
             if (variant != EnemyVariant.None) enemy.ApplyVariant(variant);
+            // 7. oturum: haritada her düşman (çağrılan kurtlar dahil) en yakın yola bağlanır (SpawnEnemy kendi kolunu ayrıca atar).
+            if (MapLayout != null) enemy.SetLane(NearestRoute(spawnPos), Random.Range(-0.3f, 0.3f));
             // "Madeni koru": her iki düşmandan biri (boss hariç) madene yürür.
             if (DefendedMine != null && !EnemyTypeInfo.IsBoss(type) && variant != EnemyVariant.Saboteur)
                 enemy.RaidTarget = spawnedCount % 2 == 0 ? DefendedMine : null;
@@ -751,6 +793,13 @@ public class BattleManager : MonoBehaviour
         enemiesAlive++;
         OnEnemiesCountChanged?.Invoke(enemiesAlive);
         return enemy;
+    }
+
+    private static BattleRoute NearestRoute(Vector2 p)
+    {
+        BattleRoute best = null; float bestD = float.MaxValue;
+        foreach (var r in MapLayout.Routes) { float d = r.DistanceTo(p); if (d < bestD) { bestD = d; best = r; } }
+        return best;
     }
 
     // ==================== OLAY CALLBACK'LERİ ====================
@@ -890,7 +939,8 @@ public class BattleManager : MonoBehaviour
                 Mathf.Max(1, GameManager.Instance.GetMainBaseLevel()))?.maxHealth ?? baseHealth;
         }
         // Yuvaların boş kaldığı yer: 5 yuvalı düzende üst orta dolu olduğundan alta konur.
-        Vector3 position = SlotCount >= 5 ? new Vector3(0f, -4.4f, 0f) : new Vector3(0f, 4.3f, 0f);
+        Vector3 position = MapLayout != null ? (Vector3)MapLayout.minePosition   // 7. oturum: yolun yanında (yerleşimden)
+            : SlotCount >= 5 ? new Vector3(0f, -4.4f, 0f) : new Vector3(0f, 4.3f, 0f);
         var mine = CreateStructureVisual("DefendedMine", BuildingType.GoldMine, mineLevel, position, 1.9f);
         var structure = mine.AddComponent<BattleStructure>();
         structure.Initialize(BuildingType.GoldMine, mineLevel, null, position, 1.9f);

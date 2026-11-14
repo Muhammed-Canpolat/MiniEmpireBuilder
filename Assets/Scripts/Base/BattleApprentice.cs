@@ -108,6 +108,7 @@ public sealed class BattleApprentice : MonoBehaviour
             followed = steer.Step(before + feet, desired + feet, step, out _) - feet;
         }
         followed = BattleObstacles.Resolve(followed + HeroController.FeetOffset, 0.3f) - HeroController.FeetOffset;
+        followed = BattleTerrain.KeepOnLand((Vector2)transform.position + HeroController.FeetOffset, followed + HeroController.FeetOffset, 0.2f) - HeroController.FeetOffset;
         transform.position = followed;
         bool moving = Vector2.Distance(before, followed) > 0.01f;
         if (moving) renderer.flipX = desired.x < before.x;

@@ -16,7 +16,8 @@ public sealed class BattleWalkGrid : IWalkGrid
 
     private void Refresh()
     {
-        if (builtVersion == BattleObstacles.Version) return;
+        int version = BattleObstacles.Version * 1000 + BattleTerrain.Version;   // 7. oturum: arazi (su/uçurum) da kapalı
+        if (builtVersion == version) return;
         blocked.Clear();
         foreach (var r in BattleObstacles.All())
         {
@@ -25,12 +26,12 @@ public sealed class BattleWalkGrid : IWalkGrid
             for (int x = x0; x < x1; x++)
             for (int y = y0; y < y1; y++) blocked.Add(new Vector2Int(x, y));
         }
-        builtVersion = BattleObstacles.Version;
+        builtVersion = version;
     }
 
     public int Version { get { Refresh(); return builtVersion; } }
     public RectInt Bounds => new RectInt(-HalfExtent, -HalfExtent, HalfExtent * 2, HalfExtent * 2);
-    public bool Walkable(Vector2Int cell) { Refresh(); return Bounds.Contains(cell) && !blocked.Contains(cell); }
+    public bool Walkable(Vector2Int cell) { Refresh(); return Bounds.Contains(cell) && !blocked.Contains(cell) && BattleTerrain.Walkable(Center(cell), 0.2f); }
     public bool CanStep(Vector2Int a, Vector2Int b) => Walkable(b);
     public Vector2Int CellOf(Vector2 world) => new Vector2Int(Mathf.FloorToInt(world.x / CellSize), Mathf.FloorToInt(world.y / CellSize));
     public Vector2 Center(Vector2Int cell) => new Vector2((cell.x + 0.5f) * CellSize, (cell.y + 0.5f) * CellSize);

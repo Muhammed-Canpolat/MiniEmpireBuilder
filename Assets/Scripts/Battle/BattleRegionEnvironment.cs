@@ -16,7 +16,15 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
         yield return null;
         RegionMechanicsStats.Reset();
         RegionData region = BattleSession.Region;
-        if (!BattleSession.IsCampaign || region == null || region.id == 1) yield break;
+        if (!BattleSession.IsCampaign || region == null) yield break;
+        if (BattleTerrain.Active)
+        {
+            // 7. oturum (D94): bölge haritası — zemin/süs harita kurucusunda; burada yalnız mekanikler + atmosfer.
+            AddMechanics(region);
+            gameObject.AddComponent<BattleAtmosphereFx>().Setup(BattleTerrain.Map);
+            yield break;
+        }
+        if (region.id == 1) yield break;
         var ground = GameObject.Find("BattleGround")?.GetComponent<SpriteRenderer>();
         if (ground != null)
         {
@@ -24,6 +32,20 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
             // Keep the source grass and leaf detail readable. The region tone contributes at most 15%.
             ground.color = Color.Lerp(Color.white, region.colorTone, 0.15f);
         }
+        AddMechanics(region);
+        if (region.id == 3) { AddMineScatter(); yield break; }
+        if (region.id >= 4) { AddRegionDressing(region.id); yield break; }
+        if (region.id != 2) yield break;
+        hero = FindFirstObjectByType<HeroController>()?.transform;
+        AddForestWash();
+        AddForestFloor();
+        AddEdgeShadows();
+        AddFog();
+    }
+
+    /// <summary>Oynanış mekanikleri (görselden bağımsız): Sis görüşü, Don fırtınası, Bölge 5 türbeleri, Bölge 6 patlamaları.</summary>
+    private void AddMechanics(RegionData region)
+    {
         if (region.specialMechanic == "Sis" && GetComponent<FogOfWar>() == null)
             gameObject.AddComponent<FogOfWar>();
         if (region.specialMechanic == "Don" && GetComponent<BattleWeather>() == null)
@@ -34,14 +56,6 @@ public sealed class BattleRegionEnvironment : MonoBehaviour
             if (region.id == 5 && GetComponent<ShadowShrines>() == null) gameObject.AddComponent<ShadowShrines>();
             if (region.id == 6 && GetComponent<VolcanicEruptions>() == null) gameObject.AddComponent<VolcanicEruptions>();
         }
-        if (region.id == 3) { AddMineScatter(); yield break; }
-        if (region.id >= 4) { AddRegionDressing(region.id); yield break; }
-        if (region.id != 2) yield break;
-        hero = FindFirstObjectByType<HeroController>()?.transform;
-        AddForestWash();
-        AddForestFloor();
-        AddEdgeShadows();
-        AddFog();
     }
 
     // ==================== BÖLGE 4–6 KİMLİĞİ (kodla; sanat gelene kadar) ====================

@@ -162,6 +162,7 @@ public static class PlaytestBot
         int maxWardBreaks = 0;
         int lastKilled = 0; float lastBaseDmg = 0f, lastProgress = 0f;
         retreatSince = -1f;
+        parkSpot = null;
         Time.timeScale = timeScale;
         lastHeroPos = hero.transform.position;
         stuckFor = 0f; sidestepUntil = 0f;
@@ -289,6 +290,24 @@ public static class PlaytestBot
         File.WriteAllText(Path.Combine(OutputDir, $"battle_r{t.region}_l{t.level}_s{t.seed}{(t.profile == "good" ? "" : "_" + t.profile)}.json"), JsonUtility.ToJson(t, true));
     }
 
+    private static Vector2? parkSpot;
+
+    /// <summary>Kara üstünde, yoldan ve Ana Üs'ten en uzak nokta (kahramansız ölçüm).</summary>
+    private static Vector2 FarFromRoad(Vector2 fallback)
+    {
+        if (!BattleTerrain.Active) return fallback + new Vector2(0f, -30f);
+        Vector2 best = fallback; float bestScore = -1f;
+        for (float y = -5f; y <= BattleMapGeometry.TopY - 2f; y += 0.5f)
+            for (float x = -7f; x <= 7f; x += 0.5f)
+            {
+                var p = new Vector2(x, y);
+                if (!BattleTerrain.Walkable(p, 0.4f) || BattleObstacles.Blocked(p, 0.4f)) continue;
+                float score = Mathf.Min(BattleTerrain.DistanceToRoad(p), Vector2.Distance(p, Vector2.zero));
+                if (score > bestScore) { bestScore = score; best = p; }
+            }
+        return best;
+    }
+
     private static Vector3 lastHeroPos;
     private static float stuckFor, sidestepUntil, retreatSince = -1f;
     /// <summary>
@@ -311,6 +330,14 @@ public static class PlaytestBot
         if (hero == null || hero.IsDowned) { if (hero != null) hero.SetMoveInput(Vector2.zero); return; }
         // Yalnız kule stratejisi: kahraman yerinden kıpırdamaz (yalnız menziline gireni kendiliğinden vurur).
         if (Strategy == "towerOnly") { hero.SetMoveInput(Vector2.zero); return; }
+        // 7. oturum: kahramansız — kahraman yoldan en uzak kara köşesinde bekletilir (savaşa hiç katılmaz; yalnız kuleler + Kışla).
+        if (Strategy == "noHero")
+        {
+            hero.SetMoveInput(Vector2.zero);
+            if (!parkSpot.HasValue) parkSpot = FarFromRoad(hero.transform.position);
+            hero.transform.position = parkSpot.Value;
+            return;
+        }
         Vector3 pos = hero.transform.position;
         float step = Vector2.Distance(pos, lastHeroPos);
         t.heroDistance += step;
@@ -318,7 +345,14 @@ public static class PlaytestBot
 
         // Düşman yokken duyurulan tarafa doğru (üsten 3 birim) konumlan: oyuncu uyarı oklarını kullanır.
         Vector3 target = home;
-        if (!Casual && edges != null && edges.Length > 0)
+        if (!Casual && BattleManager.MapLayout != null)
+        {
+            // 7. oturum: harita yolunda düşman yokken yolun üsse yakın üçte birinde, yol kenarında bekle.
+            var main = BattleManager.MapLayout.Routes[0];
+            float s = main.Length * 0.68f;
+            target = main.PointAt(s) + main.NormalAt(s) * 1.6f;
+        }
+        else if (!Casual && edges != null && edges.Length > 0)
         {
             int e = edges[0];
             Vector3 side = e == 0 ? Vector3.up : e == 1 ? Vector3.right : e == 2 ? Vector3.down : Vector3.left;

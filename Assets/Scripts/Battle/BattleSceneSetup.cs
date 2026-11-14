@@ -430,7 +430,8 @@ public class BattleSceneSetup : MonoBehaviour
         BattleCameraFollow camFollow = Camera.main.GetComponent<BattleCameraFollow>();
         if (camFollow != null && hero != null)
         {
-            camFollow.Setup(hero.transform, worldWidth, worldHeight);
+            if (BattleTerrain.Active) camFollow.SetupBounds(hero.transform, BattleTerrain.CameraBounds);   // 7. oturum: bölge haritası
+            else camFollow.Setup(hero.transform, worldWidth, worldHeight);
         }
 
         MinimapController minimap = FindFirstObjectByType<MinimapController>();

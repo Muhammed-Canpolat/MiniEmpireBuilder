@@ -16,7 +16,37 @@ public sealed class ShadowShrines : MonoBehaviour
     private void Start()
     {
         int count = Mathf.Min(Points.Length, Progression.RegionMechanics.ShrineCount(BattleSession.LevelNumber));
-        for (int i = 0; i < count; i++) CursedShrine.Create(Points[i], i * 4f);
+        var points = BattleTerrain.Active ? MapPoints() : Points;
+        for (int i = 0; i < count; i++) CursedShrine.Create(points[i], i * 4f);
+    }
+
+    /// <summary>
+    /// 7. oturum: bölge haritasında türbeler karada, yoldan 2,2+ uzakta, yuva/üs dışında: biri haritanın üst yarısında (köprüye yakın), biri
+    /// alt yarısında (üsse yakın) — kahraman yoldan ayrılıp yıkmaya gider (eski düzenle aynı amaç).
+    /// </summary>
+    public static Vector2[] MapPoints()
+    {
+        var layout = BattleTerrain.Layout;
+        Vector2 Best(float yMin, float yMax)
+        {
+            Vector2 best = new Vector2(0f, (yMin + yMax) * 0.5f); float bestScore = float.MinValue;
+            for (float y = yMin; y <= yMax; y += 0.5f)
+                for (float x = -6.5f; x <= 6.5f; x += 0.5f)
+                {
+                    var p = new Vector2(x, y);
+                    if (!BattleTerrain.Walkable(p, 0.9f)) continue;
+                    float road = BattleTerrain.DistanceToRoad(p);
+                    if (road < 2.2f || BattleObstacles.Blocked(p, 0.8f)) continue;
+                    bool clear = true;
+                    if (layout != null && layout.slots != null)
+                        foreach (var slot in layout.slots) if (Vector2.Distance(slot, p) < 2.6f) clear = false;
+                    if (!clear) continue;
+                    float score = -Mathf.Abs(road - 3f) - Mathf.Abs(y - (yMin + yMax) * 0.5f) * 0.2f;
+                    if (score > bestScore) { bestScore = score; best = p; }
+                }
+            return best;
+        }
+        return new[] { Best(13f, 20f), Best(4f, 11f) };
     }
 }
 

@@ -61,11 +61,11 @@ MonoBehaviour:
     sprites:
     - {fileID: 6215267202064938543, guid: c5a6a054a96fc4546851fdd38f73c8bb, type: 3}
     - {fileID: 5354429476588687777, guid: 3b3745d65073b4ba1a9da4c2861fd353, type: 3}
-    count: 14
+    count: 24
     height: {x: 2.5, y: 3.1}
     blocksMovement: 1
     footprint: 0.5
-    roadClearance: 0.9
+    roadClearance: 0.7
     shadow: 1
     sway: 1
     tint: {r: 1, g: 1, b: 1, a: 1}
@@ -74,11 +74,11 @@ MonoBehaviour:
     sprites:
     - {fileID: -1922301785, guid: 9606510127d3043a5bbdf980402c1628, type: 3}
     - {fileID: 2052243219, guid: 7649734177ed34f78a801612ab90a3a2, type: 3}
-    count: 12
+    count: 18
     height: {x: 2, y: 2.5}
     blocksMovement: 1
     footprint: 0.5
-    roadClearance: 0.9
+    roadClearance: 0.7
     shadow: 1
     sway: 1
     tint: {r: 1, g: 1, b: 1, a: 1}
@@ -89,7 +89,7 @@ MonoBehaviour:
     - {fileID: -9069723417043114871, guid: 3974238adf8a646d6a2b3ad76793ae41, type: 3}
     - {fileID: -2460423728298319197, guid: 72dc8fc77fc8f43bb9ce7f50bbf11d67, type: 3}
     - {fileID: -1604862082099773515, guid: 35328aa4331c645f39768db2fd54501e, type: 3}
-    count: 8
+    count: 10
     height: {x: 0.7, y: 0.95}
     blocksMovement: 0
     footprint: 0.6

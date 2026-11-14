@@ -219,6 +219,12 @@ public sealed class ForestWitchBoss : MonoBehaviour
         float angle = baseAngle + Mathf.PI + Random.Range(-1.2f, 1.2f);
         Vector3 p = heroPosition + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle)) * FogStepDistance;
         var setup = FindFirstObjectByType<BattleSceneSetup>();
+        if (BattleTerrain.Active)
+        {
+            // 7. oturum: bölge haritasında ışınlanma noktası karada (suya/uçuruma düşmez).
+            Vector2 land = BattleTerrain.NearestLand(p);
+            return new Vector3(land.x, land.y, 0f);
+        }
         if (setup != null && setup.worldWidth > 0f)
         {
             float hw = setup.worldWidth * 0.5f - 1f;

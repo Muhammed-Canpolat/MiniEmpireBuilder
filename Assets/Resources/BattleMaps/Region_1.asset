@@ -61,7 +61,7 @@ MonoBehaviour:
     sprites:
     - {fileID: 6215267202064938543, guid: c5a6a054a96fc4546851fdd38f73c8bb, type: 3}
     - {fileID: 5354429476588687777, guid: 3b3745d65073b4ba1a9da4c2861fd353, type: 3}
-    count: 12
+    count: 14
     height: {x: 2.5, y: 3}
     blocksMovement: 1
     footprint: 0.5
