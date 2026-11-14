@@ -545,7 +545,7 @@ public class Session4Tests
         var menu = T("BuildMenuController").GetProperty("Instance").GetValue(null);
         menu.GetType().GetMethod("Show").Invoke(menu, null);
         yield return new WaitForSecondsRealtime(0.4f);
-        menu.GetType().GetMethod("SelectTab", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(menu, new object[] { 1 });
+        menu.GetType().GetMethod("SelectTab", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Invoke(menu, new object[] { 1 });
         yield return new WaitForSecondsRealtime(0.4f);
         CardWorkshopTests.CaptureScreen("S2_2_decor_menu", "session4");
     }
@@ -596,12 +596,10 @@ public class Session4Tests
         // 1) Kaldırma kartı
         tap.Invoke(setup, new object[] { (Vector3)tree.GetComponent<Collider2D>().bounds.center });
         yield return new WaitForSecondsRealtime(0.4f);
-        var card = GameObject.Find("RemovePrompt");
-        Assert.NotNull(card, "kaldırma kartı");
-        Assert.NotNull(card.transform.Find("Ribbon/Title"), "kurdele başlık");
-        Assert.NotNull(card.transform.Find("SubjectSlot/Subject"), "nesne görseli");
-        Assert.NotNull(card.transform.Find("RemoveConfirm"), "KALDIR");
-        StringAssert.DoesNotContain("(", Text(card.transform.Find("RemoveConfirm/Label")), "düğme metni tek satır, bedel ayrı satırda");
+        // 6. oturum (4.2): büyük kart yerine öğenin üstünde küçük eylem menüsü (KALDIR + süre).
+        var card = GameObject.Find("RemoveActions") ?? GameObject.Find("NatureActions");
+        Assert.NotNull(card, "kaldırma menüsü");
+        Assert.NotNull(card.GetComponentInChildren<UnityEngine.UI.Button>(true), "KALDIR düğmesi");
         CardWorkshopTests.CaptureScreen("S5_remove_card", "session4");
         tap.Invoke(setup, new object[] { new Vector3(-50f, -50f) });
         yield return null;
@@ -692,7 +690,7 @@ public class Session4Tests
             if (heroRect.Contains(point) || Physics2D.OverlapPointAll(point).Length > 1) nearBig++;
             tap.Invoke(setup, new object[] { (Vector3)point });
             yield return null;
-            if (GameObject.Find("RemovePrompt") == null || Open("HeroInfo") || Open("BuildingInfo"))
+            if ((GameObject.Find("NatureActions") ?? GameObject.Find("RemoveActions") ?? GameObject.Find("RemovePrompt")) == null || Open("HeroInfo") || Open("BuildingInfo"))
                 failures.Add(n.name + " hero=" + Open("HeroInfo") + " bina=" + Open("BuildingInfo"));
             tap.Invoke(setup, new object[] { new Vector3(-50f, -50f) });   // kapat
             yield return null;

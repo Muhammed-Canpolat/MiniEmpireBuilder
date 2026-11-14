@@ -58,12 +58,18 @@ public class IslandPhaseBTests
     internal static void SetClock(long ticks) => T("IslandRepair").GetField("Clock").SetValue(null, (Func<long>)(() => ticks));
     internal const long Hour = TimeSpan.TicksPerHour;
 
-    internal static object NewSave() => T("PlayerSaveData").GetMethod("CreateNew").Invoke(null, new[] { Enum.Parse(T("WeaponType"), "Axe") });
+    internal static object NewSave()
+    {
+        var save = T("PlayerSaveData").GetMethod("CreateNew").Invoke(null, new[] { Enum.Parse(T("WeaponType"), "Axe") });
+        save.GetType().GetField("landOpened").SetValue(save, -1);   // 6. oturum (4.1): eski fikstürler arazinin Ana Üs'le açıldığını varsayar
+        return save;
+    }
 
     internal static object NewIsland(int keep)
     {
         var island = Field(NewSave(), "island");
         Set(island, "keepLevel", keep);
+        Set(island, "archerLevel", keep);   // 6. oturum (3.3): okçu seviyesi artık Kale'yi kopyalamaz
         return island;
     }
 
@@ -362,6 +368,7 @@ public class IslandPhaseBTests
         var save = NewSave();
         var island = Field(save, "island");
         Set(island, "keepLevel", keep);
+        Set(island, "archerLevel", keep);   // 6. oturum (3.3): okçu seviyesi artık Kale'yi kopyalamaz
         Set(island, "tutorialStep", 4);
         if (!fresh) Call("IslandEconomy", "EnsureSeeded", island, Math.Max(1, keep));
         configure?.Invoke(island);
@@ -415,6 +422,10 @@ public class IslandPhaseBTests
         Assert.IsTrue(FindCell("House", "None", island0, 1, out int gc, out int gr, 5));
         controller.GetType().GetMethod("MoveGhostTo").Invoke(controller, new object[] { gc, gr });
         Assert.IsTrue((bool)Prop(controller, "Valid"), "geçerli hücre (yeşil)");
+        {   // 6. oturum (3.2): ada binasının kurulumu altın da ister (Ev 250)
+            var gmo = T("GameManager").GetProperty("Instance").GetValue(null);
+            Set(T("GameManager").GetProperty("PlayerData").GetValue(gmo), "gold", 5000);
+        }
         Assert.IsTrue((bool)controller.GetType().GetMethod("Confirm").Invoke(controller, null), "onay");
         Assert.IsFalse((bool)Prop(controller, "IsPlacing"), "mod kapanır");
         Assert.AreEqual(1500 - 40, (int)Field(island0, "wood"), "Ev 40 Odun");

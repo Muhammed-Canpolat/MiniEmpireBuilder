@@ -854,6 +854,57 @@ public class Session6Tests
         Assert.IsFalse(adCalled);
     }
 
+    // ==================== SON: ilerlemesi olan eski (v11) kaydın yüklenmesi ====================
+
+    [UnityTest]
+    public IEnumerator S7_LegacyV11SaveWithProgressLoadsWithoutLosingAnything()
+    {
+        var save = S("PlayerSaveData", "CreateNew", Enum.Parse(T("WeaponType"), "Axe"));
+        SetF(save, "saveVersion", 11);
+        SetF(save, "landOpened", -1);   // v11'de alan yok (JSON'dan da çıkarılır)
+        SetF(save, "gold", 3456); SetF(save, "gems", 77); SetF(save, "apprenticeLevel", 7);
+        SetF(F(save, "hero"), "level", 9);
+        SetTypeLevel(save, "MainBase", 10, "main");
+        SetTypeLevel(save, "GoldMine", 8, "mine_1");
+        var arch = Activator.CreateInstance(T("PlacedBuildingData"));
+        SetF(arch, "slotId", "archer_1"); SetF(arch, "buildingType", "ArcherTower"); SetF(arch, "level", 6);
+        ((IList)F(save, "placedBuildings")).Add(arch);
+        SetF(save, "goldMineStoredGold", 900);
+        var island = F(save, "island");
+        S("IslandEconomy", "EnsureSeeded", island, 10);
+        SetF(island, "keepLevel", 4); SetF(island, "highestAkin", 12); SetF(island, "wood", 700); SetF(island, "meat", 222);
+        SetF(island, "islandName", ""); SetF(island, "nameOffered", false);
+        int placedIsland = ((IList)F(island, "placed")).Count;
+        string json = JsonUtility.ToJson(save);
+        // v11'de olmayan alanları JSON'dan çıkar (gerçek eski kayıt gibi)
+        foreach (var field in new[] { "iapLedger", "landOpened", "introSeen", "buildTutorial", "levelsIndependent", "adCardDay", "adCardCount" })
+            json = System.Text.RegularExpressions.Regex.Replace(json, "\"" + field + "\":(\\[[^\\]]*\\]|[^,}]*),?", "");
+        PlayerPrefs.SetString("MiniEmpireBuilder_SaveData", json);
+        PlayerPrefs.DeleteKey("MiniEmpireBuilder_SaveData_Backup");
+        if (File.Exists(SaveFile)) File.Delete(SaveFile);
+        var loaded = S("SaveSystem", "Load");
+        Assert.AreEqual(13, (int)F(loaded, "saveVersion"));
+        Assert.AreEqual(3456, (int)F(loaded, "gold")); Assert.AreEqual(77, (int)F(loaded, "gems"));
+        Assert.AreEqual(9, (int)F(F(loaded, "hero"), "level")); Assert.AreEqual(7, (int)F(loaded, "apprenticeLevel"));
+        Assert.AreEqual(900, (int)F(loaded, "goldMineStoredGold"), "madendeki altın korunur");
+        var li = F(loaded, "island");
+        Assert.AreEqual(10, (int)F(li, "keepLevel"), "ada etkin seviyesi (= Ana Üs 10) korunur, bundan sonra bağımsız");
+        Assert.AreEqual(12, (int)F(li, "highestAkin"));
+        Assert.AreEqual(placedIsland, ((IList)F(li, "placed")).Count, "ada binaları korunur");
+        Assert.IsTrue((bool)F(li, "introSeen"), "girilmiş ada: tanıtım tekrar gösterilmez");
+        Assert.AreEqual(0, ((IList)F(loaded, "iapLedger")).Count);
+        Assert.AreEqual(-1, (int)F(loaded, "landOpened"), "arazi: eski kayıt işareti");
+
+        // Oyunda: arazi Ana Üs kademesi kadar açık, savaş/depo okumaları çalışır
+        yield return FreshManager();
+        T("GameManager").GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { loaded });
+        save = loaded;
+        M(manager, "RebuildBuildingData");
+        Assert.AreEqual(3, (int)SP("LandExpansion", "OpenedTier"), "Ana Üs 10 → 3 genişleme açık kalır");
+        Assert.AreEqual(1, (int)S("BuildingLevels", "CompletedCount", loaded, Enum.Parse(T("BuildingType"), "ArcherTower")));
+        Assert.Greater((int)M(manager, "GetGoldMineStorageCapacity"), 900, "yeni depo eskisinden büyük");
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]

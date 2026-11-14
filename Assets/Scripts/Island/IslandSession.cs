@@ -53,7 +53,7 @@ public static class IslandSession
         };
     }
 
-    private static string Today => System.DateTime.UtcNow.ToString("yyyy-MM-dd");
+    private static string Today => GameClock.UtcNow.ToString("yyyy-MM-dd");   // 6. oturum (6): saat geri alma hilesine kapalı
 
     /// <summary>Bugün kaç tekrar ödülü hakkı kaldı (altın kasma sınırı).</summary>
     public static int ReplayRewardsLeft()

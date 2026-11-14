@@ -31,7 +31,7 @@ public static class BaseWorldLayout
     public static int NextLandLevel(int level)
     {
         int tier = Progression.ColorTier(level);
-        return tier >= 4 ? 0 : (tier + 1) * Progression.LevelsPerColorTier + 1;
+        return tier >= 4 ? 0 : LandExpansion.RequiredMainBase(tier + 1);   // 6. oturum (6): kilit formülü tek yerde
     }
 
     public struct Slot

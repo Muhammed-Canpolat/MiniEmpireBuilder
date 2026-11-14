@@ -638,3 +638,19 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - `UI/BattleCardUnlockDialog.cs`: Tiny Swords kâğıt + kurdele, kart simgesi + açıklama; altta EŞİT boyutlu iki düğme: mavi "▶ REKLAM İZLE (kalan hak)"
   (`ui_icon_play`) ve altın "💎 N İLE AÇ" (elmas simgesi + net fiyat; yetmezse kırmızı → Elmas Dükkânı). Günlük kart reklamı hakkı
   `FeatureConfig.dailyBattleCardAds` = 9 (savaş başına 3 kart × 3 savaş); bitince düğme pasif, "Yeni hak 3sa 12dk" (yerel gece yarısı).
+
+## D84 — Bütünsel denetim (6. oturum AŞAMA 6)
+- **Zamanlayıcılar:** Ana Üs inşaatçı görevleri (inşa, yükseltme, kahraman/çırak, doğa temizliği) tek servis `GameManager` (UTC tick, kayıtta);
+  ada Usta görevleri `IslandEconomy` (UTC, kayıtta); Kart Atölyesi, akın zamanlayıcısı, canlar da kayıtlı UTC. Hepsi oyun kapalıyken ilerler.
+  Ada doğa temizliği (yeni, kısa 3–10 sn) gerçek zamanlı ve kayıtsız: bedel BİTİŞTE ödendiği için yarıda kapanırsa kayıp yok.
+- **Saat manipülasyonu:** günlük sınırlar zaten `GameClock` (geri alınmaz yüksek su işareti). **Bulgu:** inşaatçı görevleri ve maden ham
+  `DateTime.UtcNow` kullanıyordu → saat geri alınınca süreler uzayıp/kısalıyordu; ada tekrar ödülü günlük sınırı da ham saatle. **Düzeltme:**
+  GameManager'daki tüm zaman okumaları ve ada günlük sınırı `GameClock.UtcNow`. **Sınır:** saati İLERİ almak sunucu olmadan çevrimdışı
+  doğrulanamaz (sektörde de sunucu saati gerekir) — bulut kaydı/sunucu saati geldiğinde (PLAY_RELEASE §8) kapatılmalı.
+- **Elmasla hızlandırma:** Ana Üs, ada ve Kart Atölyesi aynı `GemEconomy.FinishCost` (≤1 dk 1 elmas); kahraman/çırak da artık aynı yoldan.
+- **Altın kuru:** eksik altın tamamlama ile dükkân aynı Ana Üs'e bağlı kur (`ShopService.GoldPerGem`); önceden sabit 40 idi (Ana Üs 15'te anlamsız).
+- **Kilitler tek kaynak:** kahraman/çırak tavanı `GameManager.GetHeroMaxLevel` (Ana Üs); Kıyı Kalesi `KeepRequiredMainBase`; arazi kademesi
+  `LandExpansion.RequiredMainBase` (BaseWorldLayout.NextLandLevel artık bunu çağırır, ayrı formül kalmadı); tamamlanmış bina seviyesi `BuildingLevels`.
+- **Öğretici çakışmaları:** ada sırası tanıtım (330) → ad (320) → Okçuluk öğreticisi (310) → akın öğreticisi (okçu olmadan akın panosu açılmaz).
+  Hazır köyde/eski kayıtta Okçuluk öğreticisi atlanır. Ana Üs öğreticisi (FirstBaseGuide) adada çalışmaz.
+- **Test koşusu notu:** `-testFilter` sınıf adıyla eşleşince `[Explicit]` uzun ölçümler de koşar (Island* ≈6 dk+ her biri); gruplar adlarla verilmeli.

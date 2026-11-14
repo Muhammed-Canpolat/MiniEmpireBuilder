@@ -90,6 +90,11 @@ public class IslandFreshStartTests
         int mask = (int)Field(island, "zoneMask");
         int keep = (int)T("IslandSession").GetMethod("KeepLevel").Invoke(null, null);
         Assert.IsTrue(FindCellNear(kind, island, mask, nearCol, nearRow, out int col, out int row, keep), $"{kind} için geçerli hücre");
+        // 6. oturum (3.2): ada binalarının ilk kurulumu altınla: test cüzdanı yeterli olsun.
+        var gmType = T("GameManager");
+        var gmObj = gmType.GetProperty("Instance").GetValue(null);
+        var pd = gmType.GetProperty("PlayerData").GetValue(gmObj);
+        if ((int)Field(pd, "gold") < 5000) Set(pd, "gold", 5000);
         var host = Call("IslandPlacementHost", "ForNew", Kind(kind));
         Assert.IsTrue((bool)host.GetType().GetMethod("Confirm").Invoke(host, new object[] { col, row }), $"{kind} inşaatı başladı");
         object entry = null;
@@ -151,7 +156,9 @@ public class IslandFreshStartTests
             Assert.AreEqual((0, 0), Cost(kind, island), $"{kind} ilk yapım bedava");
         Assert.IsTrue((bool)Call("IslandEconomy", "Buildable", Kind("Archery")), "Okçuluk menüden kurulur");
         Set(island, "freeBuildMask", (int)Field(island, "freeBuildMask") | Bit("Lumber") | Bit("Archery"));
-        Assert.AreEqual((300, 60), Cost("Lumber", island), "ikinci Oduncu liste bedeli");
+        // 6. oturum (3.2): "ilk yapım bedava" kalktı; türün ilk kurulumu yalnız ALTIN (Oduncu 100), Odun/Et ikinciden itibaren.
+        Assert.AreEqual((0, 0), Cost("Lumber", island), "ilk Oduncu: Odun/Et yok, yalnız altın");
+        Assert.AreEqual(100, (int)Call("IslandEconomy", "BuildGold", Kind("Lumber"), island));
         Assert.AreEqual((CfgInt("archeryPlaceWood"), CfgInt("archeryPlaceMeat")), Cost("Archery", island));
         Assert.AreEqual((0, 0), Cost("House", island), "başka türlerin hakkı sürer");
         // İdempotent: yeniden çağırmak hiçbir şeyi değiştirmez
@@ -174,7 +181,7 @@ public class IslandFreshStartTests
         foreach (var e in Placed(island)) { Set(e, "level", (int)Field(e, "level") + (bump++ % 3)); levels[(string)Field(e, "id")] = (int)Field(e, "level"); }
         string json = JsonUtility.ToJson(save);
         // v9 kaydında v10 alanları yoktur
-        json = Regex.Replace(json, @"""freshStart"":(true|false),""freeBuildMask"":-?\d+,""clearedTrees"":\[[^\]]*\],""legacyVillage"":(true|false),", "");
+        json = Regex.Replace(json, @"""freshStart"":(true|false),""freeBuildMask"":-?\d+,""clearedTrees"":\[[^\]]*\],(""clearedNature"":\[[^\]]*\],)?""legacyVillage"":(true|false),", "");
         StringAssert.DoesNotContain("freeBuildMask", json);
         json = Regex.Replace(json, "\"saveVersion\":\\d+", "\"saveVersion\":9");
         PlayerPrefs.SetString(Key, json);
@@ -267,7 +274,7 @@ public class IslandFreshStartTests
         Assert.AreEqual(0.8f + 0.015f * 12, Scale(island, 5), 1e-4f, "inşaattaki kule sayılmaz");
         for (int i = 10; i < 20; i++) Placed(island).Add(Entry("Tower#" + i, "Tower", 15, 1, i));
         Assert.AreEqual(1.15f, Scale(island, 15), 1e-4f, "tavan");
-        Assert.AreEqual(0.72f, Scale(NewIsland(1), 1), 1e-4f, "KK1 kulesiz");
+        Assert.AreEqual(0.5f, Scale(NewIsland(1), 1), 1e-4f, "KK1 kulesiz (6. oturum 3.4: Kale 5 altı seviye başına −0,075)");
         Assert.Greater(Scale(NewIsland(9), 9), Scale(NewIsland(5), 5), "Kıyı Kalesi ile artar");
     }
 
@@ -293,8 +300,8 @@ public class IslandFreshStartTests
         var ui = BuildUi;
         string MenuCost(string kind) => (string)ui.GetType().GetMethod("MenuCardCostText").Invoke(ui, new[] { Kind(kind) });
         string MenuInfo(string kind) => (string)ui.GetType().GetMethod("MenuCardInfoText").Invoke(ui, new[] { Kind(kind) });
-        Assert.AreEqual(L("İLK YAPIM BEDAVA", "FIRST BUILD FREE"), MenuCost("Lumber"));
-        Assert.AreEqual(L("İLK YAPIM BEDAVA", "FIRST BUILD FREE"), MenuCost("Archery"), "Okçuluk menüden kurulur");
+        Assert.AreEqual(L("100 ALTIN", "100 GOLD"), MenuCost("Lumber"), "6. oturum (3.2): Oduncu ~100 altın");
+        Assert.AreEqual(L("ÜCRETSİZ", "FREE"), MenuCost("Archery"), "ilk Okçuluk ücretsiz (öğretici)");
         StringAssert.StartsWith(L("Odun üretir", "Produces Wood"), MenuInfo("Lumber"));
         StringAssert.StartsWith(L("Et üretir", "Produces Meat"), MenuInfo("Pasture"));
         yield return null;

@@ -96,7 +96,7 @@ public class GameManager : MonoBehaviour
             RebuildBuildingData();
             // "Sen yokken" özeti: kapalı geçen süre, o ana kadarki maden/can, bitecek işler.
             if (PlayerData.lastSavedTicks > 0)
-                AwayReport.Begin(PlayerData, new TimeSpan(DateTime.UtcNow.Ticks - PlayerData.lastSavedTicks).TotalSeconds);
+                AwayReport.Begin(PlayerData, new TimeSpan(GameClock.UtcNow.Ticks - PlayerData.lastSavedTicks).TotalSeconds);
             // Oyun kapalıyken süresi dolan yükseltme hemen uygulanır.
             CheckBuilderTask();
             if (PlayerData.buildableSize <= 0)
@@ -233,7 +233,7 @@ public class GameManager : MonoBehaviour
         if (PlayerData == null)
             return;
 
-        long nowTicks = DateTime.UtcNow.Ticks;
+        long nowTicks = GameClock.UtcNow.Ticks;
         if (PlayerData.goldMineLastCollectTime <= 0)
         {
             PlayerData.goldMineLastCollectTime = nowTicks;
@@ -489,8 +489,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public bool TempBuilderActive => PlayerData != null && PlayerData.tempBuilderUntilTicks > DateTime.UtcNow.Ticks;
-    public bool BuildPotionActive => PlayerData != null && PlayerData.buildPotionUntilTicks > DateTime.UtcNow.Ticks;
+    public bool TempBuilderActive => PlayerData != null && PlayerData.tempBuilderUntilTicks > GameClock.UtcNow.Ticks;
+    public bool BuildPotionActive => PlayerData != null && PlayerData.buildPotionUntilTicks > GameClock.UtcNow.Ticks;
     public bool HasFreeBuilder => FreeBuilderCount > 0;
 
     /// <summary>Tüm inşaatçılar meşgul (yeni iş başlatılamaz).</summary>
@@ -512,13 +512,13 @@ public class GameManager : MonoBehaviour
     public float BuilderProgress => TaskProgress(BuilderTask);
 
     public static double SecondsRemaining(BuilderTaskSave task) => task == null || !task.IsActive ? 0d
-        : Math.Max(0d, new TimeSpan(task.endTicks - DateTime.UtcNow.Ticks).TotalSeconds);
+        : Math.Max(0d, new TimeSpan(task.endTicks - GameClock.UtcNow.Ticks).TotalSeconds);
 
     public static float TaskProgress(BuilderTaskSave task)
     {
         if (task == null || !task.IsActive) return 0f;
         double total = task.endTicks - task.startTicks;
-        return total <= 0 ? 1f : Mathf.Clamp01((float)((DateTime.UtcNow.Ticks - task.startTicks) / total));
+        return total <= 0 ? 1f : Mathf.Clamp01((float)((GameClock.UtcNow.Ticks - task.startTicks) / total));
     }
 
     public BuilderTaskSave TaskForBuilder(int builderIndex)
@@ -551,7 +551,7 @@ public class GameManager : MonoBehaviour
         if (PlayerData == null) return false;
         int index = FirstFreeBuilderIndex();
         if (index < 0) return false;
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         var task = new BuilderTaskSave
         {
             builderIndex = index,
@@ -590,7 +590,7 @@ public class GameManager : MonoBehaviour
     public bool SpeedUpUpgrade(int minutes)
     {
         if (PlayerData == null || minutes <= 0) return false;
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         BuilderTaskSave longest = null;
         foreach (var task in PlayerData.builderTasks)
             if (task.kind == "upgrade" && task.endTicks > now && (longest == null || task.endTicks > longest.endTicks))
@@ -618,7 +618,7 @@ public class GameManager : MonoBehaviour
         if (PlayerData == null || task == null || !PlayerData.builderTasks.Contains(task)) return false;
         int cost = FinishNowCost(task);
         if (cost > 0 && !SpendGems(cost)) return false;
-        task.endTicks = DateTime.UtcNow.Ticks;
+        task.endTicks = GameClock.UtcNow.Ticks;
         CheckBuilderTask();
         return true;
     }
@@ -628,7 +628,7 @@ public class GameManager : MonoBehaviour
     {
         if (PlayerData == null || BuildPotionActive) return false;
         if (!SpendGems(GemEconomy.PotionCost)) return false;
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         long window = TimeSpan.FromHours(GemEconomy.PotionHours).Ticks;
         PlayerData.buildPotionUntilTicks = now + window;
         foreach (var task in PlayerData.builderTasks)
@@ -645,7 +645,7 @@ public class GameManager : MonoBehaviour
     public bool RentTempBuilder()
     {
         if (!CanRentTempBuilder || !SpendGems(GemEconomy.TempBuilderCost)) return false;
-        PlayerData.tempBuilderUntilTicks = DateTime.UtcNow.Ticks + TimeSpan.FromHours(GemEconomy.TempBuilderHours).Ticks;
+        PlayerData.tempBuilderUntilTicks = GameClock.UtcNow.Ticks + TimeSpan.FromHours(GemEconomy.TempBuilderHours).Ticks;
         SaveGame();
         OnBuilderHired?.Invoke(BuilderCount);
         return true;
@@ -664,7 +664,7 @@ public class GameManager : MonoBehaviour
     {
         if (PlayerData == null || duration <= TimeSpan.Zero) return;
         ApplyOfflineGoldMineProduction();
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         PlayerData.mineBoostUntilTicks = Math.Max(now, PlayerData.mineBoostUntilTicks) + duration.Ticks;
         SaveGame();
     }
@@ -673,7 +673,7 @@ public class GameManager : MonoBehaviour
     public bool SpeedUpTask(BuilderTaskSave task, int minutes)
     {
         if (PlayerData == null || task == null || minutes <= 0 || !PlayerData.builderTasks.Contains(task)) return false;
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         task.endTicks = Math.Max(now, task.endTicks - TimeSpan.FromMinutes(minutes).Ticks);
         CheckBuilderTask();
         SaveGame();
@@ -759,7 +759,7 @@ public class GameManager : MonoBehaviour
     private void CheckBuilderTask()
     {
         if (PlayerData?.builderTasks == null || PlayerData.builderTasks.Count == 0) return;
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         List<BuilderTaskSave> finished = null;
         foreach (var task in PlayerData.builderTasks)
             if (task.endTicks <= now) (finished ??= new List<BuilderTaskSave>()).Add(task);
@@ -1108,7 +1108,7 @@ public class GameManager : MonoBehaviour
     /// Altın Madeni'nin saniyede ürettiği altın
     /// </summary>
     /// <summary>2x maden (giriş takvimi ödülü) süresi devam ediyor mu.</summary>
-    public bool MineBoostActive => PlayerData != null && PlayerData.mineBoostUntilTicks > DateTime.UtcNow.Ticks;
+    public bool MineBoostActive => PlayerData != null && PlayerData.mineBoostUntilTicks > GameClock.UtcNow.Ticks;
 
     public float GetGoldPerSecond() => GetGoldPerSecond(true);
 
@@ -1136,13 +1136,13 @@ public class GameManager : MonoBehaviour
         {
             ApplyOfflineGoldMineProduction();
             SaveGame();
-            pausedAtTicks = DateTime.UtcNow.Ticks;
+            pausedAtTicks = GameClock.UtcNow.Ticks;
         }
         else if (FindFirstObjectByType<BaseWorldController>() != null)
         {
             if (pausedAtTicks > 0)
             {
-                AwayReport.Begin(PlayerData, new TimeSpan(DateTime.UtcNow.Ticks - pausedAtTicks).TotalSeconds);
+                AwayReport.Begin(PlayerData, new TimeSpan(GameClock.UtcNow.Ticks - pausedAtTicks).TotalSeconds);
                 pausedAtTicks = 0;
             }
             // Üs açıkken geri dönüldü: arka planda geçen süre şimdi eklenir

@@ -248,3 +248,16 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **UI:** `UI/WorldActionMenu.cs` (dekor + bina dokunuş menüsü; bina dokunuşu artık önce menü açar), `WorldConfirmButtons.Create(…, Func<Bounds>)`
   (hayaletin yanında), `UndoMoveButton` (küçük, sol alt, 3 sn). `FeatureConfig.recommendedLayout` (kapalı).
 - **Test:** `Session5Tests`, `Session5UiTests`. Bilinen eski başarısızlar: IslandRaidTests.LiveRaid…, IslandPhaseCTests.MonsterFlips…, BaseShadowRevisionTests.
+
+## 14 Kasım 2026 (6. oturum): savaş hataları + ekonomi + dükkân + ada ilerlemesi + arazi (D68–D84)
+- **Tamamlanmış seviye tek kaynak:** `Systems/BuildingLevels.cs` ("build" görevi süren bina 0). Kahraman/çırak yükseltmesi de inşaatçı görevi
+  (`GameManager.HeroTaskSlot/ApprenticeTaskSlot`), seviye süre bitince artar.
+- **Savaş:** menzil `BattleStructure.RangeCenter` + `Battle/RangeRing.cs`; can barı `UI/UiHealthBar.cs` (UI) ve `HealthBar` (dünya) sola sabit + beyaz iz;
+  duraklatma `Battle/BattlePause.cs` (nedenli; ayarlar + arka plan, ses dahil). Tiny Swords Run/Idle kliplerinde döngü açık; kahraman Animator AlwaysAnimate.
+- **Ekonomi:** Economy_V2 maden 600+90(L−1)/sa, depo 4 sa, çırak %L, Köylü Evi +%5/+%1 (`Base/MineStorageGauge.cs`). Sim `Tools/economy_sim_v2.py`
+  (V2-5.oturum vs V2). Dükkân `Systems/Shop/*` (ShopConfig.asset, ShopService, IapService = Unity IAP 5.4 + FakeStoreBackend), `UI/ShopTabView.cs`.
+- **Ada:** `Island/IslandIntro.cs`, `Island/IslandBuildTutorial.cs`; `KeepFollowsMainBase=false`, kilit `KeepRequiredMainBase`; kale yükseltmesi
+  `IslandEconomy.TryStartKeepUpgrade`; ada kurulum altını `FeatureConfig.islandBuildGold`; akın ölçeği `akinScalePerKeepBelow`.
+- **Arazi/temizleme:** `Base/LandExpansion.cs` (`landOpened`), `Systems/AreaHighlight.cs`, `Systems/NatureClear.cs` (süre/ödül FeatureConfig).
+- **Kayıt v13** (v12 IAP defteri, v13 ada göçü `IslandEconomy.MigrateV13`). Test `Session6Tests` (S1…S7).
+- **Test notu:** `-testFilter "Island"` gibi geniş filtre `[Explicit]` uzun ölçümleri de koşar (saatlerce sürebilir) — sınıf/test adlarıyla grupla.
