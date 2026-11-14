@@ -1,20 +1,20 @@
 # GECE_DURUM — Otonom çalışma (15 Kasım 2026, 7. oturum: bölgeye özgü savaş haritaları)
 
-DURUM: SÜRÜYOR
-ŞU ANKİ İŞ: AŞAMA 1 — veri modeli (bölge/seviye ScriptableObject) + rota/yuva üreteci + doğrulama testi
-Kararlar: DECISIONS.md D88+ · Başlangıç commit'i: 817558f (yarım kalan ada kadrajı düzeltmesi D87 bu oturumda bitti)
+DURUM: TAMAMLANDI (7. oturum)
+ŞU ANKİ İŞ: (yok) — rapor REPORT.md · SIRADAKİ: cihaz denemesi (yeni haritalar), gerçek karo/süs çizimleri (ART_NEEDS #15–23)
+Kararlar: DECISIONS.md D88+ · Başlangıç commit'i: 817558f · AŞAMA 1: 0d98984 · AŞAMA 2: 662b52a (yarım kalan ada kadrajı düzeltmesi D87 bu oturumda bitti)
 Model notu (kullanıcı): harita veri yapısı / yol bulma / denge = Opus yüksek çaba; tilemap ve süsleme = Sonnet sınıfı orta çaba.
 
 7. OTURUM İŞ LİSTESİ:
 - [x] 0 Yarım kalan: dar telefonda ada kadrajı (D87, 817558f)
-- [ ] 1 Veri modeli: BattleRegionMap (bölge SO) + BattleLevelLayout (seviye SO), rota/yuva üreteci, Gizmo düzenleme, doğrulama testi
-- [ ] 2 Savaş haritası kurulumu: bölge zemini (karo + uçurum + su), yol, düşman rotası (üst köprü → Ana Üs), kahraman yürünebilir kara, yuvalar, maden
-- [ ] 3 Seviye türleri: Hayatta Kal / Üssü Koru / Madeni Koru (sapma rotası) / Zamana Karşı / Boss (uzun rota)
-- [ ] 4 Rota varyasyonları (5 seviye; 1. seviye = harita yolu; ileride çatallanan yol; boss ek dönemeç)
-- [ ] 5 Bölge atmosferi (sis / kar / kül / lav / karanlık / kalıntılar) + grafik kalitesine bağlı partikül sınırı
-- [ ] 6 Kar / koyu / volkanik zemin karoları (Tiny Swords'tan renk eşlemesi) + sefer haritası görselleri aynı karolarla; ART_NEEDS
-- [ ] 7 Denge: bölge başına dominant strateji (yalnız kule / yalnız kahraman / kahramansız) + telemetri
-- [ ] SON: her bölge × her tür ekran görüntüsü, harita ↔ savaş yan yana, REPORT.md
+- [x] 1 Veri modeli: BattleRegionMap (bölge SO) + BattleLevelLayout (seviye SO), rota/yuva üreteci, Gizmo düzenleme, doğrulama testi
+- [x] 2 Savaş haritası kurulumu: bölge zemini (karo + uçurum + su), yol, düşman rotası (üst köprü → Ana Üs), kahraman yürünebilir kara, yuvalar, maden
+- [x] 3 Seviye türleri: Hayatta Kal / Üssü Koru / Madeni Koru (sapma rotası) / Zamana Karşı / Boss (uzun rota)
+- [x] 4 Rota varyasyonları (5 seviye; 1. seviye = harita yolu; ileride çatallanan yol; boss ek dönemeç)
+- [x] 5 Bölge atmosferi (sis / kar / kül / lav / karanlık / kalıntılar) + grafik kalitesine bağlı partikül sınırı
+- [x] 6 Kar / koyu / volkanik zemin karoları (Tiny Swords'tan renk eşlemesi) + sefer haritası görselleri aynı karolarla; ART_NEEDS
+- [x] 7 Denge: bölge başına dominant strateji (yalnız kule / yalnız kahraman / kahramansız) + telemetri
+- [x] SON: her bölge × her tür ekran görüntüsü, harita ↔ savaş yan yana, REPORT.md
 
 ENGELLENENLER:
 - (yok)

@@ -261,3 +261,16 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **Arazi/temizleme:** `Base/LandExpansion.cs` (`landOpened`), `Systems/AreaHighlight.cs`, `Systems/NatureClear.cs` (süre/ödül FeatureConfig).
 - **Kayıt v13** (v12 IAP defteri, v13 ada göçü `IslandEconomy.MigrateV13`). Test `Session6Tests` (S1…S7).
 - **Test notu:** `-testFilter "Island"` gibi geniş filtre `[Explicit]` uzun ölçümleri de koşar (saatlerce sürebilir) — sınıf/test adlarıyla grupla.
+
+## 15 Kasım 2026 (7. oturum): bölgeye özgü savaş haritaları (D87–D95)
+- **Sefer savaşları bölge haritasında** (`Assets/Scripts/Battle/Map/`): `BattleRegionMap` (Resources/BattleMaps/Region_N: karo seti, kara maskesi,
+  atmosfer, süsler, bölge yapıları) + `BattleLevelLayout` (Levels/RN_LM: rotalar, yuvalar, üs/maden/kahraman). Kurulum `BattleMapBuilder`,
+  çalışma anı arazi `BattleTerrain` (IsLand/Walkable/KeepOnLand; `BattleWalkGrid` su/uçurumu kapalı sayar), katalog `BattleMapCatalog`
+  (`Enabled=false` → eski merkez-üs düzeni; sefer dışı savaş da eski düzen). Izgara 16×32, 1 karo = 1 birim, Ana Üs (0,0), giriş köprüsü (0, 28,5).
+- Üreteç/doğrulama `BattleLayoutGenerator` (1. seviye = generate.py harita yolu). Editör: `Editor/BattleMapAuthoring.cs`
+  (`-executeMethod BattleMapAuthoring.GenerateFromCommandLine [-force]`; var olan varlığa dokunmaz), `Editor/BattleLevelLayoutEditor.cs` (Scene tutamaçları).
+  **ScriptableObject sınıfı kendi adını taşıyan dosyada olmalı** (iki SO tek dosyadayken varlıklar yüklenmiyordu).
+- Düşman: `EnemyController.SetLane` (yol izleme, `LaneLeash` 3 birim sapma); maden yağmacısı karadan A*. Denge çarpanı `BattleManager.MapEnemyHealth`.
+- Atmosfer `BattleAtmosphereFx` + `BattleFxQuality` (düşük kalite: QualitySettings 0 ya da `MEB_LowFx`). Karolar `Tools/campaign_art/recolor_tilesets.py`,
+  süsler `battle_props.py`, önizleme `layout_preview.py`, karşılaştırma `compare_maps.py`; denge özeti `Tools/balance_s7.py`.
+- Testler `Session7Tests` (V/B/G), `Session7BalanceTests` ([Explicit]). Test yardımcısı `Session4Tests.StartBattle` artık ada kipini temizler.

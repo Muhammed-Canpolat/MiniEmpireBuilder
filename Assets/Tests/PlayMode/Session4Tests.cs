@@ -339,6 +339,8 @@ public class Session4Tests
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
         managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(manager, null);
         T("BattleSession").GetMethod("Begin").Invoke(null, new object[] { region, level });
+        T("IslandSession").GetMethod("Clear").Invoke(null, null);   // önceki ada testinden kalan kip savaşı ada olarak kurmasın
+        Time.timeScale = 1f;
         UnityEngine.SceneManagement.SceneManager.LoadScene("BattleScene");
         for (int frame = 0; frame < 45; frame++) yield return null;
         yield return new WaitForSecondsRealtime(0.6f);

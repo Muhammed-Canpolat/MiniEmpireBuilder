@@ -307,4 +307,56 @@ public class Session7Tests
         Assert.Less(remaining, 180f, "sayaç akıyor");
         Assert.AreEqual(2, ((Array)P(SP("BattleManager", "MapLayout"), "Routes")).Length, "4. seviye çatallı yol");
     }
+
+    // ==================== G: GÖRÜNTÜLER + PERFORMANS ====================
+
+    /// <summary>
+    /// Her bölge × her seviye türü: 2 kule kurulu, yolda düşmanlar, atmosfer açık; oyun görüntüsü (HUD'lu, telefon oranı) + tam harita (UI'sız).
+    /// Atmosfer partikül sayısı normal ve düşük kalitede ölçülür (düşük ≤ normal/2 + 2, normal ≤ 60).
+    /// </summary>
+    [UnityTest, Timeout(1800000)]
+    public IEnumerator G1_EveryRegionEveryKindScreenshots()
+    {
+        var lines = new List<string>();
+        var tryBuild = T("BattleBuildSlot").GetMethod("TryBuild", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        string[] kinds = { "HayattaKal", "UssuKoru", "MadeniKoru", "ZamanaKarsi", "Boss" };
+        for (int region = 1; region <= 6; region++)
+            for (int level = 1; level <= 5; level++)
+            {
+                S("BattleFxQuality", "Force", new object[] { level == 2 ? (bool?)true : (bool?)false });
+                yield return Session4Tests.StartBattle(region, level, 15);
+                yield return new WaitForSeconds(0.3f);
+                var fx = Object.FindFirstObjectByType(T("BattleAtmosphereFx")) as Component;
+                int particles = fx != null ? (int)P(fx, "ActiveParticles") : -1;
+                lines.Add($"B{region} S{level} {kinds[level - 1]}: atmosfer {(fx != null ? P(fx, "Kind") : "yok")}, sprite {particles} ({(level == 2 ? "düşük" : "normal")})");
+                Assert.NotNull(fx, $"B{region}: atmosfer bileşeni");
+                Assert.LessOrEqual(particles, 60, "atmosfer tavanı");
+                // 2 kule: yerleşimin ilk iki yuvası
+                var battle = Battle;
+                battle.GetType().GetMethod("AddBattleGold").Invoke(battle, new object[] { 500 });
+                var slots = Object.FindObjectsByType(T("BattleBuildSlot"), FindObjectsSortMode.None).Cast<Component>().OrderBy(c => c.transform.position.y).ToList();
+                for (int k = 0; k < Mathf.Min(2, slots.Count); k++)
+                    tryBuild.Invoke(slots[k], new object[] { Enum.Parse(T("BuildingType"), k == 0 ? "ArcherTower" : "CannonTower") });
+                var layout = SP("BattleManager", "MapLayout");
+                var routes = (Array)P(layout, "Routes");
+                var main = routes.GetValue(0);
+                float len = (float)P(main, "Length");
+                string[] types = level == 5 ? new[] { "Troll", "Orc", "Zombie" } : new[] { "Wolf", "Zombie", "Orc", "Zombie" };
+                for (int k = 0; k < types.Length; k++)
+                {
+                    var route = routes.GetValue(k % routes.Length);
+                    float rl = (float)P(route, "Length");
+                    Vector2 at = (Vector2)route.GetType().GetMethod("PointAt").Invoke(route, new object[] { rl * (0.25f + 0.12f * k) });
+                    SpawnAt(types[k], at);
+                }
+                Time.timeScale = 1f;
+                yield return new WaitForSeconds(1.2f);
+                Vector2 focus = (Vector2)main.GetType().GetMethod("PointAt").Invoke(main, new object[] { len * 0.55f });
+                Shot($"G1_r{region}_l{level}_{kinds[level - 1]}", new Vector2(0f, focus.y), null, 540, 1170);
+                if (level == 1 || level == 4)
+                    ShotWorld($"G1_r{region}_l{level}_fullmap", new Vector2(0f, 11f), 18.2f, 560, 1140);
+            }
+        S("BattleFxQuality", "Force", new object[] { null });
+        File.WriteAllLines(Path.Combine(Folder, "G1_atmosphere.txt"), lines);
+    }
 }

@@ -96,3 +96,21 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
 ## 5. oturum (14 Kasım 2026)
 - `ui_icon_move` (dört yönlü ok) ve `ui_icon_trash` (çöp kovası): Tiny Swords ikon paketinde yok; `Tools/campaign_art/action_icons.py` ile aynı
   piksel stilinde üretildi. El çizimi sürüm gelirse `Assets/Resources/CampaignArt/` altında aynı adla değiştirilebilir.
+
+## 7. oturum (15 Kasım 2026): bölge savaş haritaları — gerçek karo/süs ihtiyacı
+Şu an: Bölge 4–6 zemini Tiny Swords karosundan **renk eşlemesiyle** (`Tools/campaign_art/recolor_tilesets.py`, D89), eksik süsler Tiny Swords
+parçalarından **türetilmiş** (`Tools/campaign_art/battle_props.py`, D91). Gelecek çizimler aynı dosya adıyla değiştirilir (kod değişmez).
+Ölçü: **64 px = 1 birim**, karo seti **Tiny Swords Tilemap_colorN düzeninde 576×384 (9×6 karo, 64×64)**: sütun 5–8 satır 0–3 yükseltilmiş zemin
+(16 kenar durumu), satır 5 uçurum (alt kenar), sol blok düz zemin. Süsler alt-orta pivot, şeffaf PNG.
+
+| # | Varlık | Dosya (değiştirilecek) | Ölçü | Not |
+|---|---|---|---|---|
+| 15 | Kar karo seti (zemin kar + buz mavisi uçurum) | Assets/Art/BattleMaps/Tileset_snow.png | 576×384 | Donmuş Geçit; ayak izi/kar dokusu, uçurumda buz sarkıtı |
+| 16 | Karanlık taş karo seti (kayrak + kızıl rün çatlakları) | Assets/Art/BattleMaps/Tileset_dark.png | 576×384 | Karanlık Kale |
+| 17 | Volkanik karo seti (bazalt + lav çatlağı) | Assets/Art/BattleMaps/Tileset_ash.png | 576×384 | Ejderin İni; lav çatlakları 4 kare animasyon ayrı katman olabilir |
+| 18 | Yıkık kale / yıkık kule / yıkık duvar | Resources/BattleMaps/Props/ruin_castle, ruin_tower, ruin_wall.png | 320×192 / 128×128 / 128×96 | Bölge 1; sarmaşık ve çatlak taş |
+| 19 | Maden girişi (kayaya oyulmuş, ahşap destek, ray, vagon) | …/Props/mine_entrance.png | 224×160 | Bölge 3 |
+| 20 | Kemik yığını ×3, kafatası, kara sancak, kırık sütun | …/Props/bones_1..3.png (+ yeni) | 64×48 | Bölge 5 |
+| 21 | Lav gölü (6 kare kabarcık animasyonu), ejder kafatası | …/Props/lava_pool.png | 160×96 (×6) | Bölge 6; şu an parıltı/kabarcık kodla |
+| 22 | Karlı çam, buzlu kaya ×2, kar yığını | …/Props/ice_rock.png (+ yeni) | 192×256 / 128×96 | Bölge 4 (şu an güz ağacı beyaz tonlu) |
+| 23 | Sis bulutu dokusu (yumuşak, döşenebilir) | — (kodla üretiliyor) | 256×128 | Bölge 2 |

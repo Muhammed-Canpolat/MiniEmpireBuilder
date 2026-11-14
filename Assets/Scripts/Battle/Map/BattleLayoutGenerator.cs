@@ -270,7 +270,9 @@ public static class BattleLayoutGenerator
     {
         var main = layout.Routes[0];
         Vector2 best = layout.minePosition; float bestScore = float.MinValue;
-        for (float s = main.Length * 0.35f; s <= main.Length * 0.7f; s += 0.5f)
+        // 7. oturum denge (D95): maden yolun üsse yakın yarısında (ilerleyiş %55–80): köprüye yakın maden ilk düşmanlarla, kahraman ve
+        // kuleler daha kurulmadan yıkılıyordu (B1-S3 23 sn'de kayıp).
+        for (float s = main.Length * 0.55f; s <= main.Length * 0.8f; s += 0.5f)
         {
             Vector2 p = main.PointAt(s), n = main.NormalAt(s);
             foreach (int side in new[] { 1, -1 })
@@ -280,7 +282,7 @@ public static class BattleLayoutGenerator
                     if (!DiscOnLand(map, c, 1.2f)) continue;
                     if (layout.DistanceToRoad(c) < 2.6f) continue;
                     if (BattleObstacles.DistanceTo(BaseRect(layout.basePosition), c) < 3f) continue;
-                    float score = -Mathf.Abs(s / main.Length - 0.52f) * 10f - Mathf.Abs(c.x) * 0.2f;
+                    float score = -Mathf.Abs(s / main.Length - 0.66f) * 10f - Mathf.Abs(c.x) * 0.2f;
                     if (score > bestScore) { bestScore = score; best = c; }
                 }
         }

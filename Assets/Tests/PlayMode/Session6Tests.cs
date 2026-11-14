@@ -1009,6 +1009,10 @@ public class Session6Tests
             }
             File.WriteAllLines(Path.Combine(Folder, "S7_island_frame.txt"), lines);
         }
-        finally { T("DevSettings").GetProperty("Enabled").SetValue(null, devWas); }
+        finally
+        {
+            T("DevSettings").GetProperty("Enabled").SetValue(null, devWas);
+            T("IslandSession").GetMethod("Clear").Invoke(null, null);   // sonraki savaş testleri ada kipinde açılmasın
+        }
     }
 }

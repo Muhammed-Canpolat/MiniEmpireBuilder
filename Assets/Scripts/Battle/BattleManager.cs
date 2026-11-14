@@ -783,7 +783,12 @@ public class BattleManager : MonoBehaviour
             enemy.Initialize(type, battleLevel, mainBaseTransform);
             if (variant != EnemyVariant.None) enemy.ApplyVariant(variant);
             // 7. oturum: haritada her düşman (çağrılan kurtlar dahil) en yakın yola bağlanır (SpawnEnemy kendi kolunu ayrıca atar).
-            if (MapLayout != null) enemy.SetLane(NearestRoute(spawnPos), Random.Range(-0.3f, 0.3f));
+            if (MapLayout != null)
+            {
+                enemy.SetLane(NearestRoute(spawnPos), Random.Range(-0.3f, 0.3f));
+                // 7. oturum denge (D95): uzun yol kulelere daha çok atış süresi veriyor; bölge haritasında düşman canı bölgeye göre artar.
+                if (!BattleSession.IsSpecial) enemy.ScaleStats(MapEnemyHealth(BattleSession.RegionId), 1f);
+            }
             // "Madeni koru": her iki düşmandan biri (boss hariç) madene yürür.
             if (DefendedMine != null && !EnemyTypeInfo.IsBoss(type) && variant != EnemyVariant.Saboteur)
                 enemy.RaidTarget = spawnedCount % 2 == 0 ? DefendedMine : null;
@@ -794,6 +799,12 @@ public class BattleManager : MonoBehaviour
         OnEnemiesCountChanged?.Invoke(enemiesAlive);
         return enemy;
     }
+
+    /// <summary>
+    /// 7. oturum (D95): bölge haritası düşman can çarpanı. Ölçüm (tek tohum, kule+kahraman): eski düzende boss'ta Ana Üs %11–98 kalırken yeni
+    /// yolda Bölge 1–5 %100 kalıyordu; yalnız kule Bölge 5'te kazanıyordu. İlk iki bölge affedici kalır (1,0), sonra artar; Bölge 6 zaten %72.
+    /// </summary>
+    public static float MapEnemyHealth(int regionId) => regionId switch { 1 => 1.0f, 2 => 1.0f, 3 => 1.2f, 4 => 1.25f, 5 => 1.4f, 6 => 1.15f, _ => 1f };
 
     private static BattleRoute NearestRoute(Vector2 p)
     {

@@ -43,6 +43,10 @@ def trim(img):
 
 
 TILESETS = {i: load(f"Terrain/Tileset/Tilemap_color{i}.png") for i in range(1, 6)}
+# 7. oturum (D89): Bölge 4–6 savaş haritasıyla aynı renk eşlemeli karolar (recolor_tilesets.py); renk bindirme yerine.
+_BM = os.path.join(ROOT, "Assets", "Art", "BattleMaps")
+for _key, _name in (("snow", "Tileset_snow.png"), ("dark", "Tileset_dark.png"), ("ash", "Tileset_ash.png")):
+    TILESETS[_key] = Image.open(os.path.join(_BM, _name)).convert("RGBA")
 
 
 def tile(tileset, col, row):
@@ -286,7 +290,7 @@ def save(img, name):
 # ======================= SEFER HARİTASI (bölge listesi) =======================
 MW, MH = 1560, 880  # -> 780x440
 CX = MW // 2  # patika karoların alt/üst kenarında ortadan geçer: karolar üst üste dizilince birleşir
-TILESET_OF = {1: 1, 2: 3, 3: 4, 4: 5, 5: 5, 6: 4}
+TILESET_OF = {1: 1, 2: 3, 3: 4, 4: "snow", 5: "dark", 6: "ash"}   # savaş haritasıyla aynı (BattleMapAuthoring.FillRegion)
 
 
 def mask_cells(mask, ox, oy):
@@ -340,7 +344,7 @@ def region_flavor(img, region, rnd, spots, avoid):
             rock(img, x, y + 20, rnd.randint(1, 4), 1.3)
 
 
-REGION_TINT = {4: ((232, 244, 255), 0.40), 5: ((46, 18, 64), 0.55), 6: ((92, 30, 14), 0.55)}
+REGION_TINT = {}   # 7. oturum: bölge 4–6 artık gerçek (renk eşlemeli) karolarla; eski tonlar: 4 buz %40, 5 mor %55, 6 kızıl %55
 
 
 def lava(img, cx, cy, size):

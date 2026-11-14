@@ -54,7 +54,12 @@ public class BattleStructureTests
     [UnityTest]
     public IEnumerator FourSlotsAreEquidistantCorners()
     {
+        // 7. oturum: sefer savaşları bölge haritasında (yuvalar yerleşimden, Session7Tests). Bu test harita olmadığında kullanılan
+        // yedek (merkez üs) düzeni denetler: harita geçici kapatılır.
+        var enabled = Type("BattleMapCatalog").GetField("Enabled");
+        enabled.SetValue(null, false);
         yield return StartBattle(3);
+        enabled.SetValue(null, true);
         var slots = Object.FindObjectsByType(Type("BattleBuildSlot"), FindObjectsSortMode.None)
             .Cast<Component>().Select(s => (Vector2)s.transform.position).ToArray();
         Assert.AreEqual(4, slots.Length);
@@ -72,7 +77,12 @@ public class BattleStructureTests
     [UnityTest]
     public IEnumerator TowerCollapsesLeavesRuinAndRebuildCostsMore()
     {
+        // 7. oturum: rol/kışkırtma kuralları serbest (haritasız) düzende denetlenir; bölge haritasında düşman yalnız yolun 3 birim
+        // yakınındaki hedefe sapar (D93) — o kural Session7Tests'te.
+        var enabled = Type("BattleMapCatalog").GetField("Enabled");
+        enabled.SetValue(null, false);
         yield return StartBattle(1);
+        enabled.SetValue(null, true);
         var battle = Object.FindFirstObjectByType(Type("BattleManager")) as Component;
         var slot = Object.FindObjectsByType(Type("BattleBuildSlot"), FindObjectsSortMode.None).Cast<Component>().First();
         var archer = Enum.Parse(Type("BuildingType"), "ArcherTower");

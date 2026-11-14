@@ -1,3 +1,108 @@
+# REPORT — 7. oturum (15 Kasım 2026): bölgeye özgü savaş haritaları
+
+Dal `gece-gelistirme` (push yok). Commit'ler: `817558f` (yarım kalan ada kadrajı), `0d98984` (AŞAMA 1 veri modeli), `662b52a` (AŞAMA 2 savaş
+haritası), son commit (denge + atmosfer + SON). Kararlar DECISIONS.md **D87–D95**. Görüntüler `Docs/playtest/session7/`.
+
+## 1. Yapılanlar
+- **Yarım kalan iş (D87):** dar telefonda ada kadrajı uzaklaşmıştı (genişlik iki yandaki küçük adacıklara göre sığıyordu). Artık yalnız ana ada
+  sığdırılıyor: 20:9 telefonda ana ada ekran genişliğinin %96'sı (önce ~%80). Tablet aynı. Test `Session6Tests.S7` (4 oran).
+- **Veri tabanlı harita (D88):** bölge başına `BattleRegionMap` (karo seti, kara maskesi, atmosfer, süsleme seti, bölge yapıları), seviye başına
+  `BattleLevelLayout` (rota noktaları, yuvalar, Ana Üs / maden / kahraman, tür, isteğe bağlı dalgalar) → `Assets/Resources/BattleMaps`.
+  **Elle düzenleme:** seviye varlığını Project'te seç → Scene görünümünde rota noktaları, yuvalar (menzil çemberiyle), üs/maden/kahraman sürüklenir;
+  Inspector'da *Doğrula / Yuvaları yeniden üret / Rotayı şablona sıfırla*. Menü: Tools ▸ Mini Empire Builder ▸ Savaş Haritaları.
+- **Haritalar (D92):** her bölgenin tüm seviyeleri Sefer Haritası'ndaki adanın dikey sürümünde: aynı Tiny Swords karo kuralı, uçurumlar, sığ su,
+  dikey ahşap köprü (düşman girişi), bölge yapıları (yıkık kale/kule, mor ev, maden girişi + sarı ev/kule, mavi kule/kışla, kara kale/kule,
+  kızıl kule/kara kışla) ve süsler. Ana Üs yolun alt ucunda. Karşılaştırma: `compare_region1..6.png` (sol harita adası, sağ savaş haritası).
+- **Rota (D90, D93):** düşmanlar üst köprüden girer, yolu izler, yalnız yolun 3 birim yakınındaki kule/kahraman/Lancer'a sapar ve geri döner;
+  kahraman su/uçurum/yapılardan geçemez (ortak yol bulma araziyi tanır). 1. seviye = harita yolunun aynısı; 2 üç kıvrım; 3 ters başlangıç + maden;
+  4 ikiye ayrılıp birleşen yol (+1 yuva); 5 boss en uzun rota. Yuvalar zikzağı izleyerek sağlı sollu, her biri bir dönemeci menzilde tutar.
+- **Seviye türleri:** Hayatta Kal / Üssü Koru yolun sonundaki Ana Üs'e; **Madeni Koru** maden yolun yanında (Tiny Swords sprite + can barı),
+  yağmacılar yoldan karadan sapar; Zamana Karşı aynı rota + sayaç; Boss aynı yolda (en uzun rota). `kinds_region1..6.png`, `B2_region*_mine.png`.
+- **Zemin (D89):** kar / Karanlık Kale / Ejderin İni karoları Tiny Swords karosundan renk eşlemesiyle (renk bindirme değil); Sefer Haritası
+  görselleri de aynı karolarla yeniden üretildi (Bölge 4–6) → harita = savaşın önizlemesi.
+- **Atmosfer (D94):** sis bulutları, kar yağışı, kül/köz, lav ışıması/kabarcık, kasvet örtüsü, toz, altın parıltısı; düşük kalitede yarı partikül.
+
+## 2. Denge ölçümleri (bot, 4× hız; "good" = kule + kahraman; S5'te baskın strateji; Bölge 6 iki tohum, diğerleri tek tohum)
+| Bölge | Seviye | Profil | Kazanma | Ana Üs canı (son) | Süre (sn) | Kahraman hasar payı | Kahraman düşüş | Yenilgi nedeni |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 1 Hayatta Kal | good | 1/1 | %100 | 24 | %100 | 0.0 | - |
+| 1 | 2 Üssü Koru | good | 1/1 | %100 | 100 | %100 | 3.0 | - |
+| 1 | 3 Madeni Koru | good | 1/1 | %100 | 62 | %71 | 1.0 | - |
+| 1 | 4 Zamana Karşı | good | 1/1 | %100 | 90 | %70 | 3.0 | - |
+| 1 | 5 Boss | good | 1/1 | %100 | 162 | %72 | 5.0 | - |
+| 1 | 5 Boss | heroOnly | 1/1 | %84 | 218 | %100 | 7.0 | - |
+| 1 | 5 Boss | noHero | 0/1 | %0 | 40 | %0 | 0.0 | base |
+| 1 | 5 Boss | towerOnly | 0/1 | %0 | 132 | %69 | 1.0 | base |
+| 2 | 1 Hayatta Kal | good | 1/1 | %90 | 54 | %100 | 2.0 | - |
+| 2 | 2 Üssü Koru | good | 1/1 | %95 | 83 | %74 | 3.0 | - |
+| 2 | 3 Madeni Koru | good | 1/1 | %100 | 73 | %96 | 1.0 | - |
+| 2 | 4 Zamana Karşı | good | 1/1 | %100 | 63 | %73 | 1.0 | - |
+| 2 | 5 Boss | good | 1/1 | %100 | 148 | %55 | 4.0 | - |
+| 2 | 5 Boss | heroOnly | 0/1 | %0 | 171 | %100 | 6.0 | base |
+| 2 | 5 Boss | noHero | 0/1 | %0 | 41 | %0 | 0.0 | base |
+| 2 | 5 Boss | towerOnly | 0/1 | %0 | 115 | %100 | 1.0 | base |
+| 3 | 1 Hayatta Kal | good | 1/1 | %100 | 39 | %69 | 1.0 | - |
+| 3 | 2 Üssü Koru | good | 1/1 | %100 | 75 | %37 | 2.0 | - |
+| 3 | 3 Madeni Koru | good | 1/1 | %98 | 99 | %62 | 1.0 | - |
+| 3 | 4 Zamana Karşı | good | 1/1 | %100 | 105 | %43 | 2.0 | - |
+| 3 | 5 Boss | good | 1/1 | %75 | 296 | %57 | 7.0 | - |
+| 3 | 5 Boss | heroOnly | 0/1 | %0 | 133 | %97 | 6.0 | base |
+| 3 | 5 Boss | noHero | 0/1 | %0 | 46 | %0 | 0.0 | base |
+| 3 | 5 Boss | towerOnly | 0/1 | %0 | 173 | %19 | 1.0 | base |
+| 4 | 1 Hayatta Kal | good | 1/1 | %100 | 47 | %100 | 1.0 | - |
+| 4 | 2 Üssü Koru | good | 1/1 | %100 | 114 | %40 | 2.0 | - |
+| 4 | 3 Madeni Koru | good | 1/1 | %100 | 85 | %67 | 0.0 | - |
+| 4 | 4 Zamana Karşı | good | 1/1 | %90 | 111 | %49 | 1.0 | - |
+| 4 | 5 Boss | good | 1/1 | %100 | 157 | %27 | 4.0 | - |
+| 4 | 5 Boss | heroOnly | 1/1 | %11 | 279 | %62 | 11.0 | - |
+| 4 | 5 Boss | noHero | 0/1 | %0 | 269 | %0 | 0.0 | base |
+| 4 | 5 Boss | towerOnly | 1/1 | %20 | 260 | %38 | 3.0 | - |
+| 5 | 1 Hayatta Kal | good | 1/1 | %100 | 38 | %46 | 1.0 | - |
+| 5 | 2 Üssü Koru | good | 1/1 | %100 | 100 | %25 | 1.0 | - |
+| 5 | 3 Madeni Koru | good | 0/1 | %100 | 74 | %38 | 1.0 | mine |
+| 5 | 4 Zamana Karşı | good | 1/1 | %100 | 111 | %38 | 2.0 | - |
+| 5 | 5 Boss | good | 1/1 | %80 | 273 | %32 | 5.0 | - |
+| 5 | 5 Boss | heroOnly | 0/1 | %0 | 165 | %70 | 7.0 | base |
+| 5 | 5 Boss | noHero | 0/1 | %0 | 216 | %0 | 0.0 | base |
+| 5 | 5 Boss | towerOnly | 1/1 | %45 | 248 | %9 | 0.0 | - |
+| 6 | 1 Hayatta Kal | good | 2/2 | %100 | 33 | %51 | 1.0 | - |
+| 6 | 2 Üssü Koru | good | 2/2 | %100 | 91 | %23 | 1.5 | - |
+| 6 | 3 Madeni Koru | good | 1/2 | %100 | 61 | %41 | 0.0 | mine |
+| 6 | 4 Zamana Karşı | good | 2/2 | %97 | 85 | %41 | 1.0 | - |
+| 6 | 5 Boss | good | 2/2 | %96 | 161 | %26 | 2.5 | - |
+| 6 | 5 Boss | heroOnly | 0/2 | %0 | 135 | %82 | 5.5 | base |
+| 6 | 5 Boss | noHero | 0/2 | %0 | 143 | %0 | 0.0 | base |
+| 6 | 5 Boss | towerOnly | 1/2 | %8 | 185 | %18 | 0.5 | base |
+
+**Okuma:** kule + kahraman 30 seviyenin 28'ini her koşuda kazanıyor. Kayıplar Madeni Koru'da maden yıkılması: Bölge 5'te 0/1, Bölge 6'da 1/2. Bu tür planlama istiyor.
+Boss'larda tek strateji çoğunlukla kaybediyor: **yalnız kahraman** yalnız Bölge 1 (%84) ve 4'te (%11) kazandı, diğerlerinde kaybediyor, **yalnız kule** Bölge 4–6'da zayıf kazanabiliyor
+(Ana Üs %8–45; Bölge 6'da 1/2), **kahramansız** Bölge 1–3'te ilk kuleyi kuracak altın olmadığı için hızlı kaybediyor. Kule + kahraman sinerjisi her bölgede en iyi yol.
+Eski düzene göre (old_battles) Bölge 1–2 boss'ları belirgin kolaylaştı (Ana Üs %11–18 → %100): "ilk bölgeler affedici" hedefiyle uyumlu bırakıldı.
+**Dikkat:** tek tohum gürültülü (ör. Bölge 2 boss'u bir koşuda kaybedildi, tekrarında %100). Daha güvenilir ölçüm: `PLAYTEST_SEEDS=3` ile
+`-testFilter Session7BalanceTests`, özet `python Tools/balance_s7.py`.
+
+## 3. Testler
+- `Session7Tests` 8/8: V1 30 seviye doğrulama (rota köprü→Ana Üs kesintisiz ve kara üstünde, yuva-yol/su/üs/maden çakışması yok, her yuva bir
+  dönemeci kapsıyor, maden karadan ulaşılır), V2 1. seviye = harita yolu + türler, V3 rota çeşitliliği, B1–B4 oynanış, G1 30 görüntü + partikül sayısı.
+- Gerileme seti (BattleStructure, CounterEnemy, ForestRegionMechanics, RegionMechanics, Session4/5/6, Barracks, BattleSettings, CardWorkshop,
+  LivesAndCards): 107/107. Ada testinin açık bıraktığı ada kipi sonraki savaş testlerini bozuyordu → testler temizliyor.
+- Çalıştırılmadı: tam takım, PlaytestBotTests (eski), FreshAccountJourney. Cihazda denenmedi.
+
+## 4. Engellenenler
+- (yok)
+
+## 5. ART_NEEDS (yeni, #15–#23)
+Kar / karanlık taş / volkanik karo setleri (576×384, Tiny Swords düzeni), yıkık kale/kule/duvar, maden girişi, kemik/kafatası/kara sancak,
+lav gölü animasyonu + ejder kafatası, karlı çam + buzlu kaya, sis dokusu. Şu an yerlerinde renk eşlemesi ve Tiny Swords'tan türetilmiş görseller var
+(aynı dosya adıyla değiştirilir, kod değişmez).
+
+## 6. Bilinen / öneriler
+- Bot görüntüleri (`PlaytestOutput/shots`) en-boy uyumsuzluğundan yatay sıkışık (botun yakalama yöntemi; oyunla ilgisi yok).
+- Bölge 5 tam harita görüntüsünde üst yarı koyu bant: kameraya bağlı kasvet örtüsü, görüntü alırken kamera ani taşındığı için; oyunda kamerayı izler.
+- İstersen Ayarlar'a "Düşük efekt" düğmesi eklenebilir (anahtar hazır: `MEB_LowFx`).
+
+---
+
 # REPORT — 6. oturum (14 Kasım 2026): savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi
 
 Dal `gece-gelistirme` (push yok). Başlangıç `b2605ef`. Kararlar DECISIONS.md **D68–D85**. Testler `Assets/Tests/PlayMode/Session6Tests.cs`.

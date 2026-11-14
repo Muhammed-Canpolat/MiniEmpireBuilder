@@ -351,6 +351,9 @@ public static class PlaytestBot
             var main = BattleManager.MapLayout.Routes[0];
             float s = main.Length * 0.68f;
             target = main.PointAt(s) + main.NormalAt(s) * 1.6f;
+            // Madeni Koru: madenin yanında bekle (yağmacılar oraya sapar).
+            if (BattleManager.Instance != null && BattleManager.Instance.DefendedMine != null && !BattleManager.Instance.DefendedMine.IsDestroyed)
+                target = BattleManager.Instance.DefendedMine.BasePoint + new Vector2(0f, -1.4f);
         }
         else if (!Casual && edges != null && edges.Length > 0)
         {

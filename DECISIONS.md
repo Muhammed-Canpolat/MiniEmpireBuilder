@@ -725,3 +725,19 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   yoldan 2,2+ uzakta (biri üst, biri alt yarıda).
 - Test: `Session7Tests.B1` (6 bölge: harita, yuvalar, düşman sapma ≤ 0,6), `B2` (6 bölge maden sapması karadan + vuruş), `B3` (kahraman karada),
   `B4` (boss yolu, zamana karşı sayacı, çatal).
+
+## D94 — Bölge atmosferi + grafik kalitesi (7. oturum; Sonnet alt ajanı, orta çaba — ben inceleyip görüntüyle doğruladım)
+- `BattleAtmosphereFx` (yalnız görsel): Yıkık Kale toz zerreleri · Sisli Orman 5–8 yarı saydam sis bulutu yatay süzülür (FogOfWar görüş
+  mekaniği ayrı, aynen) · Maden altın parıltıları · Donmuş Geçit kar yağışı · Karanlık Kale kasvet örtüsü + kenar kararması + silik kül ·
+  Ejderin İni lav gölü ışıması (DOTween nabız) + kabarcık + kül/köz. Eski düz renk örtüsü/rastgele lekeler haritada kullanılmaz.
+- Performans: her bölge en çok 60 sprite (ölçüm: 14 / 8 / 10 / 40 / 18 / 45). **Düşük kalite** (`BattleFxQuality.Low`: QualitySettings en alt seviye
+  ya da `MEB_LowFx` anahtarı) → partikül yarıya (7 / 4 / 5 / 20 / 10 / 20), ağaç salınımı ve lav kabarcıkları kapalı. Ayarlar ekranına ayrı
+  "düşük efekt" düğmesi eklenmedi (Unity kalite seviyesi zaten bağlı); istenirse `PlayerPrefs MEB_LowFx=1` ile tek satır.
+
+## D95 — Denge: bölge haritası düşman can çarpanı ve maden konumu
+- Uzun zikzak yol kulelere çok daha fazla atış süresi verdi: ilk ölçümde (tek tohum) kule + kahraman 30 seviyenin 28'ini Ana Üs'ü **%100** canla
+  bitiriyordu; Bölge 5'te yalnız kule ve kahramansız kazanıyordu. Karar: harita savaşlarında düşman canı bölgeye göre ×1,0 / 1,0 / 1,2 / 1,25 / 1,4 / 1,15
+  (`BattleManager.MapEnemyHealth`; Sonsuz/İstila kendi ölçeğinde, etkilenmez). Bölge 6'da 1,25 kule+kahramanı da yendi → 1,15 (2 tohum doğrulandı).
+- Madeni Koru: maden köprüye yakınken ilk düşmanlarla 23 sn'de yıkılıyordu → yolun üsse yakın yarısına (ilerleyiş %55–80) alındı.
+- Sonuç ve tablo: REPORT.md §2. Bilinen: tek tohum gürültülü; erken bölgelerde (1–2) kule+kahraman çok rahat — "ilk bölgeler affedici" kararıyla uyumlu bırakıldı.
+- Test uyarlaması: `BattleStructureTests` iki testi (eski 4 köşe yuva düzeni, serbest düzende rol/kışkırtma) haritayı geçici kapatarak eski düzeni denetler.
