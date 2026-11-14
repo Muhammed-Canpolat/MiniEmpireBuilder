@@ -43,6 +43,9 @@ public sealed class BattleObjectiveHud : MonoBehaviour
             timerText = ReferenceUiVisuals.Text(timerPill.transform, "ObjectiveText",
                 timed ? FormatTime(BattleManager.TimeTrialSeconds) : L.T("MADENİ KORU", "DEFEND THE MINE"), 16, ReferenceUiVisuals.Gold,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f), true);
+            // 4. oturum (3.4): gösterge üst barın ikinci satırına (bölge adının sağına) yerleşir; eskiden barın altında dünyanın üstünde
+            // durup inşa halkalarına (ve "N HAK" etiketine) biniyordu.
+            docked = DockIntoTopBar();
         }
 
         // Bu savaşta açık kartlar: küçük bir pul (ör. "KART +%10: Hasar · Can").
@@ -54,7 +57,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         for (int i = 0; i < BattleCards.BasicCount; i++) basicActive |= BattleCards.ActiveInBattle((BattleCard)i);
         if (cards.Count > 0)
         {
-            float top = timed || mine ? -144f : -110f;
+            float top = (timed || mine) && !docked ? -144f : -110f;
             var cardPill = ReferenceUiVisuals.Image(safe, "ActiveCardsPill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(-140f, top - 24f), new Vector2(140f, top), new Color(0.2f, 0.4f, 0.18f, 0.9f));
             cardPill.sprite = ReferenceUiVisuals.SolidPillSprite();
@@ -64,7 +67,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
             stackBottom = -(top - 24f);
         }
-        else if (timed || mine) stackBottom = 140f;
+        else if ((timed || mine) && !docked) stackBottom = 140f;
 
         // Dalga duyurusu ("12 düşman yaklaşıyor") ve geri sayım bu pullarla aynı yüksekliğe denk geliyordu:
         // pul varsa ikisi de pulların altına kayar.
@@ -114,6 +117,37 @@ public sealed class BattleObjectiveHud : MonoBehaviour
     /// HUD kurulumu (BattleHudRedesign) bitince "IncomingChip" ve "NextWaveCountdown"ı, üst kenarları
     /// <paramref name="clearFromTop"/> biriminin altına düşecek kadar aşağı kaydırır.
     /// </summary>
+    private bool docked;
+
+    /// <summary>Hedef göstergesini savaş üst barına (LevelText satırı, sağ) taşır; bölge adı sola kayar. Bar yoksa yerinde kalır.</summary>
+    private bool DockIntoTopBar()
+    {
+        if (timerPill == null) return false;
+        Transform top = null;
+        foreach (var t in FindObjectsByType<RectTransform>(FindObjectsSortMode.None))
+            if (t.name == "LevelText" && t.parent != null && t.parent.name == "TopBar") { top = t.parent; break; }
+        if (top == null) return false;
+        var levelRt = top.Find("LevelText") as RectTransform;
+        levelRt.anchorMin = new Vector2(0.04f, 0.12f);
+        levelRt.anchorMax = new Vector2(0.66f, 0.47f);
+        levelRt.offsetMin = levelRt.offsetMax = Vector2.zero;
+        var levelText = levelRt.GetComponent<TextMeshProUGUI>();
+        if (levelText != null) { levelText.enableAutoSizing = true; levelText.fontSizeMin = 14f; levelText.fontSizeMax = Mathf.Max(levelText.fontSize, 20f); }
+        var rt = timerPill.rectTransform;
+        rt.SetParent(top, false);
+        rt.anchorMin = new Vector2(0.67f, 0.16f);
+        rt.anchorMax = new Vector2(0.97f, 0.47f);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        if (timerText != null)
+        {
+            timerText.enableAutoSizing = true;
+            timerText.fontSizeMin = 14f;
+            timerText.fontSizeMax = 32f;
+            timerText.textWrappingMode = TextWrappingModes.NoWrap;
+        }
+        return true;
+    }
+
     private IEnumerator ShiftWaveNotices(float clearFromTop)
     {
         yield return null;

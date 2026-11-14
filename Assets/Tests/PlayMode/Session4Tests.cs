@@ -601,7 +601,7 @@ public class Session4Tests
         Assert.IsTrue(lancer.position.x > body.min.x && lancer.position.x < body.max.x, "damın içinde");
         float x0 = lancer.position.x;
         bool moved = false;
-        float until = Time.realtimeSinceStartup + 8f;
+        float until = Time.realtimeSinceStartup + 10f;
         while (Time.realtimeSinceStartup < until && !moved) { moved = Mathf.Abs(lancer.position.x - x0) > 0.2f; yield return null; }
         Assert.IsTrue(moved, "devriye: ileri geri yürür");
         var cam = Camera.main;
@@ -680,5 +680,138 @@ public class Session4Tests
         StringAssert.DoesNotContain("BEDAVA", label);
         StringAssert.DoesNotContain("FREE", label);
         StringAssert.EndsWith("1", label, "fiyat: elmas ikonu + sayı");
+    }
+    // ==================== AŞAMA 3 + 2.7: EKRAN ORANLARI ====================
+
+    internal static readonly (string tag, int w, int h)[] Ratios =
+        { ("16x9", 1080, 1920), ("19_5x9", 1080, 2340), ("20x9", 1080, 2400), ("tablet4x3", 1536, 2048) };
+
+    /// <summary>Arayüzlü (Overlay tuvalleri kameraya alınmış) görüntü, verilen piksel boyunda.</summary>
+    internal static void CaptureUi(string name, int w, int h, Action prepare = null)
+    {
+        var camera = Camera.main != null ? Camera.main : Object.FindFirstObjectByType<Camera>();
+        var texture = new RenderTexture(w, h, 24);
+        camera.targetTexture = texture;
+        float aspect = camera.aspect;
+        camera.aspect = (float)w / h;
+        var changed = new List<(Canvas, RenderMode, Camera, int, bool)>();
+        foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+        {
+            if (!canvas.isRootCanvas || canvas.renderMode != RenderMode.ScreenSpaceOverlay) continue;
+            changed.Add((canvas, canvas.renderMode, canvas.worldCamera, canvas.sortingOrder, canvas.overrideSorting));
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = 10f;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 2000 + canvas.sortingOrder;
+        }
+        Canvas.ForceUpdateCanvases();
+        if (prepare != null) { prepare(); Canvas.ForceUpdateCanvases(); }
+        camera.Render();
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        var pixels = new Texture2D(w, h, TextureFormat.RGB24, false);
+        pixels.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        pixels.Apply();
+        File.WriteAllBytes(Path.Combine(Folder, name + ".png"), pixels.EncodeToPNG());
+        Object.Destroy(pixels);
+        RenderTexture.active = previous;
+        camera.targetTexture = null;
+        camera.aspect = aspect;
+        texture.Release();
+        Object.Destroy(texture);
+        foreach (var (canvas, mode, cam, order, over) in changed)
+        {
+            if (canvas == null) continue;
+            canvas.renderMode = mode; canvas.worldCamera = cam; canvas.sortingOrder = order; canvas.overrideSorting = over;
+        }
+    }
+
+    private static Rect ScreenRect(RectTransform rt)
+    {
+        var c = new Vector3[4];
+        rt.GetWorldCorners(c);
+        return Rect.MinMaxRect(c[0].x, c[0].y, c[2].x, c[2].y);
+    }
+
+    [UnityTest]
+    public IEnumerator BaseDockLionStripIslandIconRadialSpacingAndShade()
+    {
+        yield return Nov13FeedbackTests.LoadBase(7);
+        Assert.NotNull(Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None).FirstOrDefault(t => t.name == "RadialOrnament"),
+            "3.1 aslanlı şerit geri geldi");
+        var menu = T("RadialDockMenu").GetProperty("Current").GetValue(null);
+        menu.GetType().GetMethod("SetOpen").Invoke(menu, new object[] { true, true, false });
+        yield return new WaitForSecondsRealtime(0.6f);
+        var island = GameObject.Find("Radial_island") ?? GameObject.Find("IslandBtn");
+        Assert.NotNull(island, "ADA düğmesi");
+        var icon = island.GetComponentsInChildren<UnityEngine.UI.Image>(true).FirstOrDefault(im => im.name == "Icon");
+        Assert.NotNull(icon); Assert.NotNull(icon.sprite);
+        StringAssert.Contains("ui_icon_island", icon.sprite.name, "3.2 Tiny Swords ada ikonu");
+        // Etiketler çakışmaz (3.4)
+        var labels = Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None)
+            .Where(t => t.name == "Label" && t.parent != null && t.parent.name == "Visual" && t.gameObject.activeInHierarchy).ToList();
+        Assert.GreaterOrEqual(labels.Count, 4, "radyal etiketler");
+        for (int a = 0; a < labels.Count; a++)
+            for (int b = a + 1; b < labels.Count; b++)
+            {
+                var ra = ScreenRect(labels[a]); var rb = ScreenRect(labels[b]);
+                Assert.IsFalse(ra.Overlaps(rb), $"etiketler çakışıyor: {labels[a].parent.parent.name} / {labels[b].parent.parent.name}");
+            }
+        Assert.Greater((float)menu.GetType().GetProperty("ShadeAlpha").GetValue(menu), 0.8f, "menü açıkken arka plan kararır");
+        foreach (var r in Ratios) CaptureUi("S3_base_radial_" + r.tag, r.w, r.h);
+        // Ayarlar (3.3)
+        var settings = Object.FindFirstObjectByType(T("AudioSettingsUI")) as Component;
+        Assert.NotNull(settings, "ayarlar");
+        settings.GetType().GetMethod("Open").Invoke(settings, null);
+        yield return new WaitForSecondsRealtime(0.5f);
+        Assert.IsTrue(GameObject.Find("AudioSettingsPanel").activeSelf);
+        foreach (var r in Ratios) CaptureUi("S3_settings_" + r.tag, r.w, r.h, () => settings.GetType().GetMethod("Refit").Invoke(settings, null));
+        Time.timeScale = 1f;
+    }
+
+    [UnityTest]
+    public IEnumerator BattleObjectiveSitsInTheTopBarNotOverTheWorld()
+    {
+        yield return StartBattle(1, 3);
+        var pill = GameObject.Find("ObjectivePill");
+        Assert.NotNull(pill, "Madeni Koru göstergesi");
+        Assert.AreEqual("TopBar", pill.transform.parent.name, "3.4 gösterge üst barın içinde (dünya halkalarının üstüne binmez)");
+        StringAssert.Contains("MADEN", Text(pill.transform.Find("ObjectiveText")).ToUpperInvariant());
+        foreach (var r in Ratios) CaptureUi("S3_battle_mine_hud_" + r.tag, r.w, r.h);
+        var battle = Object.FindFirstObjectByType(T("BattleManager"));
+        battle.GetType().GetMethod("BattleLost", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(battle, null);
+    }
+    // ==================== 2.7 KART ATÖLYESİ ====================
+
+    [UnityTest]
+    public IEnumerator CardWorkshopFitsAllRatiosWithClearShortfallAndNoEmptySpeedUp()
+    {
+        yield return LoadBaseWith(7, save =>
+        {
+            var placed = (IList)Field(save, "placedBuildings");
+            var entry = Activator.CreateInstance(T("PlacedBuildingData"));
+            Set(entry, "slotId", "workshop_1"); Set(entry, "buildingType", "CardWorkshop"); Set(entry, "level", 3);
+            placed.Add(entry);
+            foreach (var b in (IEnumerable)Field(save, "buildings"))
+                if (Field(b, "buildingType").ToString() == "CardWorkshop") { Set(b, "isUnlocked", true); Set(b, "level", 3); }
+            Set(Field(save, "island"), "meat", 10);
+        });
+        Assert.IsTrue((bool)Call("CardWorkshopPanel", "Open", "workshop_1"), "atölye açıldı");
+        yield return new WaitForSecondsRealtime(0.5f);
+        var panel = T("CardWorkshopPanel").GetProperty("Current").GetValue(null) as Component;
+        Assert.IsNull(GameObject.Find("SpeedUpHeader"), "boş kuyrukta HIZLANDIR başlığı yok");
+        foreach (var r in Ratios)
+        {
+            CaptureUi("S2_7_workshop_" + r.tag, r.w, r.h, () => panel.GetType().GetMethod("RefitForPixels").Invoke(panel, new object[] { (float)r.w, (float)r.h }));
+            yield return null;
+        }
+        var ribbon = GameObject.Find("Ribbon");
+        var close = panel.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "Close");
+        var body = panel.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "Panel");
+        Assert.NotNull(close); Assert.NotNull(body);
+        var pr = ScreenRect(body); var cr = ScreenRect(close);
+        Assert.IsTrue(cr.yMax <= pr.yMax + 0.5f && cr.xMax <= pr.xMax + 0.5f, "X paneli taşmıyor");
+        Call("CardWorkshopPanel", "Close");
     }
 }

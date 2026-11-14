@@ -371,3 +371,34 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   düğmelerde elmas simgesi + sayı (`GemConfirm.SetGemIcon`, `GemEconomy.FinishLabel`): bina penceresi, inşaatçı paneli, ada paneli,
   Kart Atölyesi kuyruğu. Öğretici/görevlerde bedava bitire bağlı adım yoktu (taranıp doğrulandı). GemEconomyTests/IslandPhaseBTests güncellendi.
 - **Not:** TMP yazı tipinde 💎 emojisi yok; "💎 1" görünümü ikon görüntüsü + sayı ile sağlanır.
+
+## D55 — Kart Atölyesi yeniden düzen (2.7; Sonnet alt ajanı, orta çaba — ben inceleyip test ettim)
+- Kurdele ve X panelin içinde; panel yüksekliği güvenli alandan (640–900), üst bölüm + alt ayrıntı (204) sabit, "KARTLARIM" ızgarası
+  RectMask2D'li kaydırma alanında, hücre yüksekliği boş alana göre (56–72). `RefitForPixels` yeniden yerleşim yapar.
+- Et eksik: "165 Et eksik — Ağıl'da üret ya da [elmas] 21 ile tamamla"; Et yetmezse ÜRET düğmesi kırmızı "[elmas] 21 ile üret" olur.
+- "HIZLANDIR" başlığı kalktı; hızlandırma yalnız dolu kuyruk satırında (kalan süre + reklam + elmas).
+- Kart ikonları: Keskin Oklar = Tiny Swords Arrow (döndürülmüş), Gök Avcısı = Tiny Swords avatar, Kalkan Kıran = kalkan + kırmızı çarpı
+  (`BattleCards.ApplyIcon`; sefer kart bölümü de bunu kullanır). Yeşil üçgen kalktı, krem ▶ çizimi; "+3 kullanım" kılıç ikonu;
+  kural tek satır "1 üretim = 3 savaş hakkı" + ⓘ (Tiny Swords Icon_11); YÜKSELT altında altın bedeli + sonraki seviye notu; iç boşluklar.
+- ⚠️ ▶ üçgeni ve kırık kalkan birleşimi geçici (ART_NEEDS).
+
+## D56 — Alt bar aslanlı şerit (3.1) ve ADA ikonu (3.2)
+- **3.1:** D35'te kaldırılan `OrnateStrip(false)` (intro_button alt şeridi, iki yanda aslan armalı) aynı varlıkla geri geldi; şerit dock
+  boyunda, ortası 72'lik ana düğmenin arkasında kalır. Session3Tests beklentisi tersine çevrildi (kullanıcı kararı).
+- **3.2:** ADA düğmesi = `ui_icon_island.png` (Tiny Swords su rengi daire + çimen ada + mavi Gözcü Kulesi + ağaç), üreteç
+  `Tools/campaign_art/island_icon.py`; düğme yüzü Tiny Swords su rengi, ikon yüzü doldurur (`RadialItem.iconFill`).
+
+## D57 — Ayarlar ekranı (3.3; Sonnet alt ajanı)
+- Bölümler: SES (müzik/efekt kaydırıcı + aç/kapa), TİTREŞİM (`MEB_Vibration`, iki Handheld.Vibrate çağrısı bağlandı), DİL, BİLDİRİMLER,
+  GİZLİLİK POLİTİKASI ve DESTEK (yer tutucu URL/e-posta sabitleri — Play hazırlığında gerçekleri girilecek), SAVAŞ (PES ET), sürüm.
+  Açılış 0,85→1 OutBack + karartma, kapanış 0,15 sn; timeScale 0'da da çalışır. Eski düğme adları/API korunur.
+
+## D58 — UI/UX turu (3.4)
+- **Radyal menü:** yay genişledi (yan öğeler ±152, üst öğeler ±72 / 132); etiketler arası ≥30 birim, testle çakışmazlık denetlenir.
+  Menü açıkken ekranın alt %34'ünde yukarı doğru sönen karartma (`RadialShade`, dokunuşu engellemez) — kalıcı açık menü dünyayı
+  tümden karartmasın diye tam ekran karartma seçilmedi.
+- **Kahraman çakışması:** D45'teki durma hücresi kontrolü artık kahramanın gerçek sprite sınırlarını kullanır (bayrak/şapelle iç içe kalmaz).
+- **Savaş HUD:** "MADEN %100" / zaman göstergesi üst barın ikinci satırına (bölge adının sağı) taşındı; dünyadaki inşa halkalarına binmez.
+  Halkanın "N HAK" pulu 92 → 124 birim, sabit yazı boyu.
+- **Dokunma alanları:** süslü pencere X 30×28 → 44×44, elmas onayı X 38 → 46.
+- **Unity sahte-null:** `GetComponent<T>() ?? AddComponent<T>()` kalıbı editörde MissingComponentException atıyordu (5 yer düzeltildi).

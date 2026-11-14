@@ -61,7 +61,7 @@ public static class BattleWorldMarkers
         canvas.sortingOrder = 12;
         var canvasRect = caption.GetComponent<RectTransform>();
         // Tek satır, okunur boyut: 1.5 x 0.42 dünya birimi.
-        canvasRect.sizeDelta = new Vector2(92, 40);
+        canvasRect.sizeDelta = new Vector2(124, 40);   // 4. oturum (3.4): "6 HAK" sıkışıyordu: daha geniş pul
         canvasRect.localScale = Vector3.one * 0.01f;
         var pill = caption.AddComponent<UnityEngine.UI.Image>();
         pill.sprite = ReferenceUiVisuals.PillSprite();
@@ -70,7 +70,9 @@ public static class BattleWorldMarkers
         pill.raycastTarget = false;
         var rights = ReferenceUiVisuals.Text(caption.transform, "RemainingRights", "", 26,
             ReferenceUiVisuals.Gold, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(8, 2), new Vector2(-8, -2), bodyBold: true);
+            Vector2.zero, Vector2.one, new Vector2(10, 2), new Vector2(-10, -2), bodyBold: true);
+        rights.enableAutoSizing = false;
+        rights.textWrappingMode = TextWrappingModes.NoWrap;
         caption.AddComponent<BattleSlotRights>().Initialize(manager, rights, canvas);
     }
 }

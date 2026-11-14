@@ -98,11 +98,34 @@ public static class BattleCards
             case BattleCard.HeroDamage: return "ui_icon_sword";
             case BattleCard.HeroHealth: return "ui_icon_heart";
             case BattleCard.Fortify: return "ui_icon_shield";
-            case BattleCard.SharpVolleys: return "ui_sword_red";
+            case BattleCard.SharpVolleys: return "ui_icon_arrow";   // Tiny Swords Arrow (Units/Extra/Arrow), 45° döndürülmüş
             case BattleCard.ArmorBreaker: return "ui_icon_hammer";
-            case BattleCard.SkyHunter: return "ui_hero_marker";
-            default: return "ui_icon_cross";   // Kalkan Kıran (Tiny Swords Icon_09)
+            case BattleCard.SkyHunter: return "ui_icon_archer";     // Tiny Swords Human Avatars_03 (başlıklı okçu/avcı)
+            default: return "ui_icon_cross";   // Kalkan Kıran: tek başına çarpı; ApplyIcon kırık kalkan olarak birleştirir
         }
+    }
+
+    /// <summary>Kart simgesini verilen Image'a koyar. Kalkan Kıran: kalkan simgesi + üstüne kırmızı çarpı (çocuk Image "BrokenCross"), dosya gerekmez.</summary>
+    public static void ApplyIcon(UnityEngine.UI.Image image, BattleCard card)
+    {
+        if (image == null) return;
+        bool broken = card == BattleCard.WardBreaker;
+        image.sprite = CampaignSceneSetup.Art(broken ? "ui_icon_shield" : IconName(card));
+        image.preserveAspect = true;
+        image.enabled = image.sprite != null;
+        var old = image.transform.Find("BrokenCross");
+        if (old != null) UnityEngine.Object.Destroy(old.gameObject);
+        if (!broken) return;
+        var cross = new UnityEngine.GameObject("BrokenCross", typeof(UnityEngine.RectTransform), typeof(UnityEngine.UI.Image));
+        var rt = (UnityEngine.RectTransform)cross.transform;
+        rt.SetParent(image.transform, false);
+        rt.anchorMin = new UnityEngine.Vector2(0.28f, 0.0f); rt.anchorMax = new UnityEngine.Vector2(1.0f, 0.72f);
+        rt.offsetMin = rt.offsetMax = UnityEngine.Vector2.zero;
+        var ci = cross.GetComponent<UnityEngine.UI.Image>();
+        ci.sprite = CampaignSceneSetup.Art("ui_icon_cross");
+        ci.preserveAspect = true;
+        ci.raycastTarget = false;
+        ci.enabled = ci.sprite != null;
     }
 
     // ==================== SEÇİM (savaş öncesi) ====================

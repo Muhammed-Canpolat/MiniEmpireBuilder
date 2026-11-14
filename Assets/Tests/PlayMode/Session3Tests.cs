@@ -320,7 +320,8 @@ public class Session3Tests
             Assert.LessOrEqual(rt.rect.width, 56.1f, Field(item, "id") + " küçüldü");
         }
         var hud = GameObject.Find("BaseCanvas").transform.Find("SafeArea/HudRoot");
-        Assert.IsNull(hud.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "RadialOrnament"), "aslanlı/boş plakalı şerit yok");
+        // 4. oturum (3.1): kullanıcı aslanlı şeridi geri istedi → artık var olmalı.
+        Assert.NotNull(hud.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "RadialOrnament"), "aslanlı şerit geri geldi");
         var order = (List<string>)T("ResourceTopBar").GetMethod("BaseVisibleOrder").Invoke(null, new object[] { hud });
         CollectionAssert.AreEqual(new[] { "gold", "wood", "meat", "gem", "builder" }, order, "Ana Üs: Altın, Odun, Et, Elmas, İnşaatçı");
         yield return new WaitForSecondsRealtime(0.6f);

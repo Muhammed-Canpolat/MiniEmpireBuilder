@@ -37,6 +37,9 @@ public sealed class AudioManager : MonoBehaviour
     private float sfxVolume = 0.85f;
 
     public static AudioManager Instance { get; private set; }
+    /// <summary>Ayarlar ekranındaki ses kaydırıcıları (0–1); kitaplık ses düzeyiyle çarpılır.</summary>
+    public float MusicVolume01 => Mathf.Clamp01(PlayerPrefs.GetFloat("audio_music_volume", 1f));
+    public float SfxVolume01 => Mathf.Clamp01(PlayerPrefs.GetFloat("audio_sfx_volume", 1f));
     public bool MusicEnabled => PlayerPrefs.GetInt(MusicEnabledKey, 1) == 1;
     public bool SfxEnabled => PlayerPrefs.GetInt(SfxEnabledKey, 1) == 1;
     private static AudioLibrary Library => AudioLibrary.Instance;
@@ -125,7 +128,7 @@ public sealed class AudioManager : MonoBehaviour
     // ==================== MÜZİK ====================
 
     private AudioSource ActiveMusic => isMusicAActive ? musicA : musicB;
-    private float TrackVolume(MusicTrack track) => musicVolume * Mathf.Clamp01(track?.volume ?? 1f);
+    private float TrackVolume(MusicTrack track) => musicVolume * MusicVolume01 * Mathf.Clamp01(track?.volume ?? 1f);
 
     /// <summary>Parçaya 1 sn'lik çapraz geçiş. loop=false ise parça bitince çalma listesi ilerler.</summary>
     private void PlayTrack(MusicTrack track, bool loop, float fade = FadeSeconds)
@@ -301,8 +304,8 @@ public sealed class AudioManager : MonoBehaviour
         AudioClip clip = ResolveSfx(key);
         if (clip == null || effects == null || effects.Length == 0) return;
         foreach (var source in effects)
-            if (source != null && !source.isPlaying) { source.PlayOneShot(clip, sfxVolume); return; }
-        effects[0]?.PlayOneShot(clip, sfxVolume);
+            if (source != null && !source.isPlaying) { source.PlayOneShot(clip, sfxVolume * SfxVolume01); return; }
+        effects[0]?.PlayOneShot(clip, sfxVolume * SfxVolume01);
     }
 
     private static AudioClip ResolveSfx(string key)
@@ -353,5 +356,17 @@ public sealed class AudioManager : MonoBehaviour
     {
         PlayerPrefs.SetInt(SfxEnabledKey, enabled ? 1 : 0);
         PlayerPrefs.Save();
+    }
+
+    public void SetMusicVolume01(float value)
+    {
+        PlayerPrefs.SetFloat("audio_music_volume", Mathf.Clamp01(value));
+        if (MusicEnabled && currentTrack != null && ActiveMusic != null && ActiveMusic.clip == currentTrack.clip)
+            ActiveMusic.volume = TrackVolume(currentTrack);
+    }
+
+    public void SetSfxVolume01(float value)
+    {
+        PlayerPrefs.SetFloat("audio_sfx_volume", Mathf.Clamp01(value));
     }
 }

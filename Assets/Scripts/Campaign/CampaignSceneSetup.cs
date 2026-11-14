@@ -912,6 +912,7 @@ public class CampaignSceneSetup : MonoBehaviour
         button.targetGraphic = image;
         var icon = ArtImage(rect, "Icon", CardIcon(card), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(5, -11), new Vector2(27, 11), 0f, true);
         icon.raycastTarget = false;
+        BattleCards.ApplyIcon(icon, card);   // 4. oturum (2.7): Kalkan Kıran = kalkan + kırık çarpı (atölyeyle aynı)
         if (!tierOpen || useless) icon.color = new Color(1f, 1f, 1f, 0.45f);
         Label(rect, "CardName", BattleCards.Name(card), 11, ReferenceUiVisuals.Light, false,
             new Vector2(0, 0.5f), Vector2.one, new Vector2(29, 0), new Vector2(-2, -2), TextAlignmentOptions.Left);

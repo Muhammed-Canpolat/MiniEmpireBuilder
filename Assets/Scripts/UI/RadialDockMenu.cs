@@ -10,6 +10,8 @@ public sealed class RadialItem
     public string id;
     public Func<string> label;
     public Func<Sprite> iconProvider;
+    /// <summary>İkon düğme yüzünü tümüyle doldurur (dairesel ikon; ör. ADA).</summary>
+    public bool iconFill;
     /// <summary>İkonun yanına küçük eklenen ikinci görsel (ör. ada için ağaç).</summary>
     public Sprite iconAccent;
     public Color faceColor = new Color(0.11f, 0.09f, 0.07f, 1f);
@@ -93,26 +95,27 @@ public sealed class RadialDockMenu : MonoBehaviour
         var a = hudRoot.Find("IslandBtn")?.GetComponent<Button>();
         menu.Register(new RadialItem
         {
-            id = "build", button = b, label = () => L.T("İNŞA ET", "BUILD"), offset = new Vector2(-127f, 46f),
+            id = "build", button = b, label = () => L.T("İNŞA ET", "BUILD"), offset = new Vector2(-152f, 40f),
             badgeProvider = BuildBadge
         });
         menu.Register(new RadialItem
         {
-            id = "campaign", button = s, label = () => L.T("SEFER", "CAMPAIGN"), offset = new Vector2(-57f, 124f),
+            id = "campaign", button = s, label = () => L.T("SEFER", "CAMPAIGN"), offset = new Vector2(-72f, 132f),
             emphasised = true
         });
         menu.Register(new RadialItem
         {
-            id = "hero", button = h, label = () => L.T("KAHRAMAN", "HERO"), offset = new Vector2(57f, 124f)
+            id = "hero", button = h, label = () => L.T("KAHRAMAN", "HERO"), offset = new Vector2(72f, 132f)
         });
         var islandCatalog = IslandVisualCatalog.Instance;
         menu.Register(new RadialItem
         {
             id = "island", button = a, label = () => IslandSession.Unlocked() ? L.T("ADA", "ISLE") : L.T("ADA · 5", "ISLE · 5"),
-            offset = new Vector2(127f, 46f),
-            iconProvider = () => islandCatalog != null && islandCatalog.castle != null ? islandCatalog.castle : SpriteManager.Instance?.MainBase,
-            iconAccent = SpriteManager.Instance?.Tree,
-            faceColor = new Color(0.12f, 0.30f, 0.36f, 1f),   // deniz
+            offset = new Vector2(152f, 40f),   // 4. oturum (3.4): yay genişledi, etiketler arası ≥30 birim
+            // 4. oturum (3.2): Tiny Swords parçalarından ada ikonu (su + kara + Gözcü Kulesi + ağaç; Tools/campaign_art/island_icon.py)
+            iconProvider = () => CampaignSceneSetup.Art("ui_icon_island") ?? (islandCatalog != null && islandCatalog.castle != null ? islandCatalog.castle : SpriteManager.Instance?.MainBase),
+            iconFill = true,
+            faceColor = new Color(0.28f, 0.67f, 0.66f, 1f),   // Tiny Swords su rengi
             lockedProvider = () => !IslandSession.Unlocked(),
             badgeProvider = IslandBadge
         });
@@ -145,6 +148,7 @@ public sealed class RadialDockMenu : MonoBehaviour
     /// <summary>Öğeler kaydedildikten sonra: ana düğme en üstte, kayıtlı açık/kapalı durumu (ilk açılışta açık) uygulanır.</summary>
     public void FinishSetup()
     {
+        CreateShade();
         main.SetAsLastSibling();
         bool open = !PlayerPrefs.HasKey(prefKey) || PlayerPrefs.GetInt(prefKey, 1) == 1;
         SetOpen(open, true, false);
@@ -319,7 +323,7 @@ public sealed class RadialDockMenu : MonoBehaviour
         icon.transform.SetParent(visual, false);
         var iconRt = icon.rectTransform;
         iconRt.anchorMin = Vector2.zero; iconRt.anchorMax = Vector2.one;
-        float pad = item.iconAccent != null ? 12f : 9f;
+        float pad = item.iconFill ? 6f : item.iconAccent != null ? 12f : 9f;
         iconRt.offsetMin = new Vector2(pad, pad); iconRt.offsetMax = new Vector2(-pad, -pad);
         iconRt.localScale = Vector3.one;
         icon.preserveAspect = true;
@@ -428,9 +432,34 @@ public sealed class RadialDockMenu : MonoBehaviour
         SetOpen(IsOpen, true, false);
     }
 
+    private CanvasGroup shade;
+
+    /// <summary>
+    /// 4. oturum (3.4): menü açıkken ekranın altından yükselen yumuşak karartma; düğmeler dünyadan (binalardan) ayrışır.
+    /// Dokunuşu engellemez (raycast kapalı), menü kapanınca söner.
+    /// </summary>
+    private void CreateShade()
+    {
+        if (shade != null || hud == null) return;
+        var img = ReferenceUiVisuals.Image(hud, "RadialShade", Vector2.zero, new Vector2(1f, 0.34f), Vector2.zero, Vector2.zero, Color.white);
+        img.raycastTarget = false;
+        var g = img.gameObject.AddComponent<UIGradient>();
+        g.colorTop = new Color(0f, 0f, 0f, 0f);
+        g.colorBottom = new Color(0.02f, 0.015f, 0.01f, 0.62f);
+        img.transform.SetAsFirstSibling();
+        shade = img.gameObject.AddComponent<CanvasGroup>();
+        shade.blocksRaycasts = false;
+        shade.interactable = false;
+        shade.alpha = 0f;
+    }
+
+    public float ShadeAlpha => shade != null ? shade.alpha : 0f;
+
     private void Update()
     {
         float now = Time.unscaledTime;
+        if (shade != null)
+            shade.alpha = Mathf.MoveTowards(shade.alpha, IsOpen && dockShown ? 1f : 0f, Time.unscaledDeltaTime / 0.25f);
         foreach (var item in items)
         {
             if (now < item.startAt) continue;

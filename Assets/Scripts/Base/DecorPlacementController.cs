@@ -274,7 +274,7 @@ public sealed class DecorPlacementController : MonoBehaviour
             moved.SetCell(currentCell);
             moved.gameObject.SetActive(true);
             BaseBuildingVisual.SpawnDust(moved.transform.position, 130);
-            if (Application.isMobilePlatform) Handheld.Vibrate();
+            if (Application.isMobilePlatform && AudioSettingsUI.VibrationEnabled) Handheld.Vibrate();
             Save();
             Cancel();
             ShowUndo(moved, previous);

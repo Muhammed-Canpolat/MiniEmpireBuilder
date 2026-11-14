@@ -1,8 +1,8 @@
 # GECE_DURUM — Otonom çalışma (14 Kasım 2026, 4. oturum: hatalar + temel sistemler + UI/UX)
 
-DURUM: SÜRÜYOR (4. oturum)
-ŞU ANKİ İŞ: AŞAMA 2.7 (Kart Atölyesi)
-SIRADAKİ İŞ: AŞAMA 2 (dekor 1x1, katalog, maden çırağı, kışla, ölçek tablosu, yükseltme pencereleri, elmas bitirme, Kart Atölyesi)
+DURUM: TAMAMLANDI (4. oturum)
+ŞU ANKİ İŞ: (yok) — rapor REPORT.md
+SIRADAKİ İŞ: kullanıcı cihazda dener; görselleri yeniden gönderirse karşılaştırma; sonra Google Play (PLAY_RELEASE §8)
 Kararlar: DECISIONS.md D45+ · Başlangıç commit'i: d1d8d5a
 BEKLEYEN (kullanıcı kararıyla ertelendi): Google Play işleri (PLAY_RELEASE §8) — hatalar ve UI/UX bittikten sonra.
 Test notu: Unity editörü açık olduğu için PlayMode testleri proje kopyasında (`D:/UnityProjects/MEB_TestRunner`, robocopy ile eşitlenir) koşturuluyor.
@@ -13,9 +13,9 @@ Test notu: Unity editörü açık olduğu için PlayMode testleri proje kopyası
 - [x] 1.3 Madeni Koru beyaz kare + kayıp sprite taraması (D47)
 - [x] 1.4 Ada çalı/kaya temizliği (D48) — testler Session4Tests 7/7, görüntüler Docs/playtest/session4/S1_*
 - [x] 2.1 Dekor 1x1 (D49) · 2.2 Dekor kataloğu (D50) · 2.3 Maden çırağı (D51) · 2.4 Kışla devriyesi + ölçek tablosu (D52) · 2.5 Yükseltme pencereleri (D53) · 2.6 Elmas bitirme (D54) — Session4+GemEconomy 17/17
-- [ ] 2.7 Kart Atölyesi
-- [ ] 3.1 Alt bar aslan motifi · 3.2 ADA düğmesi · 3.3 Ayarlar · 3.4 Genel UI/UX turu
-- [ ] SON: baştan oynatma + REPORT.md
+- [x] 2.7 Kart Atölyesi (D55; Sonnet alt ajanı)
+- [x] 3.1 Alt bar aslan motifi · 3.2 ADA düğmesi (D56) · 3.3 Ayarlar (D57; Sonnet alt ajanı) · 3.4 Genel UI/UX turu (D58)
+- [x] SON: baştan oynatma 49/49 + son düzeltmeler 39/39, REPORT.md
 
 ENGELLENENLER:
 - (yok)

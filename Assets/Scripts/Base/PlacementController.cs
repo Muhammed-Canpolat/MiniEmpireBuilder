@@ -279,7 +279,7 @@ public class PlacementController : MonoBehaviour
             {
                 BaseBuildingVisual.SpawnDust(pos + Vector3.down * 0.4f, 110);
                 AudioManager.Instance?.PlaySfx("buildingPlace");
-                if (Application.isMobilePlatform) Handheld.Vibrate();
+                if (Application.isMobilePlatform && AudioSettingsUI.VibrationEnabled) Handheld.Vibrate();
                 ShowUndo(moved, previous);
             }
             return;

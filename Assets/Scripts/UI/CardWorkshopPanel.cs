@@ -152,9 +152,15 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         if (image != null) image.color = enabled ? Color.white : new Color(0.62f, 0.62f, 0.62f, 0.85f);
     }
 
+    private RectTransform panelRt, safeRt;
+    private float panelH = PanelHeight;
+    private float targetScale = 1f;
+    private ScrollRect gridScroll;
+
     private void Build(Transform canvas)
     {
-        var safe = ReferenceUiVisuals.SafeArea(canvas);
+        safeRt = ReferenceUiVisuals.SafeArea(canvas);
+        var safe = safeRt;
         var dim = ReferenceUiVisuals.Image(safe, "Dim", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0.62f));
         dim.raycastTarget = true;
         var dimButton = dim.gameObject.AddComponent<Button>();
@@ -168,18 +174,57 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         if (panel.sprite != null) { panel.type = Image.Type.Sliced; panel.pixelsPerUnitMultiplier = 2.4f; }
         else panel.color = ReferenceUiVisuals.Panel;
         panel.raycastTarget = true;
-        panel.transform.localScale = Vector3.one * 0.9f;
-        panel.transform.DOScale(FitFor(CanvasSize().x, CanvasSize().y), 0.18f).SetEase(Ease.OutBack).SetLink(panel.gameObject);
-        content = panel.rectTransform;
-        FitScale();
+        panelRt = panel.rectTransform;
+        content = panelRt;
+        ApplyLayout(AvailableSize(), false);
+        panel.transform.localScale = Vector3.one * targetScale * 0.9f;
+        panel.transform.DOScale(targetScale, 0.18f).SetEase(Ease.OutBack).SetLink(panel.gameObject);
         Rebuild();
     }
 
-    /// <summary>AŞAMA 3 §3E: panel 366×770 sabit; 3:4 gibi kısa tuvallerde (≈497×662) ekrana sığacak kadar küçülür. Ölçü tuval boyudur (px değil).</summary>
+    /// <summary>AŞAMA 3 §3E: panel 366 geniş; 3:4 gibi kısa tuvallerde (≈497×662) ekrana sığacak kadar küçülür. Ölçü tuval boyudur (px değil). (Eski sabit-770 formülü; testler kullanır.)</summary>
     public static float FitFor(float canvasWidth, float canvasHeight)
     {
         if (!FeatureConfig.Instance.workshopPanelFit || canvasWidth <= 0f || canvasHeight <= 0f) return 1f;
         return Mathf.Min(1f, canvasHeight * 0.97f / PanelHeight, canvasWidth * 0.99f / PanelWidth);
+    }
+
+    /// <summary>4. oturum: kullanılabilir (güvenli alan) tuval boyundan panel ölçeği ve yüksekliği. Genişlik 366'ya sığacak şekilde ölçeklenir,
+    /// yükseklik = kullanılabilir yükseklik / ölçek, 640..900 arası; 640 yetmiyorsa ölçek ayrıca küçülür.</summary>
+    public static void Layout(float availW, float availH, out float scale, out float height)
+    {
+        if (!FeatureConfig.Instance.workshopPanelFit || availW <= 0f || availH <= 0f) { scale = 1f; height = PanelHeight; return; }
+        float sw = Mathf.Min(1f, availW * 0.99f / PanelWidth);
+        height = Mathf.Clamp(availH * 0.97f / sw, 640f, 900f);
+        scale = Mathf.Min(sw, availH * 0.97f / height);
+    }
+
+    /// <summary>Güvenli alanın tuval boyu; henüz hesaplanmadıysa tüm tuval.</summary>
+    private Vector2 AvailableSize()
+    {
+        if (safeRt != null)
+        {
+            var r = safeRt.rect;
+            if (r.width > 1f && r.height > 1f) return r.size;
+        }
+        return CanvasSize();
+    }
+
+    private void ApplyLayout(Vector2 avail, bool rebuild)
+    {
+        lastCanvas = avail;
+        // 4. oturum (2.7): üst kaynak barı (≈74 birim) ve alt radyal dock (≈40) açık kalır; pencere aradaki alana sığar,
+        // başlık ve X üst barın altında kalır (dişli düğmesi X'in üstüne binmez).
+        const float topReserve = 78f, bottomReserve = 36f;
+        Layout(avail.x, Mathf.Max(400f, avail.y - topReserve - bottomReserve), out targetScale, out float h);
+        bool heightChanged = !Mathf.Approximately(h, panelH);
+        panelH = h;
+        if (panelRt == null) return;
+        float shift = -(topReserve - bottomReserve) * 0.5f;   // aradaki alanın ortası
+        panelRt.offsetMin = new Vector2(-PanelWidth / 2f, -panelH / 2f + shift / Mathf.Max(0.01f, targetScale));
+        panelRt.offsetMax = new Vector2(PanelWidth / 2f, panelH / 2f + shift / Mathf.Max(0.01f, targetScale));
+        panelRt.localScale = Vector3.one * targetScale;
+        if (rebuild && heightChanged) Rebuild();
     }
 
     /// <summary>Tuval boyu: kök tuvalin rect'i; henüz hesaplanmadıysa CanvasScaler formülüyle (ref 390×844, match 0,5).</summary>
@@ -193,30 +238,25 @@ public sealed class CardWorkshopPanel : MonoBehaviour
     }
 
     /// <summary>Tuval boyu değişti (döndürme/test): paneli yeniden sığdırır.</summary>
-    public void Refit() => FitScale();
+    public void Refit() => ApplyLayout(AvailableSize(), true);
 
-    /// <summary>Ekran/hedef doku boyu (px) verilince ölçeği CanvasScaler formülüyle (ref 390×844, match 0,5) hesaplar (testler/ekran görüntüsü).</summary>
+    /// <summary>Ekran/hedef doku boyu (px) verilince ölçeği ve yüksekliği CanvasScaler formülüyle (ref 390×844, match 0,5) hesaplar (testler/ekran görüntüsü).</summary>
     public void RefitForPixels(float pixelWidth, float pixelHeight)
     {
         float factor = Mathf.Sqrt(pixelWidth / 390f * (pixelHeight / 844f));
         if (content == null || factor <= 0f) return;
-        content.localScale = Vector3.one * FitFor(pixelWidth / factor, pixelHeight / factor);
+        ApplyLayout(new Vector2(pixelWidth / factor, pixelHeight / factor), true);
     }
 
     private Vector2 lastCanvas;
-    private void FitScale()
-    {
-        if (content == null) return;
-        lastCanvas = CanvasSize();
-        content.localScale = Vector3.one * FitFor(lastCanvas.x, lastCanvas.y);
-    }
 
     private readonly List<GameObject> dynamic = new List<GameObject>();
 
     private void Rebuild()
     {
         if (content == null) return;
-        foreach (var item in dynamic) if (item != null) Destroy(item);
+        // Eski yerleşim aynı karede görünmesin (Destroy kare sonunda işler; yeniden boyutlamada "hayalet" kalıyordu)
+        foreach (var item in dynamic) if (item != null) { item.SetActive(false); Destroy(item); }
         dynamic.Clear();
         timers.Clear();
         var root = new GameObject("Dynamic", typeof(RectTransform));
@@ -227,19 +267,67 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         Fill(rt);
     }
 
+    private static void Place(RectTransform rt, float x, float y, float w, float h)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.offsetMin = new Vector2(x, -y - h); rt.offsetMax = new Vector2(x + w, -y);
+    }
+
+    private static Sprite triangle;
+    /// <summary>Krem renkli küçük ▶ (yazı tipinde ▶ olmayabilir; yeşil "mücevher" ui_icon_play yerine).</summary>
+    private static Sprite PlayTriangle()
+    {
+        if (triangle != null) return triangle;
+        const int n = 48;
+        var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        var px = new Color32[n * n];
+        var cream = new Color(1f, 0.96f, 0.82f);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float fx = (x + 0.5f) / n, fy = (y + 0.5f) / n;
+                float left = 0.22f, right = 0.88f;
+                float half = 0.5f * (right - fx) / (right - left);   // sağa doğru daralır
+                float edge = Mathf.Min((fx - left) * n, (half - Mathf.Abs(fy - 0.5f)) * n * 1.1f);
+                float a = Mathf.Clamp01(edge + 0.5f);
+                px[y * n + x] = new Color(cream.r, cream.g, cream.b, a);
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        triangle = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        return triangle;
+    }
+
+    /// <summary>Atölyenin sonraki seviyelerde getirdiği ilk yenilik (Sv N: ...); en yüksek seviyede null.</summary>
+    private static string NextPerk(int level, out int perkLevel)
+    {
+        perkLevel = level + 1;
+        for (int lv = level + 1; lv <= Progression.MaxLevel; lv++)
+        {
+            perkLevel = lv;
+            if (Progression.Workshop.QueueSlots(lv) > Progression.Workshop.QueueSlots(level))
+                return L.T($"{Progression.Workshop.QueueSlots(lv)}. üretim yuvası", $"queue slot #{Progression.Workshop.QueueSlots(lv)}");
+            if (lv == Progression.Workshop.RareUnlockLevel) return L.T("Nadir kartlar açılır", "unlocks Rare cards");
+            if (lv == Progression.Workshop.EpicUnlockLevel) return L.T("Destansı kartlar açılır", "unlocks Epic cards");
+            if (Progression.Workshop.UsesPerCraft(lv) > Progression.Workshop.UsesPerCraft(level))
+                return L.T($"üretim başına {Progression.Workshop.UsesPerCraft(lv)} hak", $"{Progression.Workshop.UsesPerCraft(lv)} uses per craft");
+        }
+        return null;
+    }
+
     private void Fill(Transform p)
     {
         int level = CardWorkshop.Level;
-        float w = PanelWidth;
+        float w = PanelWidth, H = panelH;
 
-        // Başlık kurdelesi + kapat
-        var ribbon = At(p, "Ribbon", 36f, -6f, w - 72f, 50f).gameObject.AddComponent<Image>();
+        // Başlık kurdelesi + kapat (ikisi de panelin içinde)
+        var ribbon = At(p, "Ribbon", 48f, 10f, w - 96f, 46f).gameObject.AddComponent<Image>();
         ribbon.sprite = Ui("ui_ribbon");
         if (ribbon.sprite != null) { ribbon.type = Image.Type.Sliced; ribbon.pixelsPerUnitMultiplier = 3f; }
         ribbon.raycastTarget = false;
-        Tx(ribbon.transform, "Title", L.T($"KART ATÖLYESİ · SEV. {level}", $"CARD WORKSHOP · LV. {level}"), 19, Color.white, 40f, 4f, w - 72f - 80f, 40f,
+        Tx(ribbon.transform, "Title", L.T($"KART ATÖLYESİ · SEV. {level}", $"CARD WORKSHOP · LV. {level}"), 18, Color.white, 28f, 3f, w - 96f - 56f, 36f,
             TextAlignmentOptions.Center, false, true);
-        var close = At(p, "Close", w - 48f, 6f, 36f, 36f);
+        var close = At(p, "Close", w - 44f, 14f, 32f, 32f);
         var closeImage = close.gameObject.AddComponent<Image>();
         closeImage.sprite = CampaignSceneSetup.Art("ui_node_red");
         closeImage.color = closeImage.sprite != null ? Color.white : ReferenceUiVisuals.Red;
@@ -248,13 +336,14 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         closeButton.onClick.AddListener(Close);
         ReferenceUiVisuals.Text(close, "X", "X", 15, Color.white, TextAlignmentOptions.Center, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
 
-        // Kaynak satırı: Et · altın · hak/üretim · YÜKSELT
+        // Kaynak satırı: Et · altın · YÜKSELT (bedel + sonraki seviye notu altında)
         var gm = GameManager.Instance;
-        Pic(p, "MeatIcon", IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.meatIcon : null, 22f, 60f, 28f, 28f);
-        meatText = Tx(p, "Meat", IslandEconomy.Meat.ToString(), 17, Ink, 52f, 60f, 56f, 28f);
-        Pic(p, "GoldIcon", CampaignSceneSetup.Art("ui_icon_coin"), 112f, 60f, 28f, 28f);
-        goldText = Tx(p, "Gold", gm != null ? gm.Gold.ToString() : "0", 17, Ink, 142f, 60f, 70f, 28f);
-        var upgrade = TsButton(p, "Upgrade", L.T("YÜKSELT", "UPGRADE"), false, w - 128f, 58f, 106f, 32f, 14, out _);
+        Pic(p, "MeatIcon", IslandVisualCatalog.Instance != null ? IslandVisualCatalog.Instance.meatIcon : null, 22f, 66f, 28f, 28f);
+        meatText = Tx(p, "Meat", IslandEconomy.Meat.ToString(), 17, Ink, 52f, 66f, 56f, 28f);
+        Pic(p, "GoldIcon", CampaignSceneSetup.Art("ui_icon_coin"), 112f, 66f, 28f, 28f);
+        goldText = Tx(p, "Gold", gm != null ? gm.Gold.ToString() : "0", 17, Ink, 142f, 66f, 70f, 28f);
+        bool maxed = level >= Progression.MaxLevel;
+        var upgrade = TsButton(p, "Upgrade", maxed ? L.T("EN YÜKSEK", "MAX LEVEL") : L.T("YÜKSELT", "UPGRADE"), false, w - 136f, 64f, 114f, 32f, 14, out _);
         upgrade.onClick.AddListener(() =>
         {
             var ui = FindFirstObjectByType<BaseWorldUI>();
@@ -263,30 +352,75 @@ public sealed class CardWorkshopPanel : MonoBehaviour
             Close();
             ui.ShowBuildingInfo(BuildingType.CardWorkshop, id);
         });
-        Tx(p, "UsesInfo", L.T($"Üretim başına ×{CardWorkshop.UsesPerCraft} hak · 1 savaş = 1 hak · yenilgide de düşer",
-            $"x{CardWorkshop.UsesPerCraft} uses per craft · 1 battle = 1 use · spent on defeat too"), 12, InkMuted, 22f, 92f, w - 44f, 18f, TextAlignmentOptions.Left, true);
+        if (maxed)
+        {
+            Tx(p, "NextInfo", L.T("EN YÜKSEK SEVİYE", "HIGHEST LEVEL"), 12, InkMuted, 22f, 100f, w - 44f, 18f, TextAlignmentOptions.Left, true);
+        }
+        else
+        {
+            string perk = NextPerk(level, out int perkLevel);
+            string next = perk != null ? L.T($"Sv {perkLevel}: {perk}", $"Lv {perkLevel}: {perk}") : L.T($"Sv {level + 1}: daha güçlü üretim", $"Lv {level + 1}: stronger crafting");
+            Tx(p, "NextInfo", next, 12, InkMuted, 22f, 100f, w - 44f - 104f, 28f, TextAlignmentOptions.TopLeft, true);
+            Pic(p, "UpgradeCostIcon", CampaignSceneSetup.Art("ui_icon_coin"), w - 136f + 14f, 99f, 20f, 20f);
+            Tx(p, "UpgradeCost", Progression.UpgradeCost(BuildingType.CardWorkshop, level + 1).ToString(), 14, Ink, w - 136f + 38f, 99f, 76f, 20f,
+                TextAlignmentOptions.Left, true);
+        }
+        int usesPer = CardWorkshop.UsesPerCraft;
+        Tx(p, "UsesInfo", L.T($"1 üretim = {usesPer} savaş hakkı", $"1 craft = {usesPer} battle uses"), 12, InkMuted, 22f, 132f, w - 44f - 30f, 18f, TextAlignmentOptions.Left, true);
+        var infoRt = At(p, "UsesInfoButton", w - 22f - 22f, 130f, 22f, 22f);
+        var infoImage = infoRt.gameObject.AddComponent<Image>();
+        infoImage.sprite = CampaignSceneSetup.Art("ui_icon_info");
+        infoImage.preserveAspect = true;
+        var infoButton = infoRt.gameObject.AddComponent<Button>();
+        infoButton.targetGraphic = infoImage;
+        if (infoImage.sprite == null)
+        {
+            infoImage.color = ReferenceUiVisuals.Blue;
+            ReferenceUiVisuals.Text(infoRt, "I", "i", 14, Color.white, TextAlignmentOptions.Center, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
+        }
+        infoButton.onClick.AddListener(() => GemActions.Toast(L.T(
+            $"Her üretim {usesPer} savaş hakkı verir. 1 savaş = 1 hak; yenilgide de düşer.",
+            $"Each craft gives {usesPer} battle uses. 1 battle = 1 use; spent on defeat too.")));
 
         // Üretim kuyruğu
-        Tx(p, "QueueTitle", L.T("ÜRETİM KUYRUĞU", "PRODUCTION QUEUE"), 13, Ink, 22f, 114f, 170f, 18f, TextAlignmentOptions.Left, true, true);
-        Header(p, "SpeedUpHeader", L.T("HIZLANDIR", "SPEED UP"), w - 196f, 117f, 160f, TextAlignmentOptions.Center);
+        Tx(p, "QueueTitle", L.T("ÜRETİM KUYRUĞU", "PRODUCTION QUEUE"), 13, Ink, 22f, 156f, 200f, 18f, TextAlignmentOptions.Left, true, true);
         int slots = Mathf.Max(1, CardWorkshop.QueueSlots);
         var queue = CardWorkshop.Queue;
-        for (int i = 0; i < slots; i++) QueueRow(p, i, i < queue.Count ? queue[i] : null, 134f + i * 58f);
+        for (int i = 0; i < slots; i++) QueueRow(p, i, i < queue.Count ? queue[i] : null, 176f + i * 56f);
 
-        // Kart ızgarası
-        float gridTop = 134f + slots * 58f + 6f;
+        // Seçili kart ayrıntısı altta sabit; kart ızgarası arada kaydırılabilir
+        const float detailH = 204f;
+        float detailTop = H - 14f - detailH;
+        float gridTop = 176f + slots * 56f + 2f;
         Tx(p, "StockTitle", L.T("KARTLARIM", "MY CARDS"), 13, Ink, 22f, gridTop, 140f, 18f, TextAlignmentOptions.Left, true, true);
-        float cellW = (w - 44f - 8f) / 2f, cellH = 62f;
+        float viewTop = gridTop + 20f, viewH = Mathf.Max(60f, detailTop - 6f - viewTop);
+        int rows = (BattleCards.Count + 1) / 2;
+        const float gap = 6f;
+        float cellH = Mathf.Clamp((viewH - gap * (rows - 1)) / rows, 64f, 76f);   // 4. oturum: ≥64 (iç boşluk)
+        float contentH = rows * cellH + (rows - 1) * gap;
+        float cellW = (w - 44f - 8f - 8f) / 2f;   // sağda kaydırma payı (8)
+
+        var view = At(p, "Grid", 18f, viewTop, w - 36f, viewH).gameObject;
+        view.AddComponent<RectMask2D>();
+        var scrollRt = (RectTransform)view.transform;
+        var contentRt = ReferenceUiVisuals.Rect(scrollRt, "Content", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -contentH), Vector2.zero);
+        var viewBg = view.AddComponent<Image>();   // sürükleme için ışın alıcı (görünmez)
+        viewBg.color = new Color(0f, 0f, 0f, 0f);
+        gridScroll = view.AddComponent<ScrollRect>();
+        gridScroll.content = contentRt;
+        gridScroll.viewport = scrollRt;
+        gridScroll.horizontal = false;
+        gridScroll.vertical = contentH > viewH + 0.5f;
+        gridScroll.movementType = ScrollRect.MovementType.Clamped;
+        gridScroll.scrollSensitivity = 24f;
         for (int i = 0; i < BattleCards.Count; i++)
         {
-            float x = 22f + (i % 2) * (cellW + 8f);
-            float y = gridTop + 20f + (i / 2) * (cellH + 6f);
-            CardCell(p, (BattleCard)i, x, y, cellW, cellH);
+            float x = 4f + (i % 2) * (cellW + 8f);
+            float y = (i / 2) * (cellH + gap);
+            CardCell(contentRt, (BattleCard)i, x, y, cellW, cellH);
         }
 
-        // Seçili kart ayrıntısı
-        float detailTop = gridTop + 20f + 4 * (cellH + 6f) + 2f;
-        Detail(p, detailTop);
+        Detail(p, detailTop, detailH);
     }
 
     private void QueueRow(Transform p, int index, WorkshopJob job, float y)
@@ -295,12 +429,13 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         var paper = Paper(p, "Queue" + index, 18f, y, w - 36f, 52f, new Color(1f, 0.97f, 0.88f, 1f), 2f);
         if (job == null)
         {
-            Tx(paper.transform, "Empty", L.T("Boş yuva: aşağıdan bir kart seç ve üret", "Empty slot: pick a card below and craft it"), 13, InkMuted, 12f, 12f, w - 60f, 28f,
-                TextAlignmentOptions.Left, true);
+            Tx(paper.transform, "Empty", L.T("Boş yuva: aşağıdan bir kart seç ve üret", "Empty slot: pick a card below and craft it"), 13, InkMuted, 18f, 0f, w - 36f - 36f, 52f,
+                TextAlignmentOptions.MidlineLeft, true);
             return;
         }
         var card = (BattleCard)job.card;
-        Pic(paper.transform, "Icon", CampaignSceneSetup.Art(BattleCards.IconName(card)), 8f, 8f, 34f, 34f);
+        var qIcon = Pic(paper.transform, "Icon", null, 8f, 8f, 34f, 34f);
+        BattleCards.ApplyIcon(qIcon, card);
         Tx(paper.transform, "Name", $"{BattleCards.Name(card)} ×{job.uses}", 14, Ink, 48f, 2f, 120f, 18f, TextAlignmentOptions.Left, true);
         Pic(paper.transform, "ClockIcon", CampaignSceneSetup.Art("ui_icon_clock"), 48f, 19f, 15f, 15f);
         var time = Tx(paper.transform, "Time", Progression.FormatDuration(CardWorkshop.SecondsLeft(job)), 13, InkMuted, 66f, 19f, 102f, 16f, TextAlignmentOptions.Left, true);
@@ -311,7 +446,7 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         int captured = index;
         var ad = TsButton(paper.transform, "Ad", $"{adsLeft}/{GemEconomy.DailyWorkshopAds}", false,
             w - 36f - 160f, 4f, 92f, 44f, 14, out var adLabel);
-        ButtonIcon(ad, adLabel, CampaignSceneSetup.Art("ui_icon_play"), 22f);   // ikon + "3/3"
+        ButtonIcon(ad, adLabel, PlayTriangle(), 18f);   // krem ▶ + "3/3" (yeşil mücevher yok)
         adLabel.textWrappingMode = TextWrappingModes.NoWrap;
         adLabel.fontSizeMax = 14f;
         Dim(ad, adsLeft > 0);
@@ -350,9 +485,19 @@ public sealed class CardWorkshopPanel : MonoBehaviour
             outline.effectColor = ReferenceUiVisuals.Gold;
             outline.effectDistance = new Vector2(2.5f, -2.5f);
         }
-        var icon = Pic(paper.transform, "Icon", CampaignSceneSetup.Art(BattleCards.IconName(card)), 8f, 10f, 40f, 40f);
-        if (!unlocked) icon.color = new Color(1f, 1f, 1f, 0.45f);
-        Tx(paper.transform, "Name", BattleCards.Name(card), 14, unlocked ? Ink : InkMuted, 54f, 8f, w - 60f, 20f, TextAlignmentOptions.Left, true);
+        float iconSize = Mathf.Clamp(h - 16f, 32f, 44f);
+        var icon = Pic(paper.transform, "Icon", null, 10f, (h - iconSize) / 2f, iconSize, iconSize);
+        BattleCards.ApplyIcon(icon, card);
+        if (!unlocked) foreach (var img in icon.GetComponentsInChildren<Image>()) img.color = new Color(1f, 1f, 1f, 0.45f);
+        float tx = 10f + iconSize + 6f, tw = w - tx - 8f;
+        // 4. oturum (2.7): iç boşluk — çerçeve kalınlığı ~7 px; ad üst satırda (8 px içeride), kademe aynı satırın sağında,
+        // stok alt satırda (alt kenardan 9 px yukarıda). Hiçbir yazı çerçeveye değmez.
+        const float pad = 9f;
+        Tx(paper.transform, "Tier", BattleCards.TierName(tier), 10, InkMuted, w - 64f - pad - 6f, pad + 2f, 64f, 13f, TextAlignmentOptions.Right, false);
+        var nameText = Tx(paper.transform, "Name", BattleCards.Name(card), 14, unlocked ? Ink : InkMuted, tx, pad - 1f, tw - 66f, 20f, TextAlignmentOptions.Left, true);
+        nameText.textWrappingMode = TextWrappingModes.NoWrap;   // "Keskin Oklar" / "Kalkan Kıran" tek satır, sığmazsa küçülür
+        nameText.enableAutoSizing = true; nameText.fontSizeMin = 10f; nameText.fontSizeMax = 14f;
+        float y0 = h - pad - 18f - 32f;
         int stock = CardWorkshop.Stock(card);
         string line;
         Color lineColor = InkMuted;
@@ -365,26 +510,24 @@ public sealed class CardWorkshopPanel : MonoBehaviour
             if (queued > 0) line += L.T($" (+{queued})", $" (+{queued})");
             if (stock > 0) lineColor = new Color(0.15f, 0.5f, 0.2f);
         }
-        // Kademe ayrı satır değil: kâğıdın alt kenarına taşıyordu; stok satırının sağında küçük etiket.
-        Tx(paper.transform, "Stock", line, 13, lineColor, 54f, 30f, w - 60f - 62f, 18f, TextAlignmentOptions.Left, true);
-        Tx(paper.transform, "Tier", BattleCards.TierName(tier), 10, InkMuted, w - 76f, 32f, 62f, 16f, TextAlignmentOptions.Right, false);
+        Tx(paper.transform, "Stock", line, 13, lineColor, tx, y0 + 32f, tw, 18f, TextAlignmentOptions.Left, true);
     }
 
-    private void Detail(Transform p, float top)
+    private void Detail(Transform p, float top, float height)
     {
         float w = PanelWidth;
         var card = selected;
         var tier = BattleCards.Tier(card);
-        var paper = Paper(p, "Detail", 14f, top, w - 28f, PanelHeight - top - 14f, new Color(1f, 0.98f, 0.9f), 2.2f);
+        var paper = Paper(p, "Detail", 14f, top, w - 28f, height, new Color(1f, 0.98f, 0.9f), 2.2f);
         float inner = w - 28f;
-        Pic(paper.transform, "Icon", CampaignSceneSetup.Art(BattleCards.IconName(card)), 10f, 8f, 36f, 36f);
+        var dIcon = Pic(paper.transform, "Icon", null, 10f, 8f, 36f, 36f);
+        BattleCards.ApplyIcon(dIcon, card);
         Tx(paper.transform, "Name", $"{BattleCards.Name(card)}  ·  {BattleCards.TierName(tier)}", 16, Ink, 52f, 6f, inner - 60f, 22f, TextAlignmentOptions.Left, true, true);
         Tx(paper.transform, "Effect", BattleCards.Description(card), 13, InkMuted, 52f, 28f, inner - 60f, 32f, TextAlignmentOptions.TopLeft, true);
 
         bool tierOpen = CardWorkshop.IsUnlocked(card);
         bool free = CardWorkshop.FirstCraftFree(card);
         int meat = CardWorkshop.MeatCost(card), gold = CardWorkshop.GoldCost(card), seconds = CardWorkshop.CraftSeconds(card);
-        // AŞAMA 3 §3E: başlıklı bölümler (MALİYET · SÜRE) + her fiyat ikonlu
         Header(paper.transform, "CostHeader", L.T("MALİYET", "COST"), 12f, 62f, 120f);
         Header(paper.transform, "TimeHeader", L.T("SÜRE", "TIME"), 152f, 62f, 80f);
         float rowY = 78f;
@@ -396,37 +539,55 @@ public sealed class CardWorkshopPanel : MonoBehaviour
         Tx(paper.transform, "GoldCost", gold.ToString(), 15, goldShort ? Warn : Ink, 106f, rowY, 44f, 24f, TextAlignmentOptions.Left, true);
         Pic(paper.transform, "ClockIcon", CampaignSceneSetup.Art("ui_icon_clock"), 152f, rowY, 22f, 24f);
         Tx(paper.transform, "Time", Progression.FormatDuration(seconds), 14, Ink, 176f, rowY, 56f, 24f, TextAlignmentOptions.Left, true);
-        // "+N kullanım": kart/parşömen ikonu + metin (çıplak sayı yok)
-        Pic(paper.transform, "UsesIcon", CampaignSceneSetup.Art("ui_scroll"), 236f, rowY, 20f, 24f);
+        // "+N kullanım": kılıç ikonu = savaşta kullanım hakkı
+        Pic(paper.transform, "UsesIcon", CampaignSceneSetup.Art("ui_icon_sword"), 236f, rowY, 20f, 24f);
         Tx(paper.transform, "Uses", L.T($"+{CardWorkshop.UsesPerCraft} kullanım", $"+{CardWorkshop.UsesPerCraft} uses"), 12, new Color(0.15f, 0.5f, 0.2f), 258f, rowY, inner - 262f, 24f, TextAlignmentOptions.Left, true);
-        float hintY = rowY + 26f;
+        float hintY = rowY + 28f;
+        bool gemCraft = false;
+        int gemShort = 0;
         if (free) Tx(paper.transform, "Free", L.T("İLK ÜRETİM BEDAVA · 30 sn", "FIRST CRAFT FREE · 30 s"), 12, new Color(0.15f, 0.5f, 0.2f), 12f, hintY, inner - 24f, 16f, TextAlignmentOptions.Left, true);
         else if (meatShort && tierOpen)
         {
-            // Tek satir: "Et eksik (160): Agil ya da [elmas] 20" - elmas simgesi + sayi yazinin hemen ardinda, sigmazsa yazi kuculur.
-            var hint = Tx(paper.transform, "MeatHint", L.T($"Et eksik ({meat - IslandEconomy.Meat}): Ağıl ya da", $"Meat short ({meat - IslandEconomy.Meat}): Pasture or"), 12, Warn, 12f, hintY, inner - 24f, 16f, TextAlignmentOptions.Left, true);
-            hint.textWrappingMode = TextWrappingModes.NoWrap;
-            hint.enableAutoSizing = false;
-            string gemsText = CardWorkshop.MeatShortfallGems(card).ToString();
-            const float gemIconW = 18f, gemTextW = 34f;
-            float avail = inner - 24f - gemIconW - gemTextW - 6f;
-            float textW = hint.GetPreferredValues(hint.text, 1000f, 16f).x;
-            hint.fontSize = textW > avail ? 12f * avail / textW : 12f;
-            textW = hint.GetPreferredValues(hint.text, 1000f, 16f).x;
-            hint.rectTransform.offsetMax = new Vector2(12f + textW + 2f, hint.rectTransform.offsetMax.y);
-            float gemX = 12f + textW + 6f;
-            Pic(paper.transform, "HintGemIcon", GemIcon.Sprite, gemX, hintY - 1f, gemIconW, gemIconW);
-            Tx(paper.transform, "HintGems", gemsText, 13, Warn, gemX + gemIconW + 2f, hintY, gemTextW, 16f, TextAlignmentOptions.Left, true).textWrappingMode = TextWrappingModes.NoWrap;
+            // "165 Et eksik — Ağıl'da üret ya da [elmas] 21 ile tamamla": tek satır, sığmazsa yazı küçülür.
+            gemCraft = true;
+            gemShort = CardWorkshop.MeatShortfallGems(card);
+            var hint = Tx(paper.transform, "MeatHint", L.T($"{meat - IslandEconomy.Meat} Et eksik — Ağıl'da üret ya da", $"{meat - IslandEconomy.Meat} Meat short — make it at the Pasture or"), 12, Warn, 12f, hintY, 200f, 16f, TextAlignmentOptions.Left, true);
+            var num = Tx(paper.transform, "HintGems", gemShort.ToString(), 13, Warn, 0f, hintY, 40f, 16f, TextAlignmentOptions.Left, true);
+            var tail = Tx(paper.transform, "HintTail", L.T("ile tamamla", "to top up"), 12, Warn, 0f, hintY, 80f, 16f, TextAlignmentOptions.Left, true);
+            foreach (var t in new[] { hint, num, tail }) { t.textWrappingMode = TextWrappingModes.NoWrap; t.enableAutoSizing = false; }
+            const float gemIconW = 16f;
+            float avail = inner - 24f - gemIconW - 6f;
+            float fs = 12f;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                hint.fontSize = fs; num.fontSize = fs + 1f; tail.fontSize = fs;
+                float total = hint.GetPreferredValues(hint.text, 1000f, 16f).x + num.GetPreferredValues(num.text, 1000f, 16f).x + tail.GetPreferredValues(tail.text, 1000f, 16f).x;
+                if (total <= avail) break;
+                fs = Mathf.Max(8f, fs * avail / total);
+            }
+            float hw = hint.GetPreferredValues(hint.text, 1000f, 16f).x + 2f;
+            float nw = num.GetPreferredValues(num.text, 1000f, 16f).x + 2f;
+            float tw = tail.GetPreferredValues(tail.text, 1000f, 16f).x + 2f;
+            Place(hint.rectTransform, 12f, hintY, hw, 16f);
+            Pic(paper.transform, "HintGemIcon", GemIcon.Sprite, 12f + hw + 3f, hintY, gemIconW, gemIconW);
+            Place(num.rectTransform, 12f + hw + 3f + gemIconW + 1f, hintY, nw, 16f);
+            Place(tail.rectTransform, 12f + hw + 3f + gemIconW + 1f + nw + 2f, hintY, tw, 16f);
         }
 
         string block = CardWorkshop.CraftBlockReason(card);
-        float buttonsY = hintY + 22f;
-        var craft = TsButton(paper.transform, "Craft", block != null ? block.ToUpperInvariant() : L.T("ÜRET", "CRAFT"), false, 12f, buttonsY + 2f, inner * 0.5f - 16f, 44f, 15, out _);
+        float buttonsY = hintY + 24f;
+        float bw = inner * 0.5f - 16f;
+        bool useGemCraft = gemCraft && block == null;
+        var craft = TsButton(paper.transform, "Craft", block != null ? block.ToUpperInvariant() : useGemCraft ? L.T($"{gemShort} ile üret", $"{gemShort} craft") : L.T("ÜRET", "CRAFT"), useGemCraft, 12f, buttonsY + 2f, bw, 44f, 15, out var craftLabel);
+        if (useGemCraft) { ButtonIcon(craft, craftLabel, GemIcon.Sprite, 20f, "GemIcon"); craftLabel.fontSizeMax = 13f; }
+        craftLabel.textWrappingMode = TextWrappingModes.NoWrap;
         Dim(craft, block == null);
         craft.onClick.AddListener(() => BeginCraft(card, false));
         int adsLeft = AdRewards.WorkshopAdsLeft;
-        var adCraft = TsButton(paper.transform, "CraftAd", L.T($"REKLAMLA ÜRET ({adsLeft}/{GemEconomy.DailyWorkshopAds})", $"CRAFT WITH AD ({adsLeft}/{GemEconomy.DailyWorkshopAds})"), true, inner * 0.5f + 4f, buttonsY, inner * 0.5f - 16f, 48f, 12, out var adCraftLabel);
-        ButtonIcon(adCraft, adCraftLabel, CampaignSceneSetup.Art("ui_icon_play"), 22f);
+        var adCraft = TsButton(paper.transform, "CraftAd", L.T($"REKLAMLA ÜRET ({adsLeft}/{GemEconomy.DailyWorkshopAds})", $"CRAFT WITH AD ({adsLeft}/{GemEconomy.DailyWorkshopAds})"), true, inner * 0.5f + 4f, buttonsY, bw, 48f, 12, out var adCraftLabel);
+        ButtonIcon(adCraft, adCraftLabel, PlayTriangle(), 14f);
+        adCraftLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        adCraftLabel.fontSizeMax = 12f;
         Dim(adCraft, block == null && adsLeft > 0);
         adCraft.onClick.AddListener(() => BeginCraft(card, true));
     }
@@ -474,7 +635,7 @@ public sealed class CardWorkshopPanel : MonoBehaviour
 
     private void Update()
     {
-        if ((CanvasSize() - lastCanvas).sqrMagnitude > 0.25f) FitScale();
+        if ((AvailableSize() - lastCanvas).sqrMagnitude > 0.25f) ApplyLayout(AvailableSize(), true);
         if (Time.unscaledTime < nextTick) return;
         nextTick = Time.unscaledTime + 0.25f;
         foreach (var (job, fill, time) in timers)

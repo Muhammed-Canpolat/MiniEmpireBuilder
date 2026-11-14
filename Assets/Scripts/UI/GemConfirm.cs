@@ -110,7 +110,7 @@ public sealed class GemConfirm : MonoBehaviour
         });
 
         var closeRect = ReferenceUiVisuals.Rect(panel.transform, "Close", Vector2.one, Vector2.one,
-            new Vector2(-46, -46), new Vector2(-8, -8));
+            new Vector2(-52, -52), new Vector2(-6, -6));   // 4. oturum (3.4): ≥46 birim dokunma alanı
         var closeImage = closeRect.gameObject.AddComponent<Image>();
         closeImage.sprite = CampaignSceneSetup.Art("ui_node_red");
         closeImage.color = closeImage.sprite != null ? Color.white : ReferenceUiVisuals.Red;

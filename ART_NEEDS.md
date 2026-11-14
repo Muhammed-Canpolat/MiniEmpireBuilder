@@ -79,3 +79,15 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
   2 kare), sancak/bayrak (64×128, 4 kare dalgalanma; mavi/sarı/kırmızı/mor/siyah), taş patika karosu (64×64, 3 varyant), çiçek tarhı (64×64),
   kuyu (128×128), heykel (64×128). Ücretsiz Tiny Swords paketinde yok; şu an katalogdan kaldırıldılar (D50).
 - **Lancer renk kademeleri:** Kışla çatısı ve savaş mızraklıları yalnız mavi (catalog'da sarı/kırmızı/mor/siyah Lancer kareleri yok).
+- **Ayarlar (3.3) simgeleri, 64×64 Tiny Swords UI stilinde:** hoparlör/ses, titreşim (telefon), zil (bildirim), küre (dil), zarf (destek),
+  kilit-kalkan (gizlilik), kaydırıcı izi + sapı (Bars klasöründeki çubuk ilerleme çubuğu, kaydırıcı değil). Şu an geçici: nota, kalp, "i",
+  saat, dişli, kalkan; kaydırıcı hap + `ui_node_blue`.
+- **ADA düğmesi (3.2):** şimdilik Tiny Swords parçalarından birleştirilmiş `ui_icon_island.png` (Tools/campaign_art/island_icon.py); el çizimi
+  bir ada ikonu gelirse doğrudan değiştirilebilir.
+
+### Kart Atölyesi
+- **Kırık kalkan simgesi (Kalkan Kıran):** şimdilik çalışma zamanında `ui_icon_shield` + kırmızı `ui_icon_cross` üst üste (`BattleCards.ApplyIcon`). Tek parça, 64x64, Tiny Swords stilinde çatlak/kırık kalkan istenir.
+- **Gök Avcısı simgesi:** şimdilik Tiny Swords `Human Avatars/Avatars_03` (başlıklı kafa) `ui_icon_archer.png` olarak kopyalandı; pakette okçu avatarı yok. Yay çeken / kuşlu 64x64 bir okçu simgesi istenir.
+- **Keskin Oklar:** Tiny Swords `Units/Extra/Arrow/Arrow.png` 45° döndürülüp kırpıldı (`ui_icon_arrow.png`); 3 oklu demet simgesi daha iyi olur.
+- **Bilgi (i) simgesi:** `Icons/Icon_11` `ui_icon_info.png` olarak kopyalandı. Kart başına "savaş hakkı" için özel simge (kılıç+kart) yok; şimdilik `ui_icon_sword`.
+- Not: kopyalanan 3 PNG için .meta dosyaları `ui_icon_play.png.meta` şablonundan, yeni GUID ile elle yazıldı (Unity yeniden içe aktarır).

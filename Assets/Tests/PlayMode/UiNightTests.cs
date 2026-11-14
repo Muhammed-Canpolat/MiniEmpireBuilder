@@ -419,7 +419,7 @@ public class UiNightTests
         yield return new WaitForSecondsRealtime(0.5f);
         var root = GameObject.Find("CardWorkshopPanel");
         var panel = root.transform.Find("SafeArea/Panel");
-        string[] mustExist = { "Dynamic/QueueTitle", "Dynamic/SpeedUpHeader", "Dynamic/Detail/CostHeader", "Dynamic/Detail/TimeHeader",
+        string[] mustExist = { "Dynamic/QueueTitle", "Dynamic/Detail/CostHeader", "Dynamic/Detail/TimeHeader",
             "Dynamic/Detail/UsesIcon", "Dynamic/Detail/MeatIcon", "Dynamic/Detail/GoldIcon", "Dynamic/Detail/ClockIcon", "Dynamic/Detail/HintGemIcon",
             "Dynamic/Queue0/Ad/Icon", "Dynamic/Queue0/Gem/GemIcon", "Dynamic/Detail/CraftAd/Icon", "Dynamic/Queue0/ClockIcon" };
         foreach (var path in mustExist) Assert.NotNull(panel.Find(path), path + " eksik");

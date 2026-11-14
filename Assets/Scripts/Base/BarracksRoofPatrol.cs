@@ -65,8 +65,9 @@ public sealed class BarracksRoofPatrol : MonoBehaviour
             yield return new WaitForSeconds(Random.Range(0.4f, 1.2f));
             // Damın öbür yanına yürü
             line = RoofLine();
-            float target = x < (line.left + line.right) * 0.5f ? Random.Range(Mathf.Lerp(line.left, line.right, 0.6f), line.right)
-                : Random.Range(line.left, Mathf.Lerp(line.left, line.right, 0.4f));
+            // Damın öbür ucuna (son çeyreğe) yürür: kısa kıpırdamalar yerine belirgin devriye
+            float target = x < (line.left + line.right) * 0.5f ? Random.Range(Mathf.Lerp(line.left, line.right, 0.78f), line.right)
+                : Random.Range(line.left, Mathf.Lerp(line.left, line.right, 0.22f));
             lancer.flipX = target < x;
             Walking = true;
             Play(run != null && run.Length > 0 ? run : idle, 6f);

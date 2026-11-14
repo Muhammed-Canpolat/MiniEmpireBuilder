@@ -188,10 +188,18 @@ public static class BaseHudRedesign
     private static void AddRadialBand(RectTransform dock)
     {
         if (dock == null || dock.Find("RadialBand") != null) return;
-        ReferenceUiVisuals.Image(dock, "RadialBand", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
+        var dark = ReferenceUiVisuals.Image(dock, "RadialBand", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
             new Color(0.05f, 0.035f, 0.02f, 0.55f));
-        // 3. oturum (2.1): alt çerçeve şeridi (aslanlı kalkanlar + boş düğüm plakaları) kaldırıldı: işlevsiz boş yuvalar gibi
-        // görünüyordu. Şerit sade: koyu tahta + altın üst kenar + perçinler; ana düğme ortada tek odak.
+        // 4. oturum (3.1): iki yanında aslan armalı eski süslü şerit geri geldi (kullanıcı isteği; 3. oturumda D35 ile kaldırılmıştı).
+        // Aynı varlık: intro_button alt şeridi (OrnateStrip). Radyal menünün küçülen ana düğmesiyle (72) uyum: şerit dock
+        // yüksekliğine oturur, ortadaki süs ana düğmenin arkasında kalır; aslanlar iki yanda görünür.
+        var strip = OrnateStrip(false);
+        if (strip == null) return;
+        var ornament = ReferenceUiVisuals.Image(dark.rectTransform, "RadialOrnament", Vector2.zero, Vector2.one,
+            new Vector2(-2f, 0f), new Vector2(2f, -4f), new Color(1f, 1f, 1f, 0.85f));
+        ornament.sprite = strip;
+        ornament.raycastTarget = false;
+        ornament.transform.SetAsFirstSibling();
     }
 
     /// <summary>Simge üstte, yazı altta; orta düğme daha büyük ve dock'tan hafif taşar.</summary>

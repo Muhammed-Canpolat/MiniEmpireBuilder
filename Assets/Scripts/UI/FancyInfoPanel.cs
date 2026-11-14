@@ -61,7 +61,8 @@ public static class FancyInfoPanel
         v.title = ReferenceUiVisuals.Text(v.ribbon.transform, "Title", "", 20, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, new Vector2(40, 8), new Vector2(-40, -4), true);
         v.title.enableAutoSizing = true; v.title.fontSizeMin = 12f; v.title.fontSizeMax = 20f;
-        v.close = ReferenceUiVisuals.Button(t, "Close", "X", false, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-42, -40), new Vector2(-12, -12), 14);
+        // 4. oturum (3.4): dokunma alanı 30×28 → 44×44 (≥48 dp'ye yakın; kâğıt kenarından taşmaz)
+        v.close = ReferenceUiVisuals.Button(t, "Close", "X", false, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-52, -50), new Vector2(-8, -6), 16);
 
         v.icon = ReferenceUiVisuals.Image(t, "Icon", new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -150), new Vector2(128, -42), Color.white);
         v.icon.preserveAspect = true;
