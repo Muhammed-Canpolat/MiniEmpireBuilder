@@ -168,6 +168,80 @@ public class Session6Tests
         Assert.AreEqual(3, lancers[0]);
     }
 
+    // ==================== 1.3 Can barları ====================
+
+    [UnityTest]
+    public IEnumerator S1_3_WorldHealthBarFillStaysLeftWithTrail()
+    {
+        var target = new GameObject("BarTarget");
+        var bar = (Component)S("HealthBar", "Create", target.transform, 100f, null, null);
+        M(bar, "Resize", new Vector2(0.65f, 0.32f));
+        foreach (float hp in new[] { 80f, 37f, 5f })
+        {
+            M(bar, "UpdateHealth", hp);
+            yield return null;
+            Assert.AreEqual((float)P(bar, "BarLeftEdge"), (float)P(bar, "FillLeftEdge"), 1e-4, $"can {hp}: dolgu sol kenara yapışık");
+            var fill = bar.transform.Find("BarFill").GetComponent<SpriteRenderer>();
+            var bg = bar.transform.Find("BarBg").GetComponent<SpriteRenderer>();
+            Assert.AreEqual(bg.bounds.min.x, fill.bounds.min.x, 0.01f, $"can {hp}: dolgunun sol kenarı = zeminin sol kenarı");
+            Assert.AreEqual(bg.bounds.size.x * hp / 100f, fill.bounds.size.x, 0.01f, $"can {hp}: genişlik orantılı");
+            Assert.Greater((float)P(bar, "TrailRatio"), (float)P(bar, "ShownRatio"), "hasar anında beyaz iz görünür");
+        }
+        yield return new WaitForSecondsRealtime(1.2f);
+        Assert.AreEqual((float)P(bar, "ShownRatio"), (float)P(bar, "TrailRatio"), 0.01f, "iz kısa sürede dolguya erir");
+        Object.Destroy(target);
+    }
+
+    [UnityTest]
+    public IEnumerator S1_3_BattleCardsAndRangeRingsCapture()
+    {
+        yield return Session4Tests.StartBattle(1, 4, 6, s =>
+        {
+            foreach (var (type, slot) in new[] { ("ArcherTower", "archer_1"), ("CannonTower", "cannon_1"), ("Monastery", "monastery_1") })
+            {
+                var p = Activator.CreateInstance(T("PlacedBuildingData"));
+                SetF(p, "slotId", slot); SetF(p, "buildingType", type); SetF(p, "level", 4);
+                ((IList)F(s, "placedBuildings")).Add(p);
+            }
+        });
+        var battle = Object.FindFirstObjectByType(T("BattleManager"));
+        var bars = Object.FindObjectsByType(T("UiHealthBar"), FindObjectsSortMode.None).Cast<Component>().ToList();
+        Assert.GreaterOrEqual(bars.Count, 3, "Savaşçı, Ana Üs ve Çırak kartları ortak UiHealthBar kullanır");
+
+        // Yuvalara Okçu, Topçu, Manastır
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var build = battle.GetType().GetMethod("BuildTower", flags);
+        var monastery = battle.GetType().GetMethod("BuildMonastery", flags);
+        var slots = Object.FindObjectsByType(T("BattleBuildSlot"), FindObjectsSortMode.None).Cast<Component>().Take(3).ToList();
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (i == 2) monastery.Invoke(battle, new object[] { slots[i].transform.position, slots[i] });
+            else build.Invoke(battle, new object[] { slots[i].transform.position, Enum.Parse(T("BuildingType"), i == 0 ? "ArcherTower" : "CannonTower"), slots[i] });
+        }
+        var mainBase = Object.FindFirstObjectByType(T("MainBaseController"));
+        float max = (float)P(mainBase, "MaxHealth");
+        M(mainBase, "TakeDamage", max * 0.63f);
+        var hero = Object.FindFirstObjectByType(T("HeroController"));
+        M(hero, "TakeDamage", (float)P(hero, "MaxHealth") * 0.3f);
+        yield return null;
+        yield return null;
+        foreach (var b in bars)
+        {
+            var mask = (RectTransform)P(b, "FillMask");
+            Assert.AreEqual(0f, mask.anchorMin.x, 1e-4, b.name + ": dolgu sol kenardan başlar");
+            Assert.AreEqual((float)P(b, "Shown"), mask.anchorMax.x, 1e-3, b.name + ": dolgu genişliği oran kadar");
+        }
+        var baseBar = bars.FirstOrDefault(b => Mathf.Abs((float)P(b, "Shown") - 0.37f) < 0.02f);
+        Assert.NotNull(baseBar, "Ana Üs kartı %37 gösteriyor");
+        Assert.Greater((float)P(baseBar, "Trail"), (float)P(baseBar, "Shown"), "hasar anında beyaz iz");
+        yield return new WaitForSecondsRealtime(0.5f);
+        // Halkalar görünür (kurulunca 2,5 sn): tek görüntüde menzil + barlar
+        CardWorkshopTests.CaptureScreen("S1_2_3_battle_rings_bars", "session6");
+        yield return new WaitForSecondsRealtime(1.5f);
+        Assert.AreEqual((float)P(baseBar, "Shown"), (float)P(baseBar, "Trail"), 0.01f, "iz erir");
+        battle.GetType().GetMethod("BattleLost", System.Reflection.BindingFlags.Public | flags)?.Invoke(battle, null);
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]

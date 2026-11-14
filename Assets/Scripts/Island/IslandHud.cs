@@ -134,8 +134,13 @@ public sealed class IslandHud : MonoBehaviour
         castleFill.sprite = IslandArt.Square;
         castleFill.type = Image.Type.Filled;
         castleFill.fillMethod = Image.FillMethod.Horizontal;
+        // 6. oturum (1.3): görünen dolgu ortak UiHealthBar (sol kenara sabit + gecikmeli beyaz iz); castleFill yalnız değer kaynağı.
+        castleFill.enabled = false;
+        var castleSource = castleFill;
+        UiHealthBar.Build((RectTransform)barBg.transform, new Color(0.35f, 0.7f, 0.95f), () => castleSource.fillAmount);
         castleText = ReferenceUiVisuals.Text(barBg.transform, "Text", "", 11, Color.white, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, false, true);
+        castleText.transform.SetAsLastSibling();
     }
 
     /// <summary>AŞAMA 3 §3A: Ana Üs'le aynı süslü çerçeve + ResourceTopBar çipleri; solda ANA ÜS, yanında ada adı (tek satır, dokununca değişir).</summary>

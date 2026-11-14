@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -139,17 +140,24 @@ public static class BattleHudRedesign
             }
             if (fill != null)
             {
+                // 6. oturum (1.3): eski dolgu (Slider'ın iç boşluklu Fill Area'sı / Filled kare) yalnız değer kaynağı olarak kalır,
+                // görünen dolgu ortak UiHealthBar: sol kenara sabit, sağdan sola azalır, hasarda gecikmeli beyaz iz.
+                Image source = fill;
+                fill.enabled = false;
                 if (slider != null)
                 {
-                    fill.sprite = ReferenceUiVisuals.SolidPillSprite();
-                    fill.type = Image.Type.Sliced;
+                    var area = bar.Find("Fill Area");
+                    if (area != null) area.gameObject.SetActive(false);
                 }
-                fill.color = accent;
-                var shine = ReferenceUiVisuals.Image(fill.rectTransform, "Shine", new Vector2(0f, 0.55f), Vector2.one,
-                    new Vector2(2f, 0f), new Vector2(-2f, -1f), new Color(1f, 1f, 1f, 0.22f));
-                shine.sprite = ReferenceUiVisuals.SolidPillSprite();
-                shine.type = Image.Type.Sliced;
-                fill.gameObject.AddComponent<DangerPulse>().Initialize(fill, accent, slider);
+                RectTransform trackRect = track != null ? track.rectTransform : bar;
+                if (slider != null && track != null)
+                {
+                    trackRect.anchorMin = Vector2.zero; trackRect.anchorMax = Vector2.one;
+                    trackRect.offsetMin = trackRect.offsetMax = Vector2.zero;
+                }
+                var hp = UiHealthBar.Build(trackRect, accent,
+                    slider != null ? (Func<float>)(() => slider.normalizedValue) : () => source.fillAmount);
+                hp.Fill.gameObject.AddComponent<DangerPulse>().Initialize(hp.Fill, accent, slider, () => hp.Shown);
             }
         }
     }
@@ -193,18 +201,20 @@ public sealed class DangerPulse : MonoBehaviour
     private Image fill;
     private Color normal;
     private Slider slider;
+    private System.Func<float> ratioSource;
 
-    public void Initialize(Image target, Color accent, Slider source)
+    public void Initialize(Image target, Color accent, Slider source, System.Func<float> ratio = null)
     {
         fill = target;
         normal = accent;
         slider = source;
+        ratioSource = ratio;
     }
 
     private void Update()
     {
         if (fill == null) return;
-        float ratio = slider != null ? slider.normalizedValue : fill.fillAmount;
+        float ratio = ratioSource != null ? ratioSource() : slider != null ? slider.normalizedValue : fill.fillAmount;
         if (ratio > 0.3f)
         {
             fill.color = normal;

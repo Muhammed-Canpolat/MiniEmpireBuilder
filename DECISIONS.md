@@ -515,3 +515,13 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   aynı görünürlük kuralı (kurulunca 2,5 sn + kahraman yaklaşınca). Ada okçusunda çember çizilmiyor (v2 kararı) — dokunulmadı.
 - Test `Session6Tests.S1_2`: Y ölçeği 0,2 → 1 sonrası çember merkezi = RangeCenter; tüm kesik uçları merkezden aynı uzaklıkta; K/G/D/B'de
   yarıçap−0,02 içeride, +0,02 dışarıda.
+
+## D70 — Ortak can barı: sol kenara sabit + gecikmeli beyaz iz (6. oturum 1.3)
+- **Kök neden:** (1) dünya üstü `HealthBar`: dolgu sprite'ı 2 birim genişken (32 px / 16 ppu) sola kaydırma `barSize.x(1−oran)/2` ile yarım
+  hesaplanıyordu → dolgu ortaya doğru küçülüyor, solda boşluk kalıyordu. (2) Savaş alt kartları Unity Slider'ı kullanıyordu: "Fill Area"nın
+  varsayılan iç boşlukları (sol 5, sağ 15) ve küçük genişlikte bozulan sliced hap → dolgu soldan içeride başlıyordu. Çırak kartı ayrı bir Filled kare.
+- **Karar:** UI: `UI/UiHealthBar.cs` — sol çapalı RectMask2D kabı (genişlik = oran) içinde her zaman tam bar genişliğinde sliced hap (kenarlar hiçbir
+  oranda bozulmaz). Hasarda dolgu hemen iner, beyaz iz 0,35 sn bekleyip 1,6 oran/sn erir; iyileşme yumuşak artar; duraklatmada iz donar.
+  Savaşçı/Ana Üs/Çırak kartları (`BattleHudRedesign.StyleCard`) ve ada kale barı bunu kullanır; eski Slider/Filled görüntü yalnız değer kaynağı.
+  Dünya: `HealthBar` aynı kural (sol pivotlu sprite, aynı iz süreleri) — karakter, düşman, kule, Ana Üs, ada yapıları hepsi bu bileşen.
+- Test `Session6Tests.S1_3_*`; görüntü `Docs/playtest/session6/S1_2_3_battle_rings_bars.png`.

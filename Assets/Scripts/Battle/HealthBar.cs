@@ -3,7 +3,9 @@ using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
-/// Bir objenin ustunde kucuk can bari gosterir.
+/// Bir objenin üstünde küçük can barı. 6. oturum (1.3): dolgu SOL kenara sabit (sol pivotlu sprite), sağdan sola azalır;
+/// hasarda gecikmeli beyaz iz (UiHealthBar ile aynı kural ve süreler). Eskiden dolgu sprite'ı 2 birim genişken kaydırma yarım
+/// hesaplanıyordu: dolgu ortaya doğru küçülüyor, solda boşluk kalıyordu.
 /// </summary>
 public class HealthBar : MonoBehaviour
 {
@@ -20,6 +22,14 @@ public class HealthBar : MonoBehaviour
     public Transform Target => targetTransform;
     public Vector3 Offset { get => offset; set => offset = value; }
     private SpriteRenderer fillRenderer;
+    private SpriteRenderer trailRenderer;
+    private float shownRatio = 1f, trailRatio = 1f, trailHoldUntil;
+    public float ShownRatio => shownRatio;
+    public float TrailRatio => trailRatio;
+    /// <summary>Dolgunun sol kenarı (yerel x): oran ne olursa olsun barın sol kenarıyla aynı.</summary>
+    public float FillLeftEdge => fillRenderer != null ? fillRenderer.transform.localPosition.x : 0f;
+    public float BarLeftEdge => -barSize.x * SpriteUnitWidth * 0.5f;
+    private const float SpriteUnitWidth = 2f;   // 32 px / 16 ppu
     private float maxHealth = 1f;
     private float currentHealth = -1f;
     private Color baseColor = Color.green;
@@ -123,13 +133,20 @@ public class HealthBar : MonoBehaviour
         backgroundTransform = bgObj.transform;
         ApplyFrameScale();
 
+        var leftSprite = CreateRoundedBarSprite(new Vector2(0f, 0.5f));
+        GameObject trailObj = new GameObject("BarTrail");
+        trailObj.transform.SetParent(transform);
+        trailRenderer = trailObj.AddComponent<SpriteRenderer>();
+        trailRenderer.sprite = leftSprite;
+        trailRenderer.color = new Color(1f, 0.97f, 0.9f, 0.9f);
+        trailRenderer.sortingOrder = 11;
+
         GameObject fillObj = new GameObject("BarFill");
         fillObj.transform.SetParent(transform);
         fillRenderer = fillObj.AddComponent<SpriteRenderer>();
-        fillRenderer.sprite = CreateRoundedBarSprite();
+        fillRenderer.sprite = leftSprite;
         fillRenderer.color = baseColor;
-        fillRenderer.sortingOrder = 11;
-        fillObj.transform.localScale = new Vector3(barSize.x, barSize.y, 1f);
+        fillRenderer.sortingOrder = 12;
     }
 
     private void ApplyFrameScale()
@@ -148,30 +165,64 @@ public class HealthBar : MonoBehaviour
         ApplyFill(maxHealth > 0f ? Mathf.Clamp01(Mathf.Max(0f, currentHealth) / maxHealth) : 1f);
     }
 
+    /// <summary>Hasar: dolgu hemen iner, beyaz iz kısa bekleyip erir. İyileşme: dolgu yumuşakça artar.</summary>
     private void ApplyFillTween(float ratio)
     {
         if (fillRenderer == null)
             return;
-
-        float targetX = barSize.x * ratio;
-        float xOffset = -(barSize.x * (1f - ratio)) / 2f;
-
-        fillRenderer.transform.DOKill(false);
-        fillRenderer.transform.DOScaleX(targetX, SmoothDuration).SetEase(Ease.OutQuad).SetLink(gameObject);
-        fillRenderer.transform.DOLocalMoveX(xOffset, SmoothDuration).SetEase(Ease.OutQuad).SetLink(gameObject);
+        if (ratio < shownRatio - 1e-4f)
+        {
+            if (trailRatio < shownRatio) trailRatio = shownRatio;
+            trailHoldUntil = Time.unscaledTime + UiHealthBar.TrailHold;
+            shownRatio = ratio;
+        }
+        targetRatio = ratio;
+        Layout();
     }
+
+    private float targetRatio = 1f;
 
     private void ApplyFill(float ratio)
     {
-        if (fillRenderer == null)
-            return;
-
-        fillRenderer.transform.localScale = new Vector3(barSize.x * ratio, barSize.y, 1f);
-        float xOffset = -(barSize.x * (1f - ratio)) / 2f;
-        fillRenderer.transform.localPosition = new Vector3(xOffset, 0f, 0f);
+        shownRatio = trailRatio = targetRatio = Mathf.Clamp01(ratio);
+        Layout();
     }
 
-    private Sprite CreateRoundedBarSprite()
+    /// <summary>Sol pivotlu sprite'lar barın sol kenarına oturur; genişlik = oran × bar.</summary>
+    private void Layout()
+    {
+        float left = BarLeftEdge;
+        if (fillRenderer != null)
+        {
+            fillRenderer.transform.localPosition = new Vector3(left, 0f, 0f);
+            fillRenderer.transform.localScale = new Vector3(barSize.x * shownRatio, barSize.y, 1f);
+            fillRenderer.enabled = shownRatio > 0.001f;
+        }
+        if (trailRenderer != null)
+        {
+            trailRenderer.transform.localPosition = new Vector3(left, 0f, 0f);
+            trailRenderer.transform.localScale = new Vector3(barSize.x * trailRatio, barSize.y, 1f);
+            trailRenderer.enabled = trailRatio > shownRatio + 0.001f;
+        }
+    }
+
+    private void StepTrail()
+    {
+        float dt = Time.unscaledDeltaTime;
+        bool changed = false;
+        if (targetRatio > shownRatio) { shownRatio = Mathf.MoveTowards(shownRatio, targetRatio, UiHealthBar.FillSpeed * dt); changed = true; }
+        if (trailRatio < shownRatio) { trailRatio = shownRatio; changed = true; }
+        else if (trailRatio > shownRatio && Time.timeScale > 0f && Time.unscaledTime >= trailHoldUntil)
+        {
+            trailRatio = Mathf.MoveTowards(trailRatio, shownRatio, UiHealthBar.TrailSpeed * dt);
+            changed = true;
+        }
+        if (changed) Layout();
+    }
+
+    private Sprite CreateRoundedBarSprite() => CreateRoundedBarSprite(new Vector2(0.5f, 0.5f));
+
+    private Sprite CreateRoundedBarSprite(Vector2 pivot)
     {
         int width = 32;
         int height = 8;
@@ -189,11 +240,12 @@ public class HealthBar : MonoBehaviour
         }
         tex.SetPixels(colors);
         tex.Apply();
-        return Sprite.Create(tex, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 16f);
+        return Sprite.Create(tex, new Rect(0f, 0f, width, height), pivot, 16f);
     }
 
     private void LateUpdate()
     {
+        StepTrail();
         if (targetTransform != null)
             transform.position = targetTransform.position + offset;
         else
