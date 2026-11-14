@@ -379,6 +379,7 @@ public class BaseWorldUI : MonoBehaviour
     {
         var gm = GameManager.Instance;
         if (gm == null || !gm.Buildings.ContainsKey(type)) return;
+        SelectionManager.Select(this, CloseAllPanels);   // 4. oturum (1.2): geri tuşu / başka seçim pencereyi kapatır
 
         if (string.IsNullOrEmpty(slotId)) slotId = HighestSlotOf(type);
         bool reopen = buildingInfoPanel == null || !buildingInfoPanel.activeSelf
@@ -491,6 +492,7 @@ public class BaseWorldUI : MonoBehaviour
     private void ShowCharacterInfo(bool apprentice)
     {
         if (GameManager.Instance == null) return;
+        SelectionManager.Select(this, CloseAllPanels);   // 4. oturum (1.2)
         showingApprentice = apprentice;
         for (int i = 0; i < characterUnderlines.Length; i++)
             if (characterUnderlines[i] != null)
@@ -683,6 +685,7 @@ public class BaseWorldUI : MonoBehaviour
 
     private void CloseAllPanels()
     {
+        SelectionManager.Release(this);
         if (buildingInfoPanel != null) buildingInfoPanel.GetComponent<PanelController>()?.Hide();
         if (heroInfoPanel != null) heroInfoPanel.GetComponent<PanelController>()?.Hide();
         BuildMenuController.Instance?.Hide();

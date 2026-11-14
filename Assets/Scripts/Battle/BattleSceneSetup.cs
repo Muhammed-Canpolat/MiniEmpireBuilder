@@ -40,6 +40,7 @@ public class BattleSceneSetup : MonoBehaviour
 
     private void Start()
     {
+        WalkGridDebug.Install(BattleWalkGrid.Shared);   // 4. oturum (1.1): F6 yürünebilirlik + rotalar
         // Kamerayı ayarla
         Camera.main.orthographic = true;
         Camera.main.orthographicSize = CameraSizeFor(Camera.main.aspect);

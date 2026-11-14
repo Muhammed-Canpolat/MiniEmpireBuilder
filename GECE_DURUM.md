@@ -1,3 +1,49 @@
+# GECE_DURUM — Otonom çalışma (14 Kasım 2026, 4. oturum: hatalar + temel sistemler + UI/UX)
+
+DURUM: SÜRÜYOR (4. oturum)
+ŞU ANKİ İŞ: AŞAMA 2.1–2.2 (dekor)
+SIRADAKİ İŞ: AŞAMA 2 (dekor 1x1, katalog, maden çırağı, kışla, ölçek tablosu, yükseltme pencereleri, elmas bitirme, Kart Atölyesi)
+Kararlar: DECISIONS.md D45+ · Başlangıç commit'i: d1d8d5a
+BEKLEYEN (kullanıcı kararıyla ertelendi): Google Play işleri (PLAY_RELEASE §8) — hatalar ve UI/UX bittikten sonra.
+Test notu: Unity editörü açık olduğu için PlayMode testleri proje kopyasında (`D:/UnityProjects/MEB_TestRunner`, robocopy ile eşitlenir) koşturuluyor.
+
+4. OTURUM İŞ LİSTESİ:
+- [x] 1.1 Ortak yol bulma (Ana Üs / Ada / Savaş) + yeniden rota + debug görsel (D45)
+- [x] 1.2 Tek seçim yöneticisi (boş yer / başka öğe / geri tuşu) (D46)
+- [x] 1.3 Madeni Koru beyaz kare + kayıp sprite taraması (D47)
+- [x] 1.4 Ada çalı/kaya temizliği (D48) — testler Session4Tests 7/7, görüntüler Docs/playtest/session4/S1_*
+- [ ] 2.1 Dekor 1x1 · 2.2 Dekor kataloğu · 2.3 Maden çırağı · 2.4 Kışla devriyesi + ölçek tablosu · 2.5 Yükseltme pencereleri · 2.6 Elmas bitirme · 2.7 Kart Atölyesi
+- [ ] 3.1 Alt bar aslan motifi · 3.2 ADA düğmesi · 3.3 Ayarlar · 3.4 Genel UI/UX turu
+- [ ] SON: baştan oynatma + REPORT.md
+
+ENGELLENENLER:
+- (yok)
+
+## Referans görseller — 4. oturum
+⚠️ Mesajda bahsedilen 3 görsel (ve 2.7'deki 4. görsel) bu oturuma **ulaşmadı**; yalnız metin geldi. Aşağıdaki detaylar kullanıcının yazılı
+tariflerinden derlendi; görseller gelirse bu bölüm güncellenmeli.
+
+### Görsel 1 — Sefer "Madeni Koru" savaş ekranı
+- Madeni temsil eden yerde **düz beyaz kare** (sprite atanmamış/kayıp; 1.3).
+- Kışla kurulu: Ana Üs yakınında beliren mızraklı savaşçılar (Lancer) **ana savaşçıya göre çok büyük** (2.4).
+- HUD: **"MADEN %100"** yazısı üstteki inşa halkasının üzerine biniyor; halkanın **"6 HAK"** etiketi sıkışmış (3.4).
+
+### Görsel 2 — Ada üssü
+- İşçiler binaların üzerinden geçip yürüyor (1.1).
+- Ağaç dışındaki küçük çalı, kaya, ot gibi arazi öğeleri kaldırılamıyor (1.4).
+
+### Görsel 3 — Ana Üs (alt radyal menü açık)
+- Radyal menü açıkken **Sefer** ve **Kahraman** düğmeleri binaların üstüne biniyor; **"KAHRAMAN" etiketi Sefer düğmesinin altına kayıyor**,
+  etiketler birbirine çok yakın; arka plan kararmıyor (3.4).
+- Kahraman şapel ve bayrakla üst üste duruyor (3.4).
+- Alt barda iki yanında aslan arması olan eski motif yok, sade duvar dokusu var (3.1). ADA düğmesi kötü görünüyor (3.2).
+
+### Görsel 4 — Kart Atölyesi (2.7)
+- Başlık şeridi ve X ekran dışına taşıyor; "Et eksik (165): Ağıl ya da 💎 21" yarım; kuyruk boşken "HIZLANDIR" başlığı;
+  kart ikonları ada uymuyor; "▶ Reklamla üret (3/3)" + yeşil mücevher; "+3 kullanım" ikonu görev parşömeniyle aynı; kural metni yoğun;
+  YÜKSELT maliyet/kazanç göstermiyor; boş yuva metni sola yapışık; nadirlik etiketleri çerçeveye değiyor.
+
+---
 # GECE_DURUM — Otonom çalışma (13 Kasım 2026, 3. oturum: oyun testi geri bildirimi 2 + Google Play hazırlığı)
 
 DURUM: TAMAMLANDI (3. oturum)

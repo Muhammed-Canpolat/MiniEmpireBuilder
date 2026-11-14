@@ -696,10 +696,22 @@ public class EnemyController : MonoBehaviour
         Vector3 direction = (aim - transform.position);
         direction.z = 0f;
         direction.Normalize();
-        transform.position += direction * moveSpeed * SpeedMultiplier * Time.deltaTime;
+        float step = moveSpeed * SpeedMultiplier * Time.deltaTime;
+        bool onLane = route != null && currentTarget == mainBaseTransform;
+        if (IsFlying || onLane)
+            transform.position += direction * step;
+        else
+        {
+            // 4. oturum (1.1): yürüyen düşman kuleleri/Ana Üs'ü/binaları delip geçmez; ortak yol bulma ile dolanır.
+            steer = steer ?? new GridSteer(route != null ? (IWalkGrid)IslandWalkGrid.Shared : BattleWalkGrid.Shared);
+            Vector2 next = steer.Step(transform.position, aim, step, out float facing);
+            transform.position = new Vector3(next.x, next.y, transform.position.z);
+            if (Mathf.Abs(facing) > 0.0001f) direction = new Vector3(facing, 0f, 0f);
+        }
         if (spriteRenderer != null && direction.x != 0)
             spriteRenderer.flipX = direction.x > 0; // Düşmanlar sağdan gelirse sola baksın
     }
+    private GridSteer steer;
 
     // ==================== SALDIRI ====================
 

@@ -15,6 +15,8 @@ public sealed class IslandPawn : MonoBehaviour
     private const float FeetPixels = 39f;
 
     public Job Kind { get; private set; }
+    /// <summary>Son yürüyüşün rotası (hata ayıklama görseli ve testler).</summary>
+    public GridPathFollower LastPath { get; private set; }
     public string CurrentClip { get; private set; } = "";
 
     private IslandVisualCatalog catalog;
@@ -97,11 +99,14 @@ public sealed class IslandPawn : MonoBehaviour
     private IEnumerator Walk(Vector2 target, string runClip)
     {
         Play(runClip);
-        while (Vector2.Distance(transform.position, target) > 0.04f)
+        // 4. oturum (1.1): ortak yol bulma — bina, su, yar ve ağaçların içinden geçmez; merdivenden iner/çıkar; harita değişince
+        // yolda yeniden hesaplar; hedef kapalıysa en yakın ulaşılabilir noktada durur.
+        var follower = new GridPathFollower(IslandWalkGrid.Shared, transform.position, target);
+        LastPath = follower;
+        while (!follower.Done)
         {
-            Vector2 position = transform.position;
-            Vector2 next = Vector2.MoveTowards(position, target, Progression.Island.PawnRunSpeed * Time.deltaTime);
-            Face(next.x - position.x);
+            Vector2 next = follower.Tick(transform.position, Progression.Island.PawnRunSpeed * Time.deltaTime, out float facing);
+            Face(facing);
             transform.position = new Vector3(next.x, next.y, 0f);
             yield return null;
         }

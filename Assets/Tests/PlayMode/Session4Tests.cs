@@ -1,0 +1,439 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using static IslandPhaseBTests;
+using Object = UnityEngine.Object;
+
+/// <summary>
+/// 14 Kasım 2026, 4. oturum: ortak yol bulma (1.1), seçim yöneticisi (1.2), maden sprite'ı (1.3), ada doğa temizliği (1.4) ve sonraki
+/// aşamaların denetimleri. Görüntüler <c>PlaytestOutput/session4/*.png</c>. Yalıtılmış test kaydı (gerçek kayıt geri yüklenir).
+/// </summary>
+[Timeout(180000)]
+public class Session4Tests
+{
+    private const string Key = "MiniEmpireBuilder_SaveData";
+    private const string BackupKey = "MiniEmpireBuilder_SaveData_Backup";
+    private static string SaveFile => Path.Combine(Application.persistentDataPath, "save.json");
+    private string savedKey, savedBackup, savedFile;
+    private bool devWas;
+
+    [SetUp]
+    public void KeepRealSave()
+    {
+        savedKey = PlayerPrefs.HasKey(Key) ? PlayerPrefs.GetString(Key) : null;
+        savedBackup = PlayerPrefs.HasKey(BackupKey) ? PlayerPrefs.GetString(BackupKey) : null;
+        savedFile = File.Exists(SaveFile) ? File.ReadAllText(SaveFile) : null;
+        devWas = (bool)T("DevSettings").GetProperty("Enabled").GetValue(null);
+    }
+
+    [TearDown]
+    public void RestoreRealSave()
+    {
+        void Put(string key, string value) { if (value != null) PlayerPrefs.SetString(key, value); else PlayerPrefs.DeleteKey(key); }
+        Put(Key, savedKey);
+        Put(BackupKey, savedBackup);
+        if (savedFile != null) File.WriteAllText(SaveFile, savedFile);
+        else if (File.Exists(SaveFile)) File.Delete(SaveFile);
+        PlayerPrefs.Save();
+        T("DevSettings").GetProperty("Enabled").SetValue(null, devWas);
+        Call("WalkGridDebug", "Show", new object[] { null });
+        Call("IslandNameUi", "Close");
+        T("IslandSession").GetMethod("Clear").Invoke(null, null);
+        T("IslandRepair").GetField("Clock").SetValue(null, (Func<long>)(() => DateTime.UtcNow.Ticks));
+        Time.timeScale = 1f;
+    }
+
+    [OneTimeTearDown]
+    public void DropTestGameManager()
+    {
+        var manager = T("GameManager").GetProperty("Instance").GetValue(null) as Component;
+        if (manager != null) Object.DestroyImmediate(manager.gameObject);
+        PlayerPrefs.Save();
+    }
+
+    internal static string Folder
+    {
+        get
+        {
+            string folder = Path.GetFullPath(Path.Combine(Application.dataPath, "../PlaytestOutput/session4"));
+            Directory.CreateDirectory(folder);
+            return folder;
+        }
+    }
+
+    internal static IEnumerator CaptureIsland(string name, int w = 1080, int h = 1920)
+    {
+        yield return null;
+        yield return null;
+        Nov13FeedbackTests.CaptureCamera(name, (Camera)Prop(Setup, "WorldCamera"), w, h, true, Folder);
+    }
+
+    internal static IEnumerator CaptureBase(string name, int w = 1080, int h = 1920)
+    {
+        yield return null;
+        yield return null;
+        Nov13FeedbackTests.CaptureCamera(name, Camera.main, w, h, false, Folder);
+    }
+
+    // ==================== YOL BULMA YARDIMCILARI ====================
+
+    private static object Grid(string type) => T(type).GetField("Shared").GetValue(null);
+    private static bool Walkable(object grid, Vector2Int c) => (bool)grid.GetType().GetMethod("Walkable").Invoke(grid, new object[] { c });
+    private static int Version(object grid) => (int)grid.GetType().GetProperty("Version").GetValue(grid);
+    private static Vector2Int CellOf(object grid, Vector2 p) => (Vector2Int)grid.GetType().GetMethod("CellOf").Invoke(grid, new object[] { p });
+    private static Vector2 Center(object grid, Vector2Int c) => (Vector2)grid.GetType().GetMethod("Center").Invoke(grid, new object[] { c });
+
+    private static List<Vector2> FindPath(object grid, Vector2 from, Vector2 to, out bool reached)
+    {
+        var method = T("GridPathfinder").GetMethod("FindPath");
+        var args = new object[] { grid, from, to, false, null, 6000 };
+        var path = (List<Vector2>)method.Invoke(null, args);
+        reached = (bool)args[3];
+        return path;
+    }
+
+    private static bool LineClear(object grid, Vector2 a, Vector2 b) =>
+        (bool)T("GridPathfinder").GetMethod("LineClear").Invoke(null, new object[] { grid, a, b });
+
+    /// <summary>Yolun (ilk nokta hariç: karakterin bulunduğu yer) bütün parçaları yürünebilir hücrelerden geçer.</summary>
+    private static void AssertPathClear(object grid, List<Vector2> path, string label)
+    {
+        Assert.GreaterOrEqual(path.Count, 1, label + ": yol boş");
+        for (int i = 1; i < path.Count; i++)
+        {
+            Assert.IsTrue(Walkable(grid, CellOf(grid, path[i])), $"{label}: {i}. nokta kapalı hücrede {path[i]}");
+            if (i >= 2) Assert.IsTrue(LineClear(grid, path[i - 1], path[i]), $"{label}: {i - 1}→{i} parçası engelden geçiyor");
+        }
+    }
+
+    // ==================== 1.1 YOL BULMA ====================
+
+    [UnityTest]
+    public IEnumerator IslandPathsAvoidBuildingsWaterAndCliffsAndUseStairs()
+    {
+        yield return LoadIsland(island => { Set(island, "zoneMask", 0xFF); }, 8, v => { });
+        var grid = Grid("IslandWalkGrid");
+        // Kale ve kurulu her bina kapalı
+        var castle = (RectInt)T("IslandGrid").GetProperty("CastleRect").GetValue(null);
+        Assert.IsFalse(Walkable(grid, new Vector2Int(castle.xMin + 1, castle.yMin + 1)), "kale hücresi kapalı");
+        foreach (var entry in Placed(CurrentIsland()))
+        {
+            var rect = (RectInt)Call("IslandGrid", "Rect", Kind((string)Field(entry, "kind")), (int)Field(entry, "col"), (int)Field(entry, "row"));
+            for (int c = rect.xMin; c < rect.xMax; c++)
+                for (int r = rect.yMin; r < rect.yMax; r++)
+                    Assert.IsFalse(Walkable(grid, new Vector2Int(c, r)), $"{Field(entry, "id")} hücresi ({c},{r}) kapalı");
+        }
+        Assert.IsFalse(Walkable(grid, new Vector2Int(0, 0)), "su kapalı");
+
+        // Ova (r16) → zirve (kale yanı): yalnız merdivenlerden çıkılır; her adım yükseklik kuralına uyar.
+        var lowland = Center(grid, new Vector2Int(8, 16));
+        var plateau = Center(grid, new Vector2Int(6, 8));
+        var path = FindPath(grid, lowland, plateau, out bool reached);
+        Assert.IsTrue(reached, "ova → yayla yolu bulunur (merdivenden)");
+        AssertPathClear(grid, path, "ova→yayla");
+        bool usedStair = false;
+        for (int i = 1; i < path.Count; i++)
+        {
+            var a = path[i - 1]; var b = path[i];
+            int steps = Mathf.CeilToInt(Vector2.Distance(a, b) / 0.1f);
+            for (int k = 0; k <= steps; k++)
+            {
+                var c = CellOf(grid, Vector2.Lerp(a, b, k / (float)Mathf.Max(1, steps)));
+                if ((bool)Call("IslandLayout", "IsStair", c.x, c.y)) usedStair = true;
+            }
+        }
+        Assert.IsTrue(usedStair, "yükseklik değişimi merdivenden");
+
+        // Ulaşılamayan hedef (açık deniz): en yakın kara hücresinde biter, titreme yok.
+        var sea = Center(grid, new Vector2Int(10, 34));
+        var toSea = FindPath(grid, lowland, sea, out bool seaReached);
+        Assert.IsFalse(seaReached, "deniz hedefine ulaşılmaz");
+        AssertPathClear(grid, toSea, "denize");
+        Assert.Less(Vector2.Distance(toSea[toSea.Count - 1], sea), Vector2.Distance(lowland, sea), "hedefe yaklaşır");
+
+        // Piyonlar bir süre çalışsın: aldıkları her yol temiz.
+        Call("WalkGridDebug", "Show", grid);
+        yield return new WaitForSeconds(6f);
+        var pawns = (IList)T("IslandPawn").GetField("All").GetValue(null);
+        int checkedPaths = 0;
+        foreach (var pawn in pawns)
+        {
+            var follower = pawn.GetType().GetProperty("LastPath").GetValue(pawn);
+            if (follower == null) continue;
+            var p = ((IReadOnlyList<Vector2>)follower.GetType().GetProperty("Path").GetValue(follower)).ToList();
+            AssertPathClear(grid, p, "piyon " + pawn);
+            checkedPaths++;
+        }
+        Assert.Greater(checkedPaths, 0, "piyonlar yürüdü");
+        yield return CaptureIsland("S1_1_island_walkgrid");
+    }
+
+    [UnityTest]
+    public IEnumerator PlacingABuildingOnARouteBumpsTheGridAndWalkersRepath()
+    {
+        yield return LoadIsland(island => { Set(island, "zoneMask", 0xFF); Set(island, "wood", 5000); Set(island, "meat", 5000); }, 8, v => { });
+        var grid = Grid("IslandWalkGrid");
+        var from = Center(grid, new Vector2Int(4, 18));
+        var to = Center(grid, new Vector2Int(16, 18));
+        var follower = Activator.CreateInstance(T("GridPathFollower"), grid, from, to, null);
+        int v0 = Version(grid);
+        // Yol üstüne bir ev koy (kayıt düzeyinde; IslandVillage sahnede de günceller)
+        bool found = FindCellNear("House", CurrentIsland(), 0xFF, 10, 18, out int col, out int row);
+        Assert.IsTrue(found, "yol yakınında boş ev yeri");
+        Placed(CurrentIsland()).Add(Entry("House#path", "House", 1, col, row));
+        T("IslandWalkGrid").GetMethod("Invalidate").Invoke(null, null);
+        Assert.Greater(Version(grid), v0, "bina kurulunca ızgara sürümü artar");
+        var tick = follower.GetType().GetMethod("Tick");
+        Vector2 pos = from;
+        for (int i = 0; i < 2000 && !(bool)follower.GetType().GetProperty("Done").GetValue(follower); i++)
+        {
+            var args = new object[] { pos, 0.05f, 0f };
+            pos = (Vector2)tick.Invoke(follower, args);
+            Assert.IsTrue(Walkable(grid, CellOf(grid, pos)) || i < 3, $"yürüyen karakter kapalı hücreye girdi {pos}");
+        }
+        Assert.Greater((int)follower.GetType().GetProperty("Repaths").GetValue(follower), 0, "yoldaki karakter rotayı yeniden hesapladı");
+        Assert.Less(Vector2.Distance(pos, to), 0.6f, "hedefe ulaştı");
+        yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator BasePathsGoAroundBuildingsAndHeroStandsOnFreeGround()
+    {
+        yield return Nov13FeedbackTests.LoadBase(7);
+        var grid = Grid("BaseWalkGrid");
+        var bounds = (RectInt)grid.GetType().GetProperty("Bounds").GetValue(grid);
+        Assert.Greater(bounds.width, 4, "Ana Üs ızgarası");
+        // Bir uçtan diğerine: binaların içinden geçmez.
+        Vector2Int? a = null, b = null;
+        for (int x = bounds.xMin; x < bounds.xMax && a == null; x++)
+            for (int y = bounds.yMin; y < bounds.yMax && a == null; y++)
+                if (Walkable(grid, new Vector2Int(x, y))) a = new Vector2Int(x, y);
+        for (int x = bounds.xMax - 1; x >= bounds.xMin && b == null; x--)
+            for (int y = bounds.yMax - 1; y >= bounds.yMin && b == null; y--)
+                if (Walkable(grid, new Vector2Int(x, y))) b = new Vector2Int(x, y);
+        Assert.NotNull(a); Assert.NotNull(b);
+        var path = FindPath(grid, Center(grid, a.Value), Center(grid, b.Value), out bool reached);
+        AssertPathClear(grid, path, "Ana Üs köşeden köşeye");
+        Call("WalkGridDebug", "Show", grid);
+        yield return new WaitForSeconds(3f);
+        var hero = GameObject.Find("Hero");
+        Assert.NotNull(hero, "kahraman");
+        var cell = CellOf(grid, hero.transform.position);
+        Assert.IsTrue((bool)T("HeroMovementController").GetMethod("IsStandCell").Invoke(null, new object[] { cell, hero, null })
+            || (bool)T("HeroMovementController").GetProperty("Instance").GetValue(null).GetType().GetProperty("IsMoving")
+                .GetValue(T("HeroMovementController").GetProperty("Instance").GetValue(null)),
+            "kahraman boş bir yerde durur (bina/dekor/bayrak görseline binmez) ya da yürüyor");
+        yield return CaptureBase("S1_1_base_walkgrid");
+    }
+
+    [Test]
+    public void BattleSteeringGoesAroundStructures()
+    {
+        var owner = new GameObject("TestObstacle");
+        try
+        {
+            var obstacles = T("BattleObstacles");
+            obstacles.GetMethod("Register").Invoke(null, new object[] { owner, new Rect(-1f, -1f, 2f, 2f) });
+            var grid = Grid("BattleWalkGrid");
+            Assert.IsFalse(Walkable(grid, CellOf(grid, Vector2.zero)), "yapı alanı kapalı");
+            var steer = Activator.CreateInstance(T("GridSteer"), grid);
+            var step = steer.GetType().GetMethod("Step");
+            Vector2 pos = new Vector2(-4f, 0.1f), goal = new Vector2(4f, 0f);
+            for (int i = 0; i < 600 && Vector2.Distance(pos, goal) > 0.05f; i++)
+            {
+                var args = new object[] { pos, goal, 0.05f, 0f };
+                pos = (Vector2)step.Invoke(steer, args);
+                Assert.IsFalse(new Rect(-1f, -1f, 2f, 2f).Contains(pos), $"düşman yapının içine girdi {pos}");
+            }
+            Assert.Less(Vector2.Distance(pos, goal), 0.1f, "hedefe dolanarak ulaştı");
+        }
+        finally
+        {
+            T("BattleObstacles").GetMethod("Unregister").Invoke(null, new object[] { owner });
+            Object.DestroyImmediate(owner);
+        }
+    }
+    // ==================== 1.2 SEÇİM YÖNETİCİSİ ====================
+
+    [UnityTest]
+    public IEnumerator DecorSelectionClosesOnEmptyTapOtherTapAndBackKey()
+    {
+        yield return Nov13FeedbackTests.LoadBase(7);
+        var decor = T("DecorPlacementController").GetProperty("Instance").GetValue(null);
+        Assert.NotNull(decor, "dekor denetçisi");
+        var all = (Array)T("DecorPlacementController").GetProperty("All").GetValue(null);
+        Assert.Greater(all.Length, 0, "dekor kataloğu");
+        var data = all.GetValue(0);
+        var spawn = decor.GetType().GetMethod("Spawn", BindingFlags.NonPublic | BindingFlags.Instance);
+        // Boş bir hücre bul
+        var grid = Grid("BaseWalkGrid");
+        var bounds = (RectInt)grid.GetType().GetProperty("Bounds").GetValue(grid);
+        Vector2Int cell = default; bool found = false;
+        for (int x = bounds.xMin + 2; x < bounds.xMax - 3 && !found; x++)
+            for (int y = bounds.yMin + 2; y < bounds.yMax - 3 && !found; y++)
+            {
+                bool free = true;
+                for (int dx = -1; dx <= 2 && free; dx++) for (int dy = -1; dy <= 2 && free; dy++)
+                    free = Walkable(grid, new Vector2Int(x + dx, y + dy));
+                if (free) { cell = new Vector2Int(x, y); found = true; }
+            }
+        Assert.IsTrue(found, "boş hücre");
+        var item = (Component)spawn.Invoke(decor, new object[] { data, cell, "test-decor" });
+        yield return null;
+        var show = decor.GetType().GetMethod("ShowActions");
+        var visible = decor.GetType().GetProperty("ActionsVisible");
+        var setup = Object.FindFirstObjectByType(T("BaseSceneSetup"));
+        var tap = setup.GetType().GetMethod("HandleTap", BindingFlags.NonPublic | BindingFlags.Instance);
+        var selection = T("SelectionManager");
+
+        show.Invoke(decor, new object[] { item });
+        Assert.IsTrue((bool)visible.GetValue(decor), "TAŞI / SİL açıldı");
+        yield return CaptureBase("S1_2_decor_selected");
+        // 1) boş yere dokunuş
+        Vector3 empty = new Vector3(bounds.xMin + 0.5f, bounds.yMin + 0.5f, 0f);
+        for (int x = bounds.xMin; x < bounds.xMax; x++)
+            if (Walkable(grid, new Vector2Int(x, bounds.yMin)) && Mathf.Abs(x - cell.x) > 3) { empty = new Vector3(x + 0.5f, bounds.yMin + 0.5f, 0f); break; }
+        tap.Invoke(setup, new object[] { empty });
+        yield return null;
+        Assert.IsFalse((bool)visible.GetValue(decor), "boş yere dokunmak seçimi kapatır");
+        // 2) aynı dekora tekrar dokunmak (aç/kapa)
+        show.Invoke(decor, new object[] { item });
+        Assert.IsTrue((bool)visible.GetValue(decor));
+        tap.Invoke(setup, new object[] { item.transform.position });
+        yield return null;
+        Assert.IsFalse((bool)visible.GetValue(decor), "aynı dekora dokunmak seçimi kapatır");
+        // 3) geri tuşu = SelectionManager.Clear
+        show.Invoke(decor, new object[] { item });
+        Assert.IsTrue((bool)visible.GetValue(decor));
+        Assert.IsTrue((bool)selection.GetMethod("Clear").Invoke(null, null), "geri tuşu kapatacak seçim buldu");
+        yield return null;
+        Assert.IsFalse((bool)visible.GetValue(decor), "geri tuşu seçimi kapatır");
+        // 4) başka bir yapıya dokunmak: bina penceresi açılır, dekor eylemleri kapanır
+        show.Invoke(decor, new object[] { item });
+        var ui = Object.FindFirstObjectByType(T("BaseWorldUI"));
+        ui.GetType().GetMethod("ShowHeroInfo").Invoke(ui, null);
+        yield return null;
+        Assert.IsFalse((bool)visible.GetValue(decor), "başka seçim dekor seçimini kapatır");
+        Assert.IsTrue((bool)selection.GetMethod("Clear").Invoke(null, null), "pencere de seçim yöneticisinde");
+        yield return new WaitForSecondsRealtime(0.4f);
+        Assert.IsFalse((bool)ui.GetType().GetProperty("IsInfoPanelOpen").GetValue(ui), "geri tuşu pencereyi kapatır");
+    }
+    // ==================== 1.3 MADENİ KORU: MADEN SPRITE'I ====================
+
+    internal static IEnumerator StartBattle(int region, int level, int mainBase = 5, Action<object> configure = null)
+    {
+        var managerType = T("GameManager");
+        var manager = managerType.GetProperty("Instance").GetValue(null) as Component;
+        if (manager == null) manager = new GameObject("TestGameManager").AddComponent(managerType);
+        yield return null;
+        var save = NewSave();
+        foreach (var entry in (IEnumerable)Field(save, "buildings"))
+            if (Field(entry, "buildingType").ToString() == "MainBase") Set(entry, "level", mainBase);
+        configure?.Invoke(save);
+        managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
+        managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(manager, null);
+        T("BattleSession").GetMethod("Begin").Invoke(null, new object[] { region, level });
+        UnityEngine.SceneManagement.SceneManager.LoadScene("BattleScene");
+        for (int frame = 0; frame < 45; frame++) yield return null;
+        yield return new WaitForSecondsRealtime(0.6f);
+    }
+
+    /// <summary>Etkin, Animator'suz ve sprite'ı boş SpriteRenderer'lar (kayıp sprite referansı belirtisi).</summary>
+    internal static List<string> NullSpriteRenderers()
+    {
+        var list = new List<string>();
+        foreach (var sr in Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None))
+        {
+            if (!sr.enabled || !sr.gameObject.activeInHierarchy || sr.sprite != null) continue;
+            if (sr.GetComponentInParent<Animator>() != null) continue;
+            if (sr.GetComponent<ParticleSystem>() != null) continue;
+            list.Add(sr.gameObject.name);
+        }
+        return list;
+    }
+
+    [UnityTest]
+    public IEnumerator DefendTheMineShowsATinySwordsMineWithHealthBar()
+    {
+        yield return StartBattle(1, 3);
+        var battle = Object.FindFirstObjectByType(T("BattleManager"));
+        Assert.NotNull(battle, "savaş");
+        var mine = battle.GetType().GetProperty("DefendedMine").GetValue(battle) as Component;
+        Assert.NotNull(mine, "Madeni Koru: maden kuruldu");
+        var sr = mine.GetComponent<SpriteRenderer>();
+        Assert.NotNull(sr.sprite, "maden sprite'ı atanmış");
+        StringAssert.Contains("Gold", sr.sprite.texture.name + sr.sprite.name, "Tiny Swords altın kayası");
+        Assert.NotNull(mine.transform.Find("MineHouse"), "maden evi");
+        Assert.NotNull(mine.transform.Find("MineHouse").GetComponent<SpriteRenderer>().sprite, "maden evi sprite'ı");
+        var bar = mine.GetType().GetField("healthBar", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(mine) as Component;
+        Assert.NotNull(bar, "can barı");
+        var empty = NullSpriteRenderers();
+        File.WriteAllLines(Path.Combine(Folder, "S1_3_null_sprites_battle.txt"), empty);
+        Assert.IsFalse(empty.Any(n => n.Contains("Mine")), "madende boş sprite yok: " + string.Join(", ", empty));
+        var cam = Camera.main;
+        var follow = cam.GetComponent(T("CameraFollow")) as Behaviour;
+        if (follow != null) follow.enabled = false;
+        cam.transform.position = new Vector3(mine.transform.position.x, mine.transform.position.y - 1.5f, cam.transform.position.z);
+        yield return null;
+        CardWorkshopTests.CaptureScreen("S1_3_defend_mine", "session4");
+        if (follow != null) follow.enabled = true;
+        battle.GetType().GetMethod("BattleLost", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(battle, null);
+    }
+    // ==================== 1.4 ADA: ÇALI / KAYA TEMİZLİĞİ ====================
+
+    [UnityTest]
+    public IEnumerator IslandBushesAndRocksCanBeClearedForASmallCost()
+    {
+        yield return LoadIsland(island => { Set(island, "zoneMask", 0xFF); Set(island, "wood", 200); }, 8, v => { });
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        Set(Prop(gm, "PlayerData"), "gold", 100);   // altın tavanının altında kalsın
+        var nature = T("IslandNatureClear");
+        var items = ((IEnumerable)nature.GetProperty("Items").GetValue(null)).Cast<object>().ToList();
+        Assert.Greater(items.Count, 10, "çalı ve kayalar bulundu");
+        object bush = items.First(it => Field(it, "kind").ToString() == "Bush" && !(bool)Field(it, "Cleared"));
+        object rock = items.First(it => Field(it, "kind").ToString() == "Rock" && !(bool)Field(it, "Cleared"));
+        var island = CurrentIsland();
+        int wood0 = (int)Field(island, "wood");
+        int gold0 = (int)gm.GetType().GetProperty("Gold").GetValue(gm);
+
+        // Dokunma: panel açılır
+        var root = (Transform)Field(bush, "root");
+        var village = T("IslandVillage").GetProperty("Instance").GetValue(null);
+        var r = (SpriteRenderer)Field(bush, "renderer");
+        Assert.IsTrue((bool)village.GetType().GetMethod("HandleTap").Invoke(village, new object[] { (Vector2)r.bounds.center }), "çalıya dokunuş işlendi");
+        yield return null;
+        yield return CaptureIsland("S1_4_bush_panel");
+
+        var tryClear = nature.GetMethod("TryClear");
+        var args = new object[] { Field(bush, "kind"), Field(bush, "cell"), null };
+        Assert.IsTrue((bool)tryClear.Invoke(null, args), "çalı temizlendi: " + args[2]);
+        args = new object[] { Field(rock, "kind"), Field(rock, "cell"), null };
+        Assert.IsTrue((bool)tryClear.Invoke(null, args), "kaya kırıldı: " + args[2]);
+        yield return new WaitForSeconds(0.6f);
+        Assert.IsFalse(root.gameObject.activeSelf, "çalı görseli kalktı");
+        Assert.IsFalse(((Transform)Field(rock, "root")).gameObject.activeSelf, "kaya görseli kalktı");
+        var cleared = (IList<string>)Field(island, "clearedNature");
+        Assert.AreEqual(2, cleared.Count, "kayda yazıldı");
+        Assert.AreEqual(wood0 + (int)nature.GetField("BushWood").GetValue(null) - (int)nature.GetField("RockWood").GetValue(null), (int)Field(island, "wood"), "odun: +çalı −kaya");
+        Assert.AreEqual(gold0 - (int)nature.GetField("BushGold").GetValue(null) + (int)nature.GetField("RockGold").GetValue(null),
+            (int)gm.GetType().GetProperty("Gold").GetValue(gm), "altın: −çalı +kaya");
+        // Kayıt döngüsü: JSON'a yazılıp geri okunur
+        string json = JsonUtility.ToJson(island);
+        StringAssert.Contains("clearedNature", json);
+        yield return CaptureIsland("S1_4_after_clear");
+
+        // Bina altında kalan çalı (eski kayıt) bedelsiz gizlenir
+        object other = items.First(it => Field(it, "kind").ToString() == "Bush" && !(bool)Field(it, "Cleared"));
+        var cell = (Vector2Int)Field(other, "cell");
+        Placed(island).Add(Entry("House#overbush", "House", 1, cell.x, cell.y));
+        nature.GetMethod("Refresh").Invoke(null, new object[] { true });
+        Assert.IsTrue((bool)Field(other, "Cleared"), "bina altındaki çalı gizlendi");
+        Assert.IsTrue(cleared.Contains("bush:" + cell.x + "," + cell.y), "göç: kayda yazıldı");
+    }
+}

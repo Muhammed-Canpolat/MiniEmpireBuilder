@@ -236,9 +236,12 @@ public sealed class AllyLancer : MonoBehaviour
         if (to.sqrMagnitude > 0.04f)
         {
             if (Mathf.Abs(to.x) > 0.05f && Target == null) sr.flipX = to.x < 0f;
-            transform.position = (Vector2)transform.position + to.normalized * Mathf.Min(to.magnitude, Progression.AllyLancerSpeed * Time.deltaTime);
+            steer = steer ?? new GridSteer(BattleWalkGrid.Shared);   // 4. oturum (1.1): yapıların içinden geçmez
+            transform.position = steer.Step(transform.position, goal, Progression.AllyLancerSpeed * Time.deltaTime, out _);
         }
     }
+
+    private GridSteer steer;
 
     public void TakeDamage(float amount)
     {

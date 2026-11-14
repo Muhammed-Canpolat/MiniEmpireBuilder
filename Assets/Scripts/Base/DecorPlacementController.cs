@@ -313,6 +313,8 @@ public sealed class DecorPlacementController : MonoBehaviour
     public void ShowActions(DecorInstance item)
     {
         if (item == null || selected != null) return;
+        // 4. oturum (1.2): aynı dekora tekrar dokunmak seçimi kapatır; başka öğe/boş yer/geri tuşu SelectionManager ile kapatır.
+        if (SelectionManager.IsSelected(item)) { SelectionManager.Clear(); return; }
         HideActions();
         var parent = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
         if (parent == null) return;
@@ -328,12 +330,16 @@ public sealed class DecorPlacementController : MonoBehaviour
         panelImage.color = Color.white;
         MakeButton(rect, L.T("TAŞI", "MOVE"), new Vector2(-50f, 0f), () => BeginMove(item), false, 92f);
         MakeButton(rect, L.T($"SİL +{item.Data.cost / 2}", $"REMOVE +{item.Data.cost / 2}"), new Vector2(50f, 0f), () => Delete(item), false, 92f);
+        SelectionManager.Select(item, HideActions);
     }
+
+    public bool ActionsVisible => actionPanel != null;
 
     private void HideActions()
     {
         if (actionPanel != null) Destroy(actionPanel);
         actionPanel = null;
+        if (SelectionManager.Current is DecorInstance) SelectionManager.Release(SelectionManager.Current);
     }
 
     private DecorInstance Spawn(DecorData data, Vector2Int cell, string id)

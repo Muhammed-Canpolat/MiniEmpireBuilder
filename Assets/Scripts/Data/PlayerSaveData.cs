@@ -311,6 +311,7 @@ public class IslandSaveData
     public bool freshStart;         // ada boş başlangıçla (yalnız kale) kuruldu
     public int freeBuildMask;       // bit (int)BuildingKind = o türün ilk yapımı kullanıldı (bedava hakkı bitti)
     public List<string> clearedTrees = new List<string>();   // kesilen ağaçlar "sütun,satır" (bir daha büyümez)
+    public List<string> clearedNature = new List<string>();  // 4. oturum (1.4): temizlenen çalı/kaya "bush:c,r" / "rock:c,r"
     public bool legacyVillage;      // v10 öncesi ilerlemesi olan ama köyü tohumlanmamış kayıt: ilk açılışta hazır köy kurulur
     // v11 (AŞAMA 3): ada adı. Boş ad = "Martı Adası". nameSeal = ad+değişiklik sayısının basit özeti (elle düzenleme tespiti).
     public string islandName = "";

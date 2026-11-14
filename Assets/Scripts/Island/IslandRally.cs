@@ -202,8 +202,13 @@ public sealed class IslandLancer : MonoBehaviour
         }
         Vector2 to = goal - Position;
         if (to.sqrMagnitude > 0.04f)
-            transform.position = (Vector2)transform.position + to.normalized * Mathf.Min(to.magnitude, Progression.Island.LancerSpeed * Time.deltaTime);
+        {
+            // 4. oturum (1.1): binaların/suyun içinden geçmez (ortak yol bulma)
+            steer = steer ?? new GridSteer(IslandWalkGrid.Shared);
+            transform.position = steer.Step(Position, goal, Progression.Island.LancerSpeed * Time.deltaTime, out _);
+        }
     }
+    private GridSteer steer;
 
     public void TakeDamage(float amount)
     {

@@ -363,23 +363,39 @@ public class BuilderVisualController : MonoBehaviour
             unit.workerRenderer.flipX = toward.x < unit.worker.position.x;
     }
 
-    /// <summary>Dolu hücrelerin etrafından dolanarak yürür; yol yoksa düz çizgi.</summary>
+    /// <summary>
+    /// Ortak yol bulma (4. oturum 1.1): dolu hücrelerin etrafından dolanır; harita değişirse (bina kuruldu/taşındı) yolda yeniden
+    /// hesaplar. Yapıya yanaşınca son adımı yapıya doğru atar; ulaşılamazsa en yakın noktada durur (bina içinden geçmez).
+    /// </summary>
     private IEnumerator Walk(Unit unit, Vector3 dest, RectInt? goalFootprint, RectInt[] ignore)
     {
-        Vector3 start = unit.worker.position;
-        var path = BuilderPathfinder.FindPath(start, dest, goalFootprint, ignore);
-        if (path == null)
-            path = new List<Vector3> { start, dest };
-        else if (goalFootprint.HasValue)
-            path.Add(dest); // son adım: kulübeye / yapıya doğru
-        unit.animator?.Play("Pawn_Run Hammer_" + unit.Color);
-        for (int i = 1; i < path.Count; i++)
+        var grid = BaseWalkGrid.Ignoring(ignore);
+        System.Func<Vector2Int, bool> isGoal = null;
+        if (goalFootprint.HasValue)
         {
-            Vector3 next = path[i];
-            Face(unit, next);
-            while ((unit.worker.position - next).sqrMagnitude > 0.0004f)
+            var r = goalFootprint.Value;
+            isGoal = c => grid.Walkable(c) &&
+                c.x >= r.xMin - 1 && c.x <= r.xMax && c.y >= r.yMin - 1 && c.y <= r.yMax &&
+                !(c.x >= r.xMin && c.x < r.xMax && c.y >= r.yMin && c.y < r.yMax) &&
+                (c.x >= r.xMin && c.x < r.xMax || c.y >= r.yMin && c.y < r.yMax);
+        }
+        var follower = new GridPathFollower(grid, unit.worker.position, dest, isGoal);
+        unit.animator?.Play("Pawn_Run Hammer_" + unit.Color);
+        while (!follower.Done)
+        {
+            Vector2 next = follower.Tick(unit.worker.position, WalkSpeed * Time.deltaTime, out float facing);
+            if (Mathf.Abs(facing) > 0.001f && unit.workerRenderer != null) unit.workerRenderer.flipX = facing < 0f;
+            unit.worker.position = new Vector3(next.x, next.y, unit.worker.position.z);
+            unit.workerRenderer.sortingOrder = 101 - Mathf.RoundToInt(unit.worker.position.y * 2f);
+            yield return null;
+        }
+        if (goalFootprint.HasValue && follower.Reached)
+        {
+            // son adım: kulübeye / yapıya doğru (kapıdan girer)
+            Face(unit, dest);
+            while ((unit.worker.position - dest).sqrMagnitude > 0.0004f)
             {
-                unit.worker.position = Vector3.MoveTowards(unit.worker.position, next, WalkSpeed * Time.deltaTime);
+                unit.worker.position = Vector3.MoveTowards(unit.worker.position, dest, WalkSpeed * Time.deltaTime);
                 unit.workerRenderer.sortingOrder = 101 - Mathf.RoundToInt(unit.worker.position.y * 2f);
                 yield return null;
             }

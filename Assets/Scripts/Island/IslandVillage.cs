@@ -23,6 +23,7 @@ public sealed class IslandVillage : MonoBehaviour
     public Action<int> ZoneTapped;
     /// <summary>AŞAMA 2 §3: ağaca dokunuş (hücre).</summary>
     public Action<Vector2Int> TreeTapped;
+    public Action<IslandNatureClear.Item> NatureTapped;   // 4. oturum (1.4): çalı/kaya temizliği
     public Action<string> Toast;
 
     private IslandSceneSetup setup;
@@ -592,6 +593,12 @@ public sealed class IslandVillage : MonoBehaviour
             if (tree != null && IslandGrid.ZoneOpen(IslandLayout.ZoneAt(tree.Cell.x, tree.Cell.y), IslandSession.Save != null ? IslandSession.Save.zoneMask : 1))
             { TreeTapped(tree.Cell); return true; }
         }
+        if (NatureTapped != null)
+        {
+            var nature = IslandNatureClear.At(world);
+            if (nature != null && IslandGrid.ZoneOpen(IslandLayout.ZoneAt(nature.cell.x, nature.cell.y), IslandSession.Save != null ? IslandSession.Save.zoneMask : 1))
+            { NatureTapped(nature); return true; }
+        }
         int zone = setup != null ? setup.ZoneCloudAt(world) : -1;
         if (zone > 0) { ZoneTapped?.Invoke(zone); return true; }
         return false;
@@ -606,6 +613,8 @@ public sealed class IslandVillage : MonoBehaviour
     {
         SpawnEntry(entry);
         IslandFx.Play("dust_1", SpotFor(entry).FeetWorld + Vector2.up * 0.3f, 1.6f, 14f);
+        IslandNatureClear.Refresh(true);   // 4. oturum (1.4): binanın altında kalan çalı/kaya kalkar
+        IslandWalkGrid.Invalidate();
         UpdateTaskVisuals(true);
     }
 
@@ -619,6 +628,8 @@ public sealed class IslandVillage : MonoBehaviour
         RebuildSheep();
         RebuildPawns();
         RefreshPiles(true);
+        IslandNatureClear.Refresh(true);
+        IslandWalkGrid.Invalidate();
     }
 
     /// <summary>Taşınırken kaynak binayı yarı saydam gösterir.</summary>

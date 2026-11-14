@@ -76,6 +76,8 @@ public class BaseSceneSetup : MonoBehaviour
         SetupCamera();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (DevSettings.DebugOverlay) gameObject.AddComponent<BaseDebugOverlay>();
+        SelectionManager.InstallBackKey();   // 4. oturum (1.2): geri tuşu seçimi iptal eder
+        WalkGridDebug.Install(BaseWalkGrid.Shared);   // 4. oturum (1.1): F6 yürünebilirlik + rotalar
 #endif
         StartCoroutine(LogBaseWidthAfterSpawn());
         StartCoroutine(RepairLayoutAfterLoad());
@@ -1149,6 +1151,15 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void HandleTap(Vector3 worldPos)
     {
+        // 4. oturum (1.2): her dünya dokunuşu önce açık seçimi (dekor eylemleri, kaldırma istemi, bina penceresi) kapatır;
+        // aynı dekora dokunmak seçimi kapatıp bırakır (aç/kapa).
+        var previous = SelectionManager.Current;
+        SelectionManager.Clear();
+        if (previous is DecorInstance prevDecor && prevDecor != null)
+        {
+            var again = Physics2D.Raycast(worldPos, Vector2.zero).collider?.GetComponentInParent<DecorInstance>();
+            if (again == prevDecor) return;
+        }
         if (IsHeroTap(worldPos))
         {
             HideRemovePrompt();
@@ -1296,6 +1307,7 @@ public class BaseSceneSetup : MonoBehaviour
 
         HideRemovePrompt();
         _removeTarget = obj;
+        SelectionManager.Select(RemovePromptToken, HideRemovePrompt);   // 4. oturum (1.2)
 
         var canvasRect = _mainCanvas.GetComponent<RectTransform>();
         _removePrompt = new GameObject("RemovePrompt", typeof(RectTransform), typeof(Image));
@@ -1364,6 +1376,7 @@ public class BaseSceneSetup : MonoBehaviour
         if (nature == null) return;
         HideRemovePrompt();
         _removeTarget = null;
+        SelectionManager.Select(RemovePromptToken, HideRemovePrompt);   // 4. oturum (1.2)
         var canvasRect = _mainCanvas.GetComponent<RectTransform>();
         _removePrompt = new GameObject("RemovePrompt", typeof(RectTransform), typeof(Image));
         _removePrompt.transform.SetParent(_mainCanvas.transform, false);
@@ -1438,8 +1451,11 @@ public class BaseSceneSetup : MonoBehaviour
         return removePointer;
     }
 
+    private static readonly object RemovePromptToken = new object();
+
     private void HideRemovePrompt()
     {
+        SelectionManager.Release(RemovePromptToken);
         if (_removePrompt != null)
         {
             Destroy(_removePrompt);

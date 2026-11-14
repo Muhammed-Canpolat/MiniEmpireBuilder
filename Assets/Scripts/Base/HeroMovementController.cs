@@ -79,7 +79,7 @@ public class HeroMovementController : MonoBehaviour
             PlayFrame(false);
             return;
         }
-        if (!walking && Time.time >= waitUntil)
+        if (!placedOnce || (!walking && Time.time >= waitUntil))
             SelectNextTarget();
         PlayFrame(walking);
     }
@@ -88,59 +88,85 @@ public class HeroMovementController : MonoBehaviour
     {
         if (!walking || (BaseWorldUI.Instance != null && BaseWorldUI.Instance.IsInfoPanelOpen)) return;
         Vector2 current = body != null ? body.position : (Vector2)transform.position;
-        Vector2 next = Vector2.MoveTowards(current, target, WalkSpeed * Time.fixedDeltaTime);
+        if (follower == null) { walking = false; return; }
+        Vector2 next = follower.Tick(current, WalkSpeed * Time.fixedDeltaTime, out float facing);
+        if (Mathf.Abs(facing) > 0.001f && spriteRenderer != null) spriteRenderer.flipX = facing < 0f;
         if (body != null) body.MovePosition(next);
         else transform.position = new Vector3(next.x, next.y, transform.position.z);
-        if (Vector2.Distance(next, target) < 0.04f)
+        if (follower.Done)
         {
             walking = false;
-            waitUntil = Time.time + Random.Range(1f, 3f);
+            follower = null;
+            waitUntil = Time.time + Random.Range(1.5f, 4f);
         }
+    }
+
+    private GridPathFollower follower;
+    private bool placedOnce;
+
+    /// <summary>
+    /// 4. oturum (1.1 + 3.4): kahramanın durabileceği hücre — kendisi ve çevresi (sol/sağ ve üst sıra) yürünebilir ve gövdesi hiçbir
+    /// bina/dekor/kamp görseline binmiyor. Kahraman doluluk ızgarasının parçasıdır: kamp ve dekorların içinde durmaz.
+    /// </summary>
+    public static bool IsStandCell(Vector2Int c, GameObject self, List<Rect> visuals = null)
+    {
+        var grid = BaseWalkGrid.Shared;
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dy = 0; dy <= 1; dy++)
+                if (!grid.Walkable(new Vector2Int(c.x + dx, c.y + dy))) return false;
+        var body = new Rect(c.x - 0.25f, c.y + 0.05f, 1.5f, 1.6f);
+        visuals = visuals ?? VisualRects(self);
+        foreach (var r in visuals) if (BaseVisualBounds.Overlap(body, r)) return false;
+        return true;
+    }
+
+    /// <summary>Ana Üs nesnelerinin (bina, kulübe, dekor, kamp) görsel dikdörtgenleri; bir seçim turunda bir kez toplanır.</summary>
+    public static List<Rect> VisualRects(GameObject self)
+    {
+        var list = new List<Rect>();
+        foreach (var (_, go) in BaseVisualBounds.Collect())
+            if (go != null && go != self) list.Add(BaseVisualBounds.Of(go));
+        return list;
     }
 
     private void SelectNextTarget()
     {
-        RectInt area = BaseMapManager.Instance != null ? BaseMapManager.Instance.BuildableRect : new RectInt(0, 0, 0, 0);
-        var candidates = new List<Vector2>();
-        var occupiedFootprints = BaseWorldLayout.GetOccupiedFootprints();
-        // 3. oturum (1.4): kahraman kamp bayrağının ve dekorların üstüne yürümez (bayrakla iç içe duruyordu)
-        var camp = GameObject.Find("HeroCamp");
-        if (camp != null) occupiedFootprints.Add(new Rect((Vector2)camp.transform.position - new Vector2(1.9f, 0.9f), new Vector2(3.8f, 2.9f)));   // bayrak + kahraman gövdesi payı
-        if (DecorPlacementController.Instance != null)
-            foreach (var item in DecorPlacementController.Instance.Placed)
-                if (item != null && item.Data != null)
-                    occupiedFootprints.Add(new Rect(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
+        var grid = BaseWalkGrid.Shared;
+        RectInt area = grid.Bounds;
+        Vector2 here = body != null ? body.position : (Vector2)transform.position;
+        var candidates = new List<Vector2Int>();
+        var visuals = VisualRects(gameObject);
         for (int x = area.xMin + 1; x < area.xMax - 1; x++)
         for (int y = area.yMin + 1; y < area.yMax - 1; y++)
         {
             Vector2 cell = new Vector2(x + 0.5f, y + 0.5f);
-            if (Vector2.Distance(cell, campCenter) > CampRadius || Vector2.Distance(cell, campCenter) < 0.7f)
-                continue;
-            if (BaseWorldLayout.IsWithinBuildingFootprint(cell, occupiedFootprints)) continue;
-            if (Physics2D.OverlapCircle(cell, 0.55f, LayerMask.GetMask("Default")) != null)
-                continue;
-            bool blocked = false;
-            foreach (var hit in Physics2D.LinecastAll(transform.position, cell, LayerMask.GetMask("Default")))
-                if (hit.collider != null && hit.collider.gameObject != gameObject)
-                {
-                    blocked = true;
-                    break;
-                }
-            if (blocked) continue;
-            int steps = Mathf.CeilToInt(Vector2.Distance(transform.position, cell) * 2f);
-            for (int step = 1; step <= steps; step++)
-                if (BaseWorldLayout.IsWithinBuildingFootprint(Vector2.Lerp(transform.position, cell,
-                    (float)step / steps), occupiedFootprints)) { blocked = true; break; }
-            if (blocked) continue;
-            candidates.Add(cell);
+            float d = Vector2.Distance(cell, campCenter);
+            if (d > CampRadius || Vector2.Distance(cell, here) < 0.7f) continue;
+            if (!IsStandCell(new Vector2Int(x, y), gameObject, visuals)) continue;
+            candidates.Add(new Vector2Int(x, y));
+        }
+        if (!placedOnce)
+        {
+            // Başlangıçta bir binanın/bayrağın/dekorun üstündeyse en yakın boş durma yerine geçer.
+            placedOnce = true;
+            if (!IsStandCell(grid.CellOf(here), gameObject, visuals) && candidates.Count > 0)
+            {
+                candidates.Sort((p, q) => Vector2.Distance(grid.Center(p), here).CompareTo(Vector2.Distance(grid.Center(q), here)));
+                Vector2 spot = grid.Center(candidates[0]);
+                if (body != null) body.position = spot;
+                transform.position = new Vector3(spot.x, spot.y, transform.position.z);
+                waitUntil = Time.time + Random.Range(1f, 3f);
+                return;
+            }
         }
         if (candidates.Count == 0)
         {
             waitUntil = Time.time + 2f;
             return;
         }
-        target = candidates[Random.Range(0, candidates.Count)];
-        spriteRenderer.flipX = target.x < transform.position.x;
+        target = grid.Center(candidates[Random.Range(0, candidates.Count)]);
+        follower = new GridPathFollower(grid, here, target);
+        if (follower.Done) { follower = null; waitUntil = Time.time + 2f; return; }
         walking = true;
     }
 

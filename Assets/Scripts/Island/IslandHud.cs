@@ -533,6 +533,7 @@ public sealed class IslandHud : MonoBehaviour
             village.CastleTapped = () => { buildUi.ShowCastle(); setup.CameraController.FocusUpper(IslandLayout.CastleCenter); };
             village.ZoneTapped = zone => { buildUi.ShowZone(zone); setup.CameraController.FocusUpper(setup.ZoneCenter(zone)); };
             village.TreeTapped = cell => buildUi.ShowTree(cell);   // AŞAMA 2 §3
+            village.NatureTapped = item => buildUi.ShowNature(item.kind, item.cell);   // 4. oturum (1.4)
         }
     }
 

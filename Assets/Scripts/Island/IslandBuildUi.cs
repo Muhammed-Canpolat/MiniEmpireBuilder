@@ -24,7 +24,8 @@ public sealed class IslandBuildUi
     private Vector2Int targetTree;
     private float nextRefresh;
 
-    private enum Mode { None, Menu, Building, Castle, Zone, Tree, Staff }
+    private enum Mode { None, Menu, Building, Castle, Zone, Tree, Staff, Nature }
+    private IslandNatureClear.Kind targetNatureKind;
 
     // Menü
     private sealed class MenuCard
@@ -390,12 +391,14 @@ public sealed class IslandBuildUi
     {
         mode = Mode.Menu; targetId = null;
         menuRoot.SetActive(true); panelRoot.SetActive(false); staffRoot.SetActive(false);
+        SelectionManager.Select(this, Close);   // 4. oturum (1.2): geri tuşu kapatır
         RefreshMenu();
     }
 
     public void Close()
     {
         mode = Mode.None; targetId = null;
+        SelectionManager.Release(this);
         if (menuRoot != null) menuRoot.SetActive(false);
         if (panelRoot != null) panelRoot.SetActive(false);
         if (staffRoot != null) staffRoot.SetActive(false);
@@ -404,6 +407,7 @@ public sealed class IslandBuildUi
     private void ShowPanel()
     {
         menuRoot.SetActive(false); staffRoot.SetActive(false); panelRoot.SetActive(true);
+        SelectionManager.Select(this, Close);   // 4. oturum (1.2): bina/kule/kale/ağaç seçimi; boş yer, başka öğe, geri tuşu kapatır
         RefreshPanel();
     }
 
@@ -415,6 +419,9 @@ public sealed class IslandBuildUi
 
     /// <summary>AŞAMA 2 §3: ağaç paneli (kes onayı ya da "üretim ağacı" bilgisi).</summary>
     public void ShowTree(Vector2Int cell) { mode = Mode.Tree; targetTree = cell; targetId = null; ShowPanel(); }
+    /// <summary>4. oturum (1.4): çalı/kaya temizleme paneli (ağaç paneliyle aynı görünüm).</summary>
+    public void ShowNature(IslandNatureClear.Kind kind, Vector2Int cell) { mode = Mode.Nature; targetNatureKind = kind; targetTree = cell; targetId = null; ShowPanel(); }
+    public bool NatureOpen => mode == Mode.Nature;
 
     /// <summary>AŞAMA 2 §2: KADRO paneli (her işçi bir satır + çalışan/kapasite).</summary>
     public void ShowStaff()
@@ -485,7 +492,7 @@ public sealed class IslandBuildUi
 
     // ==================== PANEL İÇERİĞİ ====================
 
-    private enum PrimaryAction { None, Upgrade, Explore, Akin, ClearTree }
+    private enum PrimaryAction { None, Upgrade, Explore, Akin, ClearTree, ClearNature }
     private PrimaryAction primaryAction;
     private enum TertiaryAction { None, Collect, FinishNow, Flag }
     private TertiaryAction tertiaryAction;
@@ -520,6 +527,7 @@ public sealed class IslandBuildUi
         if (mode == Mode.Zone) { RefreshZonePanel(); return; }
         if (mode == Mode.Castle) { RefreshCastlePanel(); return; }
         if (mode == Mode.Tree) { RefreshTreePanel(); return; }
+        if (mode == Mode.Nature) { RefreshNaturePanel(); return; }
         var entry = IslandEconomy.Find(targetId);
         if (entry == null) { Close(); return; }
         var kind = IslandEconomy.KindOf(entry);
@@ -741,6 +749,28 @@ public sealed class IslandBuildUi
         SetButtons(L.T($"KES · {cfg.clearTreeGold} altın", $"CLEAR · {cfg.clearTreeGold} gold"), blocked == null, null, false, null, false);
     }
 
+    private void RefreshNaturePanel()
+    {
+        var item = IslandNatureClear.Find(targetNatureKind, targetTree);
+        if (IslandSession.Save == null || item == null || item.Cleared) { Close(); return; }
+        bool bush = targetNatureKind == IslandNatureClear.Kind.Bush;
+        panelIcon.sprite = item.renderer != null ? item.renderer.sprite : null;
+        var cat = IslandVisualCatalog.Instance;
+        panelRole.sprite = bush ? (cat != null ? cat.woodIcon : null) : BaseVisualCatalog.Instance?.goldIcon;
+        panelRole.gameObject.SetActive(panelRole.sprite != null);
+        panelTitle.text = bush ? L.T("Çalı", "Bush") : L.T("Kaya", "Rock");
+        workerMinus.gameObject.SetActive(false); workerPlus.gameObject.SetActive(false); workersLabel.text = "";
+        SetCost(0, 0, null, false);
+        primaryAction = PrimaryAction.ClearNature; tertiaryAction = TertiaryAction.None; secondaryIsMove = false;
+        panelBody.text = (bush ? L.T("Çalıyı temizle: ", "Clear the bush: ") : L.T("Kayayı kır: ", "Break the rock: "))
+            + IslandNatureClear.CostText(targetNatureKind) + L.T("\nYer açılır; bir daha çıkmaz.", "\nFrees the spot; it never comes back.");
+        string blocked = IslandNatureClear.BlockedReason(targetNatureKind, targetTree);
+        panelNote.text = blocked ?? "";
+        string label = bush ? L.T($"TEMİZLE · {IslandNatureClear.BushGold} altın", $"CLEAR · {IslandNatureClear.BushGold} gold")
+            : L.T($"KIR · {IslandNatureClear.RockWood} odun", $"BREAK · {IslandNatureClear.RockWood} wood");
+        SetButtons(label, blocked == null, null, false, null, false);
+    }
+
     private void RefreshZonePanel()
     {
         int zone = targetZone;
@@ -812,6 +842,15 @@ public sealed class IslandBuildUi
                 var village = IslandVillage.Instance;
                 if (village == null) return;
                 if (!village.ClearTree(targetTree, out reason)) { Toast?.Invoke(reason); RefreshPanel(); return; }
+                Close();
+                break;
+            }
+            case PrimaryAction.ClearNature:
+            {
+                if (!IslandNatureClear.TryClear(targetNatureKind, targetTree, out reason)) { Toast?.Invoke(reason); RefreshPanel(); return; }
+                Toast?.Invoke(targetNatureKind == IslandNatureClear.Kind.Bush
+                    ? L.T($"Çalı temizlendi: +{IslandNatureClear.BushWood} Odun", $"Bush cleared: +{IslandNatureClear.BushWood} Wood")
+                    : L.T($"Kaya kırıldı: +{IslandNatureClear.RockGold} Altın", $"Rock cleared: +{IslandNatureClear.RockGold} Gold"));
                 Close();
                 break;
             }

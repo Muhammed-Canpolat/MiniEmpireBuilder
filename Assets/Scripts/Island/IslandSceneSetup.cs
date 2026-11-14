@@ -78,10 +78,13 @@ public sealed class IslandSceneSetup : MonoBehaviour
     {
         if (Ready) return;
         DisableHostLeftovers();
+        WalkGridDebug.Install(IslandWalkGrid.Shared);
+        SelectionManager.InstallBackKey();   // 4. oturum (1.2)   // 4. oturum (1.1): F6 yürünebilirlik + rotalar
         SetupCamera();
         worldRoot = new GameObject("IslandWorld").transform;
         terrainObject = Spawn("Island/IslandTerrain");
         natureObject = Spawn("Island/IslandNature");
+        IslandNatureClear.Bind(natureObject);   // 4. oturum (1.4): temizlenebilir çalı/kaya
         CollectClouds();
 
         if (BattleVfxManager.Instance == null) new GameObject("IslandVfx").AddComponent<BattleVfxManager>();

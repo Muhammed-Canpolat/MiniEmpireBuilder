@@ -50,6 +50,8 @@ public sealed class IslandSheep : MonoBehaviour
             case Mode.Idle: modeEnd = Time.time + Random.Range(1f, 2.5f); break;
             default:
                 target = new Vector2(Random.Range(meadow.xMin, meadow.xMax), Random.Range(meadow.yMin, meadow.yMax));
+                // 4. oturum (1.1): koyun bina/su/ağaç içine yürümez; hedefe düz yol kapalıysa yerinde kalır.
+                if (!GridPathfinder.LineClear(IslandWalkGrid.Shared, transform.position, target)) target = transform.position;
                 modeEnd = Time.time + 8f;
                 break;
         }

@@ -11,14 +11,25 @@ public static class BattleObstacles
     private static readonly Dictionary<Object, Rect> Areas = new Dictionary<Object, Rect>();
     private static readonly List<Object> Stale = new List<Object>();
 
+    /// <summary>4. oturum (1.1): alan eklenince/kalkınca artar (BattleWalkGrid rotaları yeniler).</summary>
+    public static int Version { get; private set; }
+
     public static void Register(Object owner, Rect area)
     {
-        if (owner != null) Areas[owner] = area;
+        if (owner == null) return;
+        if (!Areas.TryGetValue(owner, out var old) || old != area) Version++;
+        Areas[owner] = area;
     }
 
     public static void Unregister(Object owner)
     {
-        if (owner != null) Areas.Remove(owner);
+        if (owner != null && Areas.Remove(owner)) Version++;
+    }
+
+    /// <summary>Canlı engel alanları (sahibi yok edilenler atlanır).</summary>
+    public static IEnumerable<Rect> All()
+    {
+        foreach (var pair in Areas) if (pair.Key != null) yield return pair.Value;
     }
 
     /// <summary>Merkezi verilen, tabanı pivotun biraz altında başlayan bina alanı.</summary>
@@ -53,6 +64,7 @@ public static class BattleObstacles
             else point.y = r.yMax + radius;
         }
         foreach (var key in Stale) Areas.Remove(key);
+        if (Stale.Count > 0) Version++;
         return point;
     }
 

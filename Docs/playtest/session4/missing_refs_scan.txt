@@ -1,0 +1,125 @@
+GUID sayýsý 17630
+== Kayýp GUID referanslarý ==
+Assets\Cainos\Pixel Art Platformer - Village Props\Scene\SC Demo Scene - Village Props.unity m_LightingSettings f43833f1 x1
+Assets\DungeonMonsters2D\Characters\StoneGolem.prefab m_Sprite 4d080280 x1
+Assets\Handpainted_Grass_and_Ground_Textures\Demo\Demo.unity m_TerrainData 0e9384ed x2
+Assets\Hovl Studio\Magic effects pack\Demo scene\Magic effects demo.unity m_Script 8b9a305e x1 | m_Script 948f4100 x1 | m_Resources d82512f9 x1
+Assets\Hovl Studio\Magic effects pack\Demo scene\Magic effects second demo.unity m_Script 8b9a305e x1 | m_Script 948f4100 x1 | m_Resources d82512f9 x1
+Assets\Hovl Studio\Magic effects pack\Settings\PP low.asset m_Script 6050e2d5 x1 | m_Script 8e6292b2 x1 | m_Script adb84e30 x1 | m_Script 48a79b01 x1
+Assets\Joystick Pack\Examples\Example Scene.unity m_Script f70555f1 x45
+Assets\Joystick Pack\Prefabs\Dynamic Joystick.prefab m_Script f70555f1 x3
+Assets\Joystick Pack\Prefabs\Fixed Joystick.prefab m_Script f70555f1 x2
+Assets\Joystick Pack\Prefabs\Floating Joystick.prefab m_Script f70555f1 x3
+Assets\Joystick Pack\Prefabs\Variable Joystick.prefab m_Script f70555f1 x3
+Assets\Resources\UI\Fixed Joystick.prefab m_Script f70555f1 x2
+Assets\Settings\Renderer2D.asset probeVolumeDebugShader e5c6678e x1 | probeVolumeFragmentationDebugShader 03cfc491 x1 | probeVolumeOffsetDebugShader 53a11f4e x1 | probeVolumeSamplingDebugShader 8f96cd65 x1 | probeSamplingDebugMesh 57d7c4c1 x1 | probeSamplingDebugTexture 24ec0e14 x1
+== Boþ m_Sprite (SpriteRenderer/Image, sahne/prefab) ==
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Crystals crossfade 2.prefab 11
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Crystals crossfade.prefab 11
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Laser AOE.prefab 11
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Red energy explosion.prefab 11
+Assets\Joystick Pack\Examples\Example Scene.unity 11
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Crystals front attack.prefab 9
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Meteors AOE.prefab 8
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Snow AOE.prefab 8
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Plexus AoE.prefab 7
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\AoE slash blue.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\AoE slash green.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\AoE slash orange.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic circles\Magic circle.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\Slash effects\Charge slash blue.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\Slash effects\Charge slash purple.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\Slash effects\Charge slash red.prefab 6
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Ground AOE explosion.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\AoE effects\Smoke AOE explosion.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Holy hit.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Snow hit.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic circles\Freeze circle.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic circles\Healing circle.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic circles\Magic circle 2.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Slash effects\Electro slash.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Slash effects\Stone slash.prefab 5
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Buff.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Debuff.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Environment\Crystal effect blue.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Environment\Crystal effect green.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Environment\Crystal effect red.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Environment\Teleport.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Explosion.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Green hit.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Star hit.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Stones hit.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic shields\Magic shield blue.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic shields\Magic shield pink.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Magic shields\Magic shield yellow.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Portals\Portal blue.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Portals\Portal green.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Portals\Portal red.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Portals\Portal yellow.prefab 4
+Assets\Hovl Studio\Magic effects pack\Prefabs\Slash effects\Snow slash.prefab 4
+Assets\Resources\VFX\Explosion.prefab 4
+Assets\Resources\VFX\Green hit.prefab 4
+Assets\Cainos\Pixel Art Platformer - Village Props\Prefab\PF Village Props - Campfire 01.prefab 3
+Assets\Cainos\Pixel Art Platformer - Village Props\Prefab\PF Village Props - Fire Bowl.prefab 3
+Assets\Cainos\Pixel Art Platformer - Village Props\Prefab\PF Village Props - Torch.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Healing.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Lightning aura.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Love aura.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Star aura.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Electro hit.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Hits and explosions\Love hit.prefab 3
+Assets\Hovl Studio\Magic effects pack\Prefabs\Character auras\Plexus.prefab 2
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Smoke vortex.prefab 2
+Assets\Cainos\Pixel Art Platformer - Village Props\Prefab\PF Village Props - Road Lamp.prefab 1
+Assets\DungeonMonsters2D\Characters\Bat.prefab 1
+Assets\DungeonMonsters2D\Characters\Butcher.prefab 1
+Assets\DungeonMonsters2D\Characters\CrystalGolem.prefab 1
+Assets\DungeonMonsters2D\Characters\Demon.prefab 1
+Assets\DungeonMonsters2D\Characters\DragonRed.prefab 1
+Assets\DungeonMonsters2D\Characters\Ghost.prefab 1
+Assets\DungeonMonsters2D\Characters\GhostKnight.prefab 1
+Assets\DungeonMonsters2D\Characters\Imp.prefab 1
+Assets\DungeonMonsters2D\Characters\MagmaGolem.prefab 1
+Assets\DungeonMonsters2D\Characters\Rat.prefab 1
+Assets\DungeonMonsters2D\Characters\SkeletonArcher.prefab 1
+Assets\DungeonMonsters2D\Characters\SkeletonMage 1.prefab 1
+Assets\DungeonMonsters2D\Characters\SkeletonWarrior.prefab 1
+Assets\DungeonMonsters2D\Characters\Spider.prefab 1
+Assets\DungeonMonsters2D\Characters\Succubus.prefab 1
+Assets\DungeonMonsters2D\Characters\Vampire.prefab 1
+Assets\DungeonMonsters2D\Characters\WoodGolem.prefab 1
+Assets\DungeonMonsters2D\Characters\Zombie.prefab 1
+Assets\DungeonMonsters2D\Characters\ZombieWarrior.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Dust ground.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Dust hemisphere loop.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Dust loop.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Dust puff.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Smoke ground.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Smoke hemisphere loop.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Smoke loop.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Smoke effects\Smoke puff.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks blue.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks explode blue.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks explode green.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks explode pink.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks explode red.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks explode white.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks explode yellow.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks flashing blue.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks flashing green.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks flashing pink.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks flashing red.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks flashing white.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks flashing yellow.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks green.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks pink.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks red.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks white.prefab 1
+Assets\Hovl Studio\Magic effects pack\Prefabs\Sparks\Sparks yellow.prefab 1
+Assets\Inguz Media Studio\Free 2D Impact FX\Prefabs\Impact01.prefab 1
+Assets\Inguz Media Studio\Free 2D Impact FX\Prefabs\Impact02.prefab 1
+Assets\Inguz Media Studio\Free 2D Impact FX\Prefabs\Impact03.prefab 1
+Assets\Joystick Pack\Prefabs\Dynamic Joystick.prefab 1
+Assets\Joystick Pack\Prefabs\Floating Joystick.prefab 1
+Assets\Joystick Pack\Prefabs\Variable Joystick.prefab 1
+Assets\Resources\BaseGarrisonAnchor.prefab 1

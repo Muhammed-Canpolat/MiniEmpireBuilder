@@ -452,7 +452,11 @@ public class BattleManager : MonoBehaviour
     private GameObject CreateStructureVisual(string name, BuildingType type, int level, Vector3 slotPosition, float height)
     {
         Sprite sprite = null;
-        if (GameManager.Instance?.Buildings != null && GameManager.Instance.Buildings.TryGetValue(type, out var data))
+        // 4. oturum (1.3): maden veri görseli yok (Ana Üs'te parçalardan kurulur) → beyaz kare görünüyordu. Savaşta da Tiny Swords
+        // altın kayası + seviye renkli maden evi kullanılır (MineVisualParts).
+        var mineStones = type == BuildingType.GoldMine ? BaseVisualCatalog.Instance?.goldStones : null;
+        if (mineStones != null && mineStones.Length > 0) sprite = mineStones[Mathf.Min(5, mineStones.Length - 1)];
+        else if (GameManager.Instance?.Buildings != null && GameManager.Instance.Buildings.TryGetValue(type, out var data))
             sprite = data.VisualForLevel(level)?.sprite;
         if (sprite == null && SpriteManager.Instance != null)
             sprite = type == BuildingType.ArcherTower ? SpriteManager.Instance.ArcherTower
@@ -469,6 +473,7 @@ public class BattleManager : MonoBehaviour
         obj.transform.position = new Vector3(slotPosition.x, bottom - local.min.y * scale, 0f);
         renderer.sortingOrder = 6;
         renderer.color = Color.white;
+        if (type == BuildingType.GoldMine) AddMineParts(obj.transform, level, scale);
         // Zemin gölgesi
         var shadow = new GameObject("StructureShadow");
         shadow.transform.SetParent(obj.transform, false);
@@ -480,6 +485,38 @@ public class BattleManager : MonoBehaviour
         shadow.transform.localScale = new Vector3(1.6f / (circle.x * scale), 0.45f / (circle.y * scale), 1f);
         shadow.transform.position = new Vector3(slotPosition.x, bottom + 0.08f, 0f);
         return obj;
+    }
+
+    /// <summary>
+    /// Savaştaki maden: büyük altın kayanın yanına seviye renginde maden evi (Tiny Swords House3) ve iki küçük kaya. Parçalar yapının
+    /// çocuklarıdır (yıkılınca birlikte söner); ölçek ana kayaya göre dengelenir.
+    /// </summary>
+    private static void AddMineParts(Transform root, int level, float rootScale)
+    {
+        var catalog = BaseVisualCatalog.Instance;
+        if (catalog == null) return;
+        int tier = BaseVisualCatalog.ColorIndex(Mathf.Clamp(level, 1, Progression.MaxLevel));
+        void Part(string name, Sprite sprite, Vector2 offset, float height, int order)
+        {
+            if (sprite == null) return;
+            var go = new GameObject(name);
+            go.transform.SetParent(root, false);
+            float s = height / Mathf.Max(0.01f, sprite.bounds.size.y) / rootScale;
+            go.transform.localScale = new Vector3(s, s, 1f);
+            go.transform.localPosition = new Vector3(offset.x / rootScale, offset.y / rootScale, 0f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = order;
+        }
+        var house = catalog.mineHouses != null && catalog.mineHouses.Length > 0 ? catalog.mineHouses[Mathf.Min(tier, catalog.mineHouses.Length - 1)] : null;
+        var stones = catalog.goldStones;
+        float baseY = root.GetComponent<SpriteRenderer>().sprite.bounds.min.y * rootScale;
+        Part("MineHouse", house, new Vector2(1.05f, baseY + 0.95f), 1.9f, 5);
+        if (stones != null && stones.Length > 2)
+        {
+            Part("MineStoneSmallA", stones[1], new Vector2(-0.95f, baseY + 0.25f), 0.55f, 7);
+            Part("MineStoneSmallB", stones[2], new Vector2(0.55f, baseY + 0.12f), 0.45f, 7);
+        }
     }
 
     private void FinishStructure(GameObject obj, BuildingType type, int level, BattleBuildSlot slot,

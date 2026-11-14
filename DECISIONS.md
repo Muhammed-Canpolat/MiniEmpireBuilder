@@ -287,3 +287,48 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   doğrulandı. `.gitignore` anahtar deposu/şifre dosyalarını dışlar. Reklam/satın alma SDK'sı eklenmedi (paket değişikliği + AdMob/ürün
   kimlikleri kullanıcıda) → UMP akışı yapılmadı, belgelendi (PLAY_RELEASE §6). En düşük API 25 korundu.
 - **Alternatif:** min API 24 (≈+%0,5 cihaz) — gerek görülmedi.
+
+---
+# 4. oturum (14 Kasım 2026)
+
+## D45 — Ortak yol bulma servisi (1.1; Opus, yüksek çaba)
+- **Karar:** `Systems/GridPathfinding.cs` tek A* (ikili yığın, 8 yön, köşe kesme yok, düz görüş yumuşatması) + `IWalkGrid` arayüzü.
+  Izgaralar: `BaseWalkGrid` (BaseOccupancyGrid engelleri + açılmış alan), `IslandWalkGrid` (su/yar, kale + kurulu binalar, kesilmemiş
+  ağaç, altın taşı; yükseklik değişimi yalnız merdivenden 4 yönlü adımla), `BattleWalkGrid` (0,5 u hücre, BattleObstacles alanları).
+- **Güncelleme:** her ızgaranın `Version`'ı var: Ana Üs/Ada 0,25 sn'lik içerik imzası + açık `Invalidate()` (ada bina kur/taşı, doğa
+  temizliği); savaş `BattleObstacles.Version` (kayıt/silme/yıkılış). `GridPathFollower` sürüm değişince bulunduğu yerden yeniden hesaplar.
+- **Ulaşılamayan hedef:** A* en yakın keşfedilen hücreye (sezgisel en küçük) yol verir; takipçi orada durur (`Done`), titreme yok.
+  Başlangıç hücresi kapalıysa (karakter bina içinde kalmışsa) önce en yakın açık hücreye çıkar.
+- **Bağlananlar:** Ana Üs inşaatçısı (BuilderPathfinder artık sarmalayıcı), Ana Üs kahramanı (rastgele hedefler yol bulmayla; durduğu hücre +
+  çevresi açık ve gövdesi hiçbir bina/dekor/kamp görseline binmiyor — 3.4 maddesinin "kahraman bayrak/şapelle üst üste" kısmı), ada
+  piyonları, ada mızraklısı (`GridSteer`: düz görüş açıksa doğrudan, değilse A*), koyun (düz yol kapalıysa yerinde), savaş düşmanları
+  (uçanlar ve ada akın şeridindekiler hariç) ve müttefik Lancer.
+- **Dokunulmayan:** ada okçusunun atış yerleri arası yolları (`IslandLayout.PathBetween`, elle çizilmiş, yerleşime kapalı şeritler) ve
+  akın düşmanlarının kumsal şeritleri (tasarım gereği sabit rota).
+- **Debug:** `WalkGridDebug` (editör/Development, F6): yürünebilir yeşil, kapalı kırmızı, son 32 rota sarı. Testler `Show()` ile açar.
+- **Alternatif:** NavMesh 2D (NavMeshPlus) — paket ekleme yasak ve ızgara zaten var; gerek yok.
+
+## D46 — Tek seçim yöneticisi (1.2)
+- **Karar:** `UI/SelectionManager.cs`: aynı anda tek seçim; `Select(öğe, kapat)` öncekini kapatır, `Clear()` (boş yer/başka öğe/geri tuşu).
+  Ana Üs dünya dokunuşu önce seçimi kapatır; aynı dekora ikinci dokunuş seçimi kapatır (aç/kapa). Kayıtlı seçimler: dekor TAŞI/SİL,
+  ağaç/kaya/kilitli doğa kaldırma istemi, bina/kahraman/çırak penceresi (BaseWorldUI), ada bina/kule/kale/ağaç/çalı paneli ve İNŞA ET
+  menüsü (IslandBuildUi). Geri tuşu: `SelectionBackKey` (Escape = Android geri).
+
+## D47 — Madeni Koru maden görseli (1.3)
+- **Kök neden:** Maden verisinin seviye görseli yok (Ana Üs'te `BaseMineVisual` parçalarla kurar); savaştaki `CreateStructureVisual` boş sprite
+  yerine düz renk kareye düşüyordu.
+- **Karar:** Savaşta maden = Tiny Swords Gold Stone 6 (ana gövde, can barı ve boyut buna göre) + seviye renginde maden evi (House3) + iki
+  küçük altın taşı (çocuk parçalar, yıkılınca birlikte söner).
+- **Tarama:** `Docs/playtest/session4/missing_refs_scan.txt` (tüm .unity/.prefab/.asset). Oyunu etkileyen kayıp referans yok; paket demo
+  sahneleri (Cainos/Hovl/Joystick/Handpainted) ve `Resources/UI/Fixed Joystick.prefab` (Joystick Pack betiği silinmiş, kodda kullanılmıyor),
+  `DungeonMonsters2D/StoneGolem.prefab` ilk sprite'ı (Animator ilk karede değiştiriyor) raporlandı, dokunulmadı. Çalışma anı denetimi:
+  savaşta etkin, Animator'suz, sprite'ı boş renderer listesi `S1_3_null_sprites_battle.txt` (boş).
+
+## D48 — Ada çalı/kaya temizliği (1.4)
+- **Karar:** `Island/IslandNatureClear.cs`: pişmiş IslandNature prefab'ındaki "Bush{v}_{c}_{r}" / "Rock{v}_{c}_{r}" nesneleri çalışma anında
+  bulunur (prefab yeniden pişirilmedi). Dokununca ağaç paneliyle aynı panel: **çalı 5 altın → +4 odun**, **kaya 3 odun → +10 altın**.
+  Kayıt `IslandSaveData.clearedNature` ("bush:c,r"/"rock:c,r"; eski kayıtta alan yoksa boş liste, JsonUtility uyumlu). Kaldırma: hafif zıplama +
+  küçülerek sönme, toz ve renkli kırıntı parçacıkları.
+- **Mantıksal hücre:** çalı ve kaya zaten yerleşim/yürüme engeli değildi (süs); bina kurulunca/taşınınca altında kalanlar bedelsiz gizlenir ve
+  kayda yazılır (eski kayıtlarda da ilk açılışta). Böylece "bina çalının üstünde" görüntüsü de kalkar.
+- **Alternatif:** çalı/kayayı yerleşim engeli yapmak — eski kayıtlardaki binaları geçersiz kılardı; seçilmedi.
