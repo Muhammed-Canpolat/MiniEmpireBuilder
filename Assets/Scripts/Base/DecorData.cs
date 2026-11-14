@@ -15,6 +15,11 @@ public sealed class DecorData : ScriptableObject
     public string customArt;
     // Animasyon karelerinde boşluk çok olan görseller (Tiny Swords koyun, çalı) için büyütme.
     public float visualScale = 1f;
+    // 4. oturum (2.1): görselin dünya genişliği (birim). >0 ise ayak izinden bağımsızdır: 1×1 ağaç doğal boyunda görünür, yalnız gövdesi
+    // hücre kaplar. 0: eski davranış (genişlik ayak izine oturur).
+    public float visualWidth;
+    // 4. oturum (2.2): katalogdan kaldırıldı (Tiny Swords dışı). Kurulu olanlar yerinde kalır; SİL tam bedeli iade eder.
+    public bool retired;
 
     /// <summary>Oyunda ve menüde gösterilecek görsel.</summary>
     public Sprite Visual
@@ -38,6 +43,7 @@ public sealed class DecorData : ScriptableObject
     {
         if (visual == null) return 1f;
         Vector2 size = visual.bounds.size;
+        if (visualWidth > 0f) return visualWidth / Mathf.Max(0.01f, size.x);
         float scale = footprint.x * 0.92f * Mathf.Max(0.1f, visualScale) / Mathf.Max(0.01f, size.x);
         float maxHeight = footprint.y * 1.9f + 0.6f;
         if (size.y * scale > maxHeight) scale = maxHeight / Mathf.Max(0.01f, size.y);

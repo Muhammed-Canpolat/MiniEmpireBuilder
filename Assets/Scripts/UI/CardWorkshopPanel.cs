@@ -320,9 +320,8 @@ public sealed class CardWorkshopPanel : MonoBehaviour
             if (ok && CardWorkshop.TryFinishByAd(captured)) AudioManager.Instance?.PlaySfx("levelUp");
         }));
         int gems = CardWorkshop.FinishGemCost(index);
-        var gem = TsButton(paper.transform, "Gem", gems > 0 ? gems.ToString() : L.T("BEDAVA", "FREE"), true, w - 36f - 62f, 6f, 54f, 40f, 13, out var gemLabel);
-        if (gems > 0) ButtonIcon(gem, gemLabel, GemIcon.Sprite, 16f, "GemIcon");   // ikon + sayı (çıplak sayı yok)
-        else gemLabel.rectTransform.offsetMin = new Vector2(4f, 3f);
+        var gem = TsButton(paper.transform, "Gem", Mathf.Max(1, gems).ToString(), true, w - 36f - 62f, 6f, 54f, 40f, 13, out var gemLabel);
+        ButtonIcon(gem, gemLabel, GemIcon.Sprite, 16f, "GemIcon");   // 4. oturum (2.6): her zaman ikon + sayı (bedava yok)
         gem.onClick.AddListener(() =>
         {
             int cost = CardWorkshop.FinishGemCost(captured);

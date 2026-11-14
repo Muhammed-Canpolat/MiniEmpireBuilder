@@ -22,8 +22,8 @@ public static class GemEconomy
     /// <summary>Eksik altını tamamlama kuru: 1 elmas = bu kadar altın.</summary>
     public const int GoldPerGem = 40;
 
-    /// <summary>Bu süreden kısa kalan işler bedava bitirilir.</summary>
-    public const int FreeFinishSeconds = 60;
+    /// <summary>4. oturum (2.6): "bedava bitir" kalktı. Kalan süresi bu kadar ya da daha az olan iş 1 elmasla biter.</summary>
+    public const int OneGemFinishSeconds = 60;
 
     // ==================== SAVAŞ ====================
     public const int ContinueCost = 25;       // Ana Üs yıkılınca devam (savaş başına 1 kez)
@@ -74,14 +74,18 @@ public static class GemEconomy
     public const int DailyGemAds = 3;
 
     /// <summary>
-    /// Kalan süreyi hemen bitirme bedeli: 1 dk altı bedava, sonra 2,2 × √dakika
+    /// Kalan süreyi hemen bitirme bedeli: bitmiş iş 0; ≤1 dk 1 elmas (bedava bitir yok, 4. oturum 2.6); sonra 2,2 × √dakika
     /// (30 dk ≈ 12, 1 sa ≈ 17, 6 sa ≈ 42, 24 sa ≈ 83, 48 sa ≈ 118).
     /// </summary>
     public static int FinishCost(double secondsRemaining)
     {
-        if (secondsRemaining < FreeFinishSeconds) return 0;
+        if (secondsRemaining <= 0) return 0;
+        if (secondsRemaining <= OneGemFinishSeconds) return 1;
         return Mathf.Max(1, Mathf.RoundToInt(2.2f * Mathf.Sqrt((float)(secondsRemaining / 60d))));
     }
+
+    /// <summary>"Hemen bitir" düğme metni: elmas ikonu düğmenin solunda (GemConfirm.SetGemIcon), metinde yalnız sayı.</summary>
+    public static string FinishLabel(int gems) => L.T($"HEMEN BİTİR · {gems}", $"FINISH NOW · {gems}");
 
     /// <summary>Eksik altını tamamlamanın elmas bedeli (yukarı yuvarlanır).</summary>
     public static int GoldTopUpCost(int missingGold) =>

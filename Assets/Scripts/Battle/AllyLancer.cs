@@ -101,8 +101,9 @@ public sealed class AllyLancer : MonoBehaviour
 {
     public static readonly List<AllyLancer> All = new List<AllyLancer>();
     /// <summary>Lancer kare ayağının merkezden aşağıda kalan payı (ada ile aynı: 38/64 u, ölçek uygulanır).</summary>
-    private const float VisualScale = 1.2f;
-    private const float FootLift = 38f / 64f * VisualScale;
+    // 4. oturum (2.4): eskiden 1,2 (kahramandan ~1,7 kat büyük). Ortak ölçek tablosundan: kahramanla aynı boy.
+    private static float VisualScale => UnitScale.InBattle(UnitScale.Kind.Lancer);
+    private static float FootLift => 38f / 64f * VisualScale;
 
     public bool Alive { get; private set; } = true;
     public float Hp { get; private set; }

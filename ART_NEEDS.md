@@ -73,3 +73,9 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
   yoksa sessiz).
 - **Ana Üs animasyonu:** madenci kazma karesi (Tiny Swords Pawn "interact pickaxe" var, adada kullanılıyor; Ana Üs madenci
   sprite'ı farklı ise eşlenmeli), koyun otlama kareleri Ana Üs koyun dekorunda.
+
+## 4. oturum (14 Kasım 2026) ihtiyaçları
+- **Dekor (Tiny Swords stilinde, 64 px/birim, 1×1 hücreye oturan):** ahşap çit (düz/köşe/kapı, 64×64), fener direği (64×128, yanık/sönük
+  2 kare), sancak/bayrak (64×128, 4 kare dalgalanma; mavi/sarı/kırmızı/mor/siyah), taş patika karosu (64×64, 3 varyant), çiçek tarhı (64×64),
+  kuyu (128×128), heykel (64×128). Ücretsiz Tiny Swords paketinde yok; şu an katalogdan kaldırıldılar (D50).
+- **Lancer renk kademeleri:** Kışla çatısı ve savaş mızraklıları yalnız mavi (catalog'da sarı/kırmızı/mor/siyah Lancer kareleri yok).

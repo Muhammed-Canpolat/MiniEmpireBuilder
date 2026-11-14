@@ -160,7 +160,8 @@ public sealed class BuilderPanel : MonoBehaviour
             if (task != null)
             {
                 int cost = GameManager.FinishNowCost(task);
-                rowFinishLabel[i].text = cost > 0 ? L.T("BİTİR ", "FINISH ") + cost : L.T("BİTİR", "FINISH");
+                rowFinishLabel[i].text = L.T("BİTİR ", "FINISH ") + cost;   // 4. oturum (2.6): her zaman elmas (≤1 dk: 1)
+                GemConfirm.SetGemIcon(rowFinish[i].transform, true);
             }
             rowName[i].text = i >= total && i < working ? L.T("Misafir", "Guest") : L.T($"{i + 1}. İnşaatçı", $"Builder {i + 1}");
             if (i < working)

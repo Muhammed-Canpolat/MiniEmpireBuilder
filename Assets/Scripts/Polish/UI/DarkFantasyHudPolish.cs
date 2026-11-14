@@ -134,10 +134,14 @@ public static class DarkFantasyHudPolish
         StyleInfoPanel(safe.Find("BuildingInfo"));
         var heroPanel = safe.Find("HeroInfo");
         StyleInfoPanel(heroPanel);
-        SetAnchors(heroPanel?.Find("Level") as RectTransform,
-            new Vector2(0.07f, 0.59f), new Vector2(0.93f, 0.69f));
-        SetAnchors(heroPanel?.Find("Stats") as RectTransform,
-            new Vector2(0.07f, 0.33f), new Vector2(0.93f, 0.58f));
+        // 4. oturum (2.5): süslü pencerede (kurdele var) eski düz kutunun yerleşimi uygulanmaz.
+        if (heroPanel != null && heroPanel.Find("Ribbon") == null)
+        {
+            SetAnchors(heroPanel.Find("Level") as RectTransform,
+                new Vector2(0.07f, 0.59f), new Vector2(0.93f, 0.69f));
+            SetAnchors(heroPanel.Find("Stats") as RectTransform,
+                new Vector2(0.07f, 0.33f), new Vector2(0.93f, 0.58f));
+        }
         BaseHudRedesign.Apply(hud);
     }
 

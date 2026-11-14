@@ -524,7 +524,8 @@ public sealed class IslandHud : MonoBehaviour
         buildUi.PlaceRequested = kind => StartPlacement(IslandPlacementHost.ForNew(kind));
         buildUi.MoveRequested = id => StartPlacement(IslandPlacementHost.ForMove(id));
         buildUi.AkinRequested = () => { prepOpen = true; Refresh(); };
-        placement = setup.gameObject.GetComponent<IslandPlacementController>() ?? setup.gameObject.AddComponent<IslandPlacementController>();
+        placement = setup.gameObject.GetComponent<IslandPlacementController>();
+        if (placement == null) placement = setup.gameObject.AddComponent<IslandPlacementController>();   // Unity sahte-null: ?? kullanılmaz
         var village = IslandVillage.Instance;
         if (village != null)
         {

@@ -332,3 +332,42 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Mantıksal hücre:** çalı ve kaya zaten yerleşim/yürüme engeli değildi (süs); bina kurulunca/taşınınca altında kalanlar bedelsiz gizlenir ve
   kayda yazılır (eski kayıtlarda da ilk açılışta). Böylece "bina çalının üstünde" görüntüsü de kalkar.
 - **Alternatif:** çalı/kayayı yerleşim engeli yapmak — eski kayıtlardaki binaları geçersiz kılardı; seçilmedi.
+
+## D49 — Dekor boyutları 1×1 (2.1)
+- **Karar:** Ağaç, çalı, kaya, koyun ve yeni küçük dekorların ayak izi 1×1. Görsel boyu ayak izinden ayrıldı: `DecorData.visualWidth`
+  (dünya birimi; ağaç 2,1–2,3, çalı 1,25, kaya 0,85–0,95, koyun 1,3) — ağaç doğal boyunda görünür, yalnız gövde hücresi dolar.
+- **Göç:** `PlayerSaveData.decorLayoutVersion` 0 → 1: eski 3×3 ağaç kaydı eski alanının ortasına (+1,+1) taşınır; 2×2'ler sol-alt hücresinde kalır
+  (eski alanın içi → çakışma olamaz); yine de çakışırsa mevcut "en yakın boş hücre" kuralı, sığmazsa bedel iadesi.
+
+## D50 — Dekor kataloğu yalnız Tiny Swords (2.2)
+- **Kaldırılan (13):** Cainos Village Props'tan örs, fıçı, kamp ateşi, sandık, ayçiçeği, kuyu, saman balyası, korkuluk, heykel, odun yığını (eski);
+  Tiny Swords olmayan yer tutucular sancak, fener (özel çizim), patika. Asset'ler silinmedi: `DecorData.retired = true` → katalogda görünmez.
+- **Kurulu olanlar:** silinmez, yerinde kalır; oyuncu SİL derse **tam bedel** iade (normalde yarı). Savaştaki maden dekoru sandık/fıçı
+  görsellerini kullanmaya devam eder (yalnız savaş süsü).
+- **Eklenen (15):** Ağaç (sarı/çam/güz, animasyonlu), Çalı ×3 (animasyonlu), Kaya ×3, Kütük, Odun yığını, Et sepeti, Altın yığını,
+  Altın taşı, Büyük altın taşı. Katalog 19 öğe. Çit, fener, bayrak, patika Tiny Swords ücretsiz paketinde yok → ART_NEEDS.
+
+## D51 — Madende tek çırak (2.3)
+- **Kök neden:** Madende iki figür vardı: maden görselinin madencisi (MinePawn) + ayrıca çizilen Çırak (BaseApprentice).
+- **Karar:** Yalnız MinePawn kalır ve Çırak'ı temsil eder (Çırak seviyesinin renk kademesi, dokununca Çırak penceresi;
+  `BaseApprenticeVisual` artık çizmez, bağlar). Kazma = Tiny Swords "Interact Pickaxe" (adadaki madenciyle aynı kareler), sürekli.
+  Altın kıvılcımı 1,2–2 sn'de bir, çırağın önündeki kayadan 2–3 parça.
+
+## D52 — Kışla devriyesi ve ortak ölçek tablosu (2.4)
+- **Devriye:** `Base/BarracksRoofPatrol.cs`: Kışla damında mavi Lancer; damın iki ucu arasında yürür (0,32 u/sn), durup 1–3 kez sağa sola bakar.
+- **Ölçek kök nedeni:** Savaş mızraklısı 1,2 kök ölçekle çiziliyordu; kahraman 0,85 × 0,64 × 1,3 ≈ 0,71 → mızraklı ~1,7 kat büyüktü.
+- **Karar:** `Systems/UnitScale.cs` tek referans (Tiny Swords karakter gövdeleri paket içinde eş boy): Battle ≈ 0,707 (kahraman), Base = 1,9/3
+  (garnizon), Island = 1; `Relative(kind)` tür çarpanı. AllyLancer ve çatı devriyesi buradan okur. Test: mızraklı lossyScale = kahraman.
+
+## D53 — Kahraman/Çırak penceresi (2.5)
+- **Karar:** HeroInfo de `FancyInfoPanel` (kurdele başlık, portre, "Seviye N / 15" + tavan notu, "Can: 200 → 230" karşılaştırma,
+  altın ikonlu bedel, "Anında"); KAHRAMAN/ÇIRAK sekmeleri Tiny Swords düğme dokusuyla bedel satırının altında. DarkFantasyHudPolish'in
+  eski kutu yerleşimi süslü pencerede uygulanmaz.
+- **Tarama:** Kalan yükseltme/bilgi pencereleri: bina (süslü), ada (süslü), kahraman/çırak (artık süslü). İnşaatçı paneli ve Kart Atölyesi
+  liste/üretim ekranıdır (2.7'de Kart Atölyesi ayrı ele alınır).
+
+## D54 — Hemen bitir: bedava yok (2.6)
+- **Karar:** `GemEconomy.FinishCost`: bitmiş iş 0; **≤60 sn 1 elmas**; üstü mevcut 2,2 × √dakika. "BEDAVA BİTİR" metinleri kalktı;
+  düğmelerde elmas simgesi + sayı (`GemConfirm.SetGemIcon`, `GemEconomy.FinishLabel`): bina penceresi, inşaatçı paneli, ada paneli,
+  Kart Atölyesi kuyruğu. Öğretici/görevlerde bedava bitire bağlı adım yoktu (taranıp doğrulandı). GemEconomyTests/IslandPhaseBTests güncellendi.
+- **Not:** TMP yazı tipinde 💎 emojisi yok; "💎 1" görünümü ikon görüntüsü + sayı ile sağlanır.

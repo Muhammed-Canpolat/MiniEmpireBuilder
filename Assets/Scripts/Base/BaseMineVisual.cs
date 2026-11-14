@@ -46,6 +46,8 @@ public sealed class BaseMineVisual : MonoBehaviour
     private int shownNuggets = -1;
     private Coroutine atmosphere;
     public Color ThemeColor { get; private set; } = Color.white;
+    /// <summary>4. oturum (2.3): madendeki tek figür (Çırak). Maden yükselince yeniden kurulur; Çırak bağlayıcısı her seferinde bağlar.</summary>
+    public Transform Miner { get; private set; }
 
     public void Initialize(int buildingLevel, int order)
     {
@@ -152,6 +154,7 @@ public sealed class BaseMineVisual : MonoBehaviour
     {
         float unit = 1f / Mathf.Max(0.01f, transform.lossyScale.x);
         var worker = new GameObject("MinePawn");
+        Miner = worker.transform;
         worker.transform.SetParent(layers, false);
         worker.transform.localPosition = new Vector3((minerAnchorCell.x - 2f) * unit,
             (minerAnchorCell.y - 2f) * unit, -0.02f);
@@ -264,20 +267,24 @@ public sealed class BaseMineVisual : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(Random.Range(2.5f, 4.5f));
+            // 4. oturum (2.3): kazma darbeleriyle eş aralıkta (1,2–2 sn) çırağın önündeki kayadan 2–3 altın kıvılcımı sıçrar.
+            yield return new WaitForSeconds(Random.Range(1.2f, 2f));
             if (stones.Count == 0) continue;
-            // Kazma darbesinde büyük kayadan altın kıvılcımı sıçrar.
-            Vector3 origin = transform.position + new Vector3(-0.35f, 0.15f);
-            var spark = new GameObject("MineGoldSpark");
-            spark.transform.position = origin + new Vector3(Random.Range(-0.25f, 0.25f), 0f);
-            spark.transform.localScale = Vector3.one * 0.12f;
-            var renderer = spark.AddComponent<SpriteRenderer>();
-            renderer.sprite = BaseMapManager.MakeCircleSprite(Color.white);
-            renderer.color = new Color(1f, 0.88f, 0.3f);
-            renderer.sortingOrder = sortingOrder + 45;
-            spark.transform.DOJump(spark.transform.position + new Vector3(Random.Range(0.2f, 0.5f), -0.1f),
-                0.35f, 1, 0.45f);
-            renderer.DOFade(0f, 0.45f).OnComplete(() => Destroy(spark));
+            Vector3 origin = Miner != null ? Miner.position + new Vector3(-0.42f, 0.32f) : transform.position + new Vector3(-0.35f, 0.15f);
+            int count = Random.Range(2, 4);
+            for (int i = 0; i < count; i++)
+            {
+                var spark = new GameObject("MineGoldSpark");
+                spark.transform.position = origin + new Vector3(Random.Range(-0.12f, 0.12f), Random.Range(-0.05f, 0.08f));
+                spark.transform.localScale = Vector3.one * Random.Range(0.07f, 0.12f);
+                var renderer = spark.AddComponent<SpriteRenderer>();
+                renderer.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+                renderer.color = i == 0 ? new Color(1f, 0.95f, 0.6f) : new Color(1f, 0.82f, 0.22f);
+                renderer.sortingOrder = sortingOrder + 45;
+                spark.transform.DOJump(spark.transform.position + new Vector3(Random.Range(-0.45f, 0.1f), Random.Range(-0.2f, 0f)),
+                    Random.Range(0.25f, 0.4f), 1, 0.5f).SetLink(spark);
+                renderer.DOFade(0f, 0.5f).SetLink(spark).OnComplete(() => Destroy(spark));
+            }
         }
     }
 

@@ -694,6 +694,8 @@ public class BaseMapManager : MonoBehaviour
                 : go.AddComponent<BaseGarrisonVisual>();
             garrisonVisual.transform.localPosition = Vector3.zero;
         }
+        if (type == BuildingType.Barracks && go.GetComponent<SpriteRenderer>() != null)
+            go.AddComponent<BarracksRoofPatrol>();   // 4. oturum (2.4): damda devriye gezen mızraklı
         if (type == BuildingType.GoldMine)
         {
             int mineLevel = instanceLevel;

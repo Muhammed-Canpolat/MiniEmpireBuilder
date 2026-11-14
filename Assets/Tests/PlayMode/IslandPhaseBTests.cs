@@ -167,7 +167,7 @@ public class IslandPhaseBTests
         Assert.AreEqual(13, (int)Call("GemEconomy", "MeatTopUpCost", 100));   // ⌈100/8⌉
         Assert.AreEqual(0, (int)Call("GemEconomy", "MeatTopUpCost", 0));
         Assert.AreEqual(2, (int)Call("GemEconomy", "WoodTopUpCost", 26));      // ⌈26/25⌉
-        Assert.AreEqual(0, (int)Call("GemEconomy", "FinishCost", 30d), "1 dk altı bedava");
+        Assert.AreEqual(1, (int)Call("GemEconomy", "FinishCost", 30d), "≤1 dk 1 elmas (4. oturum 2.6)");
         Assert.Greater((int)Call("GemEconomy", "FinishCost", 3600d), 0);
     }
 

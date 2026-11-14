@@ -54,7 +54,9 @@ public class GemEconomyTests
     public void PricesMatchDesign()
     {
         int Finish(double seconds) => (int)Call("GemEconomy", "FinishCost", seconds);
-        Assert.AreEqual(0, Finish(30), "1 dk altı bedava");
+        Assert.AreEqual(1, Finish(30), "4. oturum (2.6): ≤1 dk 1 elmas (bedava bitir yok)");
+        Assert.AreEqual(1, Finish(60), "tam 1 dk: 1 elmas");
+        Assert.AreEqual(0, Finish(0), "bitmiş iş");
         Assert.AreEqual(12, Finish(30 * 60));
         Assert.AreEqual(17, Finish(3600));
         Assert.AreEqual(42, Finish(6 * 3600));

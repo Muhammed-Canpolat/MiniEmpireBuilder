@@ -379,13 +379,15 @@ public class BaseSceneSetup : MonoBehaviour
         TextMeshProUGUI bCost = fancyBuilding.primaryLabel;
         Button bClose = fancyBuilding.close;
 
-        GameObject heroInfoPanel = CreatePanel(canvasObj.transform, "HeroInfo", new Vector2(0.1f, 0.15f), new Vector2(0.9f, 0.45f), new Color(0.1f, 0.1f, 0.1f, 0.95f));
-        TextMeshProUGUI hName = CreateText(heroInfoPanel.transform, "Name", "Kahraman", new Vector2(0.1f, 0.85f), new Vector2(0.84f, 0.96f), 37, TextAlignmentOptions.Center, Color.white);
-        TextMeshProUGUI hLvl = CreateText(heroInfoPanel.transform, "Level", L.T("Seviye 1", "Level 1"), new Vector2(0.1f, 0.60f), new Vector2(0.9f, 0.72f), 31, TextAlignmentOptions.Center, Color.yellow);
-        TextMeshProUGUI hStats = CreateText(heroInfoPanel.transform, "Stats", "Can: 100", new Vector2(0.1f, 0.34f), new Vector2(0.9f, 0.60f), 25, TextAlignmentOptions.TopLeft, Color.white);
-        Button hUpBtn = CreateButton(heroInfoPanel.transform, "UpBtn", L.T("Yükselt", "Upgrade"), new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.3f), new Color(0.2f, 0.7f, 0.2f));
-        TextMeshProUGUI hCost = hUpBtn.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
-        Button hClose = CreateButton(heroInfoPanel.transform, "CloseBtn", "X", new Vector2(0.85f, 0.85f), new Vector2(0.95f, 0.95f), Color.red);
+        // 4. oturum (2.5): Kahraman/Çırak penceresi de aynı süslü bileşen (eski düz koyu kutu kalktı).
+        var fancyHero = FancyInfoPanel.Build(canvasObj.transform, "HeroInfo", new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.40f));
+        GameObject heroInfoPanel = fancyHero.root;
+        TextMeshProUGUI hName = fancyHero.title;
+        TextMeshProUGUI hLvl = fancyHero.level;
+        TextMeshProUGUI hStats = fancyHero.body;
+        Button hUpBtn = fancyHero.primary;
+        TextMeshProUGUI hCost = fancyHero.primaryLabel;
+        Button hClose = fancyHero.close;
 
         // --- BaseWorldUI Bağlama ---
         BaseWorldUI uiScript = gameObject.AddComponent<BaseWorldUI>();
@@ -396,6 +398,7 @@ public class BaseSceneSetup : MonoBehaviour
             battleBtn, buildBtn
         );
         uiScript.UseFancyBuildingPanel(fancyBuilding);
+        uiScript.UseFancyCharacterPanel(fancyHero);
 
         DarkFantasyHudPolish.PolishBase(_mainCanvas, hudRoot.transform);
     }
@@ -1244,7 +1247,7 @@ public class BaseSceneSetup : MonoBehaviour
                 GetComponent<BaseWorldUI>()?.ShowHeroInfo();
                 return;
             }
-            else if (hit.collider.GetComponentInParent<BaseApprenticeVisual>() != null)
+            else if (hit.collider.GetComponentInParent<BaseApprenticeVisual>() != null || hit.collider.GetComponent<BaseApprenticeTap>() != null)
             {
                 HideRemovePrompt();
                 GetComponent<BaseWorldUI>()?.ShowApprenticeInfo();

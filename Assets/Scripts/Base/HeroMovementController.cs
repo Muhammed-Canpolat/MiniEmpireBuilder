@@ -114,10 +114,25 @@ public class HeroMovementController : MonoBehaviour
         for (int dx = -1; dx <= 1; dx++)
             for (int dy = 0; dy <= 1; dy++)
                 if (!grid.Walkable(new Vector2Int(c.x + dx, c.y + dy))) return false;
-        var body = new Rect(c.x - 0.25f, c.y + 0.05f, 1.5f, 1.6f);
+        var body = BodyRectAt(new Vector2(c.x + 0.5f, c.y + 0.5f), self);
         visuals = visuals ?? VisualRects(self);
         foreach (var r in visuals) if (BaseVisualBounds.Overlap(body, r)) return false;
         return true;
+    }
+
+    /// <summary>
+    /// Kahramanın <paramref name="at"/> noktasında dururken kapladığı görsel dikdörtgen: gerçek sprite sınırı (kenar saydamlığı için %20
+    /// daraltılmış), dönüşüm noktasına göre aynı göreli konumda. Sprite yoksa 1,5×1,6'lık varsayılan.
+    /// </summary>
+    public static Rect BodyRectAt(Vector2 at, GameObject self)
+    {
+        var sr = self != null ? self.GetComponent<SpriteRenderer>() : null;
+        if (sr == null || sr.sprite == null) return new Rect(at.x - 0.75f, at.y - 0.45f, 1.5f, 1.6f);
+        var b = sr.bounds;
+        Vector2 offset = (Vector2)b.center - (Vector2)self.transform.position;
+        Vector2 size = new Vector2(b.size.x * 0.6f, b.size.y * 0.8f);
+        Vector2 center = at + offset;
+        return new Rect(center - size * 0.5f, size);
     }
 
     /// <summary>Ana Üs nesnelerinin (bina, kulübe, dekor, kamp) görsel dikdörtgenleri; bir seçim turunda bir kez toplanır.</summary>

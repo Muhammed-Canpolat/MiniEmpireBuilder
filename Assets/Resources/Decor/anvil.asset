@@ -22,3 +22,5 @@ MonoBehaviour:
   animatorController: {fileID: 0}
   customArt: 
   visualScale: 0.85
+  visualWidth: 0
+  retired: 1

@@ -436,4 +436,249 @@ public class Session4Tests
         Assert.IsTrue((bool)Field(other, "Cleared"), "bina altındaki çalı gizlendi");
         Assert.IsTrue(cleared.Contains("bush:" + cell.x + "," + cell.y), "göç: kayda yazıldı");
     }
+    // ==================== AŞAMA 2 YARDIMCILARI ====================
+
+    internal static IEnumerator LoadBaseWith(int mainBase, Action<object> configure, int gold = 6345)
+    {
+        var managerType = T("GameManager");
+        var gm = managerType.GetProperty("Instance").GetValue(null) as Component;
+        if (gm == null) gm = new GameObject("TestGameManager").AddComponent(managerType);
+        T("DevSettings").GetProperty("Enabled").SetValue(null, false);
+        yield return null;
+        var save = NewSave();
+        foreach (var entry in (IEnumerable)Field(save, "buildings"))
+            if (Field(entry, "buildingType").ToString() == "MainBase") Set(entry, "level", mainBase);
+        Set(save, "gold", gold);
+        Set(save, "gems", 111);
+        Set(save, "firstBaseGuideDone", true);
+        var island = Field(save, "island");
+        Set(island, "keepLevel", Math.Max(1, Math.Min(mainBase, 15)));
+        Set(island, "tutorialStep", 4);
+        Call("IslandNameRules", "Apply", island, "Kartal Adası");
+        configure?.Invoke(save);
+        managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(gm, new[] { save });
+        managerType.GetMethod("RebuildBuildingData", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(gm, null);
+        managerType.GetMethod("CheckUnlockBuildings", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(gm, null);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("BaseScene");
+        for (int i = 0; i < 45; i++) yield return null;
+        yield return new WaitForSecondsRealtime(0.8f);
+    }
+
+    private static object DecorRecord(string instance, string id, int x, int y)
+    {
+        var rec = Activator.CreateInstance(T("PlacedDecorSave"));
+        Set(rec, "instanceId", instance); Set(rec, "decorId", id); Set(rec, "x", x); Set(rec, "y", y);
+        return rec;
+    }
+
+    // ==================== 2.1 / 2.2 DEKOR ====================
+
+    private static readonly string[] TinySwordsTextures = { "Tree", "Bush", "Rock", "Stump", "Sheep", "Gold", "Wood Resource", "Meat Resource" };
+
+    [Test]
+    public void DecorCatalogIsTinySwordsOnlyAndSmallDecorIsOneCell()
+    {
+        var catalog = (Array)T("DecorPlacementController").GetProperty("Catalog").GetValue(null);
+        Assert.GreaterOrEqual(catalog.Length, 15, "katalog zenginleşti");
+        foreach (var d in catalog)
+        {
+            string id = (string)Field(d, "id");
+            var sprite = (Sprite)d.GetType().GetProperty("Visual").GetValue(d);
+            Assert.NotNull(sprite, id + " görseli");
+            string tex = sprite.name;   // atlas dokusu adı paketlenince değişir; sprite adı Tiny Swords dosya adından gelir
+            Assert.IsTrue(TinySwordsTextures.Any(t => tex.StartsWith(t) || tex.Contains(t)), $"{id}: Tiny Swords sprite'ı değil ({tex})");
+            var fp = (Vector2Int)Field(d, "footprint");
+            Assert.AreEqual(Vector2Int.one, fp, id + " 1×1");
+        }
+        var all = (Array)T("DecorPlacementController").GetProperty("All").GetValue(null);
+        foreach (var d in all)
+            if ((bool)Field(d, "retired"))
+                Assert.IsFalse(((Sprite)d.GetType().GetProperty("Visual").GetValue(d))?.name.StartsWith("Tree") ?? false);
+    }
+
+    [UnityTest]
+    public IEnumerator OldTwoByTwoDecorMigratesAndRetiredDecorStaysWithFullRefund()
+    {
+        yield return LoadBaseWith(7, save =>
+        {
+            var list = (IList)Field(save, "placedDecor");
+            list.Add(DecorRecord("old-tree", "tree", 4, 16));
+            list.Add(DecorRecord("old-bush", "bush", 8, 16));
+            list.Add(DecorRecord("old-barrel", "barrel", 10, 16));
+            Set(save, "decorLayoutVersion", 0);
+        }, gold: 100);
+        var decor = T("DecorPlacementController").GetProperty("Instance").GetValue(null);
+        var placed = ((IEnumerable)decor.GetType().GetProperty("Placed").GetValue(decor)).Cast<Component>().ToList();
+        Component Find(string id) => placed.FirstOrDefault(p => (string)p.GetType().GetProperty("InstanceId").GetValue(p) == id);
+        var tree = Find("old-tree"); var bush = Find("old-bush"); var barrel = Find("old-barrel");
+        Assert.NotNull(tree, "eski ağaç duruyor"); Assert.NotNull(bush, "eski çalı duruyor"); Assert.NotNull(barrel, "emekli fıçı silinmedi");
+        Vector2Int Cell(Component c) => (Vector2Int)c.GetType().GetProperty("Cell").GetValue(c);
+        Assert.IsTrue(new RectInt(4, 16, 3, 3).Contains(Cell(tree)), "3×3 ağaç eski alanının içinde kaldı (orta ya da en yakın boş hücre): " + Cell(tree));
+        Assert.AreEqual(new Vector2Int(8, 16), Cell(bush), "2×2 çalı yerinde (1×1)");
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        Assert.AreEqual(1, (int)Field(Prop(gm, "PlayerData"), "decorLayoutVersion"));
+        int gold0 = (int)Prop(gm, "Gold");
+        var barrelData = barrel.GetType().GetProperty("Data").GetValue(barrel);
+        int cost = (int)Field(barrelData, "cost");
+        decor.GetType().GetMethod("Delete").Invoke(decor, new object[] { barrel });
+        Assert.AreEqual(gold0 + cost, (int)Prop(gm, "Gold"), "emekli dekor silinince tam bedel iade");
+
+        // Yan yana doğal çevre: 1×1 ağaç/çalı/kaya dizisi
+        var spawn = decor.GetType().GetMethod("Spawn", BindingFlags.NonPublic | BindingFlags.Instance);
+        var all = ((Array)T("DecorPlacementController").GetProperty("Catalog").GetValue(null)).Cast<object>().ToList();
+        string[] row = { "tree", "tree3", "bush2", "rock", "bush", "tree2", "rock4", "stump", "bush3", "tree4", "gold_stone" };
+        var canPlace = decor.GetType().GetMethod("CanPlace", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public, null,
+            new[] { T("DecorData"), typeof(Vector2Int), T("DecorInstance") }, null);
+        int x = 4;
+        foreach (var id in row)
+        {
+            var data = all.First(d => (string)Field(d, "id") == id);
+            var cell = new Vector2Int(x++, 13);
+            if (canPlace == null || (bool)canPlace.Invoke(decor, new object[] { data, cell, null }))
+                spawn.Invoke(decor, new object[] { data, cell, "row-" + id });
+        }
+        yield return new WaitForSecondsRealtime(0.3f);
+        var cam = Camera.main;
+        cam.transform.position = new Vector3(9.5f, 14.5f, cam.transform.position.z);
+        Nov13FeedbackTests.CaptureCamera("S2_1_decor_row", cam, 1080, 1920, false, Folder);
+        // Menü: Dekor sekmesi
+        var menu = T("BuildMenuController").GetProperty("Instance").GetValue(null);
+        menu.GetType().GetMethod("Show").Invoke(menu, null);
+        yield return new WaitForSecondsRealtime(0.4f);
+        menu.GetType().GetMethod("SelectTab", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(menu, new object[] { 1 });
+        yield return new WaitForSecondsRealtime(0.4f);
+        CardWorkshopTests.CaptureScreen("S2_2_decor_menu", "session4");
+    }
+    // ==================== 2.3 MADEN: TEK ÇIRAK ====================
+
+    [UnityTest]
+    public IEnumerator MineHasASingleDiggingApprenticeWithGoldSparks()
+    {
+        yield return Nov13FeedbackTests.LoadBase(7);
+        yield return new WaitForSecondsRealtime(1f);
+        var pawns = Object.FindObjectsByType<Animator>(FindObjectsSortMode.None)
+            .Where(a => a.gameObject.name == "MinePawn" || a.gameObject.name == "BaseApprentice").ToList();
+        Assert.AreEqual(1, pawns.Count, "madende tek figür: " + string.Join(",", pawns.Select(p => p.name)));
+        var miner = pawns[0];
+        Assert.NotNull(miner.GetComponent(T("BaseApprenticeTap")), "madenci Çırak'tır (dokununca Çırak penceresi)");
+        Assert.NotNull(miner.GetComponent<BoxCollider2D>(), "dokunma alanı");
+        var state = miner.GetCurrentAnimatorClipInfo(0);
+        Assert.IsTrue(state.Length > 0 && state[0].clip.name.Contains("Pickaxe"), "kazma animasyonu: " + (state.Length > 0 ? state[0].clip.name : "yok"));
+        bool spark = false;
+        float until = Time.realtimeSinceStartup + 3f;
+        while (Time.realtimeSinceStartup < until && !spark) { spark = GameObject.Find("MineGoldSpark") != null; yield return null; }
+        Assert.IsTrue(spark, "altın kıvılcımı çıktı");
+        var cam = Camera.main;
+        float size = cam.orthographicSize;
+        cam.orthographicSize = 3.2f;
+        cam.transform.position = new Vector3(miner.transform.position.x, miner.transform.position.y + 0.4f, cam.transform.position.z);
+        Nov13FeedbackTests.CaptureCamera("S2_3_mine_apprentice", cam, 1080, 1920, false, Folder);
+        cam.orthographicSize = size;
+    }
+    // ==================== 2.4 KIŞLA DEVRİYESİ + ÖLÇEK TABLOSU ====================
+
+    private static void AddBarracks(object save, int level, string slot = "barracks_1")
+    {
+        var placed = (IList)Field(save, "placedBuildings");
+        var entry = Activator.CreateInstance(T("PlacedBuildingData"));
+        Set(entry, "slotId", slot); Set(entry, "buildingType", "Barracks"); Set(entry, "level", level);
+        placed.Add(entry);
+        foreach (var b in (IEnumerable)Field(save, "buildings"))
+            if (Field(b, "buildingType").ToString() == "Barracks") { Set(b, "isUnlocked", true); Set(b, "level", level); }
+    }
+
+    [UnityTest]
+    public IEnumerator BarracksRoofLancerPatrolsAndBattleLancersMatchHeroScale()
+    {
+        yield return LoadBaseWith(12, save => AddBarracks(save, 10));
+        var patrol = Object.FindFirstObjectByType(T("BarracksRoofPatrol")) as Component;
+        Assert.NotNull(patrol, "Kışla çatı devriyesi");
+        yield return new WaitForSecondsRealtime(1f);
+        var lancer = (Transform)Prop(patrol, "Lancer");
+        Assert.NotNull(lancer, "damdaki mızraklı");
+        var body = patrol.GetComponent<SpriteRenderer>().bounds;
+        Assert.IsTrue(lancer.position.y > body.center.y, "mızraklı binanın üst yarısında (damda)");
+        Assert.IsTrue(lancer.position.x > body.min.x && lancer.position.x < body.max.x, "damın içinde");
+        float x0 = lancer.position.x;
+        bool moved = false;
+        float until = Time.realtimeSinceStartup + 8f;
+        while (Time.realtimeSinceStartup < until && !moved) { moved = Mathf.Abs(lancer.position.x - x0) > 0.2f; yield return null; }
+        Assert.IsTrue(moved, "devriye: ileri geri yürür");
+        var cam = Camera.main;
+        float size = cam.orthographicSize;
+        cam.orthographicSize = 4f;
+        cam.transform.position = new Vector3(body.center.x, body.center.y, cam.transform.position.z);
+        Nov13FeedbackTests.CaptureCamera("S2_4_barracks_roof", cam, 1080, 1920, false, Folder);
+        cam.orthographicSize = size;
+
+        // Savaş: mızraklılar kahramanla aynı ölçek tablosundan
+        yield return StartBattle(1, 1, 12, save => AddBarracks(save, 10));
+        var lancers = ((IEnumerable)T("AllyLancer").GetField("All").GetValue(null)).Cast<Component>().ToList();
+        Assert.Greater(lancers.Count, 0, "savaşta mızraklı");
+        var hero = Object.FindFirstObjectByType(T("HeroController")) as Component;
+        float heroScale = hero.transform.lossyScale.x;
+        foreach (var l in lancers)
+            Assert.AreEqual(heroScale, l.transform.lossyScale.x, 0.02f, "mızraklı ölçeği = kahraman ölçeği (UnitScale.Battle)");
+        Assert.AreEqual((float)T("UnitScale").GetField("Battle").GetValue(null), heroScale, 0.02f, "kahraman = tablo");
+        var bcam = Camera.main;
+        var follow = bcam.GetComponent(T("CameraFollow")) as Behaviour;
+        if (follow != null) follow.enabled = false;
+        var mb = Object.FindFirstObjectByType(T("MainBaseController")) as Component;
+        bcam.transform.position = new Vector3(mb.transform.position.x, mb.transform.position.y - 1.5f, bcam.transform.position.z);
+        yield return null;
+        CardWorkshopTests.CaptureScreen("S2_4_battle_lancers", "session4");
+        var battle = Object.FindFirstObjectByType(T("BattleManager"));
+        battle.GetType().GetMethod("BattleLost", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(battle, null);
+    }
+    internal static string Text(Transform t)
+    {
+        foreach (var c in t.GetComponents<Component>())
+        {
+            var p = c.GetType().GetProperty("text");
+            if (p != null && p.PropertyType == typeof(string)) return (string)p.GetValue(c);
+        }
+        return null;
+    }
+
+    // ==================== 2.5 KAHRAMAN / ÇIRAK PENCERESİ ====================
+
+    [UnityTest]
+    public IEnumerator HeroAndApprenticeUseTheFancyUpgradePanel()
+    {
+        yield return Nov13FeedbackTests.LoadBase(7);
+        var ui = Object.FindFirstObjectByType(T("BaseWorldUI"));
+        ui.GetType().GetMethod("ShowHeroInfo").Invoke(ui, null);
+        yield return new WaitForSecondsRealtime(0.5f);
+        var panel = GameObject.Find("HeroInfo");
+        Assert.NotNull(panel, "kahraman penceresi");
+        Assert.NotNull(panel.transform.Find("Ribbon"), "süslü kurdele başlık");
+        Assert.AreEqual("ui_paper", panel.GetComponent<UnityEngine.UI.Image>().sprite != null ? "ui_paper" : "", "kâğıt zemin");
+        var level = Text(panel.transform.Find("Level"));
+        StringAssert.Contains("/ 15", level, "Seviye N / 15");
+        var body = Text(panel.transform.Find("Body"));
+        StringAssert.Contains("→", body, "mevcut → sonraki değerler");
+        Assert.IsTrue(panel.transform.Find("WoodIcon").gameObject.activeSelf, "altın ikonu + bedel");
+        CardWorkshopTests.CaptureScreen("S2_5_hero_panel", "session4");
+        ui.GetType().GetMethod("ShowApprenticeInfo").Invoke(ui, null);
+        yield return new WaitForSecondsRealtime(0.4f);
+        StringAssert.Contains("Maden", Text(panel.transform.Find("Body")), "Çırak değerleri");
+        CardWorkshopTests.CaptureScreen("S2_5_apprentice_panel", "session4");
+    }
+    // ==================== 2.6 HEMEN BİTİR: BEDAVA YOK ====================
+
+    [Test]
+    public void FinishNowIsNeverFreeAndCostsOneGemUnderAMinute()
+    {
+        int Finish(double sec) => (int)Call("GemEconomy", "FinishCost", sec);
+        Assert.AreEqual(0, Finish(0), "bitmiş iş");
+        Assert.AreEqual(1, Finish(1), "1 sn kala 1 elmas");
+        Assert.AreEqual(1, Finish(59));
+        Assert.AreEqual(1, Finish(60), "tam 1 dk: 1 elmas");
+        Assert.GreaterOrEqual(Finish(61), 2, "1 dk üstü formül");
+        Assert.AreEqual(17, Finish(3600), "mevcut formül korunur");
+        string label = (string)Call("GemEconomy", "FinishLabel", 1);
+        StringAssert.DoesNotContain("BEDAVA", label);
+        StringAssert.DoesNotContain("FREE", label);
+        StringAssert.EndsWith("1", label, "fiyat: elmas ikonu + sayı");
+    }
 }

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c52e97efd190be46bc7c6dabcf9d9d9, type: 3}
+  m_Name: tree3
+  m_EditorClassIdentifier: Assembly-CSharp::DecorData
+  id: tree3
+  displayName: Çam
+  footprint: {x: 1, y: 1}
+  cost: 15
+  unlockMainBaseLevel: 2
+  sprite: {fileID: -1922301785, guid: 9606510127d3043a5bbdf980402c1628, type: 3}
+  animated: 1
+  animatorController: {fileID: 9100000, guid: 070b8abcf130c45319deddb7cc75fe69, type: 2}
+  customArt: 
+  visualScale: 1
+  visualWidth: 2.1
+  retired: 0

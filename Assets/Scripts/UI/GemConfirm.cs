@@ -122,6 +122,15 @@ public sealed class GemConfirm : MonoBehaviour
         AudioManager.Instance?.PlaySfx("click");
     }
 
+    /// <summary>4. oturum (2.6): düğmedeki elmas simgesini açar/kapatır (yoksa ekler). Fiyat "💎 1" biçiminde: simge + sayı.</summary>
+    public static void SetGemIcon(Transform button, bool on)
+    {
+        if (button == null) return;
+        var existing = button.Find("GemIcon");
+        if (existing == null && on) AddGemIcon(button);
+        else if (existing != null) existing.gameObject.SetActive(on);
+    }
+
     /// <summary>Düğme yazısının soluna küçük elmas simgesi.</summary>
     public static void AddGemIcon(Transform button)
     {

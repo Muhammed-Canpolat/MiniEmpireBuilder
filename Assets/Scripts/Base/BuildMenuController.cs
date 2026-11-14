@@ -106,11 +106,11 @@ public class BuildMenuController : MonoBehaviour
         CreateItem(BuildingType.CardWorkshop, X(3), X(3) + cw, Progression.Workshop.BuildCost);
         CreateItem(BuildingType.House, X(4), X(4) + cw, Progression.BuildCost(BuildingType.House));
         CreateItem(BuildingType.Barracks, X(5), X(5) + cw, Progression.BuildCost(BuildingType.Barracks));
-        var decor = DecorPlacementController.All;
-        // Doğa → köy eşyaları → büyük yapılar; listede olmayan yeni dekorlar en sona, bedele göre.
-        string[] decorOrder = { "tree", "bush", "rock", "flowers", "sheep", "stone_path",
-            "hay_bale", "barrel", "crate", "wood_logs", "anvil", "scarecrow", "campfire",
-            "lantern", "flag", "fountain", "statue" };
+        var decor = DecorPlacementController.Catalog;
+        // 4. oturum (2.2): yalnız Tiny Swords. Ağaçlar → çalılar → kayalar → kütük/kaynak yığınları → koyun → altın taşları.
+        string[] decorOrder = { "tree", "tree2", "tree3", "tree4", "bush", "bush2", "bush3", "bush4",
+            "rock", "rock2", "rock3", "rock4", "stump", "wood_pile", "meat_pile", "gold_pile", "sheep",
+            "gold_stone", "gold_stone_big" };
         int Order(DecorData d) { int i = System.Array.IndexOf(decorOrder, d.id); return i < 0 ? 1000 + d.cost : i; }
         System.Array.Sort(decor, (a, b) => Order(a).CompareTo(Order(b)));
         CreateDecorGrid(decor);

@@ -242,7 +242,8 @@ public sealed class IslandSceneSetup : MonoBehaviour
 
     private void BuildVillage(int keep)
     {
-        Village = gameObject.GetComponent<IslandVillage>() ?? gameObject.AddComponent<IslandVillage>();
+        Village = gameObject.GetComponent<IslandVillage>();
+        if (Village == null) Village = gameObject.AddComponent<IslandVillage>();   // Unity sahte-null: ?? kullanılmaz
         Village.Build(this, worldRoot, keep);
         pawnsRoot = Village.PawnsRoot;
         CastleStructure = Village.CastleStructure;

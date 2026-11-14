@@ -228,7 +228,8 @@ public sealed class IslandBurn : MonoBehaviour
     public static void Ignite(IslandBuilding target, float seconds, float fractionPerSecond)
     {
         if (target == null || target.Structure == null) return;
-        var burn = target.GetComponent<IslandBurn>() ?? target.gameObject.AddComponent<IslandBurn>();
+        var burn = target.GetComponent<IslandBurn>();
+        if (burn == null) burn = target.gameObject.AddComponent<IslandBurn>();   // Unity sahte-null: ?? kullanılmaz
         burn.building = target;
         burn.until = Time.time + seconds;
         burn.fraction = Mathf.Max(burn.fraction, fractionPerSecond);

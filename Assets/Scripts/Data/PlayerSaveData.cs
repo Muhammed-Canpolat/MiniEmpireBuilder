@@ -31,6 +31,7 @@ public class PlayerSaveData
     // Haritaya yerleştirilen binalar
     public List<PlacedBuildingData> placedBuildings = new List<PlacedBuildingData>();
     public List<PlacedDecorSave> placedDecor = new List<PlacedDecorSave>();
+    public int decorLayoutVersion;   // 4. oturum (2.1): 1 = küçük dekorlar 1×1 (DecorPlacementController.LayoutVersion)
     public List<CampaignLevelProgress> campaignProgress = new List<CampaignLevelProgress>();
 
     // İnşa edilebilir alanın kayıtlı genişliği; görünüm yüksekliği buna göre hesaplanır.

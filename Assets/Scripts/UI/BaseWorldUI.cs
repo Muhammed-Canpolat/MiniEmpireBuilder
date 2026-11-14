@@ -136,6 +136,55 @@ public class BaseWorldUI : MonoBehaviour
     }
 
     private FancyInfoPanel.View fancy;
+    private FancyInfoPanel.View fancyHero;
+
+    /// <summary>4. oturum (2.5): Kahraman/Çırak penceresi ortak süslü bileşen (sekmeler, portre, mevcut → sonraki, ikonlu bedel).</summary>
+    public void UseFancyCharacterPanel(FancyInfoPanel.View view)
+    {
+        fancyHero = view;
+        if (fancyHero == null) return;
+        fancyHero.secondary.gameObject.SetActive(false);
+        fancyHero.tertiary.gameObject.SetActive(false);
+        fancyHero.note.gameObject.SetActive(false);
+        var prt = fancyHero.primary.GetComponent<RectTransform>();
+        prt.anchorMax = new Vector2(0.96f, 0f);
+        fancyHero.body.rectTransform.offsetMax = new Vector2(-18f, -70f);
+        fancyHero.panel.rectTransform.SetAsLastSibling();
+    }
+
+    /// <summary>Süslü karakter penceresi: portre, "Seviye N / 15", karşılaştırmalı değerler, altın ikonu + bedel.</summary>
+    private void FillFancyCharacter(bool apprentice, int level, int maxLevel, string current, string next, int cost)
+    {
+        if (fancyHero == null) return;
+        var gm = GameManager.Instance;
+        Sprite portrait = null;
+        if (apprentice)
+        {
+            var binder = FindFirstObjectByType<BaseApprenticeVisual>();
+            var miner = binder != null ? binder.Figure : null;
+            var sr = miner != null ? miner.GetComponent<SpriteRenderer>() : null;
+            portrait = sr != null ? sr.sprite : null;
+        }
+        else
+        {
+            var heroObject = GameObject.Find("Hero");
+            var sr = heroObject != null ? heroObject.GetComponent<SpriteRenderer>() : null;
+            portrait = sr != null ? sr.sprite : null;
+        }
+        if (portrait != null)
+        {
+            var trimmed = HeroPortraitSprite.Get(portrait);
+            fancyHero.icon.sprite = trimmed != null ? trimmed : portrait;
+        }
+        fancyHero.icon.enabled = fancyHero.icon.sprite != null;
+        fancyHero.level.text = L.T($"Seviye {level} / {Progression.MaxLevel}", $"Level {level} / {Progression.MaxLevel}")
+            + (level >= maxLevel && level < Progression.MaxLevel ? L.T("  · tavan: Ana Üs", "  · cap: Main Base") : "");
+        bool canGrow = level < maxLevel;
+        fancyHero.body.text = canGrow ? FancyInfoPanel.CompareStats(current, next) : current;
+        FancyInfoPanel.SetCost(fancyHero, CampaignSceneSetup.Art("ui_icon_coin"), cost, gm.Gold >= cost, null, 0, true,
+            L.T("Anında", "Instant"), canGrow);
+        fancyHero.timeIcon.gameObject.SetActive(false);
+    }
 
     /// <summary>3. oturum (2.4): bina penceresi ortak süslü bileşen; TAŞI düğmesi ve ikonlu maliyet satırı bu görünümle gelir.</summary>
     public void UseFancyBuildingPanel(FancyInfoPanel.View view)
@@ -416,14 +465,15 @@ public class BaseWorldUI : MonoBehaviour
 
         if (upgradeCostText != null)
         {
+            if (upgradeButton != null) GemConfirm.SetGemIcon(upgradeButton.transform, task != null && typeData.isUnlocked);   // 4. oturum (2.6)
             if (!typeData.isUnlocked)
                 upgradeCostText.text = L.T($"Ana Üs Sev. {typeData.GetRequiredMainBaseLevel()} gerekli", $"Requires Main Base Lv. {typeData.GetRequiredMainBaseLevel()}");
             else if (task != null)
             {
-                // Süren iş: düğme "hemen bitir" olur (1 dk altı bedava).
+                // Süren iş: düğme "hemen bitir" olur (4. oturum 2.6: bedava yok; ≤1 dk 1 elmas; elmas ikonu + sayı).
                 int finish = GameManager.FinishNowCost(task);
                 string left = Progression.FormatDuration(GameManager.SecondsRemaining(task));
-                upgradeCostText.text = finish > 0 ? L.T($"HEMEN BİTİR · {finish} ELMAS · {left}", $"FINISH NOW · {finish} GEMS · {left}") : L.T($"BEDAVA BİTİR · {left}", $"FINISH FREE · {left}");
+                upgradeCostText.text = GemEconomy.FinishLabel(finish) + " · " + left;
             }
             else if (building.level >= Progression.MaxLevel)
                 upgradeCostText.text = L.T("EN YÜKSEK SEVİYE", "MAX LEVEL");
@@ -510,8 +560,19 @@ public class BaseWorldUI : MonoBehaviour
             int apprenticeLevel = GameManager.Instance.PlayerData.apprenticeLevel;
             int apprenticeCost = GameManager.Instance.GetApprenticeUpgradeCost();
             if (heroNameText != null) heroNameText.text = L.T("ÇIRAK", "APPRENTICE");
-            if (heroLevelText != null) heroLevelText.text = L.T("Seviye ", "Level ") + apprenticeLevel;
-            if (heroStatsText != null)
+            if (heroLevelText != null && fancyHero == null) heroLevelText.text = L.T("Seviye ", "Level ") + apprenticeLevel;
+            var appProgression = ApprenticeProgressionData.Instance;
+            if (fancyHero != null && appProgression != null)
+            {
+                int cap = GameManager.Instance.GetApprenticeMaxLevel();
+                int nx = Mathf.Min(cap, apprenticeLevel + 1);
+                string Lines(int lv) =>
+                    L.T("Can: ", "Health: ") + appProgression.Health(hero.weaponType, lv) + "\n" +
+                    L.T("Hasar: ", "Damage: ") + appProgression.Damage(hero.weaponType, lv) + "\n" +
+                    L.T("Maden: +%", "Mine: +") + appProgression.MineBonus(lv) + L.T("", "%");
+                FillFancyCharacter(true, apprenticeLevel, cap, Lines(apprenticeLevel), Lines(nx), apprenticeCost);
+            }
+            else if (heroStatsText != null)
             {
                 var progression = ApprenticeProgressionData.Instance;
                 if (progression != null)
@@ -538,10 +599,23 @@ public class BaseWorldUI : MonoBehaviour
         if (heroNameText != null)
             heroNameText.text = L.T("Ana Savaşçı", "Main Warrior");
 
-        if (heroLevelText != null)
+        if (heroLevelText != null && fancyHero == null)
             heroLevelText.text = L.T("Seviye ", "Level ") + hero.level;
 
-        if (heroStatsText != null)
+        if (fancyHero != null)
+        {
+            var nextHero = new HeroData { weaponType = hero.weaponType,
+                level = Mathf.Min(hero.level + 1, GameManager.Instance.GetHeroMaxLevel()) };
+            nextHero.ApplyLevelStats();
+            string Lines(HeroData h) =>
+                L.T("Can: ", "Health: ") + h.maxHealth.ToString("F0") + "\n" +
+                L.T("Hasar: ", "Damage: ") + h.damage.ToString("F0") + "\n" +
+                L.T("Kalkan: %", "Shield: ") + Mathf.RoundToInt(h.shield * 100f) + L.T("", "%") + "\n" +
+                L.T($"Menzil: {h.attackRange:F1} · Hız: {h.attackSpeed:F1}/sn", $"Range: {h.attackRange:F1} · Speed: {h.attackSpeed:F1}/s");
+            FillFancyCharacter(false, hero.level, GameManager.Instance.GetHeroMaxLevel(), Lines(hero), Lines(nextHero),
+                GameManager.Instance.GetHeroUpgradeCost());
+        }
+        else if (heroStatsText != null)
         {
             // Bir sonraki seviyenin değerleri ok ile gösterilir (kalkan: %10 + seviye başına %2).
             var next = new HeroData { weaponType = hero.weaponType,
@@ -635,10 +709,25 @@ public class BaseWorldUI : MonoBehaviour
                 typeof(Image), typeof(Button));
             go.transform.SetParent(heroInfoPanel.transform, false);
             var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(i == 0 ? 0.08f : 0.51f, 0.72f);
-            rect.anchorMax = new Vector2(i == 0 ? 0.49f : 0.91f, 0.83f);
+            if (fancyHero != null)
+            {
+                // Süslü pencerede sekmeler bedel satırının altında yan yana (Tiny Swords düğme dokusu)
+                rect.anchorMin = new Vector2(i == 0 ? 0.04f : 0.51f, 0.24f);
+                rect.anchorMax = new Vector2(i == 0 ? 0.49f : 0.96f, 0.355f);
+            }
+            else
+            {
+                rect.anchorMin = new Vector2(i == 0 ? 0.08f : 0.51f, 0.72f);
+                rect.anchorMax = new Vector2(i == 0 ? 0.49f : 0.91f, 0.83f);
+            }
             rect.offsetMin = rect.offsetMax = Vector2.zero;
             go.GetComponent<Image>().color = new Color(0.17f, 0.12f, 0.08f);
+            if (fancyHero != null)
+            {
+                var tabImage = go.GetComponent<Image>();
+                tabImage.sprite = FancyInfoPanel.Ui("ui_button_blue");
+                if (tabImage.sprite != null) { tabImage.type = Image.Type.Sliced; tabImage.pixelsPerUnitMultiplier = 3f; tabImage.color = Color.white; }
+            }
             go.GetComponent<Button>().onClick.AddListener(() => ShowCharacterInfo(selected == 1));
             var textGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             textGo.transform.SetParent(go.transform, false);
@@ -663,7 +752,7 @@ public class BaseWorldUI : MonoBehaviour
             characterUnderlines[i] = underline;
             underline.SetActive(i == 0);
         }
-        if (heroUpgradeButton != null)
+        if (heroUpgradeButton != null && fancyHero == null)   // süslü pencerede bedel satırı zaten altın ikonlu
         {
             var icon = new GameObject("GoldIcon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(heroUpgradeButton.transform, false);

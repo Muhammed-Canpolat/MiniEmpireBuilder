@@ -93,10 +93,12 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
                 (point.cell.x - footprint.x * 0.5f) / parentScale,
                 (point.cell.y - footprint.y * 0.5f) / parentScale, -0.03f);
             actor.transform.localScale = Vector3.one * 0.72f / parentScale;
-            var renderer = actor.GetComponent<SpriteRenderer>() ?? actor.AddComponent<SpriteRenderer>();
+            var renderer = actor.GetComponent<SpriteRenderer>();
+            if (renderer == null) renderer = actor.AddComponent<SpriteRenderer>();   // Unity sahte-null: ?? kullanılmaz
             renderer.sortingOrder = sortingOrder + 30 + i;
             renderer.color = Color.white;
-            var animator = actor.GetComponent<Animator>() ?? actor.AddComponent<Animator>();
+            var animator = actor.GetComponent<Animator>();
+            if (animator == null) animator = actor.AddComponent<Animator>();   // Unity sahte-null: ?? kullanılmaz
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             animator.runtimeAnimatorController = Controller(point.role, catalog, level);
             Play(animator, point.role == Role.Monk ? "Monk_Idle" :

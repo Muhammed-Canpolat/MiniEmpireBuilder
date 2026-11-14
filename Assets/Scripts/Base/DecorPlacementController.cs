@@ -34,6 +34,12 @@ public sealed class DecorPlacementController : MonoBehaviour
         Mathf.Clamp(Mathf.FloorToInt(world.y - footprint.y * 0.5f), 0, BaseWorldLayout.Height - footprint.y));
 
     public static DecorData[] All => Resources.LoadAll<DecorData>("Decor");
+    /// <summary>4. oturum (2.2): İnşa Et → Dekor kataloğu (yalnız Tiny Swords; emekli dekorlar hariç).</summary>
+    public static DecorData[] Catalog => Array.FindAll(All, d => d != null && !d.retired);
+    /// <summary>SİL iadesi: emekli dekor tam bedel, diğerleri yarı.</summary>
+    public static int RefundFor(DecorData data) => data == null ? 0 : data.retired ? data.cost : data.cost / 2;
+    /// <summary>Dekor yerleşim sürümü: 1 = küçük dekorlar 1×1 (ağaç 3×3'ten, ortası korunur).</summary>
+    public const int LayoutVersion = 1;
     public IReadOnlyList<DecorInstance> Placed => placed;
     public bool IsPlacing => selected != null;
 
@@ -71,6 +77,15 @@ public sealed class DecorPlacementController : MonoBehaviour
         if (records == null) return;
         bool changed = false;
         int refund = 0;
+        var player = GameManager.Instance.PlayerData;
+        if (player.decorLayoutVersion < LayoutVersion)
+        {
+            // 4. oturum (2.1): ağaç 3×3 → 1×1: eski alanın ortasına; 2×2 → 1×1 sol-alt hücrede kalır (eski alanın içi, çakışmaz).
+            foreach (var record in records)
+                if (record != null && record.decorId == "tree") { record.x += 1; record.y += 1; }
+            player.decorLayoutVersion = LayoutVersion;
+            changed = true;
+        }
         foreach (var record in records)
         {
             var data = Array.Find(All, item => item.id == record.decorId);
@@ -303,7 +318,7 @@ public sealed class DecorPlacementController : MonoBehaviour
     public void Delete(DecorInstance item)
     {
         if (item == null || !placed.Remove(item)) return;
-        int refund = item.Data.cost / 2;
+        int refund = RefundFor(item.Data);
         Destroy(item.gameObject);
         GameManager.Instance?.AddGold(refund);
         Save();
@@ -329,7 +344,8 @@ public sealed class DecorPlacementController : MonoBehaviour
         panelImage.type = Image.Type.Sliced;
         panelImage.color = Color.white;
         MakeButton(rect, L.T("TAŞI", "MOVE"), new Vector2(-50f, 0f), () => BeginMove(item), false, 92f);
-        MakeButton(rect, L.T($"SİL +{item.Data.cost / 2}", $"REMOVE +{item.Data.cost / 2}"), new Vector2(50f, 0f), () => Delete(item), false, 92f);
+        int refund = RefundFor(item.Data);
+        MakeButton(rect, L.T($"SİL +{refund}", $"REMOVE +{refund}"), new Vector2(50f, 0f), () => Delete(item), false, 92f);
         SelectionManager.Select(item, HideActions);
     }
 

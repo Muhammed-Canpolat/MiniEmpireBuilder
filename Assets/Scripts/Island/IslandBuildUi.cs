@@ -505,6 +505,7 @@ public sealed class IslandBuildUi
         secondary.gameObject.SetActive(secondaryText != null);
         if (secondaryText != null) { secondaryLabel.text = secondaryText; secondary.interactable = secondaryOn; }
         tertiary.gameObject.SetActive(tertiaryText != null);
+        GemConfirm.SetGemIcon(tertiary.transform, tertiaryText != null && tertiaryAction == TertiaryAction.FinishNow);   // 4. oturum (2.6)
         if (tertiaryText != null) { tertiaryLabel.text = tertiaryText; tertiary.interactable = tertiaryOn; }
     }
 
@@ -564,7 +565,7 @@ public sealed class IslandBuildUi
         {
             int gems = IslandEconomy.FinishGemCost();
             tertiaryAction = TertiaryAction.FinishNow;
-            tertiaryText = gems <= 0 ? L.T("HEMEN BİTİR · BEDAVA", "FINISH NOW · FREE") : L.T($"HEMEN BİTİR · {gems} elmas", $"FINISH NOW · {gems} gems");
+            tertiaryText = GemEconomy.FinishLabel(gems);   // 4. oturum (2.6): bedava yok, elmas ikonu + sayı
             tertiaryOn = true;
             SetCost(0, 0, Progression.FormatDuration(IslandEconomy.TaskSecondsLeft), true);
         }
@@ -792,7 +793,7 @@ public sealed class IslandBuildUi
             int gems = IslandEconomy.FinishGemCost();
             tertiaryAction = TertiaryAction.FinishNow;
             SetCost(0, 0, Progression.FormatDuration(IslandEconomy.TaskSecondsLeft), true);
-            SetButtons(null, false, null, false, gems <= 0 ? L.T("HEMEN BİTİR · BEDAVA", "FINISH NOW · FREE") : L.T($"HEMEN BİTİR · {gems} elmas", $"FINISH NOW · {gems} gems"), true);
+            SetButtons(null, false, null, false, GemEconomy.FinishLabel(gems), true);
             return;
         }
         if (open || !Progression.Island.ZoneRevealable(zone)) { SetCost(0, 0, null, false); panelNote.text = open ? "" : IslandEconomy.ZoneBlockedReason(zone); SetButtons(null, false, null, false, null, false); return; }
