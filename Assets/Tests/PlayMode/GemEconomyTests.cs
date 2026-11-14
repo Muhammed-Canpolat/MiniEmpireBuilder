@@ -154,9 +154,10 @@ public class GemEconomyTests
 
         // Eksik altın: 81 altın eksik → 3 elmas.
         SetField("gold", 100);
+        int expectGems = 1000 - (int)Call("GemEconomy", "GoldTopUpCost", 81);   // kur Ana Üs'e bağlı: çağrıdan önce hesapla
         Assert.IsTrue((bool)Invoke("TopUpGold", 181));
         Assert.AreEqual(181, Prop("Gold"));
-        Assert.AreEqual(1000 - Mathf.CeilToInt(81f / (int)Static("ShopService", "GoldPerGem")), Gems);
+        Assert.AreEqual(expectGems, Gems);
 
         // Canları doldur.
         SetField("lives", 2);

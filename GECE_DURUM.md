@@ -1,7 +1,7 @@
 # GECE_DURUM — Otonom çalışma (14 Kasım 2026, 6. oturum: savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi)
 
-DURUM: SÜRÜYOR (6. oturum)
-ŞU ANKİ İŞ: ada test takımları gerileme kontrolü, sonra AŞAMA 6
+DURUM: TAMAMLANDI (6. oturum)
+ŞU ANKİ İŞ: (yok) — rapor REPORT.md · SIRADAKİ: cihaz denemesi + PLAY_RELEASE §8–§9
 Kararlar: DECISIONS.md D68+ · Başlangıç commit'i: b2605ef · Testler: Session6Tests (editör kapalı, doğrudan projede)
 
 6. OTURUM İŞ LİSTESİ:
@@ -10,7 +10,7 @@ Kararlar: DECISIONS.md D68+ · Başlangıç commit'i: b2605ef · Testler: Sessio
 - [x] 2.1 Çırak maden katkısı (D73) · [x] 2.2 Kahraman/Çırak yükseltme süresi + mevcut→sonraki (D74) · [x] 2.3 Maden deposu (D75) · [x] 2.4 Dükkân + IAP (D76)
 - [x] 3.1 Adaya ilk giriş (D77) · [x] 3.2 Ada başlangıcı + öğretici (D78) · [x] 3.3 Ada seviyeleri bağımsız (D79) · [x] 3.4 Akın dengesi (D80)
 - [x] 4.1 Arazi genişletme şeffaflığı (D81) · [x] 4.2 Süreli temizleme + kompakt menü (D82)
-- [x] 5 Savaş kartı butonları (D83) · [ ] 6 Bütünsel denetim · [ ] SON
+- [x] 5 Savaş kartı butonları (D83) · [x] 6 Bütünsel denetim (D84, D85) · [x] SON (baştan oynatma + v11 kayıt yükleme)
 
 ENGELLENENLER:
 - (yok)

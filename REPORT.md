@@ -1,3 +1,102 @@
+# REPORT — 6. oturum (14 Kasım 2026): savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi
+
+Dal `gece-gelistirme` (push yok). Başlangıç `b2605ef`. Kararlar DECISIONS.md **D68–D85**. Testler `Assets/Tests/PlayMode/Session6Tests.cs`.
+Görüntüler `Docs/playtest/session6/`.
+
+## 1. Kısa özet
+- **Savaş:** inşası bitmemiş bina savaşa girmez (tek kaynak `BuildingLevels`); menzil çemberi kulenin ortasında ve hedeflemeyle aynı;
+  can barları sola sabit + gecikmeli beyaz iz; uzun yürüyüşte animasyon donmaz; ayarlar/arka plan duraklatması (zaman, sayaçlar, ses) + DEVAM.
+- **Ekonomi:** çırak katkısı %1…%15; kahraman/çırak yükseltmesi süreli (inşaatçı + aynı elmas kuralı) ve "mevcut → sonraki" her zaman görünür;
+  maden deposu görünür (4 saatlik üretim, "DOLU", Köylü Evi +%5/+%1); DÜKKÂN sekmesi (elmasla kaynak, Unity IAP 5.4 ile elmas).
+- **Ada:** ilk girişte tanıtım + "Adanızın adı ne olsun?" (kök neden bulundu), yalnız kale ile başlangıç + zorunlu Okçuluk öğreticisi,
+  ada seviyeleri Ana Üs'ten bağımsız (Kale Sv.N ← Ana Üs Sv.N+1 kilidi), akın eğrisi yeni başlangıca göre.
+- **Arazi/temizleme:** kilitli araziye dokununca tüm alan vurgulanır + koşul/büyüklük/kaynak kartı + AÇ (bulut dağılması); temizleme süreli
+  (3/5/10 sn), küçük eylem menüsü, halka, işçi, ödül.
+- **Savaş kartı penceresi:** eşit boyutlu "▶ REKLAM İZLE (hak)" / "💎 N İLE AÇ"; hak bitince kalan süre.
+- Kayıt **v11 → v13** (v12: IAP defteri; v13: ada ilk giriş/öğretici/bağımsız seviye göçü). Eski kayıtta hiçbir şey kaybolmaz (test S7).
+
+## 2. Madde madde
+| Madde | Durum | Not |
+|---|---|---|
+| 1.1 Tamamlanmamış inşaat | ✅ D68 | `Systems/BuildingLevels.cs`; savaş kule hakkı/seviyesi, Kışla, ev deposu, Kart Atölyesi, ipucu |
+| 1.2 Menzil çemberleri | ✅ D69 | Kök neden: halka ölçeği tweenlenen kulenin çocuğuydu (Y 0,2 → 1, merkez ×5 aşağı) |
+| 1.3 Can barları | ✅ D70 | `UI/UiHealthBar.cs` + dünya `HealthBar`; Slider iç boşlukları ve yarım ofset hatası |
+| 1.4 Uzun yürüyüş animasyonu | ✅ D71 | Kök neden: gizli renderer + `CullUpdateTransforms`; ayrıca 181 klipte döngü kapalıydı |
+| 1.5 Duraklatma | ✅ D72 | `Battle/BattlePause.cs` (ayarlar + arka plan/telefon/kilit), ses de durur |
+| 2.1 Çırak katkısı | ✅ D73 | öncesi/sonrası ECONOMY §11.1 |
+| 2.2 Kahraman/Çırak | ✅ D74 | süreli, elmasla bitir, mevcut → sonraki |
+| 2.3 Maden deposu | ✅ D75 | ECONOMY §11.2–11.3 |
+| 2.4 Dükkân | ✅ D76 | ECONOMY §12, PLAY_RELEASE §9 |
+| 3.1 Adaya ilk giriş | ✅ D77 | Kök neden: `DevSettings.Enabled` (Development APK'da açık) adı hiç sormuyordu |
+| 3.2 Ada başlangıcı + öğretici | ✅ D78 | yalnız kale; Okçuluk ücretsiz; Oduncu/Ağıl 100 altın (ECONOMY §13) |
+| 3.3 Bağımsız ada seviyeleri | ✅ D79 | adil göç: girilmiş adada o anki etkin seviye korunur |
+| 3.4 Akın dengesi | ✅ D80 | Kale 1: düşman ölçeği 0,5 (öldürme süresi eski Kale 5 ile aynı) |
+| 4.1 Arazi genişletme | ✅ D81 | Ana Üs + ada aynı vurgu |
+| 4.2 Temizleme | ✅ D82 | Ana Üs + ada aynı sistem |
+| 5 Savaş kartı UI | ✅ D83 | |
+| 6 Bütünsel denetim | ✅ D84 | §4 |
+
+## 3. Ekonomi metrikleri (öncesi → sonrası, SIM 40 tohum)
+| Metrik | V2 (5. oturum) | V2 (6. oturum) |
+|---|---|---|
+| Toplam gelir, 1. gün (altın/sa) | 1.890 | 1.659 |
+| Toplam gelir, 3. gün | 1.643 | 2.107 |
+| Ana Üs medyanı 1 sa / 1. g / 3. g / 7. g | 8 / 10 / 13 / 15 | 5 / 10 / 14 / 15 |
+| Maden deposu taşması 1. gün | %85 | %0 |
+| Cüzdan tavanında geçen oturum (1. gün) | %2,8 | %0,2 |
+| Çırak Sv10 + maden Sv10 (eski hızla) | 10.368 altın/sa | 9.504 altın/sa (−%8,3) |
+| Altın kuru (Ana Üs 10) | 40 altın/elmas (sabit) | 94 altın/elmas (dükkân + top-up aynı) |
+Yorum: altın değerli kalıyor (1. günde sıradaki Ana Üs ~20 savaş, tavanda boşa giden altın ~0); depo artık anlamlı; Ana Üs 15'e ~3,5. gün.
+
+## 4. Bütünsel denetim (AŞAMA 6) — bulunan sorunlar ve çözümler
+| # | Bulgu | Çözüm |
+|---|---|---|
+| 1 | İnşaatçı görevleri ve maden ham `DateTime.UtcNow`: saat geri alınınca süreler oynuyordu | GameManager tümüyle `GameClock` (geri alınmaz saat) |
+| 2 | Ada tekrar ödülü günlük sınırı ham saatle | `GameClock` |
+| 3 | Saati İLERİ alma çevrimdışı doğrulanamaz | Belgelendi: sunucu saati/bulut kaydıyla kapatılmalı (açık iş) |
+| 4 | Eksik altın tamamlama sabit 40 altın/elmas (Ana Üs 15'te anlamsız) | Dükkânla aynı Ana Üs'e bağlı kur |
+| 5 | Kahraman/çırak eğitimi tek inşaatçıyı tıkıyordu (baştan oynatmada kahraman Sv2'de kaldı) | Ayrı eğitim yuvası (D85) |
+| 6 | Arazi kilidi formülü iki yerde | `LandExpansion.RequiredMainBase` tek kaynak |
+| 7 | Inşası bitmemiş bina 6 farklı okuma noktasında sayılıyordu | `BuildingLevels` |
+| 8 | Ada adı Development derlemesinde hiç sorulmuyordu | Kapı yalnız otomatik testte |
+| 9 | Tiny Swords Run/Idle klipleri döngüsüz (çırak, işçi, koyun, okçular da etkileniyordu) | 181 klipte döngü |
+| 10 | Çevrimdışı maden: <1 altın birikince zaman damgası ilerliyor, kesir kayboluyordu | Damga korunur |
+| 11 | Eski test `OldV9Save…` 4. oturumdan beri yanlış regex (clearedNature) | Regex düzeltildi |
+Elmasla hızlandırma: Ana Üs, ada, Kart Atölyesi, kahraman/çırak hepsi `GemEconomy.FinishCost`. Öğretici sırası: tanıtım → ad → Okçuluk → akın öğreticisi (çakışma yok).
+
+## 5. Testler
+- `Session6Tests` 22/22 (S1_1 … S7). Güncellenen eski testler: IslandFreshStartTests 8/8, IslandPhaseBTests, IslandPhaseE2, RaidAbilityTests,
+  Session4/5 (kaldırma menüsü, fikstür: eski kayıt arazisi `landOpened = -1`, okçu seviyesi = kale), EconomyProfileTests, BaseBarracksTests, GemEconomyTests.
+- Geniş koşu (108 test: ada C/E2, akın, yetenek, Nov13, Session4/5, Kışla, Atölye): düzeltmelerden sonra yalnız **önceden bilinen 2** başarısız:
+  `IslandPhaseCTests.MonsterFlips…`, `IslandRaidTests.LiveRaid…` (5. oturum raporunda da vardı).
+- Not: `-testFilter "Island"` gibi geniş filtre `[Explicit]` uzun ölçümleri de koşturur; ilk koşum bu yüzden ~30 dk sürdü (takılma değil).
+
+## 6. SON — baştan oynatma ve kayıt yükleme
+**Yeni kayıt, sınırsız elmas KAPALI** (`FreshAccountJourneyTests`, bot oyuncu; rapor `Docs/playtest/session6/journey/journey.md`):
+- Ana Üs 1 → 5 ~6 sa 40 dk simüle süre; 15 savaş (9 zafer, 6 yenilgi; en ileri B2-4). Kahraman Sv4, çırak Sv4 (eğitim yuvası sonrası).
+- Ada: tanıtım gösterildi → "Adanızın adı ne olsun?" → "Kartal Adası" (ücretsiz, 2 hak kaldı) → öğretici → Okçuluk Alanı ücretsiz → okçu binadan çıktı.
+- Akın 1, 2, 3 Kıyı Kalesi Sv1 + Okçu Sv1 ile kazanıldı (kale %100; bot "iyi" profil — gerçek oyuncu için de kazanılabilir).
+- Dükkân: sahte mağazayla `gems_small` → +100 elmas (defter + onay); Odun Kesesi 4 elmas → +90 Odun.
+- Duraklatma, menzil, can barları sefer savaşında `S1_*` testleriyle doğrulandı (görüntüler session6/S1_*).
+**Mevcut kayıt:** telefonundaki kayda buradan erişemem (editördeki kayıt test koşularınca yenilenmiş). Onun yerine ilerlemesi olan bir **v11 kaydı**
+(Ana Üs 10, kahraman 9, çırak 7, maden 8, ada Kale 4/Akın 12, madende 900 altın) birebir kurulup tam yükleme yolundan geçirildi (`S7`): hiçbir değer
+kaybolmadı, ada seviyesi 10'a sabitlendi, arazi 3 genişleme açık kaldı, tanıtım tekrar gösterilmez. **Cihazda ilk açılışta kontrol et.**
+
+## 7. Engellenenler / bilinen sınırlar
+- ENGELLENEN yok.
+- Bilinen sınırlar: saati ileri alma (sunucu gerekir); ada temizlik işleri gerçek zamanlı (yarıda kapanırsa bedel alınmaz, iş kaybolur);
+  test görüntülerinde öğretici deliği ekran ölçeği farkı yüzünden kayık görünebilir (oyunda değil); cihaz testi yapılmadı (Development APK ile dene).
+- Ana Üs 1. genişleme kademesi eski kayıtlarda doğa tabanı yüzünden "0 ağaç" gösterebilir (alan zaten temizdi).
+
+## 8. PLAY_RELEASE.md'de senin yapman gerekenler (yeni)
+1. **Play Console → Uygulama içi ürünler:** `gems_small` (100), `gems_medium` (550), `gems_large` (1.250) — tüketilebilir, fiyatı sen ver (öneri §9.1).
+2. **Lisans test kullanıcıları** ekle; dahili test kanalına imzalı AAB yükle (ürünler ancak o zaman görünür).
+3. **GooglePlayTangle üret** (Services → In-App Purchasing → Receipt Validation Obfuscator, Play Console lisans anahtarı) ve commit et —
+   yapılmazsa yayın derlemesi gerçek satın almada elmas VERMEZ.
+4. İçerik derecelendirmesi formunda "Dijital satın alma: Evet".
+5. Önceki maddeler (upload key, gizlilik URL'si, formlar, 12 test kullanıcısı) aynen bekliyor (§8).
+
+---
 # REPORT — 5. oturum (14 Kasım 2026): yerleşim, yol bulma, Taşı/Sil · ✓/✗ · GERİ AL
 
 Dal: `gece-gelistirme` (push yok) · Başlangıç `21bd545` · Kararlar `DECISIONS.md` D62–D67 · Durum `GECE_DURUM.md` ·

@@ -654,3 +654,8 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Öğretici çakışmaları:** ada sırası tanıtım (330) → ad (320) → Okçuluk öğreticisi (310) → akın öğreticisi (okçu olmadan akın panosu açılmaz).
   Hazır köyde/eski kayıtta Okçuluk öğreticisi atlanır. Ana Üs öğreticisi (FirstBaseGuide) adada çalışmaz.
 - **Test koşusu notu:** `-testFilter` sınıf adıyla eşleşince `[Explicit]` uzun ölçümler de koşar (Island* ≈6 dk+ her biri); gruplar adlarla verilmeli.
+
+## D85 — Kahraman/çırak eğitimi inşaatçı tutmaz (6. oturum SON bulgusu)
+- Baştan oynatmada (yeni hesap, bot) kahraman/çırak yükseltmesi tek inşaatçıyı binalarla paylaştığı için kahraman Ana Üs 5'e kadar Sv2'de kaldı,
+  B1-5 defalarca kaybedildi, cüzdan tavanda bekledi. **Karar:** eğitim görevleri `builderIndex = −1` (kendi yuvası; kahraman ve çırak ayrı ayrı birer);
+  süre eğrisi ve elmasla bitirme aynı (D74), seviye yine süre bitince artar. İnşaatçı sayacı (`BusyBuilderCount`) bunları saymaz.

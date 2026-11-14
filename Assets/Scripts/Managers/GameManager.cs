@@ -469,7 +469,8 @@ public class GameManager : MonoBehaviour
     /// <summary>Etkin görevler (her inşaatçının en fazla bir görevi).</summary>
     public IReadOnlyList<BuilderTaskSave> BuilderTasks => PlayerData?.builderTasks ?? NoTasks;
     public int BuilderCount => Mathf.Clamp(PlayerData?.builderCount ?? 1, 1, Progression.MaxBuilders);
-    public int BusyBuilderCount => BuilderTasks.Count;
+    /// <summary>İnşaatçı tutan görevler (kahraman/çırak eğitimi builderIndex −1: inşaatçı tutmaz, 6. oturum).</summary>
+    public int BusyBuilderCount { get { int n = 0; foreach (var t in BuilderTasks) if (t.builderIndex >= 0) n++; return n; } }
     public int FreeBuilderCount => Mathf.Max(0, WorkingBuilderCount - BusyBuilderCount);
 
     /// <summary>
@@ -549,8 +550,10 @@ public class GameManager : MonoBehaviour
         string slotId = "", string buildingType = "")
     {
         if (PlayerData == null) return false;
-        int index = FirstFreeBuilderIndex();
-        if (index < 0) return false;
+        // 6. oturum: kahraman/çırak eğitimi kendi yuvasında (inşaatçı kuyruğunu tıkamaz; süre ve elmas kuralı aynı).
+        bool training = slotId == HeroTaskSlot || slotId == ApprenticeTaskSlot;
+        int index = training ? -1 : FirstFreeBuilderIndex();
+        if (!training && index < 0) return false;
         long now = GameClock.UtcNow.Ticks;
         var task = new BuilderTaskSave
         {
@@ -892,7 +895,7 @@ public class GameManager : MonoBehaviour
         int level = apprentice ? Mathf.Max(1, PlayerData.apprenticeLevel) : PlayerData.hero.level;
         int cap = apprentice ? GetApprenticeMaxLevel() : GetHeroMaxLevel();
         if (level >= cap) return UpgradeBlock.MaxLevel;
-        if (IsBuilderBusy) return UpgradeBlock.BuilderBusy;
+        // eğitim inşaatçı tutmaz
         if (Gold < (apprentice ? GetApprenticeUpgradeCost() : GetHeroUpgradeCost())) return UpgradeBlock.NoGold;
         return UpgradeBlock.None;
     }

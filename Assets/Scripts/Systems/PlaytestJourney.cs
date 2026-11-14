@@ -51,6 +51,8 @@ public static class PlaytestJourney
     {
         report = new Report();
         Last = report;
+        IslandNameUi.OfferInDev = true;   // 6. oturum: ilk giriş akışı (tanıtım + ad + öğretici) gerçek oyuncudaki gibi
+        FakeStoreBackend.ClearPending();
         simMinutes = 0;
         shot = 0;
         Directory.CreateDirectory(OutputDir);
@@ -229,7 +231,19 @@ public static class PlaytestJourney
         report.islandVisited = true;
         simMinutes += 1;
         var island = IslandSession.Save;
-        Note($"ADA: bina {island.placed?.Count ?? 0} · Odun {island.wood} · Et {island.meat} · ad penceresi {(IslandNameUi.IsOpen ? "AÇIK" : "yok")}");
+        // 6. oturum (3.1): ilk giriş tanıtımı → ad penceresi
+        for (float t = 0; t < 4f && IslandIntro.Current == null && !IslandNameUi.IsOpen; t += Time.unscaledDeltaTime) yield return null;
+        if (IslandIntro.Current != null)
+        {
+            report.problems.Remove("tanıtım yok");
+            for (float t = 0; t < 2.6f; t += Time.unscaledDeltaTime) yield return null;
+            yield return Capture("04_island_intro");
+            Note("ADA: ilk giriş tanıtımı gösterildi (bulutlar açıldı, hikâye kartı)");
+            IslandIntro.Current.Finish();
+            for (float t = 0; t < 1.5f && !IslandNameUi.IsOpen; t += Time.unscaledDeltaTime) yield return null;
+        }
+        else report.problems.Add("ADA: ilk giriş tanıtımı görünmedi");
+        Note($"ADA: bina {island.placed?.Count ?? 0} · Odun {island.wood} · Et {island.meat} · okçu {(setup.Archer != null && setup.Archer.gameObject.activeSelf ? "VAR" : "yok")} · ad penceresi {(IslandNameUi.IsOpen ? "AÇIK" : "yok")}");
         if (IslandNameUi.IsOpen)
         {
             report.namePrompted = true;
@@ -245,25 +259,55 @@ public static class PlaytestJourney
         }
         yield return Capture("04b_island_fresh");
 
+        // 6. oturum (2.4): dükkân — sahte mağazayla elmas paketi + elmasla kaynak paketi (gerçek akış: kayıt + defter)
+        {
+            int gems0 = gm.Gems;
+            bool started = IapService.Instance.Buy("gems_small");
+            for (float t = 0; t < 1f; t += Time.unscaledDeltaTime) yield return null;
+            Note($"DÜKKÂN: sahte mağazayla 'gems_small' → elmas {gems0} → {gm.Gems} ({(started && gm.Gems == gems0 + IapService.GemsFor("gems_small") ? "verildi" : "SORUN")})");
+            if (!(started && gm.Gems == gems0 + IapService.GemsFor("gems_small"))) report.problems.Add("IAP elmas verilmedi");
+            int wood0 = IslandEconomy.Wood;
+            var res = ShopService.Buy(ShopResource.Wood, 0);
+            Note($"DÜKKÂN: Odun Kesesi ({ShopService.PackGems(ShopResource.Wood, 0)} elmas) → {res} · Odun {wood0} → {IslandEconomy.Wood}");
+        }
+
+        // 6. oturum (3.2): zorunlu Okçuluk öğreticisi — İNŞA ET → Okçuluk Alanı → yerleştir → inşa → okçu çıkar
+        for (float t = 0; t < 3f && IslandBuildTutorial.Current == null; t += Time.unscaledDeltaTime) yield return null;
+        if (IslandBuildTutorial.Current != null)
+        {
+            yield return Capture("04b2_tutorial");
+            IslandBuildTutorial.Current.ActionButton.onClick.Invoke();
+            yield return null;
+            var spot = IslandLayout.Building(IslandLayout.BuildingKind.Archery);
+            var entry = IslandEconomy.TryStartBuild(IslandLayout.BuildingKind.Archery, spot.col, spot.row, false, out string why);
+            Note($"Öğretici: Okçuluk Alanı {(entry != null ? "ücretsiz kuruldu" : "KURULAMADI: " + why)}");
+            if (entry == null) report.problems.Add("Okçuluk Alanı kurulamadı: " + why);
+            for (float t = 0; t < Progression.Island.PlaceSeconds + 1.5f; t += Time.unscaledDeltaTime) { IslandEconomy.Tick(IslandEconomy.Now); yield return null; }
+            for (float t = 0; t < 1f; t += Time.unscaledDeltaTime) yield return null;
+            bool archer = setup.Archer != null && setup.Archer.gameObject.activeSelf;
+            Note($"Öğretici bitti: okçu {(archer ? "binadan çıktı" : "YOK")} · Kıyı Kalesi Sv{IslandSession.KeepLevel()} · Okçu Sv{IslandSession.ArcherLevel()}");
+            if (!archer) report.problems.Add("Okçu öğreticiden sonra görünmedi");
+            yield return Capture("04b3_archer_out");
+        }
+        else Note("ADA: öğretici yok (Okçuluk zaten var)");
+
         var raid = setup.Raid;
-        if (raid != null && raid.CanStart(1))
+        for (int akin = 1; akin <= 3 && raid != null && raid.CanStart(akin); akin++)
         {
             IslandBot.Attach(setup, IslandBot.Profile.Good);
-            raid.StartAkin(1);
+            raid.StartAkin(akin);
             Time.timeScale = 6f;
-            float t0 = Time.time;
-            while (raid.Phase == IslandRaidManager.State.Running && Time.time - t0 < 600f) yield return null;
+            float s0 = Time.time;
+            while (raid.Phase == IslandRaidManager.State.Running && Time.time - s0 < 600f) yield return null;
             Time.timeScale = 1f;
-            simMinutes += (Time.time - t0) / 60d;
-            var r = raid.LastReward;
-            report.akinWon = raid.Phase == IslandRaidManager.State.Won;
-            Note($"Akın 1: {raid.Phase} · kale %{raid.CastleHealthPercent * 100f:0} · {Time.time - t0:0} sn" +
-                 (report.akinWon ? $" · ödül +{r.wood} Odun, +{r.meat} Et, +{r.gold} altın, +{r.gems} elmas" : ""));
-            yield return Capture("04c_island_after_akin");
+            simMinutes += (Time.time - s0) / 60d;
+            Note($"Akın {akin} (Kale Sv{IslandSession.KeepLevel()}, Okçu Sv{IslandSession.ArcherLevel()}): {raid.Phase} · kale %{raid.CastleHealthPercent * 100f:0}");
+            if (akin == 1) report.akinWon = raid.Phase == IslandRaidManager.State.Won;
+            if (raid.Phase != IslandRaidManager.State.Won) { raid.ReturnToIdle(); yield return null; break; }
             raid.ReturnToIdle();
             yield return null;
         }
-        else report.problems.Add("Akın 1 başlatılamadı");
+        if (raid == null || !report.akinWon) report.problems.Add("Akın 1 kazanılamadı/başlatılamadı");
 
         // Ada Tüccarı (AŞAMA 4, V2): Et paketi.
         if (IslandEconomy.TraderEnabled)

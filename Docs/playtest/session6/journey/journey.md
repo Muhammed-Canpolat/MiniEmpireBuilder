@@ -1,0 +1,58 @@
+# SON — yeni hesapla baştan oynatma (otomatik)
+
+- Sınırsız elmas kapalı: True · ekonomi profili: V2
+- Savaş: 9/15 zafer · son aşama B2-5 · yıldız 15
+- Bitiş: Ana Üs 5 · kahraman 4 · altın 432 · simüle süre 6 sa 47 dk
+- Ada: ziyaret True · ad penceresi True · Akın 1 True · Tüccar True · sefer paneli True
+- Sorunlar: yok
+
+## Günlük
+- [0 dk] Yeni hesap: Ana Üs 1 · altın 50/500 · elmas 0 · maden deposu 0 · ekonomi profili V2
+- [1 dk] Üs: harcanacak bir şey yok · Ana Üs 1 · altın 50/500 · elmas 0 · maden deposu 0
+- [2 dk] Savaş B1-1: win · 32 sn · dalga 1 · kale %100 · savaş altını 70 · ödeme +92 · cüzdan 50→142 · can 5→5
+- [3 dk] Üs: maden +2 · Ana Üs 1 · altın 144/500 · elmas 2 · maden deposu 0
+- [5 dk] Savaş B1-2: win · 88 sn · dalga 2 · kale %89 · savaş altını 157 · ödeme +170 · cüzdan 144→314 · can 5→5
+- [5 dk] Üs: maden +4, MainBase → 2 (150) · Ana Üs 1 · altın 168/500 · elmas 4 · maden deposu 0 · inşaat 10 sn
+- [8 dk] Savaş B1-3: win · 98 sn · dalga 2 · kale %85 · savaş altını 186 · ödeme +204 · cüzdan 168→372 · can 5→5
+- [9 dk] Üs: maden +4, MainBase → 3 (250) · Ana Üs 2 · altın 126/500 · elmas 11 · maden deposu 0 · inşaat 1 dk
+- [11 dk] Savaş B1-4: lose · 95 sn · dalga 2 · kale %0 · savaş altını 103 · ödeme +0 · cüzdan 126→126 · can 5→4
+- [2 sa 11 dk] — 120 dk ara (oturum arası) · altın 126/600 · elmas 16 · maden deposu 1217
+- [2 sa 11 dk] Üs: maden +474, MainBase → 4 (400) · Ana Üs 3 · altın 200/600 · elmas 16 · maden deposu 743 · inşaat 3 dk
+- [2 sa 14 dk] Savaş B1-4: lose · 104 sn · dalga 2 · kale %0 · savaş altını 179 · ödeme +0 · cüzdan 200→200 · can 5→4
+- [2 sa 14 dk] Üs: maden +400, kahraman → 1 (80), çırak → 1 (100) · Ana Üs 3 · altın 420/600 · elmas 16 · maden deposu 348 · inşaat 10 sn
+- [2 sa 17 dk] Savaş B1-4: lose · 93 sn · dalga 2 · kale %0 · savaş altını 141 · ödeme +0 · cüzdan 420→420 · can 4→3
+- [2 sa 17 dk] Üs: maden +180, kahraman → 2 (100), çırak → 2 (130) · Ana Üs 3 · altın 370/600 · elmas 16 · maden deposu 172 · inşaat 1 dk
+- [2 sa 20 dk] Savaş B1-4: lose · 83 sn · dalga 2 · kale %0 · savaş altını 160 · ödeme +0 · cüzdan 370→370 · can 3→2
+- [2 sa 20 dk] Üs: maden +176 · Ana Üs 3 · altın 546/600 · elmas 16 · maden deposu 0 · inşaat 36 sn
+- [2 sa 23 dk] Savaş B1-4: win · 85 sn · dalga 2 · kale %70 · savaş altını 217 · ödeme +239 · cüzdan 546→600 · can 2→2
+- [4 sa 23 dk] — 120 dk ara (oturum arası) · altın 600/900 · elmas 23 · maden deposu 1228
+- [4 sa 23 dk] Üs: maden +300, MainBase → 5 (600) · Ana Üs 4 · altın 300/900 · elmas 23 · maden deposu 928 · inşaat 6 dk
+- [4 sa 27 dk] Savaş B1-5: win · 185 sn · dalga 3 · kale %13 · savaş altını 436 · ödeme +415 · cüzdan 300→715 · can 5→5
+- [4 sa 28 dk] Üs: maden +185, kahraman → 3 (130), çırak → 3 (170) · Ana Üs 4 · altın 600/900 · elmas 34 · maden deposu 751 · inşaat 3 dk
+- [4 sa 30 dk] Savaş B2-1: win · 42 sn · dalga 1 · kale %99 · savaş altını 112 · ödeme +154 · cüzdan 600→754 · can 5→5
+- [4 sa 30 dk] Üs: maden +146 · Ana Üs 4 · altın 900/900 · elmas 36 · maden deposu 607 · inşaat 2 dk 46 sn
+- [4 sa 33 dk] Savaş B2-2: win · 101 sn · dalga 2 · kale %18 · savaş altını 267 · ödeme +282 · cüzdan 900→900 · can 5→5
+- [4 sa 33 dk] Üs: harcanacak bir şey yok · Ana Üs 4 · altın 900/900 · elmas 37 · maden deposu 611 · inşaat 2 dk 17 sn
+- [4 sa 36 dk] Savaş B2-3: win · 83 sn · dalga 2 · kale %87 · savaş altını 260 · ödeme +289 · cüzdan 900→900 · can 5→5
+- [6 sa 36 dk] — 120 dk ara (oturum arası) · altın 900/1300 · elmas 44 · maden deposu 1851
+- [6 sa 36 dk] Üs: maden +400, 2. inşaatçı alındı · Ana Üs 5 · altın 450/1300 · elmas 44 · maden deposu 1451
+- [6 sa 37 dk] ADA: ilk giriş tanıtımı gösterildi (bulutlar açıldı, hikâye kartı)
+- [6 sa 37 dk] ADA: bina 0 · Odun 60 · Et 0 · okçu yok · ad penceresi AÇIK
+- [6 sa 37 dk] Ada adı 'Kartal Adası': kaydedildi (bedava) · elmas 44
+- [6 sa 37 dk] DÜKKÂN: sahte mağazayla 'gems_small' → elmas 44 → 144 (verildi)
+- [6 sa 37 dk] DÜKKÂN: Odun Kesesi (4 elmas) → Ok · Odun 60 → 150
+- [6 sa 37 dk] Öğretici: Okçuluk Alanı ücretsiz kuruldu
+- [6 sa 37 dk] Öğretici bitti: okçu binadan çıktı · Kıyı Kalesi Sv1 · Okçu Sv1
+- [6 sa 38 dk] Akın 1 (Kale Sv1, Okçu Sv1): Won · kale %100
+- [6 sa 38 dk] Akın 2 (Kale Sv1, Okçu Sv1): Won · kale %100
+- [6 sa 38 dk] Akın 3 (Kale Sv1, Okçu Sv1): Won · kale %100
+- [6 sa 38 dk] Ada Tüccarı: 50 Et alındı (400 altın) · Et 27→77 · altın 540→140
+- [6 sa 39 dk] Üs: maden +1160, 2. inşaatçı alındı, MainBase → 6 (850) · Ana Üs 5 · altın 450/1300 · elmas 40 · maden deposu 295 · inşaat 10 dk
+- [6 sa 39 dk] Sefer paneli B2-4: Düşman: 20    Ödül: 106   ·   Süre: 3 dk · kartlar var
+- [6 sa 41 dk] Savaş B2-4: win · 85 sn · dalga 2 · kale %6 · savaş altını 289 · ödeme +323 · cüzdan 450→773 · can 5→5
+- [6 sa 42 dk] Üs: maden +300, GoldMine → 2 (80), ArcherTower → 2 (80), kahraman → 4 (160), çırak → 4 (230) · Ana Üs 5 · altın 523/1300 · elmas 41 · maden deposu 0 · inşaat 10 sn
+- [6 sa 44 dk] Savaş B2-5: lose · 81 sn · dalga 2 · kale %0 · savaş altını 184 · ödeme +0 · cüzdan 523→523 · can 5→4
+- [6 sa 44 dk] Üs: maden +5, CannonTower → 2 (100) · Ana Üs 5 · altın 428/1300 · elmas 41 · maden deposu 0 · inşaat 10 sn
+- [6 sa 46 dk] Savaş B2-5: lose · 62 sn · dalga 2 · kale %0 · savaş altını 192 · ödeme +0 · cüzdan 428→428 · can 4→3
+- [6 sa 47 dk] Üs: maden +4 · Ana Üs 5 · altın 432/1300 · elmas 41 · maden deposu 0 · inşaat 5 dk 17 sn
+- [6 sa 47 dk] BİTİŞ: Ana Üs 5 · kahraman 4 · çırak 4 · 9/15 zafer · yıldız 15 · altın 432/1300 · elmas 41 · maden deposu 0
