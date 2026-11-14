@@ -494,3 +494,13 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Ada:** bağlanmadı — adada bina dokunuşu zaten TAŞI'lı kendi süslü panelini açıyor ve SelectionManager'a bağlı; araya menü koymak ada panel
   akışını/testlerini riske atardı. Sonraki adım: `IslandHud` BuildingTapped → WorldActionMenu (YÜKSELT = ShowBuilding, TAŞI = IslandPlacementHost.ForMove).
 - Simgeler `ui_icon_move` / `ui_icon_trash` Tiny Swords piksel stiliyle üretildi (`Tools/campaign_art/action_icons.py`); el çizimi ART_NEEDS'te.
+
+## D68 — Tamamlanmış seviye tek kaynaktan (6. oturum 1.1)
+- **Kök neden:** yükseltme seviyeyi zaten süre bitince artırıyordu; ama YENİ kurulan bina kayda hemen `level = 1` ile giriyor ("build" görevi
+  yalnız görseldi). Savaş kule hakkı (`BattleManager.GetBattleBuildAllowance`), kule seviyesi, Kışla Lancer'ları, Köylü Evi depo bonusu,
+  Kart Atölyesi seviyesi ve ilk savaş ipucu kayıttaki her binayı sayıyordu → 1 dk'lık Topçu inşası bitmeden savaşta kurulabiliyordu.
+- **Karar:** `Systems/BuildingLevels.cs` tek kaynak. `PlacedBuildingData.level` = TAMAMLANMIŞ seviye (yükseltme sırasında artmaz);
+  "build" görevi süren binanın tamamlanmış seviyesi 0. Hedef seviye yalnız gösterim (`PendingLevel`). Veri yapısı değişmedi (durum görevlerden
+  türetiliyor) → migration gerekmez; eski kayıtta süren inşa da doğru sayılır. "build" görevi bitince tür seviyeleri yeniden hesaplanır.
+- Okuyanlar: GameManager (tür seviyesi, savaş kule seviyesi, ev bonusu), BattleManager, AllyBarracks, CardWorkshop, savaş ipucu.
+  Kahraman/Çırak (2.2) ve ada (3.3) aynı ilkeyle.

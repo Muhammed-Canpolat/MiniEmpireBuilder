@@ -161,9 +161,8 @@ public class GameManager : MonoBehaviour
     {
         float bonus = 0f;
         if (PlayerData?.placedBuildings == null) return 0f;
-        foreach (var placed in PlayerData.placedBuildings)
-            if (placed != null && placed.level > 0 && placed.buildingType == nameof(BuildingType.House))
-                bonus += Progression.HouseStorageBonus(placed.level);
+        foreach (int level in BuildingLevels.CompletedLevels(PlayerData, BuildingType.House))
+            bonus += Progression.HouseStorageBonus(level);
         return bonus;
     }
 
@@ -322,11 +321,7 @@ public class GameManager : MonoBehaviour
     private void RecomputeTypeLevel(BuildingType type)
     {
         if (!Buildings.TryGetValue(type, out var data)) return;
-        int best = 0;
-        if (PlayerData?.placedBuildings != null)
-            foreach (var placed in PlayerData.placedBuildings)
-                if (placed != null && placed.buildingType == type.ToString())
-                    best = Mathf.Max(best, placed.level);
+        int best = BuildingLevels.HighestCompleted(PlayerData, type);   // 6. oturum (1.1): yalnız tamamlanmış seviye
         if (best > 0) data.level = best;
         data.ApplyLevelStats();
         var entry = PlayerData?.buildings?.Find(e => e.buildingType == type);
@@ -366,11 +361,7 @@ public class GameManager : MonoBehaviour
     /// <summary>Savaşta bu türden kurulan index'inci kule: binalar seviyeye göre azalan sırada.</summary>
     public int GetBattleTowerLevel(BuildingType type, int index)
     {
-        var levels = new List<int>();
-        if (PlayerData?.placedBuildings != null)
-            foreach (var placed in PlayerData.placedBuildings)
-                if (placed != null && placed.buildingType == type.ToString())
-                    levels.Add(Mathf.Max(1, placed.level));
+        var levels = BuildingLevels.CompletedLevels(PlayerData, type);   // 6. oturum (1.1)
         if (levels.Count == 0)
             return Buildings.TryGetValue(type, out var data) ? Mathf.Max(1, data.level) : 1;
         levels.Sort((a, b) => b.CompareTo(a));
@@ -757,6 +748,12 @@ public class GameManager : MonoBehaviour
             PlayerData.builderTasks.Remove(task);
             if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
                 ApplyInstanceUpgrade(task.slotId, type);
+            else if (task.kind == "build")
+            {
+                // 6. oturum (1.1): inşası biten bina ancak şimdi tür seviyesine/bonuslara katılır.
+                foreach (var t in new List<BuildingType>(Buildings.Keys)) RecomputeTypeLevel(t);
+                OnGoldMineStoredChanged?.Invoke(PlayerData.goldMineStoredGold, GetGoldMineStorageCapacity());
+            }
         }
         SaveGame();
         foreach (var task in finished) OnBuilderTaskCompleted?.Invoke(task);

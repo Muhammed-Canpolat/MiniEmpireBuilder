@@ -1,3 +1,27 @@
+# GECE_DURUM — Otonom çalışma (14 Kasım 2026, 6. oturum: savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi)
+
+DURUM: SÜRÜYOR (6. oturum)
+ŞU ANKİ İŞ: 1.2 Menzil çemberleri
+Kararlar: DECISIONS.md D68+ · Başlangıç commit'i: b2605ef · Testler: Session6Tests (editör kapalı, doğrudan projede)
+
+6. OTURUM İŞ LİSTESİ:
+- [x] 1.1 Tamamlanmamış inşaat savaşa yansımasın (D68) — Session6Tests.S1_1
+- [ ] 1.2 Menzil çemberleri · [ ] 1.3 Can barları · [ ] 1.4 Uzun yürüyüş animasyonu · [ ] 1.5 Savaşta duraklatma
+- [ ] 2.1 Çırak maden katkısı · [ ] 2.2 Kahraman/Çırak yükseltme süresi + mevcut→sonraki · [ ] 2.3 Maden deposu · [ ] 2.4 Dükkân + IAP
+- [ ] 3.1 Adaya ilk giriş · [ ] 3.2 Ada başlangıcı + öğretici · [ ] 3.3 Ada seviyeleri bağımsız · [ ] 3.4 Akın dengesi
+- [ ] 4.1 Arazi genişletme şeffaflığı · [ ] 4.2 Süreli temizleme + kompakt menü
+- [ ] 5 Savaş kartı butonları · [ ] 6 Bütünsel denetim · [ ] SON
+
+ENGELLENENLER:
+- (yok)
+
+## Referans görsel — 6. oturum
+- Sefer savaşı "Yıkık Kale Yolu · Seviye 4", DALGA 2/2, SÜRE 1:42, altın 110. Okçu Kulesi (mavi çatı) Ana Üs'ün sol üstünde; çevresindeki
+  kesikli altın menzil çemberi kulenin ~1,4 birim ALTINDA ortalanmış: kuzey kenarı kulenin hemen üstünde, güney kenarı çok aşağıda (1.2).
+  Ana Üs'ün can barı ~%10 dolu ama dolgu sol kenardan içeride (1.3). Alt kartlar: Savaşçı 179/260, Ana Üs 256/700, Çırak 48/165 —
+  Ana Üs kartında sarı dolgu kısa/ortalanmış görünüyor (1.3). Sağ altta düşmanın üstünde "+ 2 HAK" inşa yuvası halkası.
+
+---
 # GECE_DURUM — Otonom çalışma (14 Kasım 2026, 5. oturum: yerleşim + yol bulma + Taşı/Sil/GERİ AL UI)
 
 DURUM: TAMAMLANDI (5. oturum)

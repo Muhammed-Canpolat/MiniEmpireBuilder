@@ -38,13 +38,7 @@ public static class CardWorkshop
     {
         get
         {
-            int best = 0;
-            var placed = Data?.placedBuildings;
-            if (placed != null)
-                foreach (var entry in placed)
-                    if (entry != null && entry.buildingType == nameof(BuildingType.CardWorkshop))
-                        best = Mathf.Max(best, entry.level);
-            return best;
+            return BuildingLevels.HighestCompleted(Data, BuildingType.CardWorkshop);   // 6. oturum (1.1)
         }
     }
 

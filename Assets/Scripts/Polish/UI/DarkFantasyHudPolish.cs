@@ -343,9 +343,9 @@ public static class DarkFantasyHudPolish
             Vector2.zero, Vector2.zero, bodyBold: true);
         // Kule hakkı olmayan oyuncuya yapamayacağı bir şeyi önermeyiz.
         var player = GameManager.Instance?.PlayerData;
-        bool ownsTower = player?.placedBuildings != null && player.placedBuildings.Exists(b =>
-            b != null && (b.buildingType == "ArcherTower" || b.buildingType == "CannonTower"
-                || b.buildingType == "Monastery"));
+        bool ownsTower = BuildingLevels.CompletedCount(player, BuildingType.ArcherTower) > 0
+            || BuildingLevels.CompletedCount(player, BuildingType.CannonTower) > 0
+            || BuildingLevels.CompletedCount(player, BuildingType.Monastery) > 0;
         if (player?.firstBattleTowerBuilt == true || !ownsTower)
             buildHint.gameObject.SetActive(false);
         MoveHint.TryShow(safe);

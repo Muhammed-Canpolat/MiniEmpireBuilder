@@ -28,11 +28,7 @@ public sealed class AllyBarracks : MonoBehaviour
     /// <summary>Kayıttaki kurulu Kışla seviyeleri (her bina kendi seviyesindeki kadar Lancer verir).</summary>
     public static List<int> BarracksLevels(PlayerSaveData data)
     {
-        var levels = new List<int>();
-        if (data?.placedBuildings == null) return levels;
-        foreach (var placed in data.placedBuildings)
-            if (placed != null && placed.level > 0 && placed.buildingType == nameof(BuildingType.Barracks)) levels.Add(placed.level);
-        return levels;
+        return BuildingLevels.CompletedLevels(data, BuildingType.Barracks);   // 6. oturum (1.1): inşası süren Kışla sayılmaz
     }
 
     /// <summary>Savaş sahnesinde Kışla garnizonunu kurar; kurulu Kışla yoksa null (nesne oluşturulmaz).</summary>

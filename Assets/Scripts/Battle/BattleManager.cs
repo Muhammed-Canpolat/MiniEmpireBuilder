@@ -819,12 +819,8 @@ public class BattleManager : MonoBehaviour
 
     public int GetBattleBuildAllowance(BuildingType type)
     {
-        var placed = GameManager.Instance?.PlayerData?.placedBuildings;
-        if (placed == null) return 0;
-        int count = 0;
-        foreach (var building in placed)
-            if (building != null && building.buildingType == type.ToString()) count++;
-        return count;
+        // 6. oturum (1.1): yalnız inşası TAMAMLANMIŞ binalar savaşta kule hakkı verir.
+        return BuildingLevels.CompletedCount(GameManager.Instance?.PlayerData, type);
     }
 
     public int GetBattleBuildRemaining(BuildingType type)
