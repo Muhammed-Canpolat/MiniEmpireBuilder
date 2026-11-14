@@ -977,4 +977,38 @@ public class Session6Tests
             yield return null;
         }
     }
+
+    // 15 Kasım (cihaz geri bildirimi): dar telefonda ada kadrajı uzaklaşmıştı (genişlik adacıklara göre sığıyordu).
+    [UnityTest]
+    public IEnumerator S7_IslandFramingOnNarrowPhoneFitsMainland()
+    {
+        try
+        {
+            yield return IslandPhaseBTests.LoadIsland(null, 5, v => devWas = v);
+            yield return new WaitForSecondsRealtime(0.5f);
+            var cc = T("IslandCameraController");
+            var main = (Rect)cc.GetMethod("MainlandBounds").Invoke(null, null);
+            var land = (Rect)cc.GetMethod("LandBounds").Invoke(null, null);
+            var lines = new List<string> { $"land={land} main={main}" };
+            foreach (var (tag, w, h) in Session4Tests.Ratios)
+            {
+                var args = new object[] { (float)w / h, null, null };
+                cc.GetMethod("ComputeFixedView").Invoke(null, args);
+                float size = (float)args[2]; var center = (Vector2)args[1];
+                float viewW = size * 2f * w / h;
+                lines.Add($"{tag}: size={size:F2} viewW={viewW:F2} mainShare={main.width / viewW:P0} landH/viewH={land.height / (2f * size):P0}");
+                Assert.LessOrEqual(main.width, viewW + 0.01f, tag + ": ana ada genişliği ekrana sığar");
+                // Uzaklaşmış değil: ya ana ada genişliği ya da ada yüksekliği (HUD bandı = %83) sınırı doldurur
+                Assert.IsTrue(main.width / viewW >= 0.9f || land.height / (2f * size) >= 0.8f, tag + $": kadraj bir eksende dolu (genişlik {main.width / viewW:P0}, yükseklik {land.height / (2f * size):P0})");
+                Assert.LessOrEqual(land.height, 2f * size * 0.84f, tag + ": ada dikeyde üst/alt HUD bandına sığar");
+                var camera = (Camera)P(SP("IslandSceneSetup", "Instance"), "WorldCamera");
+                var pos = camera.transform.position; float old = camera.orthographicSize;
+                camera.orthographicSize = size; camera.transform.position = new Vector3(center.x, center.y, pos.z);
+                Session4Tests.CaptureUi("S7_island_frame_" + tag, w / 2, h / 2);
+                camera.orthographicSize = old; camera.transform.position = pos;
+            }
+            File.WriteAllLines(Path.Combine(Folder, "S7_island_frame.txt"), lines);
+        }
+        finally { T("DevSettings").GetProperty("Enabled").SetValue(null, devWas); }
+    }
 }

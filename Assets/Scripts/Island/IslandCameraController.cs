@@ -95,13 +95,45 @@ public sealed class IslandCameraController : MonoBehaviour
         aspect = Mathf.Max(0.3f, aspect);
         var land = config.islandViewFitLand ? LandBounds() : new Rect(0f, 0f, IslandLayout.Width, IslandLayout.Height);
         float usable = Mathf.Clamp(1f - config.islandViewTopHudFraction - config.islandViewBottomHudFraction, 0.3f, 1f);
-        float widthFit = land.width * 0.5f * (1f + 2f * config.islandViewSeaMargin) / aspect;
+        // 15 Kasım (cihaz geri bildirimi, dar telefon ≈9:19,5): genişlik iki yandaki küçük adacıklara göre sığdırılınca ana ada ekranın
+        // ~%80'ine iniyor ve "uzaklaşmış" görünüyordu. Genişlik yalnız ANA adaya (kaleyle bağlı kara) sığdırılır; adacıklar kenarda
+        // kesilebilir. Tablette (0,625) yükseklik bağlayıcı olduğundan görünüm değişmez.
+        var main = config.islandViewFitLand ? MainlandBounds() : land;
+        float widthFit = main.width * 0.5f * (1f + 2f * config.islandViewSeaMargin) / aspect;
         float heightFit = land.height * 0.5f / usable;
         size = Mathf.Max(widthFit, heightFit);
         // Bandın ortası (alt pay + usable/2) viewport'ta 0.5 değilse dünya merkezini ona göre kaydır
         float bandCenter = config.islandViewBottomHudFraction + usable * 0.5f;
-        center = new Vector2(land.center.x, land.center.y - (bandCenter - 0.5f) * 2f * size);
+        center = new Vector2(main.center.x, land.center.y - (bandCenter - 0.5f) * 2f * size);
     }
+
+    /// <summary>Kale hücresiyle 4-komşulukla bağlı kara (ana ada) sınırı; kıyı köpüğü için yarım hücre pay. Adacıklar hariç.</summary>
+    public static Rect MainlandBounds()
+    {
+        if (mainlandBounds.HasValue) return mainlandBounds.Value;
+        int w = IslandLayout.Width, h = IslandLayout.Height;
+        var seen = new bool[w, h];
+        var queue = new Queue<Vector2Int>();
+        var start = new Vector2Int(Mathf.FloorToInt(IslandLayout.CastleCenterCell.x), Mathf.FloorToInt(IslandLayout.CastleCenterCell.y));
+        if (!IslandLayout.IsLand(start.x, start.y)) { mainlandBounds = LandBounds(); return mainlandBounds.Value; }
+        queue.Enqueue(start); seen[start.x, start.y] = true;
+        int minC = start.x, maxC = start.x;
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            minC = Mathf.Min(minC, p.x); maxC = Mathf.Max(maxC, p.x);
+            foreach (var d in new[] { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down })
+            {
+                var n = p + d;
+                if (n.x < 0 || n.y < 0 || n.x >= w || n.y >= h || seen[n.x, n.y] || !IslandLayout.IsLand(n.x, n.y)) continue;
+                seen[n.x, n.y] = true; queue.Enqueue(n);
+            }
+        }
+        var land = LandBounds();
+        mainlandBounds = Rect.MinMaxRect(Mathf.Max(land.xMin, minC - 0.5f), land.yMin, Mathf.Min(land.xMax, maxC + 1.5f), land.yMax);
+        return mainlandBounds.Value;
+    }
+    private static Rect? mainlandBounds;
 
     public void ApplyFixedView()
     {

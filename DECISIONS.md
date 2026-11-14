@@ -666,3 +666,10 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   çağırdığı için yakalamamıştı. **Düzeltme:** kart kabı en üste alınır (`SetAsLastSibling`). **Test:** `S3_1_2` artık EventSystem ile düğmenin ekrandaki
   ortasına ışın atar, ilk isabetin DEVAM olduğunu denetler (düzeltme kaldırılınca "ilk isabet: Sky" ile başarısız olduğu doğrulandı).
 - Diğer yeni pencereler (öğretici, duraklatma, savaş kartı, arazi kartı, dükkân) aynı açıdan gözden geçirildi: katman sırası doğru.
+
+## D87 — Dar telefonda ada kadrajı uzaklaşmıştı (cihaz geri bildirimi, 15 Kasım)
+- **Kök neden:** sabit kadraj genişliği tüm kara sınırına (iki yandaki küçük adacıklar dahil, 21 u) sığdırılıyordu. Tablette (4:3, 0,75)
+  yükseklik bağlayıcı olduğu için fark edilmedi; 19,5:9/20:9 telefonda genişlik bağlayıcı → ana ada ekranın ~%80'i.
+- **Düzeltme:** `IslandCameraController.MainlandBounds` (kale hücresine 4-komşulukla bağlı kara); genişlik yalnız ana adaya (19 u) sığar,
+  adacıklar kenarda kesilebilir. 20:9'da ana ada %96 genişlik (≈×1,11 yakın); 16:9 ve tablet değişmedi (yükseklik bağlayıcı).
+- **Test:** `Session6Tests.S7_IslandFramingOnNarrowPhoneFitsMainland` (4 oran: sığma + bir eksenin dolu olması + görüntü).
