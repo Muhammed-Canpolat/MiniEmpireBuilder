@@ -1,3 +1,83 @@
+# REPORT — 5. oturum (14 Kasım 2026): yerleşim, yol bulma, Taşı/Sil · ✓/✗ · GERİ AL
+
+Dal: `gece-gelistirme` (push yok) · Başlangıç `21bd545` · Kararlar `DECISIONS.md` D62–D67 · Durum `GECE_DURUM.md` ·
+Görüntüler ve test çıktıları `Docs/playtest/session5/` (ham: `PlaytestOutput/session5/`).
+
+## 1. Kısa özet
+- Bütün maddeler yapıldı. Kısmen kalan tek şey: **2.1 eylem menüsü adaya bağlanmadı** (adada bina dokunuşu zaten TAŞI'lı kendi panelini açıyor; ayrıntı §2).
+- ⚠️ Ulaşan 3 görselin 1. ve 2.'si aynıydı (Taşı/Sil paneli), 3.'sü GERİ AL. **"Buraya sığmıyor" görseli ulaşmadı**; o madde yazılı tarifine göre
+  yapıldı ve testle yeniden üretildi (kalenin hemen altına bina taşıma).
+- Unity editörü kapalıydı; testleri doğrudan projede batchmode ile koşturdum.
+- Model dağılımı: yerleşim + yol bulma + testler Opus/yüksek çaba; 2.1 eylem menüsü Sonnet alt ajanı (orta çaba) — çıktısını ben inceleyip test ettim.
+- ⚠️ Cihazda denenmedi; doğrulama test ekran görüntüleriyle.
+
+## 2. Madde madde
+### AŞAMA 1 — Kritik
+| # | Kök neden | Yapılan |
+|---|---|---|
+| 1.1 "Buraya sığmıyor" | Hücre denetimine ek olarak **görünmeyen bir sprite-örtüşme denetimi** vardı. Kalenin görseli ayak izinin 1,7 birim altına taşıyor, taşınan binanın çatısı da kendi ayak izinden taşıyor → ızgarada yeşil görünen hücrelerde ret. Ters yönde: maden (alt satırı boş görünür) ve kamp bayrağı (2×2 kare) görselinden büyük. Yeni bina hayaleti gerçek binadan farklı ölçekle (0,9) çiziliyordu. | Tek kural hücreler: her yapının engel alanı = ayak izi ∪ görselinin gerçekten kapladığı hücreler. Yerleşim modunda dolu hücreler kırmızı, çit payı soluk kırmızı, hayaletin hücreleri tek tek yeşil/kırmızı (bina ve dekor). Kamp = bayrağın kendi hücreleri. Hayalet = gerçek görsel ve ölçek. Yükleme doğrulaması (hayalet kayıt temizliği + kayıttan sıfırdan doluluk karşılaştırması). **Bulunan gerçek hata:** doğa nesnelerinin hücresi oluşturma sırasında kaydolmuyor, (0,0)'da hayalet kalıyordu — düzeltildi. Kahraman, üstüne bina kurulursa kenara **yürür**. Eski kayıtlı düzenin kıpırdamaması için yükleme onarımı yumuşak (yalnız gerçek çakışmada taşır; test: "taşınan yok"). |
+| 1.2 Yapı içinden geçme | Savaşta her yapı görselinden bağımsız sabit **1,25×1** birimlik engel kaydediyordu; Madeni Koru madeni ~2,7×1,65 | Savaş engeli görselden (maden 1,25×1 → 2,27×1,48; kale 3,4×2,76). Düşman vuruş mesafesi engelin kenarından da ölçülür (saldırı gecikmez). Çırak, kahraman yapının öbür yanındayken yol bulmayla dolanır. Ana Üs yürüme ızgarası yeni engel alanlarını kullanır; ada zaten hücre ızgarasıyla kapalıydı. |
+| 1.3 Dekor ölçeği | 1×1'e geçişte görsel genişlik `visualWidth`'ten okundu, eski büyütme (`visualScale`) yok sayıldı: koyun %37, çalı %50 boyuna düştü | `DecorScale` ortak tablosu (ayak izinden bağımsız): koyun 3,5 · çalı 2,48 · kaya 1,84 · ağaç 2,76 (eski boyutlar); sonradan eklenenler Tiny Swords doğal boyunda. |
+
+### AŞAMA 2 — UI/UX
+- **2.1 Taşı/Sil:** yeni ortak `WorldActionMenu`: öğenin hemen üstünde (sığmazsa altında), ekran içinde, öğeyi izler; yuvarlak altın halkalı ikonlu
+  düğmeler + kısa etiket. Dekor: TAŞI (dört yönlü ok) · SİL (çöp kovası; altında altın simgesi + "+iade"; kısa onay: "Silinsin mi? +N ✓/✗").
+  Seçili öğe altın dış hatla vurgulanır; boş yere dokununca kapanır. **Binalar/kuleler de aynı menüyü kullanır** (YÜKSELT + TAŞI; kalede yalnız
+  YÜKSELT; maden önce altını toplar). ⚠️ Bu, bina dokunuş akışını değiştirdi: pencere artık YÜKSELT'e basınca açılır. **Ada bağlanmadı** (bkz. D67).
+- **2.2 ✓/✗:** hayaletin yanında (sağ, sığmazsa sol/alt/üst), onu izler, hayaletin ya da arkasındaki kalenin üstüne binmez. Geçersizken ✓ soluk ve basılamaz.
+- **2.3 GERİ AL:** 188×58 hap → 52 çaplı yuvarlak düğme + küçük etiket (alanın ~%45'i), sol alt köşe, radyal menünün üstü. 3 sn, azalan altın halka, yumuşak sönme.
+- **2.4 Önerilen düzen:** `FeatureConfig.recommendedLayout = false` ile gizli; kod silinmedi.
+
+## 3. Öncesi / sonrası görüntüler (`Docs/playtest/session5/`)
+- 1.1: öncesi = senin tarifin (görsel ulaşmadı); sonrası `S1_1_move_under_castle_red.png`, `S1_1_move_into_castle_red.png` (kırmızı hücreler),
+  `S1_1_hero_walked_away.png`, tarama `S1_1_scan_debug.png` (mavi = ayak izi, camgöbeği = engel alanı, sarı = görsel, kırmızı = sprite boşluğu reddi).
+- 1.2: `S1_2_defend_mine_walkgrid.png` (F6: maden ve kale kırmızı, rotalar dolanıyor), `S1_2_battle_towers.png`.
+- 1.3: öncesi = senin 2./3. görselin (ağıl küçücük); sonrası `S1_3_sheep_pen_after.png`.
+- 2.1: `S5_action_menu_*.png` (4 ekran oranı). 2.2: `S2_2_confirm_beside_invalid.png` / `_valid.png`. 2.3: `S2_3_undo_small.png`. 2.4: `S2_4_build_menu.png`.
+
+## 4. 1.1 yerleşim testi sonuçları (Ana Üs 15, tam düzen, 3316 aday yer × 7 bina türü)
+```
+GoldMine 4×4: aday 435, kabul 112, görünür engel 322, sprite-boşluk reddi 1, çirkin kabul 0, ızgara uyuşmazlığı 0
+CannonTower 3×2: aday 496, kabul 124, görünür engel 357, sprite-boşluk reddi 15, çirkin kabul 0, ızgara uyuşmazlığı 0
+ArcherTower 4×4: aday 435, kabul 113, görünür engel 318, sprite-boşluk reddi 4, çirkin kabul 0, ızgara uyuşmazlığı 0
+Monastery 3×3: aday 480, kabul 115, görünür engel 348, sprite-boşluk reddi 17, çirkin kabul 0, ızgara uyuşmazlığı 0
+CardWorkshop 3×3: aday 480, kabul 117, görünür engel 342, sprite-boşluk reddi 21, çirkin kabul 0, ızgara uyuşmazlığı 0
+Barracks 3×3: aday 480, kabul 119, görünür engel 339, sprite-boşluk reddi 22, çirkin kabul 0, ızgara uyuşmazlığı 0
+House 2×3: aday 510, kabul 174, görünür engel 332, sprite-boşluk reddi 4, çirkin kabul 0, ızgara uyuşmazlığı 0
+```
+- **Izgara uyuşmazlığı 0:** ızgarada kırmızısız görünen her hücre grubu kabul edildi; her ret kırmızı hücreyle gösterildi.
+- **Çirkin kabul 0:** kabul edilen hiçbir yerde bina başka yapının görseline binmiyor.
+- "Sprite boşluğu reddi" (%2,6): iki görsel aynı hücreye karşı yönlerden 1 birimden az taşıyınca hücre kuralı gözden biraz katıdır; bu retler
+  ızgarada kırmızı hücreyle görünür (gizli değil). Önceki kuralda bu sayı ayrıca **görünmeyen** retlerle birlikte 60+ idi.
+- Yükleme doğrulaması: `S1_1_load_validation.txt`; yeniden yüklemede düzen değişmedi (`S1_1_reload_moves.txt`: "taşınan yok").
+- 1.2 rotaları: Ana Üs 14 yapı / 14 rota, ada 9 rota, savaş 8 rota, Madeni Koru 4 rota — hepsi engelsiz; kahraman ve çırak yapı görseline girmedi.
+
+## 5. Testler
+- **Yeni:** `Session5Tests` 18 test (yerleşim taraması, kırmızı hücreler, kahramanın çekilmesi, yükleme doğrulaması, düzenin kıpırdamaması, Ana Üs /
+  ada / savaş / Madeni Koru rotaları + kahraman-çırak yürütmesi, dekor ölçeği, ✓/✗ konumu, GERİ AL, önerilen düzen, iki baştan-sona oynatma) ve
+  `Session5UiTests` 3 test (eylem menüsü: ekran içi + ikonlar + iade, sil onayı + vurgu, bina menüsü/kalede TAŞI yok) — **hepsi geçti**.
+- **Gerileme:** Ana Üs, savaş, ada, UI ve önceki oturum grupları (~230 test) koşturuldu. Değişikliğe bağlı kırılanlar düzeltildi (imzası değişen
+  metotları yansımayla çağıran eski testler; bir testin taşıdığı Topçu artık Okçu Kulesinin görünen tepesine biniyordu → en yakın geçerli yer).
+- ⚠️ **Bu oturumdan önce de başarısız olan 3 test** (başlangıç commit'inin betikleriyle ayrı kopyada koşturup doğruladım; bu oturumun işi değil):
+  `IslandRaidTests.LiveRaidInTheScene…` (akın 180 sn'de bitmiyor), `IslandPhaseCTests.MonsterFlips…`, `BaseShadowRevisionTests.ShadowsRemainSoft…`
+  (gölge köşe parlaklığı, kararsız).
+- ⚠️ Toplu koşuda sıraya bağlı kararsızlık: `UiFixPassTests.BattleSlotsClear…` ve savaş yolculuğu testi başka testlerden sonra savaş sahnesini
+  bazen bulamıyor; tek başına ya da kendi grubunda geçiyor.
+
+## 6. Oynatma (SON)
+- Ana Üs (`SON_base_journey.txt`): 12 binanın hepsi taşındı ve GERİ AL ile döndü; koyun/çalı/kaya kuruldu, biri taşındı, biri silindi.
+  Bu sırada gerçek bir hata yakalandı ve düzeltildi: GERİ AL eski yeri katı kuralla denetliyordu; eski düzende yerinde kalan bir binada geri alma
+  başarısız oluyordu → geri alma yumuşak denetime bağlandı.
+- Savaş (`SON_battles.txt`, ×4 hız, ~100 sn oyun süresi): normal savaşta 323, Madeni Koru'da 92 düşman konumu denetlendi; hiçbiri yapının içinde
+  değildi. Madeni Koru oyuncu girdisi olmadan yenilgiyle bitti (beklenen: kahraman kımıldamıyor).
+
+## 7. Açık işler / sonraki adım
+- 2.1 menüsünün adaya bağlanması (D67'de nasıl yapılacağı yazılı).
+- Bina dokunuşunun artık önce menü açması bir alışkanlık değişikliği; cihazda dene, istersen tek dokunuşta pencere + menüdeki TAŞI'ya dönebiliriz.
+- `ui_icon_move` / `ui_icon_trash` üretilmiş ikonlar; el çizimi gelirse değiştirilir (ART_NEEDS).
+- Google Play işleri (PLAY_RELEASE §8) senin kararınla bekliyor.
+
+---
 # REPORT — 4. oturum (14 Kasım 2026): hatalar, temel sistemler ve UI/UX
 
 Dal: `gece-gelistirme` (push yok) · Başlangıç `d1d8d5a` · Commit'ler: AŞAMA 1 `2bc05b8`, AŞAMA 2.1–2.6 `49811d1`, AŞAMA 2.7 + 3 + SON (bu rapor)

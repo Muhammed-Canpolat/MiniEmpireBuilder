@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Yerleştirme/taşıma onayı: alt bardaki "YERLEŞTİR / İPTAL" çubuğunun yerine, yerleştirilen nesnenin hemen üstünde yüzen iki
-/// yuvarlak düğme — ✓ (onay, yeşil Tiny Swords tarzı tik) ve ✗ (iptal, Tiny Swords Icon_09). Altın halkalı koyu yüz (HUD ailesi,
+/// yuvarlak düğme — ✓ (onay, yeşil Tiny Swords tarzı tik) ve ✗ (iptal, Tiny Swords Icon_09). 5. oturum: hayaletin yanında. Altın halkalı koyu yüz (HUD ailesi,
 /// radyal menüyle aynı). Düğmelerin üstünde küçük bilgi hapı: bedel (simge + sayı) ya da neden konamadığı (kırmızı).
 /// Hayalet sürüklendikçe izler; ekranın dışına taşmaz (üst bar/alt bar payı). Ana Üs binası, Ana Üs dekoru ve Ada aynı bileşeni kullanır.
 /// </summary>
@@ -17,7 +17,11 @@ public sealed class WorldConfirmButtons : MonoBehaviour
     private const float Gap = 18f;
 
     private Func<Vector3> anchor;
+    private Func<Bounds> bounds;
     private Camera cam;
+    private CanvasGroup confirmGroup;
+    /// <summary>Son yerleşimde hayaletin hangi yanında durduğu (test): "right" / "left" / "below" / "above".</summary>
+    public string Side { get; private set; } = "";
     private RectTransform rect, parentRect;
     private Button confirm;
     private Image confirmFace, confirmIcon;
@@ -30,6 +34,18 @@ public sealed class WorldConfirmButtons : MonoBehaviour
     public Button Confirm => confirm;
     public bool CanConfirm => confirm != null && confirm.interactable;
     public string Info => infoPill != null && infoPill.activeSelf && infoText != null ? infoText.text : "";
+
+    /// <summary>
+    /// 5. oturum (2.2): düğmeler hayaletin YANINDA durur (sağ; sığmazsa sol; o da olmazsa alt/üst) ve onu izler; hayaletin üstüne ya da
+    /// arkasındaki yapının (ör. ana kale) üstüne binmez. <paramref name="worldBounds"/> hayaletin dünya sınırı; her kare okunur.
+    /// </summary>
+    public static WorldConfirmButtons Create(Transform safe, Func<Bounds> worldBounds, Camera camera, UnityAction onConfirm, UnityAction onCancel,
+        string name = "PlacementConfirm")
+    {
+        var c = Create(safe, () => worldBounds().center, camera, onConfirm, onCancel, name);
+        if (c != null) { c.bounds = worldBounds; c.Follow(); }
+        return c;
+    }
 
     /// <param name="safe">Tuvalin güvenli alanı.</param>
     /// <param name="worldTop">Nesnenin üst orta noktası (dünya); her kare okunur.</param>
@@ -50,6 +66,7 @@ public sealed class WorldConfirmButtons : MonoBehaviour
         c.parentRect = (RectTransform)safe;
         c.confirm = c.RoundButton("Confirm", -(ButtonSize + Gap) * 0.5f, CampaignSceneSetup.Art("ui_icon_check"),
             new Color(0.17f, 0.24f, 0.13f, 0.96f), onConfirm, out c.confirmFace, out c.confirmIcon);
+        c.confirmGroup = c.confirm.gameObject.AddComponent<CanvasGroup>();
         c.RoundButton("Cancel", (ButtonSize + Gap) * 0.5f, CampaignSceneSetup.Art("ui_icon_cross"),
             new Color(0.25f, 0.12f, 0.10f, 0.96f), onCancel, out _, out _);
         c.BuildInfoPill();
@@ -117,6 +134,8 @@ public sealed class WorldConfirmButtons : MonoBehaviour
     {
         if (confirm == null) return;
         confirm.interactable = canConfirm;
+        // 5. oturum (2.2): geçersizken ✓ soluk ve basılamaz (dokunuş yutulur, onay çağrılmaz)
+        if (confirmGroup != null) { confirmGroup.alpha = canConfirm ? 1f : 0.42f; confirmGroup.interactable = canConfirm; }
         confirmFace.color = canConfirm ? new Color(0.17f, 0.24f, 0.13f, 0.96f) : new Color(0.16f, 0.15f, 0.14f, 0.9f);
         confirmIcon.color = canConfirm ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);
         string key = (info ?? "") + "|" + (icon != null ? icon.name : "") + "|" + warning;
@@ -146,15 +165,46 @@ public sealed class WorldConfirmButtons : MonoBehaviour
         if (anchor == null || parentRect == null) return;
         var camera = cam != null ? cam : Camera.main;
         if (camera == null) return;
-        Vector3 screen = camera.WorldToScreenPoint(anchor());
         var canvas = parentRect.GetComponentInParent<Canvas>();
         Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screen, uiCamera, out Vector2 local)) return;
         var area = parentRect.rect;
-        float halfW = Mathf.Max(rect.sizeDelta.x * 0.5f, InfoWidth * 0.5f) + 12f;
-        // Üstte üst bar (~150), altta alt bar (~150) payı
-        float x = Mathf.Clamp(local.x, area.xMin + halfW, area.xMax - halfW);
-        float y = Mathf.Clamp(local.y + 10f, area.yMin + 150f, area.yMax - rect.sizeDelta.y - 150f);
+        float halfW = Mathf.Max(rect.sizeDelta.x * 0.5f, InfoWidth * 0.5f);
+        float height = rect.sizeDelta.y;
+        const float TopPad = 150f, BottomPad = 150f, Edge = 12f, Gap = 14f;
+        if (bounds == null)
+        {
+            // Eski davranış: nesnenin üstünde ortalı
+            Vector3 screen = camera.WorldToScreenPoint(anchor());
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screen, uiCamera, out Vector2 local)) return;
+            float x0 = Mathf.Clamp(local.x, area.xMin + halfW + Edge, area.xMax - halfW - Edge);
+            float y0 = Mathf.Clamp(local.y + 10f, area.yMin + BottomPad, area.yMax - height - TopPad);
+            rect.anchoredPosition = new Vector2(x0 - area.center.x, y0 - area.center.y);
+            Side = "above";
+            return;
+        }
+        // Hayaletin ekran dikdörtgeni (güvenli alan yerel koordinatında)
+        var b = bounds();
+        Vector2 lo = Vector2.positiveInfinity, hi = Vector2.negativeInfinity;
+        foreach (var corner in new[] { new Vector3(b.min.x, b.min.y), new Vector3(b.max.x, b.max.y), new Vector3(b.min.x, b.max.y), new Vector3(b.max.x, b.min.y) })
+        {
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, camera.WorldToScreenPoint(corner), uiCamera, out Vector2 p)) return;
+            lo = Vector2.Min(lo, p); hi = Vector2.Max(hi, p);
+        }
+        float minX = area.xMin + Edge, maxX = area.xMax - Edge, minY = area.yMin + BottomPad, maxY = area.yMax - TopPad;
+        float cy = Mathf.Clamp((lo.y + hi.y) * 0.5f - height * 0.5f, minY, maxY - height);   // pivot alt-orta
+        float x, y;
+        string side;
+        if (hi.x + Gap + 2f * halfW <= maxX) { x = hi.x + Gap + halfW; y = cy; side = "right"; }
+        else if (lo.x - Gap - 2f * halfW >= minX) { x = lo.x - Gap - halfW; y = cy; side = "left"; }
+        else if (lo.y - Gap - height >= minY)
+        {
+            x = Mathf.Clamp((lo.x + hi.x) * 0.5f, minX + halfW, maxX - halfW); y = lo.y - Gap - height; side = "below";
+        }
+        else
+        {
+            x = Mathf.Clamp((lo.x + hi.x) * 0.5f, minX + halfW, maxX - halfW); y = Mathf.Min(hi.y + Gap, maxY - height); side = "above";
+        }
+        Side = side;
         rect.anchoredPosition = new Vector2(x - area.center.x, y - area.center.y);
     }
 }

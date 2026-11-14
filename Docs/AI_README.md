@@ -237,3 +237,14 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **UI:** Kahraman/Çırak penceresi `FancyInfoPanel`; Kart Atölyesi ve Ayarlar yeniden (Ayarlar'da gizlilik URL'si/destek e-postası YER TUTUCU).
 - **Test:** editör açıkken testler `D:/UnityProjects/MEB_TestRunner` kopyasında (robocopy /MIR + batchmode; yeni .meta'ları geri kopyala).
   `Session4Tests` 4 ekran oranında (`Ratios`) UI görüntüsü alır (`CaptureUi`). Unity sahte-null: `GetComponent() ?? AddComponent()` kullanma.
+
+## 14 Kasım 2026 (5. oturum): yerleşim + yol bulma + eylem menüsü (D62–D67)
+- **Ana Üs yerleşimi:** tek kural hücreler. Yapı engel alanı = ayak izi ∪ görsel hücreleri (`BaseOccupancyGrid.BlockOf/VisualCells`, dinlenme
+  ölçeği `RestVisualRelative`); oyun ve test aynı fonksiyonu kullanır (`PlacementController.Validate`). Izgarada dolu hücreler kırmızı.
+  Yükleme onarımı ve GERİ AL YUMUŞAK (`FootprintFree`, `RestoreObjectTo`): eski düzen kıpırdamaz. Denetim/tarama `Base/BasePlacementAudit.cs`.
+  Yüklemede `BaseMapManager.ValidateOccupancy` (hayalet kayıt temizliği). `NatureObstacle.cell` artık özellik (kayıt hatası düzeldi).
+- **Savaş engeli görselden** (`BattleObstacles.FromVisual`; ada yapıları `VisualObstacle=false`); düşman vuruş mesafesi engel kenarından.
+- **Dekor ölçeği** `Systems/DecorScale.cs` tablosundan (ayak izinden bağımsız). Yeni dekor eklerken tabloya satır ekle.
+- **UI:** `UI/WorldActionMenu.cs` (dekor + bina dokunuş menüsü; bina dokunuşu artık önce menü açar), `WorldConfirmButtons.Create(…, Func<Bounds>)`
+  (hayaletin yanında), `UndoMoveButton` (küçük, sol alt, 3 sn). `FeatureConfig.recommendedLayout` (kapalı).
+- **Test:** `Session5Tests`, `Session5UiTests`. Bilinen eski başarısızlar: IslandRaidTests.LiveRaid…, IslandPhaseCTests.MonsterFlips…, BaseShadowRevisionTests.

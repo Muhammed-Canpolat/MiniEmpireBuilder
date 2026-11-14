@@ -265,7 +265,8 @@ public class BuilderVisualController : MonoBehaviour
     // ==================== YÜRÜYÜŞ VE ÇALIŞMA ====================
 
     private static RectInt HutCells(Unit unit) => unit.hut != null
-        ? BaseOccupancyGrid.CellsFor((Vector2)BuilderHut.FootprintSize, unit.hut.transform.position)
+        ? BaseOccupancyGrid.BlockAt(BuilderHut.FootprintSize, unit.hut.transform.position,
+            BaseOccupancyGrid.RestVisualRelative(unit.hut.gameObject))   // 5. oturum (D62): engel alanı = ayak izi ∪ görsel
         : new RectInt(0, 0, 0, 0);
 
     /// <summary>Hedef konumdaki bina/yapının hücre dikdörtgeni (bulunamazsa 1x1).</summary>
@@ -278,7 +279,8 @@ public class BuilderVisualController : MonoBehaviour
                 if (obj?.gameObject == null || obj.isBeingRemoved) continue;
                 if (obj.objectType != MapObjectType.Building && obj.objectType != MapObjectType.BuilderHut) continue;
                 if (((Vector2)obj.gameObject.transform.position - (Vector2)target).sqrMagnitude > 0.04f) continue;
-                return BaseOccupancyGrid.CellsFor((Vector2)BaseMapManager.FootprintOf(obj), target);
+                return BaseOccupancyGrid.BlockAt(BaseMapManager.FootprintOf(obj), target,
+                    BaseOccupancyGrid.RestVisualRelative(obj.gameObject));
             }
         return new RectInt(Mathf.FloorToInt(target.x), Mathf.FloorToInt(target.y), 1, 1);
     }

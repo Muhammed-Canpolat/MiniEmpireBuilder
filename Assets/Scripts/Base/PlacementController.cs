@@ -28,6 +28,11 @@ public class PlacementController : MonoBehaviour
     private float _moveOriginalAlpha = 1f;
     private GameObject _moveGrid;
     private GameObject _footprint;
+    private Rect? _movingVisual;          // taşınan yapının göreli görseli (taşıma büyütmesinden ÖNCE ölçülür)
+    private Vector2Int _lastConflictCell = new Vector2Int(int.MinValue, 0);
+    private readonly System.Collections.Generic.HashSet<Vector2Int> _conflicts = new System.Collections.Generic.HashSet<Vector2Int>();
+    private readonly System.Collections.Generic.List<SpriteRenderer> _cellTiles = new System.Collections.Generic.List<SpriteRenderer>();
+    private RectInt _tileBlock;
     private GameObject _undoToast;
     private GameObject _confirmBar;
     private Button _confirmButton;
@@ -73,7 +78,10 @@ public class PlacementController : MonoBehaviour
         _cell = CellOf(center, size);
         _lastValidWorldPos = CenterOf(_cell, size);
 
-        CreateGhost(BaseMapManager.GetBuildingColor(type), SpriteManager.Instance?.GetBuildingSprite(type));
+        _movingVisual = null;
+        Sprite preview = BaseMapManager.PreviewSprite(type);
+        CreateGhost(BaseMapManager.GetBuildingColor(type), preview,
+            type == BuildingType.GoldMine ? (Vector3?)null : BaseMapManager.BuildingVisualScale(type, preview));
         CreateGrid();
         CreateConfirmBar();
         _ghostObj.transform.position = _lastValidWorldPos;
@@ -96,6 +104,7 @@ public class PlacementController : MonoBehaviour
         _moveScale = obj.gameObject.transform.localScale;
         _lastValidWorldPos = _moveOrigin;
         _cell = CellOf(_moveOrigin, BaseMapManager.FootprintOf(obj));
+        _movingVisual = BaseOccupancyGrid.RestVisualRelative(obj.gameObject);
         obj.gameObject.transform.DOScale(_moveScale * 1.1f, 0.12f);
         _drag.BeginHeld(); // uzun basma parmağı hâlâ basılıysa hayalet hemen onu izler
 
@@ -144,6 +153,8 @@ public class PlacementController : MonoBehaviour
         if (_footprint != null) Destroy(_footprint);
         if (_confirmBar != null) Destroy(_confirmBar);
         _ghostObj = _moveGrid = _footprint = _confirmBar = null;
+        _cellTiles.Clear();
+        _lastConflictCell = new Vector2Int(int.MinValue, 0);
         _confirmButton = null;
         _confirmButtons = null;
         _drag.Reset();
@@ -175,36 +186,80 @@ public class PlacementController : MonoBehaviour
         {
             _footprint.transform.position = _lastValidWorldPos;
             _footprint.GetComponent<SpriteRenderer>().color = _valid
-                ? new Color32(0x4F, 0xCF, 0x74, 0x59)
-                : new Color32(0xC2, 0x45, 0x2D, 0x59);
+                ? new Color32(0x4F, 0xCF, 0x74, 0x40)
+                : new Color32(0xC2, 0x45, 0x2D, 0x40);
         }
+        UpdateCellTiles();
         UpdateConfirmButton();
     }
 
-    private bool IsPlacementValid(Vector3 center)
+    private bool IsPlacementValid(Vector3 center) => Validate(_placingBuildingType, center, _movingObject, CurrentVisual());
+
+    /// <summary>Yerleştirilen yapının göreli görseli: taşımada önceden ölçülen, yeni binada hayaletin kendisi.</summary>
+    private Rect? CurrentVisual()
+    {
+        if (_movingObject != null) return _movingVisual;
+        if (_ghostRenderer == null || _ghostObj == null) return null;
+        var r = BaseVisualBounds.RendererRect(_ghostRenderer);
+        r.position -= (Vector2)_ghostObj.transform.position;
+        return r;
+    }
+
+    /// <summary>
+    /// Yerleştirme kuralı (oyun ve testler aynı fonksiyonu kullanır). 5. oturum (D62): tek kural hücrelerdir — yapının engel alanı
+    /// (ayak izi ∪ görsel hücreleri) başka yapının engel alanına, kampa, dekora, doğaya ya da çit payına girmemeli. Eskiden ayrıca
+    /// görünmeyen sprite-örtüşme denetimi vardı ("Buraya sığmıyor" yeşil hücrelerde de çıkıyordu); artık her ret ızgarada kırmızı hücredir.
+    /// <paramref name="visual"/> yapının göreli görseli; verilmezse taşınan nesneninki ya da aynı türden kurulu binanınki.
+    /// </summary>
+    public static bool Validate(BuildingType type, Vector2 center, PlacedMapObject moving = null, Rect? visual = null)
     {
         var map = BaseMapManager.Instance;
         if (map == null) return false;
-        bool cellsOk = _movingObject != null
-            ? map.CanPlaceObjectAt(_movingObject, center)
-            : map.CanPlaceBuildingAt(_placingBuildingType, center);
-        if (!cellsOk) return false;
-        // 3. oturum (1.4): çatılar/büyük sprite'lar başka yapının görseline girmesin
-        Rect visual;
-        GameObject self = null;
-        if (_movingObject != null && _movingObject.gameObject != null)
+        return moving != null ? map.CanPlaceObjectWithVisual(moving, center, visual) : map.CanPlaceBuildingWithVisual(type, center, null, visual);
+    }
+
+    /// <summary>Hayaletin engel alanındaki çakışan hücreler (kırmızı) — test ve ızgara.</summary>
+    public System.Collections.Generic.HashSet<Vector2Int> CurrentConflicts => _conflicts;
+
+    /// <summary>
+    /// Izgara: diğer nesnelerin dolu hücreleri soluk kırmızı (yerleşim başında bir kez), hayaletin engel alanı hücre hücre yeşil/kırmızı.
+    /// </summary>
+    private void UpdateCellTiles()
+    {
+        if (_moveGrid == null) return;
+        var size = CurrentFootprint();
+        var cells = new RectInt(_cell.x, _cell.y, size.x, size.y);
+        if (_cell == _lastConflictCell && _cellTiles.Count > 0) return;
+        _lastConflictCell = _cell;
+        _conflicts.Clear();
+        BaseOccupancyGrid.ConflictCells(cells, _movingObject, null, true, true, null, CurrentVisual(), _conflicts);
+        var block = BaseOccupancyGrid.BlockAt(size, (Vector2)CenterOf(_cell, size), CurrentVisual());
+        var square = BaseMapManager.MakeSquareSprite(Color.white);
+        int needed = block.width * block.height;
+        while (_cellTiles.Count < needed)
         {
-            self = _movingObject.gameObject;
-            visual = BaseVisualBounds.Of(self);
-            visual.position += (Vector2)(center - self.transform.position);
+            var tile = new GameObject("GhostCell");
+            tile.transform.SetParent(_moveGrid.transform, false);
+            tile.transform.localScale = new Vector3(0.92f / square.bounds.size.x, 0.92f / square.bounds.size.y, 1f);
+            var sr = tile.AddComponent<SpriteRenderer>();
+            sr.sprite = square;
+            sr.sortingOrder = 99;
+            _cellTiles.Add(sr);
         }
-        else if (_ghostRenderer != null && _ghostObj != null)
-        {
-            visual = BaseVisualBounds.RendererRect(_ghostRenderer);
-            visual.position += (Vector2)(center - _ghostObj.transform.position);
-        }
-        else return true;
-        return !BaseVisualBounds.OverlapsAny(visual, self, _ghostObj);
+        int i = 0;
+        for (int y = block.yMin; y < block.yMax; y++)
+            for (int x = block.xMin; x < block.xMax; x++)
+            {
+                var sr = _cellTiles[i++];
+                sr.gameObject.SetActive(true);
+                sr.transform.position = new Vector3(x + 0.5f, y + 0.5f, 0f);
+                bool bad = _conflicts.Contains(new Vector2Int(x, y));
+                bool footprintCell = cells.Contains(new Vector2Int(x, y));
+                sr.color = bad ? new Color(0.95f, 0.18f, 0.12f, 0.62f)
+                    : footprintCell ? new Color(0.31f, 0.81f, 0.45f, 0.5f) : new Color(0.31f, 0.81f, 0.45f, 0.26f);
+            }
+        for (; i < _cellTiles.Count; i++) _cellTiles[i].gameObject.SetActive(false);
+        _tileBlock = block;
     }
 
     /// <summary>Taşınan nesnenin (bina ya da kulübe) ya da yeni binanın kapladığı alan.</summary>
@@ -258,7 +313,16 @@ public class PlacementController : MonoBehaviour
             _confirmButtons.SetState(true, null);
     }
 
-    /// <summary>Hayaletin üst orta noktası (✓/✗ düğmeleri bunun üstünde durur).</summary>
+    /// <summary>5. oturum (2.2): hayaletin görseli ∪ engel alanı (✓/✗ bunun yanında durur, onu izler).</summary>
+    private Bounds GhostBounds()
+    {
+        var size = CurrentFootprint();
+        var b = new Bounds(_lastValidWorldPos, new Vector3(size.x, size.y, 0.1f));
+        if (_ghostRenderer != null) b.Encapsulate(_ghostRenderer.bounds);
+        return b;
+    }
+
+    /// <summary>Hayaletin üst orta noktası (eski yerleşim; testler/geri uyum).</summary>
     private Vector3 GhostTop()
     {
         if (_ghostRenderer == null) return _lastValidWorldPos;
@@ -279,7 +343,7 @@ public class PlacementController : MonoBehaviour
             // Taşıma onayı
             var moved = _movingObject;
             Vector3 previous = _moveOrigin;
-            bool success = BaseMapManager.Instance != null && BaseMapManager.Instance.MoveObjectTo(moved, pos);
+            bool success = BaseMapManager.Instance != null && BaseMapManager.Instance.MoveObjectWithVisual(moved, pos, _movingVisual);
             CancelPlacement(); // Ghost silinir, renk 1f yapılır
             if (success)
             {
@@ -312,6 +376,7 @@ public class PlacementController : MonoBehaviour
                 ?.PlayConstructionComplete(), completedBuilding.id ?? "");
         AudioManager.Instance?.PlaySfx("buildingPlace");
         BaseMapManager.Instance?.SaveAll();
+        HeroMovementController.Instance?.RefreshWalkable();   // 5. oturum (1.1): kahraman yeni binanın yerindeyse kenara yürür
         FinishPlacement();
     }
 
@@ -381,6 +446,19 @@ public class PlacementController : MonoBehaviour
             AddLine(x, area.center.y, 0.025f, area.height);
         for (int y = area.yMin; y <= area.yMax; y++)
             AddLine(area.center.x, y, area.width, 0.025f);
+        // 5. oturum (1.1): dolu hücreler (başka yapının engel alanı, kamp bayrağı, dekor, doğa, çit payı) soluk kırmızı: neden sığmadığı görünür
+        foreach (var cell in BaseOccupancyGrid.OccupiedForDisplay(_movingObject, null, true))
+        {
+            if (!area.Contains(cell)) continue;
+            var tile = new GameObject("OccupiedCell");
+            tile.transform.SetParent(_moveGrid.transform, false);
+            tile.transform.position = new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f);
+            tile.transform.localScale = new Vector3(0.96f / square.bounds.size.x, 0.96f / square.bounds.size.y, 1f);
+            var sr = tile.AddComponent<SpriteRenderer>();
+            sr.sprite = square;
+            sr.sortingOrder = 97;
+            sr.color = BaseOccupancyGrid.InEdgeMargin(cell) ? new Color(1f, 0.12f, 0.08f, 0.2f) : new Color(1f, 0.1f, 0.06f, 0.38f);
+        }
         _footprint = new GameObject("MoveFootprint");
         var renderer = _footprint.AddComponent<SpriteRenderer>();
         renderer.sprite = square;
@@ -394,7 +472,7 @@ public class PlacementController : MonoBehaviour
     {
         // Alt bar çubuğu yerine nesnenin hemen üstünde ✓ / ✗ (WorldConfirmButtons)
         var parent = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
-        _confirmButtons = WorldConfirmButtons.Create(parent, GhostTop, Camera.main, OnConfirmClicked, CancelPlacement);
+        _confirmButtons = WorldConfirmButtons.Create(parent, GhostBounds, Camera.main, OnConfirmClicked, CancelPlacement);
         if (_confirmButtons == null) return;
         _confirmBar = _confirmButtons.gameObject;
         _confirmButton = _confirmButtons.Confirm;
@@ -407,7 +485,7 @@ public class PlacementController : MonoBehaviour
         var safe = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
         var button = UndoMoveButton.Show(safe, () =>
         {
-            if (moved?.gameObject != null && BaseMapManager.Instance != null && BaseMapManager.Instance.MoveObjectTo(moved, previous))
+            if (moved?.gameObject != null && BaseMapManager.Instance != null && BaseMapManager.Instance.RestoreObjectTo(moved, previous))
                 BaseBuildingVisual.SpawnDust(previous + Vector3.down * 0.4f, 110);
         });
         _undoToast = button != null ? button.gameObject : null;

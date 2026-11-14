@@ -9,6 +9,8 @@ public sealed class BaseBuildingVisual : MonoBehaviour
     private Animator animator;
     private Vector3 restScale;
     private int currentLevel;
+    /// <summary>Animasyonsuz (dinlenme) ölçeği: yerleşim hücreleri bu ölçekteki görselden hesaplanır (açılış/dokunma animasyonu etkilemez).</summary>
+    public Vector3 RestScale => restScale;
 
     public void Initialize(BuildingType buildingType, SpriteRenderer renderer, Vector3 scale)
     {

@@ -86,6 +86,7 @@ public sealed class BattleApprentice : MonoBehaviour
 
     // Kahramanın solunda, hafif önünde: kahramanın gövdesi (≈0.8 yarı genişlik) onu örtmez.
     private static readonly Vector2 FollowOffset = new Vector2(-1.1f, -0.15f);
+    private GridSteer steer;
 
     private void Update()
     {
@@ -98,6 +99,14 @@ public sealed class BattleApprentice : MonoBehaviour
         Vector2 fromHero = followed - (Vector2)hero.transform.position;
         if (fromHero.magnitude > 3f)
             followed = (Vector2)hero.transform.position + fromHero.normalized * 3f;
+        // 5. oturum (1.2): kahraman bir yapının öbür yanındaysa düz çizgide duvara dayanmak yerine ortak yol bulmayla dolanır.
+        Vector2 feet = HeroController.FeetOffset;
+        if (!GridPathfinder.LineClear(BattleWalkGrid.Shared, before + feet, desired + feet))
+        {
+            steer = steer ?? new GridSteer(BattleWalkGrid.Shared);
+            float step = Mathf.Max((followed - before).magnitude, 3.2f * Time.deltaTime);
+            followed = steer.Step(before + feet, desired + feet, step, out _) - feet;
+        }
         followed = BattleObstacles.Resolve(followed + HeroController.FeetOffset, 0.3f) - HeroController.FeetOffset;
         transform.position = followed;
         bool moving = Vector2.Distance(before, followed) > 0.01f;

@@ -1,0 +1,2 @@
+normal: ~100 sn oyun süresi (×4), 323 düşman konumu denetlendi, savaş sürüyor
+madeni_koru: ~100 sn oyun süresi (×4), 92 düşman konumu denetlendi, savaş bitti (yenilgi)

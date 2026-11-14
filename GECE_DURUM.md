@@ -1,3 +1,44 @@
+# GECE_DURUM — Otonom çalışma (14 Kasım 2026, 5. oturum: yerleşim + yol bulma + Taşı/Sil/GERİ AL UI)
+
+DURUM: TAMAMLANDI (5. oturum)
+ŞU ANKİ İŞ: (yok) — rapor REPORT.md
+SIRADAKİ İŞ: kullanıcı cihazda dener (özellikle yeni bina dokunuş menüsü); 2.1'in adaya bağlanması; sonra Google Play (PLAY_RELEASE §8)
+Kararlar: DECISIONS.md D62+ · Başlangıç commit'i: 21bd545
+Model notu: yerleşim/yol bulma = Opus yüksek çaba; UI işleri Sonnet sınıfı/orta çaba yeterli (kullanıcı).
+
+5. OTURUM İŞ LİSTESİ:
+- [x] 1.1 Ana üs yerleşim sistemi denetimi (D62) — Session5Tests tarama: ızgara uyuşmazlığı 0, çirkin kabul 0; NatureObstacle (0,0) hayalet hatası bulundu
+- [x] 1.2 Hiçbir sahnede karakter yapı içinden geçmesin (D63) — Ana Üs/ada/savaş/Madeni Koru rota + yürütme testleri
+- [x] 1.3 Dekor/hayvan ölçeği ortak tablodan (D64)
+- [x] 2.1 Taşı/Sil eylem menüsü (D67; Sonnet alt ajanı) — Ana Üs dekor + bina/kule; ADA BAĞLANMADI (ada paneli zaten TAŞI'lı)
+- [x] 2.2 ✓/✗ hayaletin yanında, geçersizken ✓ soluk/pasif (D66)
+- [x] 2.3 GERİ AL küçük, sol alt, 3 sn + azalan halka + sönme (D66)
+- [x] 2.4 "Önerilen düzen" bayrakla kapalı (D65)
+- [x] SON: 12 bina taşı/geri al, dekor kur/taşı/sil, normal + Madeni Koru savaşı; REPORT.md. Session5Tests 18/18, Session5UiTests 3/3
+
+ENGELLENENLER:
+- (yok). Önceden var olan 3 başarısız test REPORT §5'te (başlangıç commit'inde de başarısız).
+
+## Referans görseller — 5. oturum
+⚠️ Mesajda 3 görsel tarif edildi; ulaşan 3 dosyanın **1. ve 2.'si aynı** (Taşı/Sil paneli), 3.'sü GERİ AL. "Buraya sığmıyor" hatasının
+görseli **ulaşmadı**; 1.1/2.2 için kullanıcının yazılı tarifi esas: kalenin altındaki boş alan reddediliyor, ✓/✗ ve "Buraya sığmıyor"
+etiketi taşınan binanın değil ana kalenin üstünde duruyor.
+
+### Görsel 1 (=2) — Dekora dokununca açılan Taşı/Sil paneli (Ana Üs, 1280×2048, Development Build)
+- Üst bar: altın 20.7K, odun 567, et 211, arma "15 ANA ÜS", elmas 46, inşaatçı 4/4, dişli. Solda GÜNLÜK ve GÖREV.
+- Panel: sağ kenarda, ekran dışına taşan koyu yeşil-kahve dikdörtgen şerit (y≈580–740, x≈700→ekran dışı); içinde iki düz koyu
+  dikdörtgen düğme "TAŞI" ve "SİL +2" (ikon yok, "+2"nin neyi iade ettiği belirsiz). Panel ağılın (sağ üst koyun/çalı alanı) üstünü
+  tamamen kapatıyor; seçili öğe vurgulanmıyor.
+- Alan düzeni: üst köşelerde iki taş kule, üst ortada iki kırmızı sancak arasında Kışla (mavi kenarlı taş bina), solda alt alta 4 mavi
+  çatılı ev ("z" uyku işaretli), ortada koyu kilise (Kart Atölyesi?), merkezde büyük kale, sağda kırmızı çatılı ev, altında maden (altın
+  kayalar + kırmızı kulübe + çırak), solda mavi kilise (manastır), ortada kahraman + sarı bayrak, sağda iki sarı çatılı ev, alt köşelerde
+  iki okçuluk alanı, alt ortada ikinci Kışla. Radyal menü kapalı.
+### Görsel 3 — Taşıma sonrası GERİ AL
+- Ekranın ortasında (y≈1290–1440, x≈380–900, ekran genişliğinin ~%40'ı) büyük koyu hap: solda halkalı turuncu geri oku, sağda altın
+  "GERİ AL". Kahramanı ve bayrağı tamamen kapatıyor. Radyal menü açık (SEFER, KAHRAMAN, İNŞA ET, ADA).
+- Bu görüntüde **ağıl (sağ üst)**: 4×5 çalı + 6 koyun **çok küçük** (çalılar ~25 px, koyunlar ~15 px) → 1.3 gerilemesi.
+
+---
 # GECE_DURUM — Otonom çalışma (14 Kasım 2026, 4. oturum: hatalar + temel sistemler + UI/UX)
 
 DURUM: TAMAMLANDI (4. oturum)

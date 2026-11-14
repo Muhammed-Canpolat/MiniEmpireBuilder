@@ -20,11 +20,21 @@ public class HeroMovementController : MonoBehaviour
     private float animationClock;
     private bool walking;
 
+    /// <summary>
+    /// Harita değişti (bina kuruldu/taşındı, dekor): yeni hedef seçilir. 5. oturum (1.1): kahraman yeni yapının alanında kaldıysa en yakın
+    /// boş durma yerine YÜRÜYEREK çekilir (bina onun üstüne kurulmaz gibi görünmez; ışınlanmaz).
+    /// </summary>
     public void RefreshWalkable()
     {
         walking = false;
+        follower = null;
         waitUntil = Time.time;
+        evacuate = true;
     }
+
+    private bool evacuate;
+    /// <summary>Son çekilmede yürüyerek mi çıktı (test).</summary>
+    public bool LastEvacuationWalked { get; private set; }
 
     private void Awake()
     {
@@ -116,7 +126,7 @@ public class HeroMovementController : MonoBehaviour
                 if (!grid.Walkable(new Vector2Int(c.x + dx, c.y + dy))) return false;
         var body = BodyRectAt(new Vector2(c.x + 0.5f, c.y + 0.5f), self);
         visuals = visuals ?? VisualRects(self);
-        foreach (var r in visuals) if (BaseVisualBounds.Overlap(body, r)) return false;
+        foreach (var r in visuals) if (BaseVisualBounds.Overlap(body, r, BaseVisualBounds.Tolerance, BaseVisualBounds.Tolerance)) return false;
         return true;
     }
 
@@ -159,6 +169,27 @@ public class HeroMovementController : MonoBehaviour
             if (d > CampRadius || Vector2.Distance(cell, here) < 0.7f) continue;
             if (!IsStandCell(new Vector2Int(x, y), gameObject, visuals)) continue;
             candidates.Add(new Vector2Int(x, y));
+        }
+        if (evacuate && placedOnce)
+        {
+            evacuate = false;
+            if (!IsStandCell(grid.CellOf(here), gameObject, visuals) && candidates.Count > 0)
+            {
+                candidates.Sort((p, q) => Vector2.Distance(grid.Center(p), here).CompareTo(Vector2.Distance(grid.Center(q), here)));
+                target = grid.Center(candidates[0]);
+                follower = new GridPathFollower(grid, here, target);
+                LastEvacuationWalked = !follower.Done;
+                if (follower.Done)
+                {
+                    follower = null;
+                    if (body != null) body.position = target;
+                    transform.position = new Vector3(target.x, target.y, transform.position.z);
+                    waitUntil = Time.time + 1f;
+                    return;
+                }
+                walking = true;
+                return;
+            }
         }
         if (!placedOnce)
         {

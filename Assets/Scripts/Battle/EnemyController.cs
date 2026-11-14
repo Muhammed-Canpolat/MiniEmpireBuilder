@@ -655,7 +655,21 @@ public class EnemyController : MonoBehaviour
         currentTarget = target;
         targetPoint = point;
         targetRadius = radius;
+        // 5. oturum (1.2): yapının yürünemez alanı görselden büyüdü; vuruş mesafesi alanın kenarından da ölçülür.
+        targetObstacle = null;
+        if (target != null)
+        {
+            var structure = target.GetComponent<BattleStructure>();
+            if (structure != null) targetObstacle = structure;
+            else
+            {
+                var castle = target.GetComponent<MainBaseController>();
+                if (castle != null) targetObstacle = castle;
+            }
+        }
     }
+
+    private Object targetObstacle;
 
     /// <summary>Hareketli hedeflerde (kahraman, Çırak) nokta her karede güncellenir.</summary>
     private void RefreshTargetPoint()
@@ -679,7 +693,16 @@ public class EnemyController : MonoBehaviour
         return nearest;
     }
 
-    private float DistanceToTarget => Vector2.Distance(transform.position, targetPoint) - targetRadius;
+    private float DistanceToTarget
+    {
+        get
+        {
+            float d = Vector2.Distance(transform.position, targetPoint) - targetRadius;
+            if (targetObstacle != null && BattleObstacles.TryGet(targetObstacle, out var area))
+                d = Mathf.Min(d, BattleObstacles.DistanceTo(area, transform.position));
+            return d;
+        }
+    }
 
     // ==================== HAREKET ====================
 

@@ -1,0 +1,1 @@
+[Doluluk] hayalet harita 0, doğa 1 (3,4:yok edilmiş), dekor 0, yapı altındaki doğa 0; kayıtta olup sahnede olmayan hücre 1, sahnede olup kayıtta olmayan 0 → kayıt sahneye göre yeniden yazıldı

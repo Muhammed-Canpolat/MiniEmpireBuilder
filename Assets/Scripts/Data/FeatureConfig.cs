@@ -115,6 +115,13 @@ public sealed class FeatureConfig : ScriptableObject
     /// <summary>Etkin altın ekonomisi profili: Resources/Config/ altındaki EconomyConfig asset adı ("Economy_V2" ya da "Economy_Legacy").</summary>
     public string economyProfile = "Economy_V2";
 
+    [Header("Ana Üs (5. oturum)")]
+    /// <summary>
+    /// İnşa Et menüsündeki "ÖNERİLEN DÜZEN" düğmesi ve ona bağlı otomatik yerleşim (BaseMapManager.ApplyRecommendedLayout). 5. oturum (2.4):
+    /// kullanıcı kararıyla KAPALI — kod silinmedi; true yapılırsa düğme geri gelir. (Varsayılanı false: asset'te alan yoksa da kapalı.)
+    /// </summary>
+    public bool recommendedLayout = false;
+
     private static FeatureConfig cached;
 
     public static FeatureConfig Instance

@@ -13,7 +13,22 @@ public sealed class NatureObstacle : MonoBehaviour
     public static readonly Dictionary<Vector2Int, NatureObstacle> ByCell = new Dictionary<Vector2Int, NatureObstacle>();
 
     public NatureKind kind;
-    public Vector2Int cell;
+    [SerializeField] private Vector2Int _cell;
+
+    /// <summary>
+    /// 5. oturum (1.1): hücre atanınca kayıt güncellenir. Eskiden alan olarak AddComponent'tan SONRA atanıyordu; OnEnable o anda (0,0)
+    /// ile çalıştığından gerçek hücre hiç kaydolmuyor, (0,0)'da hayalet kayıt kalıyordu.
+    /// </summary>
+    public Vector2Int cell
+    {
+        get => _cell;
+        set
+        {
+            if (ByCell.TryGetValue(_cell, out var current) && current == this) ByCell.Remove(_cell);
+            _cell = value;
+            if (isActiveAndEnabled) ByCell[_cell] = this;
+        }
+    }
 
     public string Id => MakeId(kind, cell);
     public static string MakeId(NatureKind kind, Vector2Int cell) => $"{kind}_{cell.x}_{cell.y}";
@@ -24,11 +39,11 @@ public sealed class NatureObstacle : MonoBehaviour
         : kind == NatureKind.Bush ? L.T("Çalı", "Bush")
         : kind == NatureKind.Rock ? L.T("Kaya", "Rock") : L.T("Kütük", "Stump");
 
-    private void OnEnable() => ByCell[cell] = this;
+    private void OnEnable() => ByCell[_cell] = this;
 
     private void OnDisable()
     {
-        if (ByCell.TryGetValue(cell, out var current) && current == this) ByCell.Remove(cell);
+        if (ByCell.TryGetValue(_cell, out var current) && current == this) ByCell.Remove(_cell);
     }
 
     /// <summary>Hücre dikdörtgeninde doğa nesnesi var mı?</summary>

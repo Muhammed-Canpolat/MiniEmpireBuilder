@@ -191,6 +191,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         currentCell = TryFindNearestFree(data, start, 20, out var free) ? free : start;
         drag.Reset();
         CreateGhost();
+        CreateMoveGrid();
         CreateConfirmBar();
     }
 
@@ -287,6 +288,7 @@ public sealed class DecorPlacementController : MonoBehaviour
             if (GameManager.Instance == null || !GameManager.Instance.SpendGold(selected.cost)) return;
             Spawn(selected, currentCell, Guid.NewGuid().ToString("N"));
             DailyQuests.Report(QuestKind.PlaceDecor);
+            HeroMovementController.Instance?.RefreshWalkable();
         }
         Save();
         Cancel();
@@ -298,7 +300,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         var safe = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
         var button = UndoMoveButton.Show(safe, () =>
         {
-            if (moved != null && CanPlace(moved.Data, previous, moved))
+            if (moved != null && BaseOccupancyGrid.FootprintFree(new RectInt(previous.x, previous.y, moved.Data.footprint.x, moved.Data.footprint.y), null, moved, false, true, null))   // 5. oturum: geri alma yumuşak denetim
             {
                 moved.SetCell(previous);
                 Save();
@@ -325,27 +327,30 @@ public sealed class DecorPlacementController : MonoBehaviour
         HideActions();
         var parent = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
         if (parent == null) return;
-        actionPanel = new GameObject("DecorActions", typeof(RectTransform), typeof(Image));
-        actionPanel.transform.SetParent(parent, false);
-        var rect = actionPanel.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(214f, 58f);
-        rect.position = Camera.main.WorldToScreenPoint(item.transform.position + Vector3.up);
-        var panelImage = actionPanel.GetComponent<Image>();
-        panelImage.sprite = ReferenceUiVisuals.ToastSprite();
-        panelImage.type = Image.Type.Sliced;
-        panelImage.color = Color.white;
-        MakeButton(rect, L.T("TAŞI", "MOVE"), new Vector2(-50f, 0f), () => BeginMove(item), false, 92f);
+        // 5. oturum (2.1): nesnenin hemen üstünde süslü eylem menüsü (TAŞI / SİL + iade); SİL kısa onay ister; seçili dekor altın parlar.
         int refund = RefundFor(item.Data);
-        MakeButton(rect, L.T($"SİL +{refund}", $"REMOVE +{refund}"), new Vector2(50f, 0f), () => Delete(item), false, 92f);
-        SelectionManager.Select(item, HideActions);
+        var items = new List<WorldActionMenu.Item>
+        {
+            new WorldActionMenu.Item { id = "move", icon = CampaignSceneSetup.Art("ui_icon_move"), label = L.T("TAŞI", "MOVE"), action = () => BeginMove(item) },
+            new WorldActionMenu.Item
+            {
+                id = "delete", icon = CampaignSceneSetup.Art("ui_icon_trash"), label = L.T("SİL", "REMOVE"),
+                costIcon = CampaignSceneSetup.Art("ui_icon_coin"), costText = "+" + refund,
+                confirm = true, question = L.T("Silinsin mi?", "Remove it?"), action = () => Delete(item)
+            }
+        };
+        var sr = item.GetComponent<SpriteRenderer>();
+        var menu = WorldActionMenu.Show(parent, () => sr != null ? sr.bounds : new Bounds(item.transform.position, Vector3.one), Camera.main, items,
+            "DecorActions", item, sr);
+        actionPanel = menu != null ? menu.gameObject : null;
     }
 
-    public bool ActionsVisible => actionPanel != null;
+    public bool ActionsVisible => actionPanel != null && actionPanel.activeInHierarchy;
 
     private void HideActions()
     {
-        if (actionPanel != null) Destroy(actionPanel);
+        if (WorldActionMenu.Current != null && WorldActionMenu.Current.gameObject == actionPanel) WorldActionMenu.Current.Close();
+        else if (actionPanel != null) Destroy(actionPanel);
         actionPanel = null;
         if (SelectionManager.Current is DecorInstance) SelectionManager.Release(SelectionManager.Current);
     }
@@ -370,6 +375,15 @@ public sealed class DecorPlacementController : MonoBehaviour
         }
         placed.Add(item);
         return item;
+    }
+
+    /// <summary>5. oturum (1.1): yok edilmiş ya da veri kaybetmiş dekor girdilerini listeden çıkarır (hayalet hücre bırakmasın).</summary>
+    public int PruneGhosts()
+    {
+        int removed = placed.RemoveAll(item => item == null || item.Data == null || item.gameObject == null
+            || !item.gameObject.activeSelf && item != moving);
+        if (removed > 0) Save();
+        return removed;
     }
 
     /// <summary>Dışarıdan (görsel çakışma onarımı) kayıt.</summary>
@@ -412,6 +426,19 @@ public sealed class DecorPlacementController : MonoBehaviour
             Line(x, area.center.y, 0.025f, area.height);
         for (int y = area.yMin; y <= area.yMax; y++)
             Line(area.center.x, y, area.width, 0.025f);
+        // 5. oturum (1.1): dolu hücreler soluk kırmızı (bina/kule engel alanı, bayrak, dekor, doğa) — neden konamadığı görünür
+        foreach (var cell in BaseOccupancyGrid.OccupiedForDisplay(null, moving, false))
+        {
+            if (!area.Contains(cell)) continue;
+            var tile = new GameObject("OccupiedCell");
+            tile.transform.SetParent(moveGrid.transform, false);
+            tile.transform.position = new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f);
+            tile.transform.localScale = new Vector3(0.96f / Square.bounds.size.x, 0.96f / Square.bounds.size.y, 1f);
+            var sr = tile.AddComponent<SpriteRenderer>();
+            sr.sprite = Square;
+            sr.sortingOrder = 97;
+            sr.color = new Color(1f, 0.1f, 0.06f, 0.38f);
+        }
     }
 
     private void CreateGhost()
@@ -446,9 +473,11 @@ public sealed class DecorPlacementController : MonoBehaviour
         var parent = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
         confirmButtons = WorldConfirmButtons.Create(parent, () =>
         {
-            if (ghostRenderer == null) return ghost != null ? ghost.transform.position : Vector3.zero;
-            var b = ghostRenderer.bounds;
-            return new Vector3(b.center.x, b.max.y, 0f);
+            // 5. oturum (2.2): hayaletin yanında (görsel ∪ ayak izi)
+            var b = new Bounds(ghost != null ? ghost.transform.position : Vector3.zero,
+                new Vector3(selected != null ? selected.footprint.x : 1f, selected != null ? selected.footprint.y : 1f, 0.1f));
+            if (ghostRenderer != null) b.Encapsulate(ghostRenderer.bounds);
+            return b;
         }, Camera.main, Confirm, Cancel, "DecorConfirm");
         if (confirmButtons == null) return;
         confirmBar = confirmButtons.gameObject;

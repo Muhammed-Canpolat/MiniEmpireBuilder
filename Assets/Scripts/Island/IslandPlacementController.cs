@@ -269,9 +269,9 @@ public sealed class IslandPlacementController : MonoBehaviour
         // Alt çubuk yerine binanın hemen üstünde ✓ / ✗ (Ana Üs ile ortak WorldConfirmButtons)
         confirmButtons = WorldConfirmButtons.Create(safe, () =>
         {
-            if (ghostRenderer == null) return ghost != null ? ghost.transform.position : Vector3.zero;
-            var b = ghostRenderer.bounds;
-            return new Vector3(b.center.x, b.max.y, 0f);
+            // 5. oturum (2.2): hayaletin yanında (Ana Üs ile aynı kural)
+            if (ghostRenderer == null) return new Bounds(ghost != null ? ghost.transform.position : Vector3.zero, Vector3.one);
+            return ghostRenderer.bounds;
         }, cam, () => Confirm(), Cancel, "IslandPlacementConfirm");
         if (confirmButtons == null) return;
         bar = confirmButtons.gameObject;

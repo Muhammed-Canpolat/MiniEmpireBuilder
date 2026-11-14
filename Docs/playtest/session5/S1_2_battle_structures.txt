@@ -1,0 +1,5 @@
+Monastery: görsel (x:2.74, y:2.31, width:1.13, height:1.85) engel (x:2.68, y:2.00, width:1.25, height:1.97)
+CannonTower: görsel (x:-0.48, y:-3.66, width:0.97, height:1.47) engel (x:-0.63, y:-4.10, width:1.25, height:1.76)
+ArcherTower: görsel (x:-4.15, y:2.38, width:1.68, height:1.64) engel (x:-4.02, y:2.00, width:1.41, height:1.86)
+AnaUs: görsel (x:-1.94, y:-0.63, width:3.89, height:2.60) engel (x:-1.70, y:-1.05, width:3.40, height:2.76)
+rota: 8

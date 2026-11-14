@@ -619,13 +619,10 @@ public class Session4Tests
         Assert.NotNull(buttons, "✓/✗ düğmeleri");
         Assert.NotNull(buttons.transform.Find("Confirm/Icon").GetComponent<UnityEngine.UI.Image>().sprite, "✓ simgesi");
         Assert.NotNull(buttons.transform.Find("Cancel/Icon").GetComponent<UnityEngine.UI.Image>().sprite, "✗ simgesi");
-        // Düğmeler hayaletin üstünde (ekranda hayaletin üst kenarının üstünde, yatayda ortalı)
+        // 5. oturum (2.2): düğmeler hayaletin YANINDA (üstüne binmez; arkasındaki yapının üstünde durmaz) — ayrıntılı denetim Session5Tests
         var ghost = GameObject.Find("GhostPlacement").GetComponent<SpriteRenderer>();
-        Vector3 ghostTop = Camera.main.WorldToScreenPoint(new Vector3(ghost.bounds.center.x, ghost.bounds.max.y, 0f));
-        var corners = new Vector3[4];
-        ((RectTransform)buttons.transform).GetWorldCorners(corners);
-        Assert.GreaterOrEqual(corners[0].y, ghostTop.y - 2f, "düğmeler hayaletin üstünde");
-        Assert.AreEqual(ghostTop.x, (corners[0].x + corners[2].x) * 0.5f, 60f, "yatayda hayaletle hizalı");
+        var side = (string)buttons.GetComponent(T("WorldConfirmButtons")).GetType().GetProperty("Side").GetValue(buttons.GetComponent(T("WorldConfirmButtons")));
+        StringAssert.IsMatch("right|left|below|above", side, "hayaletin bir yanında");
         CaptureUi("S5_move_confirm", 780, 1688, () => buttons.GetComponent(T("WorldConfirmButtons")).GetType().GetMethod("Follow").Invoke(buttons.GetComponent(T("WorldConfirmButtons")), null));
         pc.GetType().GetMethod("CancelPlacement").Invoke(pc, null);
         yield return null;

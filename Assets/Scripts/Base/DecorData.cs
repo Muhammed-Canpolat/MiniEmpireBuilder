@@ -36,10 +36,15 @@ public sealed class DecorData : ScriptableObject
     }
 
     /// <summary>
-    /// Oranı koruyan tek ölçek: genişlik footprint'e oturur; uzun görseller (ağaç, heykel)
-    /// footprint'ten yüksek olabilir ama makul bir tavanla sınırlanır.
+    /// Görsel ölçek: 5. oturum (1.3) ortak ölçek tablosundan (<see cref="DecorScale"/>), ayak izinden bağımsız.
     /// </summary>
-    public float ScaleFor(Sprite visual)
+    public float ScaleFor(Sprite visual) => DecorScale.For(this, visual);
+
+    /// <summary>
+    /// Tabloda olmayan (emekli) dekorların eski formülü: genişlik footprint'e oturur; uzun görseller footprint'ten yüksek olabilir
+    /// ama makul bir tavanla sınırlanır. <see cref="visualWidth"/> doluysa o kullanılır.
+    /// </summary>
+    public float LegacyScale(Sprite visual)
     {
         if (visual == null) return 1f;
         Vector2 size = visual.bounds.size;

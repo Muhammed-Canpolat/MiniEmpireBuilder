@@ -586,7 +586,11 @@ public class BaseMapManager : MonoBehaviour
         // Bina serbest ızgarada durur; kimlik (slotId) bina örneğinin benzersiz anahtarıdır.
         // Eski kayıtlardaki sabit slot kimlikleri korunur, yoksa yeni benzersiz kimlik üretilir.
         if (string.IsNullOrEmpty(id) || IsSlotOccupied(id)) id = NewBuildingId(type);
-        if (!CanSpawnAt(type, pos))
+        // 5. oturum (D62): kayıtlı bina yerinde yumuşak denetimle kalır (yalnız ayak izi çakışırsa taşınır); yeni bina katı kurala uyar.
+        bool fits = savedPosition && type != BuildingType.MainBase
+            ? BaseOccupancyGrid.FootprintFree(BaseOccupancyGrid.CellsFor((Vector2)BaseWorldLayout.Footprint(type), pos), null, null, true, false, null)
+            : CanSpawnAt(type, pos);
+        if (!fits)
         {
             Vector2 candidate;
             if (BaseWorldLayout.TryGet(id, out var legacy) && legacy.buildingType == type
@@ -743,7 +747,21 @@ public class BaseMapManager : MonoBehaviour
         return obj;
     }
 
-    private Vector3 CalculateBuildingVisualScale(BuildingType type, Sprite sprite)
+    /// <summary>Yeni bina hayaleti: 1. seviyenin gerçek görseli (inşa edilecek bina neyse o).</summary>
+    public static Sprite PreviewSprite(BuildingType type)
+    {
+        if (GameManager.Instance?.Buildings != null && GameManager.Instance.Buildings.TryGetValue(type, out var data))
+        {
+            var sprite = data.VisualForLevel(1)?.sprite;
+            if (sprite != null) return sprite;
+        }
+        return SpriteManager.Instance?.GetBuildingSprite(type);
+    }
+
+    /// <summary>Binanın dünyadaki ölçeği (kurulu binayla aynı formül; hayalet de bunu kullanır, 5. oturum 1.1).</summary>
+    public static Vector3 BuildingVisualScale(BuildingType type, Sprite sprite) => CalculateBuildingVisualScale(type, sprite);
+
+    private static Vector3 CalculateBuildingVisualScale(BuildingType type, Sprite sprite)
     {
         float spriteWidth = sprite != null ? sprite.bounds.size.x : 0f;
         if (spriteWidth <= 0.0001f) return Vector3.one;
@@ -1026,10 +1044,18 @@ public class BaseMapManager : MonoBehaviour
             GameManager.Instance.PlayerData.removedFenceIds.Add(fenceId);
     }
 
+    /// <summary>
+    /// 5. oturum (D62): <paramref name="visual"/> yapının göreli görseli (dinlenme ölçeğinde). Verilmezse taşınan nesnenin kendi görseli,
+    /// yoksa aynı türden kurulu bir binanınki kullanılır; engel alanı = ayak izi ∪ görsel hücreleri (BaseOccupancyGrid).
+    /// </summary>
     public bool CanPlaceBuildingAt(BuildingType type, Vector2 center, PlacedMapObject moving = null)
+        => CanPlaceBuildingWithVisual(type, center, moving, null);
+
+    public bool CanPlaceBuildingWithVisual(BuildingType type, Vector2 center, PlacedMapObject moving, Rect? visual)
     {
         if (type == BuildingType.MainBase) return false;
-        return CanPlaceFootprintAt(BaseWorldLayout.Footprint(type), center, moving);
+        return CanPlaceFootprintAt(BaseWorldLayout.Footprint(type), center, moving,
+            visual ?? (moving == null ? BaseOccupancyGrid.TypicalVisual(type) : null));
     }
 
     /// <summary>Haritadaki bir nesnenin kapladığı alan (bina türüne göre; kulübe 2×2).</summary>
@@ -1038,12 +1064,14 @@ public class BaseMapManager : MonoBehaviour
             ? BaseWorldLayout.Footprint(obj.buildingType.Value)
             : BuilderHut.FootprintSize;
 
-    public bool CanPlaceObjectAt(PlacedMapObject obj, Vector2 center)
+    public bool CanPlaceObjectAt(PlacedMapObject obj, Vector2 center) => CanPlaceObjectWithVisual(obj, center, null);
+
+    public bool CanPlaceObjectWithVisual(PlacedMapObject obj, Vector2 center, Rect? visual)
     {
         if (obj == null) return false;
         if (obj.objectType == MapObjectType.Building)
-            return obj.buildingType.HasValue && CanPlaceBuildingAt(obj.buildingType.Value, center, obj);
-        return obj.objectType == MapObjectType.BuilderHut && CanPlaceFootprintAt(FootprintOf(obj), center, obj);
+            return obj.buildingType.HasValue && CanPlaceBuildingWithVisual(obj.buildingType.Value, center, obj, visual);
+        return obj.objectType == MapObjectType.BuilderHut && CanPlaceFootprintAt(FootprintOf(obj), center, obj, visual);
     }
 
     // ==================== İNŞAATÇI KULÜBELERİ ====================
@@ -1080,13 +1108,14 @@ public class BaseMapManager : MonoBehaviour
         return best;
     }
 
-    public bool CanPlaceFootprintAt(Vector2 size, Vector2 center, PlacedMapObject moving = null)
+    public bool CanPlaceFootprintAt(Vector2 size, Vector2 center, PlacedMapObject moving = null, Rect? visual = null)
         => BaseOccupancyGrid.IsFree(BaseOccupancyGrid.CellsFor(size, center), moving, null,
-            true, !_repairing, _repairSettled);
+            true, !_repairing, _repairSettled,
+            visual ?? (moving?.gameObject != null ? BaseOccupancyGrid.RestVisualRelative(moving.gameObject) : (Rect?)null));
 
     /// <summary>Ana Üs dahil, bu türden bir yapı o merkeze konabilir mi (yerleşim kuralı).</summary>
     private bool CanSpawnAt(BuildingType type, Vector2 center)
-        => CanPlaceFootprintAt((Vector2)BaseWorldLayout.Footprint(type), center);
+        => CanPlaceFootprintAt((Vector2)BaseWorldLayout.Footprint(type), center, null, BaseOccupancyGrid.TypicalVisual(type));
 
     /// <summary>Üretilen benzersiz bina kimliği, örn. "archertower_3fa91c".</summary>
     private static string NewBuildingId(BuildingType type)
@@ -1154,7 +1183,7 @@ public class BaseMapManager : MonoBehaviour
     /// </summary>
     public int RepairVisualLayout()
     {
-        var items = BaseVisualBounds.Collect();
+        var items = BaseVisualBounds.CollectStructures();   // 5. oturum (D62): dekor görselleri onarıma girmez
         int Rank(string name) => name.StartsWith("MainBase") || name == "camp" ? 0 : name.StartsWith("GoldMine") ? 1
             : name.StartsWith("decor:") ? 4 : 2;   // Ana Üs ve kahraman kampı sabit
         items = items.Select((x, i) => (x, i)).OrderBy(p => Rank(p.x.name)).ThenBy(p => p.i).Select(p => p.x).ToList();
@@ -1246,7 +1275,12 @@ public class BaseMapManager : MonoBehaviour
             {
                 Vector2Int size = FootprintOf(obj);
                 Vector3 position = obj.gameObject.transform.position;
-                if (!CanPlaceFootprintAt((Vector2)size, position, obj) && obj.buildingType != BuildingType.MainBase)
+                // 5. oturum (D62): mevcut düzen yalnız gerçek çakışmada onarılır (ayak izi ya da görseller iç içe); yeni yer katı kuralla bulunur.
+                bool broken = !BaseOccupancyGrid.FootprintFree(BaseOccupancyGrid.CellsFor((Vector2)size, position), obj, null, true, false, _repairSettled);
+                if (!broken)
+                    foreach (var settled in _repairSettled)
+                        if (BaseOccupancyGrid.VisualClash(obj, settled)) { broken = true; break; }
+                if (broken && obj.buildingType != BuildingType.MainBase)
                 {
                     Vector3 spot = NearestFreeSpot(size, position, obj);
                     if (CanPlaceFootprintAt((Vector2)size, spot, obj))
@@ -1275,9 +1309,113 @@ public class BaseMapManager : MonoBehaviour
         return moved;
     }
 
-    public bool MoveObjectTo(PlacedMapObject obj, Vector3 newPos)
+    /// <summary>
+    /// 5. oturum (1.1): yükleme doğrulaması. Doluluk her sorguda sahnedeki nesnelerden okunur; burada (1) yok edilmiş nesnelerin kayıtları
+    /// (hayalet harita/dekor/doğa girdileri) temizlenir, (2) kayıttaki bina ve dekor kayıtlarından doluluk SIFIRDAN kurulup sahnedekiyle
+    /// karşılaştırılır; fark varsa (eski 2×2 dekor, silinmiş/taşınmış nesne kalıntısı) kayıt sahneye göre yeniden yazılır.
+    /// Sonuç satırı döner (log ve test için).
+    /// </summary>
+    public string ValidateOccupancy()
     {
-        if (obj?.gameObject == null || !CanPlaceObjectAt(obj, newPos)) return false;
+        int ghosts = _mapObjects.RemoveAll(o => o == null || o.gameObject == null);
+        int natureGhosts = 0;
+        var natureNames = new List<string>();
+        var removedNature = GameManager.Instance?.PlayerData?.removedNatureIds;
+        foreach (var key in NatureObstacle.ByCell.Keys.ToList())
+        {
+            var n = NatureObstacle.ByCell[key];
+            if (n == null || !n.isActiveAndEnabled || n.cell != key || removedNature != null && removedNature.Contains(n.Id))
+            {
+                NatureObstacle.ByCell.Remove(key);
+                natureGhosts++;
+                natureNames.Add($"{key.x},{key.y}:" + (n == null ? "yok edilmiş" : !n.isActiveAndEnabled ? "kapalı " + n.Id : n.cell != key ? "yanlış hücre " + n.Id : "kaldırılmış " + n.Id));
+            }
+        }
+        int decorGhosts = DecorPlacementController.Instance != null ? DecorPlacementController.Instance.PruneGhosts() : 0;
+
+        // Bina/dekor altında kalan doğa nesnesi (eski kayıtlarda doğa hücresi kaydolmadığı için üstüne kurulabiliyordu): bedelsiz kalkar,
+        // böylece onarım binayı yerinden oynatmaz (adadaki kural: IslandNatureClear).
+        int underBuilding = 0;
+        var covered = new HashSet<Vector2Int>();
+        foreach (var o in _mapObjects)
+            if (o.gameObject != null && !o.isBeingRemoved && (o.objectType == MapObjectType.Building && o.buildingType.HasValue || o.objectType == MapObjectType.BuilderHut))
+            {
+                var r = BaseOccupancyGrid.CellsFor((Vector2)FootprintOf(o), o.gameObject.transform.position);
+                for (int y = r.yMin; y < r.yMax; y++) for (int x = r.xMin; x < r.xMax; x++) covered.Add(new Vector2Int(x, y));
+            }
+        if (DecorPlacementController.Instance != null)
+            foreach (var item in DecorPlacementController.Instance.Placed)
+                if (item != null && item.Data != null) covered.Add(item.Cell);
+        foreach (var key in NatureObstacle.ByCell.Keys.ToList())
+        {
+            var n = NatureObstacle.ByCell[key];
+            if (n == null || !covered.Contains(key)) continue;
+            if (removedNature != null && !removedNature.Contains(n.Id)) removedNature.Add(n.Id);
+            NatureObstacle.ByCell.Remove(key);
+            Destroy(n.gameObject);
+            underBuilding++;
+        }
+
+        // Kayıttan sıfırdan kurulan doluluk ↔ sahnedeki doluluk (ayak izleri)
+        var fromSave = new HashSet<Vector2Int>();
+        var live = new HashSet<Vector2Int>();
+        void Add(HashSet<Vector2Int> set, RectInt r) { for (int y = r.yMin; y < r.yMax; y++) for (int x = r.xMin; x < r.xMax; x++) set.Add(new Vector2Int(x, y)); }
+        var data = GameManager.Instance?.PlayerData;
+        if (data?.placedBuildings != null)
+            foreach (var rec in data.placedBuildings)
+                if (rec != null && rec.hasPosition && Enum.TryParse<BuildingType>(rec.buildingType, out var t))
+                    Add(fromSave, BaseOccupancyGrid.CellsFor((Vector2)BaseWorldLayout.Footprint(t), new Vector2(rec.x, rec.y)));
+        if (data?.placedDecor != null)
+            foreach (var rec in data.placedDecor)
+            {
+                var d = rec != null ? Array.Find(DecorPlacementController.All, item => item.id == rec.decorId) : null;
+                if (d != null) Add(fromSave, new RectInt(rec.x, rec.y, d.footprint.x, d.footprint.y));
+            }
+        foreach (var o in _mapObjects)
+            if (o.gameObject != null && !o.isBeingRemoved && o.objectType == MapObjectType.Building && o.buildingType.HasValue)
+                Add(live, BaseOccupancyGrid.CellsFor((Vector2)FootprintOf(o), o.gameObject.transform.position));
+        if (DecorPlacementController.Instance != null)
+            foreach (var item in DecorPlacementController.Instance.Placed)
+                if (item != null && item.Data != null) Add(live, new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
+        int stale = fromSave.Count(c => !live.Contains(c)), missing = live.Count(c => !fromSave.Contains(c));
+        if (stale > 0 || missing > 0 || underBuilding > 0)
+        {
+            SaveAll();
+            DecorPlacementController.Instance?.SaveNow();
+        }
+        BaseWalkGrid.Invalidate();
+        string line = $"[Doluluk] hayalet harita {ghosts}, doğa {natureGhosts}" + (natureNames.Count > 0 ? " (" + string.Join(", ", natureNames) + ")" : "") +
+            $", dekor {decorGhosts}, yapı altındaki doğa {underBuilding}; kayıtta olup sahnede olmayan hücre {stale}, " +
+            $"sahnede olup kayıtta olmayan {missing}" + (stale > 0 || missing > 0 ? " → kayıt sahneye göre yeniden yazıldı" : "");
+        if (ghosts + natureGhosts + decorGhosts + underBuilding + stale + missing > 0) Debug.Log(line);
+        return line;
+    }
+
+    public bool MoveObjectTo(PlacedMapObject obj, Vector3 newPos) => MoveObjectWithVisual(obj, newPos, null);
+
+    /// <summary>
+    /// GERİ AL: nesneyi az önce bulunduğu yere döndürür. 5. oturum (D62): eski yer katı kurala değil yumuşak denetime bakar (ayak izi boş mu);
+    /// yükleme sırasında yerinde kalan eski düzenler hücre yuvarlaması yüzünden "dolu" sayılıp geri alma başarısız olmasın.
+    /// </summary>
+    public bool RestoreObjectTo(PlacedMapObject obj, Vector3 previous)
+    {
+        if (obj?.gameObject == null) return false;
+        var cells = BaseOccupancyGrid.CellsFor((Vector2)FootprintOf(obj), previous);
+        if (!BaseOccupancyGrid.FootprintFree(cells, obj, null, true, true, null)) return false;
+        obj.gameObject.transform.DOKill();
+        obj.gameObject.transform.position = new Vector3(previous.x, previous.y, obj.gameObject.transform.position.z);
+        obj.gameObject.transform.DOPunchScale(Vector3.one * 0.08f, 0.2f);
+        BaseGroundPaths.Instance?.Refresh();
+        obj.gameObject.GetComponent<BuilderHut>()?.OnMoved();
+        SaveAll();
+        HeroMovementController.Instance?.RefreshWalkable();
+        return true;
+    }
+
+    /// <summary>Taşıma; <paramref name="visual"/> taşıma büyütmesinden önce ölçülen göreli görsel (yoksa nesneninki).</summary>
+    public bool MoveObjectWithVisual(PlacedMapObject obj, Vector3 newPos, Rect? visual)
+    {
+        if (obj?.gameObject == null || !CanPlaceObjectWithVisual(obj, newPos, visual)) return false;
 
         Vector3 target = new Vector3(newPos.x, newPos.y, obj.gameObject.transform.position.z);
         obj.gameObject.transform.DOKill();

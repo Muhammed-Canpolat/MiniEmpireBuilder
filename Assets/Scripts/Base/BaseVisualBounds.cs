@@ -9,8 +9,13 @@ using UnityEngine;
 /// </summary>
 public static class BaseVisualBounds
 {
-    /// <summary>İki görselin izin verilen en fazla örtüşmesi (dünya birimi): kenar teması/gölge payı.</summary>
+    /// <summary>Sıkı örtüşme payı (kahramanın durma yeri vb.).</summary>
     public const float Tolerance = 0.12f;
+    /// <summary>
+    /// 5. oturum (D62): iki YAPI görselinin izin verilen örtüşmesi = hücre kuralının payının iki katı (her biri komşu hücreye en fazla
+    /// MarginX/MarginY kadar taşabilir). Yerleşim yalnız hücrelere bakar; bu denetim aynı kuralın görsel karşılığıdır.
+    /// </summary>
+    public const float StructureToleranceX = BaseOccupancyGrid.MarginX * 2f, StructureToleranceY = BaseOccupancyGrid.MarginY * 2f;
 
     private static bool Skip(SpriteRenderer sr, Transform root)
     {
@@ -74,7 +79,7 @@ public static class BaseVisualBounds
     /// <summary>Dikdörtgen, <paramref name="self"/> dışındaki herhangi bir Ana Üs nesnesinin görseline giriyor mu.</summary>
     public static bool OverlapsAny(Rect rect, GameObject self, GameObject alsoIgnore = null)
     {
-        foreach (var (_, go) in Collect())
+        foreach (var (_, go) in CollectStructures())
         {
             if (go == null || go == self || go == alsoIgnore) continue;
             if (Overlap(rect, Of(go))) return true;
@@ -82,17 +87,28 @@ public static class BaseVisualBounds
         return false;
     }
 
-    /// <summary>İki görsel, kenar payından fazla iç içe mi (her iki eksende de Tolerance'tan fazla).</summary>
-    public static bool Overlap(Rect a, Rect b)
+    /// <summary>İki yapı görseli, hücre kuralının izin verdiğinden fazla iç içe mi (her iki eksende de).</summary>
+    public static bool Overlap(Rect a, Rect b) => Overlap(a, b, StructureToleranceX, StructureToleranceY);
+
+    /// <summary>İki görsel, verilen paylardan fazla iç içe mi (her iki eksende de).</summary>
+    public static bool Overlap(Rect a, Rect b, float tolX, float tolY)
     {
         if (a.width <= 0f || b.width <= 0f) return false;
         float ox = Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin);
         float oy = Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin);
-        return ox > Tolerance && oy > Tolerance;
+        return ox > tolX && oy > tolY;
     }
 
-    /// <summary>Ana Üs'ün görsel olarak denetlenen nesneleri: binalar, inşaatçı kulübeleri, dekorlar, kahraman kampı (ad, nesne).</summary>
-    public static List<(string name, GameObject go)> Collect()
+    /// <summary>
+    /// Ana Üs'ün görsel olarak denetlenen nesneleri: binalar, inşaatçı kulübeleri, kahraman kampı ve (istenirse) dekorlar (ad, nesne).
+    /// 5. oturum (D62): dekor görselleri birbirine ve çatılara binebilir (ağıl, çalı kümesi); yapı çakışma onarımına girmez.
+    /// </summary>
+    public static List<(string name, GameObject go)> Collect() => Collect(true);
+
+    /// <summary>Yalnız yapılar (bina, kulübe, kamp): çakışma onarımı ve yerleşim denetimi.</summary>
+    public static List<(string name, GameObject go)> CollectStructures() => Collect(false);
+
+    private static List<(string name, GameObject go)> Collect(bool includeDecor)
     {
         var list = new List<(string, GameObject)>();
         var map = BaseMapManager.Instance;
@@ -104,7 +120,7 @@ public static class BaseVisualBounds
                 if (!building && obj.objectType != MapObjectType.BuilderHut) continue;
                 list.Add((building ? obj.buildingType.Value + ":" + obj.id : "hut:" + obj.id, obj.gameObject));
             }
-        if (DecorPlacementController.Instance != null)
+        if (includeDecor && DecorPlacementController.Instance != null)
             foreach (var item in DecorPlacementController.Instance.Placed)
                 if (item != null && item.Data != null) list.Add(("decor:" + item.Data.id + ":" + item.InstanceId, item.gameObject));
         var camp = GameObject.Find("HeroCamp");
@@ -115,7 +131,7 @@ public static class BaseVisualBounds
     /// <summary>Görsel olarak iç içe geçmiş çiftler (test ve hata ayıklama).</summary>
     public static List<string> Overlaps()
     {
-        var all = Collect();
+        var all = CollectStructures();
         var rects = new List<Rect>();
         foreach (var (_, go) in all) rects.Add(Of(go));
         var result = new List<string>();

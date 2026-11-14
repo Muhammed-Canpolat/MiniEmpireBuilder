@@ -1014,6 +1014,7 @@ public class BaseSceneSetup : MonoBehaviour
     private System.Collections.IEnumerator RepairLayoutAfterLoad()
     {
         for (int frame = 0; frame < 4; frame++) yield return null;
+        if (BaseMapManager.Instance != null) BaseMapManager.Instance.ValidateOccupancy();   // 5. oturum (1.1): hayalet kayıtlar
         if (BaseMapManager.Instance != null) BaseMapManager.Instance.RepairLayout();
         // 3. oturum (1.4): sprite'lar (animasyon ilk kare, gölge) otursun; sonra görsel çakışma onarımı
         yield return new WaitForSecondsRealtime(0.5f);   // açılış ölçek animasyonları bitsin
@@ -1038,6 +1039,7 @@ public class BaseSceneSetup : MonoBehaviour
 
     private void HandleLongPress(GameObject targetObj)
     {
+        SelectionManager.Clear();   // 5. oturum (2.1): açık eylem menüsü/vurgu taşıma başlarken kalkar
         var decor = targetObj != null ? targetObj.GetComponentInParent<DecorInstance>() : null;
         if (decor != null)
         {
@@ -1193,6 +1195,12 @@ public class BaseSceneSetup : MonoBehaviour
         // aynı dekora dokunmak seçimi kapatıp bırakır (aç/kapa).
         var previous = SelectionManager.Current;
         SelectionManager.Clear();
+        // 5. oturum (2.1): açık bina menüsü varken aynı binaya (maden hariç: altın toplar) tekrar dokunmak menüyü kapatıp bırakır.
+        if (previous is PlacedMapObject prevBuilding && prevBuilding.gameObject != null && prevBuilding.buildingType != BuildingType.GoldMine)
+        {
+            var hitAgain = Physics2D.Raycast(worldPos, Vector2.zero).collider;
+            if (hitAgain != null && BaseMapManager.Instance != null && BaseMapManager.Instance.GetMapObject(hitAgain.gameObject) == prevBuilding) return;
+        }
         if (previous is DecorInstance prevDecor && prevDecor != null)
         {
             var again = Physics2D.Raycast(worldPos, Vector2.zero).collider?.GetComponentInParent<DecorInstance>();
@@ -1271,13 +1279,8 @@ public class BaseSceneSetup : MonoBehaviour
 
                 }
 
-                var ui = GetComponent<BaseWorldUI>();
-                // Kart Atölyesi: dokununca üretim ekranı açılır (yükseltme o ekrandaki düğmeden bina paneline gider).
-                if (mapObj.buildingType == BuildingType.CardWorkshop && CardWorkshopPanel.Open(mapObj.id)) return;
-                if (ui != null && mapObj.buildingType.HasValue)
-                {
-                    ui.ShowBuildingInfo(mapObj.buildingType.Value, mapObj.id);
-                }
+                // 5. oturum (2.1): binaya dokunmak artık binanın üstünde eylem menüsünü açar (YÜKSELT/BİLGİ + TAŞI); pencere düğmeden açılır.
+                ShowBuildingActions(mapObj);
                 return;
             }
 
@@ -1312,6 +1315,50 @@ public class BaseSceneSetup : MonoBehaviour
         // Boşluğa tıklandı - Panelleri kapat (artık tıklamayla yürümeyecek)
         HideRemovePrompt();
         GetComponent<BaseWorldUI>()?.HideAllPanelsPublic();
+    }
+
+    /// <summary>
+    /// Bina eylem menüsü: YÜKSELT (bina/yükseltme penceresi; Kart Atölyesi'nde üretim ekranı) ve TAŞI (Ana Üs kalesi taşınamaz → yalnız ilki).
+    /// Menü binanın üstünde durur, bina altın parlar; boş yere dokunmak/geri tuşu kapatır.
+    /// </summary>
+    public WorldActionMenu ShowBuildingActions(PlacedMapObject mapObj)
+    {
+        if (mapObj == null || mapObj.gameObject == null || !mapObj.buildingType.HasValue) return null;
+        var type = mapObj.buildingType.Value;
+        var safe = _mainCanvas != null ? _mainCanvas.transform.Find("SafeArea") : null;
+        if (safe == null) return null;
+        var ui = GetComponent<BaseWorldUI>();
+        var items = new System.Collections.Generic.List<WorldActionMenu.Item>
+        {
+            new WorldActionMenu.Item
+            {
+                id = "info", icon = CampaignSceneSetup.Art("ui_icon_hammer"), label = L.T("YÜKSELT", "UPGRADE"),
+                action = () =>
+                {
+                    if (type == BuildingType.CardWorkshop && CardWorkshopPanel.Open(mapObj.id)) return;
+                    ui?.ShowBuildingInfo(type, mapObj.id);
+                }
+            }
+        };
+        if (type != BuildingType.MainBase)
+            items.Add(new WorldActionMenu.Item
+            {
+                id = "move", icon = CampaignSceneSetup.Art("ui_icon_move"), label = L.T("TAŞI", "MOVE"),
+                action = () => PlacementController.Instance?.BeginMove(mapObj)
+            });
+        var go = mapObj.gameObject;
+        var sr = go.GetComponent<SpriteRenderer>();
+        return WorldActionMenu.Show(safe, () => BuildingBounds(go), Camera.main, items, "BuildingActions", mapObj, sr);
+    }
+
+    /// <summary>Binanın ekranda görünen dünya sınırı (kök görsel; yoksa çarpıştırıcı).</summary>
+    private static Bounds BuildingBounds(GameObject go)
+    {
+        if (go == null) return new Bounds();
+        var sr = go.GetComponent<SpriteRenderer>();
+        if (sr != null && sr.sprite != null && sr.color.a > 0.1f) return sr.bounds;
+        var col = go.GetComponent<Collider2D>();
+        return col != null ? col.bounds : new Bounds(go.transform.position, Vector3.one);
     }
 
     /// <summary>Üst barın altındaki kısa bilgi balonu (kilitli arazi, inşaatçı vb.).</summary>

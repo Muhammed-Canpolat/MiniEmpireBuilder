@@ -434,3 +434,63 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   içinde. Alttan taşan süre çizgisi yerine simgenin çevresinde boşalan altın halka var. Hap gölgeli, etiket tek satır. Dekor taşıma da
   aynı ortak düğmeyi kullanır (eskiden düz yazılı düğmeydi).
 - Eskimiş test düzeltildi: `ExpansionFeatureTests.DecorCatalogGridAndTabs` (4. oturumdan beri 32 dekor varlığı, ağaç 1×1, menüde emekli olmayanlar).
+
+## D62 — Ana Üs yerleşimi: tek kural hücreler, engel alanı = ayak izi ∪ görsel (5. oturum 1.1)
+- **Kök neden ("Buraya sığmıyor" boş görünen yerde):** yerleştirme hücre denetimine EK olarak görünmeyen bir sprite-örtüşme denetimi yapıyordu
+  (3. oturum 1.4). Ana kalenin görseli ayak izinin 1,7 birim altına, Topçu 1,8 altına/1,3 üstüne, Kışla/kulübe her yana taşıyor; taşınan binanın
+  çatısı da kendi ayak izinden taşıyor. Sonuç: ızgarada yeşil görünen hücrelerde ret. Maden ve kamp bayrağında tersi: ayak izi görselden büyük
+  (maden alt satırı boş görünür, bayrak 2×2 kare). Ayrıca yeni bina hayaleti 0,9 sabit ölçekle çiziliyordu (gerçek binadan farklı).
+- **Karar:** `BaseOccupancyGrid` engel alanı = ayak izi ∪ görselin gerçekten kapladığı hücreler (`VisualCells`: hücreye yanlardan ≥0,35,
+  alt/üstten ≥0,3 giren görsel o hücreyi kaplar; dinlenme ölçeğinde, `RestVisualRelative`). Ayrı sprite denetimi kalktı; `PlacementController.Validate`
+  tek kural. Kamp = bayrağın görsel hücreleri. Dekor ve doğa yalnız kendi hücresi (çalı/koyun görselleri birbirine/çatılara binebilir; görsel
+  çakışma onarımına girmez). İki yapının izin verilen görsel örtüşmesi 0,7×0,6 (`BaseVisualBounds.StructureTolerance*`); kahraman 0,12 kalır.
+- **Görünürlük:** yerleşim modunda (bina + dekor) dolu hücreler kırmızı, çit payı soluk kırmızı; hayaletin engel alanı hücre hücre yeşil/kırmızı.
+  Hayalet = gerçek bina görseli ve ölçeği (`BaseMapManager.PreviewSprite/BuildingVisualScale`).
+- **Hayalet kayıtlar:** `BaseMapManager.ValidateOccupancy` (yüklemede, onarımdan önce): yok edilmiş harita/dekor/doğa girdileri temizlenir; kayıttan
+  sıfırdan kurulan doluluk sahneyle karşılaştırılır, fark varsa kayıt yeniden yazılır. **Bulunan gerçek hata:** `NatureObstacle.cell` AddComponent'tan
+  sonra atanıyordu; OnEnable (0,0) ile çalıştığından açık araziye kalan doğa nesneleri hiç kaydolmuyor, (0,0)'da hayalet kalıyordu → `cell` özellik
+  oldu. Eski kayıtlarda bina/dekor altında kalan doğa nesnesi yüklemede bedelsiz kalkar (bina yerinden oynamasın).
+- **Kahraman:** kurulan/taşınan yapının alanında kalırsa en yakın boş durma yerine yürüyerek çekilir (`HeroMovementController.RefreshWalkable`).
+- **Ölçüm (Ana Üs 15 tam düzen, 3316 aday):** ızgara–kural uyuşmazlığı 0, kabul edilip başka yapıya binen 0; iki görsel aynı hücreye karşı yönden
+  <1 birim taşınca hücre kuralı gözden biraz katı ("sprite boşluğu" reddi ~%2,6) — bu retler ızgarada kırmızı görünür. Rapor `PlaytestOutput/session5/S1_1_*`.
+
+## D63 — Hiçbir sahnede yapı içinden geçme (5. oturum 1.2)
+- **Kök neden:** savaşta her yapı görselinden bağımsız sabit 1,25×1 birimlik engel kaydediyordu; Madeni Koru madeni (~2,7×1,65) ve büyük kuleler
+  bunun çok dışına taşıyordu, kahraman/çırak görselin içinden geçiyordu. Karakterler yapıların üstünde çizildiğinden (sabit sıralama) geçiş görünüyordu.
+- **Karar:** `BattleObstacles.FromVisual`: engel = yapının sıkı görseli (yanlardan %8, tepeden %10 pay; can barı, gölge, efekt, garnizon hariç) ∪ eski
+  alan; açılış animasyonu boyunca 1,5 sn yenilenir (BattleStructure, MainBaseController). Düşman vuruş mesafesi alanın kenarından da ölçülür
+  (büyüyen engel saldırıyı geciktirmez). Çırak, kahraman yapının öbür yanındayken ortak yol bulmayla (`GridSteer`) dolanır.
+- Ana Üs yürüme ızgarası D62 engel alanlarını kullanır (çatı/görsel dahil); ada `IslandWalkGrid` (4. oturum) yeterli bulundu.
+- **Testler:** Session5Tests — Ana Üs/ada/savaş (normal + Madeni Koru) yapıların arkasına rota, kahraman+çırak yürütmesi, düşmanlar.
+
+## D64 — Dekor ölçeği ortak tablodan (5. oturum 1.3)
+- **Kök neden:** 4. oturumda dekorlar 1×1'e geçerken görsel genişlik `visualWidth` ile verildi ve eski `visualScale` büyütmesi (Tiny Swords karelerinin
+  boşluğu için) yok sayıldı: koyun 3,5 → 1,3 birim (%37), çalı 2,48 → 1,25, kaya 1,84 → 0,85, ağaç 2,76 → 2,3.
+- **Karar:** `Systems/DecorScale.cs` tek tablo (id → karenin dünya genişliği), ayak izinden bağımsız. Eski boyutlar geri: koyun 3,5, çalı 2,48,
+  kaya 1,84, ağaç 2,76 (Tree3–4: 2,52, eski oran), kütük ağaçla aynı paket ölçeği 2,76; sonradan eklenen altın taşı/yığınlar Tiny Swords doğal boyu
+  (64 px = 1 birim). Tabloda olmayan emekli dekorlar eski formül (`DecorData.LegacyScale`).
+
+## D65 — "Önerilen düzen" kapalı (5. oturum 2.4)
+- İnşa Et menüsündeki ÖNERİLEN DÜZEN düğmesi `FeatureConfig.recommendedLayout = false` ile gizlendi; `BaseMapManager.ApplyRecommendedLayout`
+  ve `DecorPlacementController.AddRecommendedClusters` kodu duruyor (bayrak true → düğme geri gelir). Oyunda başka çağıran yok.
+
+## D66 — ✓/✗ hayaletin yanında, GERİ AL küçük (5. oturum 2.2, 2.3)
+- **2.2 kök neden:** düğmeler hayaletin ÜST kenarının üstüne konuyordu; hayalet kalenin altındayken düğmeler ve "Buraya sığmıyor" kalenin üstünde
+  görünüyordu. **Karar:** `WorldConfirmButtons.Create(…, Func<Bounds>)`: grup hayaletin ekran dikdörtgeninin SAĞINA (sığmazsa soluna, o da olmazsa
+  altına/üstüne) dikeyde ortalı konur, her karede izler, güvenli alanda kalır; hayaletin üstüne binmez. Geçersizken ✓ %42 soluk ve basılamaz
+  (CanvasGroup.interactable). Ana Üs binası, dekor ve ada aynı bileşen.
+- **2.3:** GERİ AL 188×58 hap → 52 çaplı yuvarlak düğme + altında küçük "GERİ AL" etiketi (kök 66×74, eski alanın ~%45'i). Sol alt köşe, radyal menü
+  yayının üstü (güvenli alan sol-alt'tan 44, 238) — çit dışındaki ağaç şeridi; oyun alanını kapatmaz. 3 sn; altın halka kalan süreyle azalır; süre
+  bitince 0,35 sn'de söner (sönerken dokunuş geri almaz).
+
+## D67 — Ortak eylem menüsü (5. oturum 2.1; Sonnet alt ajanı, orta çaba — ben inceleyip test ettim)
+- `UI/WorldActionMenu.cs`: seçili öğenin hemen üstünde (sığmazsa altında), güvenli alan içinde kalan, öğeyi izleyen küçük menü. 48'lik yuvarlak
+  altın halkalı düğmeler (WorldConfirmButtons ile aynı aile), altında etiket hapı, gerekiyorsa simge + sayı bedel/iade hapı.
+- Dekor: TAŞI (dört yönlü ok) · SİL (çöp kovası, altında altın simgesi + "+iade"). SİL kısa onay ister ("Silinsin mi? +N [altın]" ✓/✗).
+  ("+2 🪵" örneği verilmişti; dekor iadesi altındır, simge buna göre.) Menü nesnesi hâlâ `DecorActions`.
+- Seçili öğe altın tonlu, hafif nabız atan dış hatla vurgulanır (`SelectHighlight`); boş yere/başka öğeye dokunma ve geri tuşu kapatır (SelectionManager).
+- **Bina dokunuş akışı değişti:** bina/kuleye dokunmak artık pencereyi doğrudan açmaz; aynı menü YÜKSELT + TAŞI gösterir (kalede yalnız YÜKSELT,
+  maden önce altını toplar, inşaatçı kulübesi eskisi gibi). Uzun basarak taşıma sürer.
+- **Ada:** bağlanmadı — adada bina dokunuşu zaten TAŞI'lı kendi süslü panelini açıyor ve SelectionManager'a bağlı; araya menü koymak ada panel
+  akışını/testlerini riske atardı. Sonraki adım: `IslandHud` BuildingTapped → WorldActionMenu (YÜKSELT = ShowBuilding, TAŞI = IslandPlacementHost.ForMove).
+- Simgeler `ui_icon_move` / `ui_icon_trash` Tiny Swords piksel stiliyle üretildi (`Tools/campaign_art/action_icons.py`); el çizimi ART_NEEDS'te.

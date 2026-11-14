@@ -115,7 +115,7 @@ public class BuildMenuController : MonoBehaviour
         System.Array.Sort(decor, (a, b) => Order(a).CompareTo(Order(b)));
         CreateDecorGrid(decor);
         SelectTab(0);
-        CreateRecommendedLayoutControl();
+        if (FeatureConfig.Instance.recommendedLayout) CreateRecommendedLayoutControl();   // 5. oturum (2.4): bayrakla kapalı (D65)
     }
 
     private void CreateRecommendedLayoutControl()

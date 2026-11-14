@@ -210,7 +210,8 @@ public class ViewportRevisionTests
         Capture("revision-02-layout-clean.png");
         debug.GetType().GetMethod("SetVisible").Invoke(debug, new object[] { true });
         Capture("revision-02-layout-debug.png");
-        Assert.IsTrue(Object.FindObjectsByType<Transform>(FindObjectsInactive.Include,
+        // 5. oturum (2.4): "Önerilen düzen" düğmesi FeatureConfig.recommendedLayout bayrağıyla kapalı (kod duruyor, yukarıda doğrudan çağrıldı)
+        Assert.IsFalse(Object.FindObjectsByType<Transform>(FindObjectsInactive.Include,
             FindObjectsSortMode.None).Any(item => item.name == "RecommendedLayout"));
         Assert.IsNull(GameObject.Find("StoneRoadTilemap"), "Toprak yollar kaldırıldı (5429490): yol tilemap'i oluşturulmaz");
         Capture("revision-03-road-debug.png");

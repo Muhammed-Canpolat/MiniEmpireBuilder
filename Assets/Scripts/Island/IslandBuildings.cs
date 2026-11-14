@@ -86,6 +86,7 @@ public sealed class IslandBuilding : MonoBehaviour
         }
         float visualHeight = building.IsCastle ? 2.3f : Mathf.Max(0.8f, renderer.bounds.max.y - building.Center.y);
         var structure = go.AddComponent<BattleStructure>();
+        structure.VisualObstacle = false;   // 5. oturum (1.2): adada yürüme IslandWalkGrid ile; savaş görsel engeli yalnız savaş sahnesinde
         structure.Initialize(type, building.Level, null, building.Center, visualHeight);
         structure.SetMaxHealth(hp);
         structure.KeepOnCollapse = true;

@@ -43,7 +43,19 @@ public class MainBaseController : MonoBehaviour
         // Can barı oluştur (üssün görünen tepesinin üstünde)
         healthBar = HealthBar.Create(transform, maxHealth, new Vector3(0, 1.95f, 0), ReferenceUiVisuals.Gold);
         // Kahraman ve Çırak üssün içinden geçemez.
-        BattleObstacles.Register(this, BattleObstacles.Footprint(transform.position, 3.4f, 1.05f, 1.6f));
+        RegisterObstacle();
+        obstacleRefreshUntil = Time.time + 1.5f;
+    }
+
+    private float obstacleRefreshUntil;
+
+    /// <summary>5. oturum (1.2): yürünemez alan görselden (eski sabit 3,4×2,65 alanla birleşik).</summary>
+    private void RegisterObstacle() =>
+        BattleObstacles.Register(this, BattleObstacles.FromVisual(gameObject, BattleObstacles.Footprint(transform.position, 3.4f, 1.05f, 1.6f)));
+
+    private void LateUpdate()
+    {
+        if (Time.time < obstacleRefreshUntil) RegisterObstacle();
     }
 
     private void OnDestroy() => BattleObstacles.Unregister(this);

@@ -92,3 +92,7 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
 - **Bilgi (i) simgesi:** `Icons/Icon_11` `ui_icon_info.png` olarak kopyalandı. Kart başına "savaş hakkı" için özel simge (kılıç+kart) yok; şimdilik `ui_icon_sword`.
 - Not: kopyalanan 3 PNG için .meta dosyaları `ui_icon_play.png.meta` şablonundan, yeni GUID ile elle yazıldı (Unity yeniden içe aktarır).
 - **Onay (✓) simgesi:** Tiny Swords Icon_09 (✗) ile eş stilde el çizimi ✓. Şimdilik `ui_icon_check` (Icon_07 paletiyle kodla üretilen geçici sürüm).
+
+## 5. oturum (14 Kasım 2026)
+- `ui_icon_move` (dört yönlü ok) ve `ui_icon_trash` (çöp kovası): Tiny Swords ikon paketinde yok; `Tools/campaign_art/action_icons.py` ile aynı
+  piksel stilinde üretildi. El çizimi sürüm gelirse `Assets/Resources/CampaignArt/` altında aynı adla değiştirilebilir.
