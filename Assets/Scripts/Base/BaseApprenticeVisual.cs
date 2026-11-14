@@ -12,6 +12,9 @@ public sealed class BaseApprenticeVisual : MonoBehaviour
     private Transform bound;
     private int boundLevel = -1;
     private float nextCheck;
+    /// <summary>Piyonun gövdesi (dünya birimi; 192 px'lik Tiny Swords karesinde ~40×55 px gövde, kazma salınımı hariç).</summary>
+    public static readonly Vector2 BodySize = new Vector2(0.62f, 0.86f);
+    public const float BodyOffsetY = -0.08f;
 
     private void Start()
     {
@@ -41,15 +44,14 @@ public sealed class BaseApprenticeVisual : MonoBehaviour
         if (bound.GetComponent<BaseApprenticeTap>() == null) bound.gameObject.AddComponent<BaseApprenticeTap>();
         var collider = bound.GetComponent<BoxCollider2D>();
         if (collider == null) collider = bound.gameObject.AddComponent<BoxCollider2D>();
-        float s = Mathf.Max(0.01f, bound.lossyScale.x);
-        collider.size = new Vector2(0.8f / s, 1.0f / s);
-        collider.offset = new Vector2(0f, 0.35f / s);
-        var animator = bound.GetComponent<Animator>();
-        if (animator == null) return;
+        // Dokunma alanı yalnız piyonun gövdesi: madenin geri kalanına dokunmak madeni açar (altın toplar).
+        // Ölçek o anki lossyScale'den değil piyonun hedef dünya ölçeğinden: bina açılış animasyonu sırasında (ölçek ~0) bağlanınca
+        // eski kod alanı ~15 kat büyütüyor, madenin tamamı Çırak'a dokunuş sayılıyordu.
+        float s = BaseMineVisual.WorkerWorldScale;
+        collider.size = new Vector2(BodySize.x / s, BodySize.y / s);
+        collider.offset = new Vector2(0f, BodyOffsetY / s);
         var controller = BaseVisualCatalog.Instance?.GetUnitController(BuildingType.GoldMine, level);
-        if (controller != null) animator.runtimeAnimatorController = controller;
-        string color = new[] { "Blue", "Yellow", "Red", "Purple", "Black" }[BaseVisualCatalog.ColorIndex(level)];
-        animator.Play("Pawn_Interact Pickaxe_" + color, 0, 0f);
+        mine.SetWorkerLook(controller, BaseVisualCatalog.ColorIndex(level));
     }
 }
 

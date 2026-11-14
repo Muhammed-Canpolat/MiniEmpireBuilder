@@ -1186,6 +1186,15 @@ public class BaseSceneSetup : MonoBehaviour
                 DecorPlacementController.Instance?.ShowActions(touchedDecor);
                 return;
             }
+            // Çırak madenin içinde durur ve yürür: dokunuş gövdesine (dar dokunma alanı) denk geliyorsa Çırak penceresi,
+            // madenin geri kalanı maden (altın toplama). Çakışan iki alandan hangisinin önce döneceği belli olmadığından açıkça bakılır.
+            foreach (var overlap in Physics2D.OverlapPointAll(worldPos))
+                if (overlap.GetComponent<BaseApprenticeTap>() != null)
+                {
+                    HideRemovePrompt();
+                    GetComponent<BaseWorldUI>()?.ShowApprenticeInfo();
+                    return;
+                }
             var touchedNature = hit.collider.GetComponent<NatureObstacle>();
             if (touchedNature != null)
             {

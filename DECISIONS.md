@@ -402,3 +402,12 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   Halkanın "N HAK" pulu 92 → 124 birim, sabit yazı boyu.
 - **Dokunma alanları:** süslü pencere X 30×28 → 44×44, elmas onayı X 38 → 46.
 - **Unity sahte-null:** `GetComponent<T>() ?? AddComponent<T>()` kalıbı editörde MissingComponentException atıyordu (5 yer düzeltildi).
+
+## D59 — Maden dokunuşu ve çırak iş döngüsü (14 Kasım, oturum sonrası geri bildirim)
+- **Kök neden:** çırağın dokunma alanı bina açılış animasyonu sırasında (ölçek ~0) `lossyScale` ile hesaplanıyordu; ~10×14 birim olup madenin
+  tamamını kaplıyordu, madene dokunmak Çırak penceresini açıyordu. Alan artık piyonun hedef dünya ölçeğinden (1,04): yalnız gövde (0,62×0,86).
+- Dokunuş gövdeye denk gelirse Çırak penceresi; madenin geri kalanı (kaya, maden evi, yığın) maden: altın toplanır + bina penceresi.
+  Çakışan iki alanda sonuç açıkça `OverlapPointAll` ile seçilir.
+- **Çırak iş döngüsü:** kayayı kazar (Interact Pickaxe, kıvılcımlar yalnız bu sırada) → altını sırtlayıp yığına yürür (Run Gold) → bırakır
+  (Idle Gold, külçe yığına sekip söner, yığın zıplar) → kazmasını alıp sırayla öbür kayaya yürür (Run Pickaxe). Hepsi Tiny Swords piyon kareleri;
+  renk Çırak seviyesinden. Test: `Session4Tests.MineTapCollectsGoldAndOnlyApprenticeBodyOpensApprentice`.

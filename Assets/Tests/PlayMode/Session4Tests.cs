@@ -575,6 +575,76 @@ public class Session4Tests
         Nov13FeedbackTests.CaptureCamera("S2_3_mine_apprentice", cam, 1080, 1920, false, Folder);
         cam.orthographicSize = size;
     }
+
+    /// <summary>Madene dokunmak madeni açar/altın toplar; yalnız çırağın gövdesi Çırak penceresini açar. Çırak kazar, yürür, altın taşır.</summary>
+    [UnityTest]
+    public IEnumerator MineTapCollectsGoldAndOnlyApprenticeBodyOpensApprentice()
+    {
+        yield return Nov13FeedbackTests.LoadBase(7);
+        yield return new WaitForSecondsRealtime(1f);
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        var data = Prop(gm, "PlayerData");
+        var mine = (Component)Object.FindFirstObjectByType(T("BaseMineVisual"));
+        Transform miner = (Transform)Prop(mine, "Miner");
+        Assert.NotNull(miner, "çırak");
+        var setup = Object.FindFirstObjectByType(T("BaseSceneSetup"));
+        var tap = setup.GetType().GetMethod("HandleTap", BindingFlags.NonPublic | BindingFlags.Instance);
+        GameObject Panel() { var p = GameObject.Find("HeroInfo"); return p != null && p.activeInHierarchy ? p : null; }
+
+        // 1) madenin çırak dışındaki her yeri (büyük kaya, maden evi, yığın) madendir: altın toplanır, Çırak penceresi açılmaz
+        Vector3 c = mine.transform.position;
+        var spots = new[] { c + new Vector3(-0.85f, 0.75f), c + new Vector3(1.05f, 0.5f), c + new Vector3(1.1f, -1.15f), c + new Vector3(-1.5f, 0.1f) };
+        foreach (var spot in spots)
+        {
+            Set(data, "gold", 0);
+            Set(data, "goldMineStoredGold", 30);
+            tap.Invoke(setup, new object[] { spot });
+            yield return null;
+            Assert.AreEqual(0, (int)Field(data, "goldMineStoredGold"), "madene dokunuş altını toplar: " + (spot - c) + " çarpanlar=" +
+                string.Join(",", Physics2D.OverlapPointAll(spot).Select(o => o.name + o.bounds)) + " mineCol=" +
+                (mine.GetComponentInParent<BoxCollider2D>() != null ? mine.GetComponentInParent<BoxCollider2D>().bounds.ToString() : "yok"));
+            Assert.IsNull(Panel(), "madene dokunuş Çırak penceresi açmaz: " + (spot - c));
+            tap.Invoke(setup, new object[] { c + new Vector3(0f, -6f) });   // seçim/pencere kapansın
+            yield return null;
+        }
+        // 2) çırağın gövdesi Çırak penceresini açar
+        var body = miner.GetComponent<BoxCollider2D>();
+        Assert.Less(body.bounds.size.x, 0.8f, "dokunma alanı dar (gövde)");
+        tap.Invoke(setup, new object[] { body.bounds.center });
+        yield return new WaitForSecondsRealtime(0.4f);
+        Assert.NotNull(Panel(), "çırağa dokunuş Çırak penceresini açar");
+        StringAssert.Contains("Maden", Text(Panel().transform.Find("Body")));
+        tap.Invoke(setup, new object[] { c + new Vector3(0f, -6f) });
+        yield return null;
+
+        // 3) çırak kazar → altını yığına taşır (yürür) → öbür kayaya yürür
+        var anim = miner.GetComponent<Animator>();
+        var clips = new HashSet<string>();
+        Vector3 start = miner.position;
+        float far = 0f;
+        float until = Time.realtimeSinceStartup + 16f;
+        bool walked = false;
+        while (Time.realtimeSinceStartup < until)
+        {
+            var info = anim.GetCurrentAnimatorClipInfo(0);
+            if (info.Length > 0) clips.Add(info[0].clip.name);
+            far = Mathf.Max(far, (miner.position - start).magnitude);
+            if ((bool)Prop(mine, "MinerWalking")) walked = true;
+            if (walked && clips.Any(n => n.Contains("Run")) && clips.Any(n => n.Contains("Gold")) && far > 0.6f) break;
+            yield return null;
+        }
+        Debug.Log("[MineApprentice] clips=" + string.Join(",", clips) + " far=" + far);
+        Assert.IsTrue(walked, "çırak yürüdü");
+        Assert.Greater(far, 0.6f, "çırak yerinden ayrıldı");
+        Assert.IsTrue(clips.Any(n => n.Contains("Run")), "yürüme kareleri: " + string.Join(",", clips));
+        Assert.IsTrue(clips.Any(n => n.Contains("Gold")), "altın taşıma kareleri: " + string.Join(",", clips));
+        var cam = Camera.main;
+        float size = cam.orthographicSize;
+        cam.orthographicSize = 3.2f;
+        cam.transform.position = new Vector3(c.x, c.y + 0.2f, cam.transform.position.z);
+        Nov13FeedbackTests.CaptureCamera("S5_mine_apprentice_walk", cam, 1080, 1920, false, Folder);
+        cam.orthographicSize = size;
+    }
     // ==================== 2.4 KIŞLA DEVRİYESİ + ÖLÇEK TABLOSU ====================
 
     private static void AddBarracks(object save, int level, string slot = "barracks_1")
