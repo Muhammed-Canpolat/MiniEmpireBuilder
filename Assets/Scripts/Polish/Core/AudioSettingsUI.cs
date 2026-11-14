@@ -391,7 +391,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
         isOpen = false;
         PlayerPrefs.Save();
         // Oyun durumu hemen geri verilir; görsel kapanış kısa bir animasyonla biter.
-        if (battleScene) Time.timeScale = 1f;
+        if (battleScene) BattlePause.Resume(BattlePause.Settings);   // 6. oturum (1.5): önceki zaman ölçeği + ses geri gelir
         if (battleScene) BattleModalOpen = false;
         anim?.Kill();
         if (panel == null) return;
@@ -425,7 +425,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
         anim.Append(panelRect.DOScale(1f, 0.22f).SetEase(Ease.OutBack));
         anim.Join(panelGroup.DOFade(1f, 0.18f));
         anim.Join(dimGroup.DOFade(1f, 0.18f));
-        if (battleScene) Time.timeScale = 0f;
+        if (battleScene) BattlePause.Pause(BattlePause.Settings);    // zaman, zamanlayıcılar, ses ve müzik durur
         if (battleScene) BattleModalOpen = true;
     }
 
@@ -487,7 +487,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
     private void OnDestroy()
     {
         anim?.Kill();
-        if (battleScene && Time.timeScale == 0f) Time.timeScale = 1f;
+        if (battleScene) BattlePause.Resume(BattlePause.Settings);
         if (battleScene) BattleModalOpen = false;
         if (gearSprite != null) Destroy(gearSprite);
         if (gearTexture != null) Destroy(gearTexture);

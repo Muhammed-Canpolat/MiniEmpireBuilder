@@ -1,12 +1,12 @@
 # GECE_DURUM — Otonom çalışma (14 Kasım 2026, 6. oturum: savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi)
 
 DURUM: SÜRÜYOR (6. oturum)
-ŞU ANKİ İŞ: 1.5 Savaşta duraklatma
+ŞU ANKİ İŞ: 2.1 Çırak maden katkısı
 Kararlar: DECISIONS.md D68+ · Başlangıç commit'i: b2605ef · Testler: Session6Tests (editör kapalı, doğrudan projede)
 
 6. OTURUM İŞ LİSTESİ:
 - [x] 1.1 Tamamlanmamış inşaat savaşa yansımasın (D68) — Session6Tests.S1_1
-- [x] 1.2 Menzil çemberleri (D69) · [x] 1.3 Can barları (D70) · [x] 1.4 Uzun yürüyüş animasyonu (D71) · [ ] 1.5 Savaşta duraklatma
+- [x] 1.2 Menzil çemberleri (D69) · [x] 1.3 Can barları (D70) · [x] 1.4 Uzun yürüyüş animasyonu (D71) · [x] 1.5 Savaşta duraklatma (D72)
 - [ ] 2.1 Çırak maden katkısı · [ ] 2.2 Kahraman/Çırak yükseltme süresi + mevcut→sonraki · [ ] 2.3 Maden deposu · [ ] 2.4 Dükkân + IAP
 - [ ] 3.1 Adaya ilk giriş · [ ] 3.2 Ada başlangıcı + öğretici · [ ] 3.3 Ada seviyeleri bağımsız · [ ] 3.4 Akın dengesi
 - [ ] 4.1 Arazi genişletme şeffaflığı · [ ] 4.2 Süreli temizleme + kompakt menü

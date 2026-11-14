@@ -86,6 +86,7 @@ public class BattleManager : MonoBehaviour
 
     private void Start()
     {
+        BattlePauseWatcher.Install();   // 6. oturum (1.5): arka plana alınınca duraklat + DEVAM
         // GameManager yoksa oluştur (test için)
         if (GameManager.Instance == null)
         {

@@ -537,3 +537,13 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   Chopped, Explosion, Dust, Heal) dokunulmadı. Dungeon canavarları (ada düşmanları) zaten döngülüydü; tek kareli düşmanlar kodla yürür (EnemyMotion).
 - Test `Session6Tests.S1_4_*`: katalogdaki ve Resources'taki tüm denetleyicilerde yürüme/bekleme klipleri döngülü; savaşta 5 sn yürüyüşün son 1,5 sn'sinde
   kahraman kareleri değişmeye devam ediyor.
+
+## D72 — Savaş duraklatması tek servisten (6. oturum 1.5)
+- **Önce:** ayarlar açılınca `timeScale = 0` vardı ama ses/müzik sürüyordu; kapanınca zaman HER ZAMAN 1'e dönüyordu (ör. devam teklifi penceresinin
+  0'ını ezebilirdi); arka plana alma / telefon / ekran kilidi savaşı duraklatmıyordu.
+- **Karar:** `Battle/BattlePause.cs` — nedenli duraklatma (`settings`, `background`; hepsi kalkınca devam). Duraklatma = `timeScale 0` + `AudioListener.pause`.
+  Savaş sayaçları (dalga, SÜRE, kule/kahraman/yetenek bekleme, akın) ölçekli zamanla çalıştığı için hepsi durur (denetlendi: savaş kodunda gerçek zaman
+  kullanan yalnız süs nabızları var). Devamda duraklatma öncesi ölçek geri gelir. `BattlePauseWatcher` (BattleManager kurar): `OnApplicationPause(true)` ve
+  cihazda odak kaybı → savaş sürüyorsa duraklat, dönüşte Tiny Swords kâğıt pencere "DURAKLATILDI · DEVAM". DEVAM'a basılmadan oyun sürmez; ayarlar da
+  açıksa ikisi de kapanmalı. Sahne kapanınca tüm nedenler temizlenir.
+- Test `Session6Tests.S1_5`; görüntü `Docs/playtest/session6/S1_5_paused_resume.png`.

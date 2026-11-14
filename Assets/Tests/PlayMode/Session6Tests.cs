@@ -308,6 +308,60 @@ public class Session6Tests
             | System.Reflection.BindingFlags.Instance)?.Invoke(battle, null);
     }
 
+    // ==================== 1.5 Savaşta duraklatma ====================
+
+    [UnityTest]
+    public IEnumerator S1_5_SettingsAndBackgroundPauseBattle()
+    {
+        yield return Session4Tests.StartBattle(1, 2);
+        yield return new WaitForSeconds(2.5f);   // düşmanlar yürümeye başlasın
+        var pause = T("BattlePause");
+        var settings = Object.FindFirstObjectByType(T("AudioSettingsUI")) as Component;
+        Assert.NotNull(settings, "savaş ayarlar düğmesi/penceresi");
+
+        // Ayarlar açılınca: zaman, ses durur; düşmanlar yerinde kalır
+        M(settings, "Open");
+        yield return null;
+        Assert.AreEqual(0f, Time.timeScale, "ayarlar açıkken zaman durur");
+        Assert.IsTrue(AudioListener.pause, "ayarlar açıkken ses/müzik durur");
+        var enemies = Object.FindObjectsByType(T("EnemyController"), FindObjectsSortMode.None).Cast<Component>().ToList();
+        var before = enemies.Select(e => e.transform.position).ToList();
+        float gameTime = Time.time;
+        yield return new WaitForSecondsRealtime(1f);
+        Assert.AreEqual(gameTime, Time.time, 1e-4, "oyun saati (dalga/süre/bekleme sayaçları) ilerlemiyor");
+        for (int i = 0; i < enemies.Count; i++)
+            if (enemies[i] != null) Assert.AreEqual(before[i], enemies[i].transform.position, "düşman duraklamada kıpırdamaz");
+        M(settings, "Close");
+        yield return null;
+        Assert.AreEqual(1f, Time.timeScale, "ayarlar kapanınca kaldığı yerden sürer");
+        Assert.IsFalse(AudioListener.pause);
+
+        // Arka plana alma (telefon / ekran kilidi): otomatik duraklar, dönüşte DEVAM düğmesi
+        pause.GetMethod("OnAppBackgrounded").Invoke(null, null);
+        yield return null;
+        Assert.AreEqual(0f, Time.timeScale);
+        Assert.IsTrue(AudioListener.pause);
+        var watcher = Object.FindFirstObjectByType(T("BattlePauseWatcher")) as Component;
+        var overlay = (GameObject)P(watcher, "Overlay");
+        Assert.NotNull(overlay); Assert.IsTrue(overlay.activeSelf, "DEVAM penceresi görünür");
+        // Ayarlar da açılırsa: DEVAM'a basmak tek başına oyunu başlatmaz
+        M(settings, "Open");
+        yield return null;
+        CardWorkshopTests.CaptureScreen("S1_5_paused_resume", "session6");
+        M(settings, "Close");
+        yield return null;
+        Assert.AreEqual(0f, Time.timeScale, "arka plan duraklaması DEVAM'a kadar sürer");
+        var button = overlay.GetComponentsInChildren<UnityEngine.UI.Button>(true).First(b => b.name == "ResumeButton");
+        button.onClick.Invoke();
+        yield return null;
+        Assert.AreEqual(1f, Time.timeScale, "DEVAM → oyun sürer");
+        Assert.IsFalse(AudioListener.pause);
+        Assert.IsFalse(overlay.activeSelf);
+        var battle = Object.FindFirstObjectByType(T("BattleManager"));
+        battle.GetType().GetMethod("BattleLost", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+            | System.Reflection.BindingFlags.Instance)?.Invoke(battle, null);
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]
