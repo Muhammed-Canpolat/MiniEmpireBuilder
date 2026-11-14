@@ -640,7 +640,20 @@ public class Session6Tests
             Assert.NotNull(intro, "ilk girişte tanıtım");
             yield return new WaitForSecondsRealtime(2.6f);
             CardWorkshopTests.CaptureScreen("S3_1_intro_story", "session6");
-            M(intro, "Finish");
+            // Gerçek dokunuş: DEVAM'ın ekrandaki ortasına yapılan UI ışını önce DEVAM düğmesine çarpmalı (üstünde dokunuş yutan katman yok).
+            var cont = (UnityEngine.UI.Button)P(intro, "ContinueButton");
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            Assert.NotNull(es, "EventSystem");
+            var corners = new Vector3[4];
+            ((RectTransform)cont.transform).GetWorldCorners(corners);
+            var ped = new UnityEngine.EventSystems.PointerEventData(es) { position = (corners[0] + corners[2]) * 0.5f };
+            var hits = new List<UnityEngine.EventSystems.RaycastResult>();
+            es.RaycastAll(ped, hits);
+            Assert.IsTrue(hits.Count > 0 && hits[0].gameObject.GetComponentInParent<UnityEngine.UI.Button>() == cont,
+                "DEVAM dokunuşu düğmeye ulaşıyor (ilk isabet: " + (hits.Count > 0 ? hits[0].gameObject.name : "yok") + ")");
+            cont.onClick.Invoke();
+            yield return null;
+            Assert.IsNull(SP("IslandIntro", "Current"), "DEVAM tanıtımı kapattı");
             deadline = Time.realtimeSinceStartup + 3f;
             while (!(bool)SP("IslandNameUi", "IsOpen") && Time.realtimeSinceStartup < deadline) yield return null;
             var nameUi = SP("IslandNameUi", "Current");

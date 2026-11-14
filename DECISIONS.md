@@ -659,3 +659,10 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - Baştan oynatmada (yeni hesap, bot) kahraman/çırak yükseltmesi tek inşaatçıyı binalarla paylaştığı için kahraman Ana Üs 5'e kadar Sv2'de kaldı,
   B1-5 defalarca kaybedildi, cüzdan tavanda bekledi. **Karar:** eğitim görevleri `builderIndex = −1` (kendi yuvası; kahraman ve çırak ayrı ayrı birer);
   süre eğrisi ve elmasla bitirme aynı (D74), seviye yine süre bitince artar. İnşaatçı sayacı (`BusyBuilderCount`) bunları saymaz.
+
+## D86 — Ada tanıtımında DEVAM basılmıyordu (cihaz geri bildirimi)
+- **Kök neden:** `IslandIntro.Play` güvenli alanı (kartın kabı) `Build` çağrısının argümanı olarak ÖNCE oluşturuyordu; tam ekran "Sky" katmanı
+  (dokunuş yutan, raycastTarget) sonradan eklendiği için kartın üstünde kalıyor, DEVAM'a gelen her dokunuşu yutuyordu. Test düğmeyi doğrudan
+  çağırdığı için yakalamamıştı. **Düzeltme:** kart kabı en üste alınır (`SetAsLastSibling`). **Test:** `S3_1_2` artık EventSystem ile düğmenin ekrandaki
+  ortasına ışın atar, ilk isabetin DEVAM olduğunu denetler (düzeltme kaldırılınca "ilk isabet: Sky" ile başarısız olduğu doğrulandı).
+- Diğer yeni pencereler (öğretici, duraklatma, savaş kartı, arazi kartı, dükkân) aynı açıdan gözden geçirildi: katman sırası doğru.

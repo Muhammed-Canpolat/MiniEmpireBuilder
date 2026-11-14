@@ -89,6 +89,9 @@ public sealed class IslandIntro : MonoBehaviour
         continueButton = FancyInfoPanel.TsButton(cardRt, "ContinueButton", L.T("DEVAM", "CONTINUE"), false,
             new Vector2(0.25f, 0f), new Vector2(0.75f, 0f), new Vector2(0, 12), new Vector2(0, 56), 18, out _);
         continueButton.onClick.AddListener(Finish);
+        // Düzeltme (cihaz geri bildirimi): güvenli alan (kart) gökyüzü/bulut katmanlarından ÖNCE oluşturuluyordu; tam ekran gök katmanı
+        // kartın üstünde kalıp DEVAM'a gelen dokunuşu yutuyordu. Kart en üste alınır.
+        safe.SetAsLastSibling();
     }
 
     private IEnumerator Run()
