@@ -225,3 +225,15 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - Yayın: `Editor/AndroidReleaseBuild.cs` (-executeMethod AndroidReleaseBuild.BuildFromCommandLine; imza MEB_KEYSTORE_* ortam değişkeni),
   `Systems/ReleaseLogging.cs`, `Tools/check_aab.py`; belgeler PLAY_RELEASE / DATA_SAFETY / PRIVACY_POLICY / STORE_LISTING.
 - Test notu: `-testFilter BasePresentationTests` tüm takımı koşturur (derleme adı); sınıf adlarıyla gruplayın.
+
+## 14 Kasım 2026 (4. oturum): hatalar + temel sistemler + UI/UX (D45–D58)
+- **Yol bulma:** `Systems/GridPathfinding.cs` (A*, `GridPathFollower` yeniden rota, `GridSteer` kovalama) + `BaseWalkGrid` / `IslandWalkGrid`
+  (yükseklik yalnız merdivenden) / `BattleWalkGrid` (BattleObstacles.Version). F6 debug `WalkGridDebug`. Yeni yürüyen birim bunları kullanmalı.
+- **Seçim:** `UI/SelectionManager.cs` (tek seçim; boş yer/başka öğe/geri tuşu kapatır). Yeni seçilebilir öğe `Select(öğe, kapat)` çağırmalı.
+- **Ölçek:** `Systems/UnitScale.cs` tek referans (Battle ≈0,707 = kahraman, Base 1,9/3, Island 1).
+- **Dekor:** küçükler 1×1 (`DecorData.visualWidth`), emekli dekorlar `retired` (katalog `DecorPlacementController.Catalog`), kayıt `decorLayoutVersion`.
+- **Ada:** `Island/IslandNatureClear.cs` (çalı/kaya temizliği, kayıt `clearedNature`). Madende tek figür = Çırak (`BaseApprenticeVisual` bağlayıcı).
+- **Ekonomi:** bedava bitir yok; ≤1 dk 1 elmas (`GemEconomy.FinishCost`), `GemConfirm.SetGemIcon`.
+- **UI:** Kahraman/Çırak penceresi `FancyInfoPanel`; Kart Atölyesi ve Ayarlar yeniden (Ayarlar'da gizlilik URL'si/destek e-postası YER TUTUCU).
+- **Test:** editör açıkken testler `D:/UnityProjects/MEB_TestRunner` kopyasında (robocopy /MIR + batchmode; yeni .meta'ları geri kopyala).
+  `Session4Tests` 4 ekran oranında (`Ratios`) UI görüntüsü alır (`CaptureUi`). Unity sahte-null: `GetComponent() ?? AddComponent()` kullanma.
