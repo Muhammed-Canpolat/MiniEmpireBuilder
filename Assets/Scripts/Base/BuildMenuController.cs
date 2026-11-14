@@ -22,7 +22,8 @@ public class BuildMenuController : MonoBehaviour
     private readonly List<Button> _decorButtons = new List<Button>();
     private readonly List<GameObject> _structureCards = new List<GameObject>();
     private readonly List<GameObject> _decorCards = new List<GameObject>();
-    private readonly GameObject[] _tabUnderlines = new GameObject[2];
+    private readonly GameObject[] _tabUnderlines = new GameObject[3];
+    private ShopTabView _shop;   // 6. oturum (2.4): DÜKKÂN sekmesi
     private int _activeTab;
     private GameObject _recommendedButton;
     private GameObject _recommendedConfirm;
@@ -95,8 +96,10 @@ public class BuildMenuController : MonoBehaviour
         // Gerçekte Ana Üs ve Altın Madeni ilk başta sahneye yerleşmeli, ancak menüden de yerleştirilebilir.
         // Maliyetleri BuildingData GetUpgradeCost üzerinden ilk seviye için hesaplayabiliriz. Veya sabit tutabiliriz.
 
-        CreateTab("YAPI", 0, 0.05f, 0.43f);
-        CreateTab("DEKOR", 1, 0.48f, 0.86f);
+        // 6. oturum (2.4): üç sekme — Yapı, Dekor, Dükkân.
+        CreateTab(L.T("YAPI", "BUILD"), 0, 0.03f, 0.30f, "YAPI");
+        CreateTab(L.T("DEKOR", "DECOR"), 1, 0.32f, 0.59f, "DEKOR");
+        CreateTab(L.T("DÜKKÂN", "SHOP"), 2, 0.61f, 0.88f, "DUKKAN");
         // 6 yapı: Kart Atölyesi (Ana Üs 5), Köylü Evi (3) ve Kışla (7) (Faz F); sütunlar dar, yazılar küçülür.
         const float cw = 0.158f, gap = 0.0048f;
         float X(int column) => 0.006f + column * (cw + gap);
@@ -114,6 +117,7 @@ public class BuildMenuController : MonoBehaviour
         int Order(DecorData d) { int i = System.Array.IndexOf(decorOrder, d.id); return i < 0 ? 1000 + d.cost : i; }
         System.Array.Sort(decor, (a, b) => Order(a).CompareTo(Order(b)));
         CreateDecorGrid(decor);
+        _shop = ShopTabView.Build(_panelRoot.transform, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.64f));
         SelectTab(0);
         if (FeatureConfig.Instance.recommendedLayout) CreateRecommendedLayoutControl();   // 5. oturum (2.4): bayrakla kapalı (D65)
     }
@@ -150,9 +154,9 @@ public class BuildMenuController : MonoBehaviour
         _recommendedConfirm.SetActive(false);
     }
 
-    private void CreateTab(string title, int index, float left, float right)
+    private void CreateTab(string title, int index, float left, float right, string id)
     {
-        var go = new GameObject("Tab_" + title, typeof(RectTransform), typeof(Image), typeof(Button));
+        var go = new GameObject("Tab_" + id, typeof(RectTransform), typeof(Image), typeof(Button));
         go.transform.SetParent(_panelRoot.transform, false);
         var rect = go.GetComponent<RectTransform>();
         rect.anchorMin = new Vector2(left, 0.79f);
@@ -184,12 +188,16 @@ public class BuildMenuController : MonoBehaviour
         _tabUnderlines[index] = underline;
     }
 
-    private void SelectTab(int index)
+    /// <summary>6. oturum (2.4): menüyü DÜKKÂN sekmesinde açar (elmas/kaynak eksikliğinde de buraya yönlendirilebilir).</summary>
+    public void ShowShop() { Show(); SelectTab(2); }
+
+    public void SelectTab(int index)
     {
         _activeTab = index;
         if (_recommendedButton != null) _recommendedButton.SetActive(index == 0);
         foreach (var item in _structureCards) item.SetActive(index == 0);
         foreach (var item in _decorCards) item.SetActive(index == 1);
+        if (_shop != null) { _shop.gameObject.SetActive(index == 2); if (index == 2) _shop.Refresh(); }
         for (int i = 0; i < _tabUnderlines.Length; i++)
         {
             if (_tabUnderlines[i] == null) continue;
@@ -208,7 +216,7 @@ public class BuildMenuController : MonoBehaviour
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.CardWorkshop, out var workshop) && !workshop.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.House, out var house) && !house.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.Barracks, out var barracks) && !barracks.isUnlocked);
-            hint.gameObject.SetActive(index == 1 || hasLocked);
+            hint.gameObject.SetActive(index != 2 && (index == 1 || hasLocked));
             hint.text = index == 0 ? L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows.") :
                 L.T("Dekora uzun bas: taşı veya sil (%50 iade).", "Long-press decor: move or remove (50% refund).");
         }

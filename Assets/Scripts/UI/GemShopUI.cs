@@ -154,26 +154,34 @@ public sealed class GemShopUI : MonoBehaviour
         y += 6f;
         TopText(p, "PacksTitle", L.T("ELMAS PAKETLERİ", "GEM PACKS"), 18, y, 16, Ink, true, TextAlignmentOptions.Left);
         y += 22f;
-        string[] packs = { "80", "500", "1200" };
-        for (int i = 0; i < packs.Length; i++)
+        // 6. oturum (2.4): gerçek paketler (IapService; fiyat mağazadan, yerel para birimi). Tam dükkân: İnşa Et → DÜKKÂN.
+        var shopCfg = ShopConfig.Instance;
+        for (int i = 0; i < shopCfg.gemProductIds.Length && i < 3; i++)
         {
+            string productId = shopCfg.gemProductIds[i];
             var tile = TopRect(p, "Pack" + i, 18 + i * 108, y, 100, 62);
             var image = tile.gameObject.AddComponent<Image>();
             image.sprite = ReferenceUiVisuals.SolidPillSprite();
             image.type = Image.Type.Sliced;
-            image.color = ReferenceUiVisuals.Hex(0x5A4127);
+            image.color = i == shopCfg.bestValueIndex ? ReferenceUiVisuals.Hex(0x4A2E5C) : ReferenceUiVisuals.Hex(0x5A4127);
             var button = tile.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            button.onClick.AddListener(() => GemActions.Toast(L.T("Elmas paketleri mağaza bağlantısıyla gelecek", "Gem packs arrive with the store connection")));
+            button.onClick.AddListener(() =>
+            {
+                if (!IapService.Instance.Buy(productId))
+                    GemActions.Toast(IapService.Instance.Ready ? L.T("Önceki satın alma sürüyor", "A purchase is in progress")
+                        : L.T("Mağazaya bağlanılıyor…", "Connecting to the store…"));
+            });
             var icon = ReferenceUiVisuals.Image(tile, "Gem", new Vector2(0.06f, 0.3f), new Vector2(0.36f, 0.9f),
                 Vector2.zero, Vector2.zero, Color.white);
             icon.sprite = GemIcon.Sprite;
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            ReferenceUiVisuals.Text(tile, "Amount", packs[i], 16, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
+            ReferenceUiVisuals.Text(tile, "Amount", shopCfg.gemProductGems[i].ToString(), 16, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
                 new Vector2(0.36f, 0.3f), new Vector2(1f, 0.9f), Vector2.zero, new Vector2(-4, 0), true);
-            ReferenceUiVisuals.Text(tile, "Soon", L.T("YAKINDA", "SOON"), 10, ReferenceUiVisuals.Muted, TextAlignmentOptions.Center,
+            var priceLabel = ReferenceUiVisuals.Text(tile, "Price", "…", 10, ReferenceUiVisuals.Gold, TextAlignmentOptions.Center,
                 Vector2.zero, new Vector2(1f, 0.32f), new Vector2(4, 4), new Vector2(-4, 0), false, true);
+            rows.Add(new Row { status = priceLabel, price = null, statusText = () => ShopTabView.SafePrice(IapService.Instance.PriceLabel(productId), priceLabel), priceText = null });
         }
         y += 72f;
 
@@ -229,6 +237,7 @@ public sealed class GemShopUI : MonoBehaviour
         foreach (var row in rows)
         {
             row.status.text = row.statusText();
+            if (row.priceText == null || row.price == null) continue;   // elmas paketi karosu: yalnız fiyat etiketi
             string price = row.priceText();
             // Elmas simgesi solda: sayı biraz sağa kayar.
             row.price.text = int.TryParse(price, out _) ? "   " + price : price;

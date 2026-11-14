@@ -572,3 +572,15 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Hata düzeltmesi:** çevrimdışı üretim 1 altından az biriktiğinde zaman damgası yine de ileri alınıyordu (kesir kayboluyordu); düşük saatlik
   üretimde bu kayıp büyüyecekti → damga artık ilerlemez.
 - Eski kayıt: biriken altın korunur (yeni kapasite eskisinden büyük); migration gerekmez.
+
+## D76 — Dükkân: elmasla kaynak + gerçek parayla elmas (6. oturum 2.4)
+- **Paket kuralı istisnası:** CLAUDE.md "paket değiştirme" der; kullanıcı bu oturumda açıkça Unity IAP istedi → `com.unity.purchasing` **5.4.0**
+  (Haziran 2026; v5 API: StoreController, Pending → Confirm) eklendi. Başka paket/ayar değişmedi.
+- İnşa Et menüsü üç sekme: YAPI · DEKOR · DÜKKÂN (`UI/ShopTabView.cs`). Kaynak paketleri `Systems/Shop/ShopService.cs`, sayılar
+  `ShopConfig.asset` (gerekçe ECONOMY.md §12). Altın kuru Ana Üs'le ölçeklenir ve eksik altın tamamlama da aynı kuru kullanır.
+- `Systems/Shop/IapService.cs`: arka uç Unity IAP (cihaz) ya da `FakeStoreBackend` (editör/testler). Elmas yalnız bekleyen sipariş + makbuz
+  doğrulaması sonrası; kayda yazılıp sonra onaylanır; işlem defteri `PlayerSaveData.iapLedger` (kayıt **v12**, migration: boş defter).
+  Yerel doğrulama `CrossPlatformValidator(GooglePlayTangle.Data(), Application.identifier)`; tangle yoksa yayında elmas verilmez.
+- Fiyat metni mağazadan; yazı tipinde olmayan para simgesi (₺ gibi) ISO koduna çevrilir (`ShopTabView.SafePrice`) — kare görünmez.
+- Üst bardaki eski Elmas Dükkânı'nın "YAKINDA" karoları aynı ürünlere bağlandı.
+- Ürün kimlikleri ve kullanıcı adımları PLAY_RELEASE.md §9.

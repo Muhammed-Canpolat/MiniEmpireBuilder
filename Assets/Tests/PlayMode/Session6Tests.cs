@@ -512,6 +512,110 @@ public class Session6Tests
         CardWorkshopTests.CaptureScreen("S2_3_mine_full", "session6");
     }
 
+    // ==================== 2.4 Dükkân + IAP ====================
+
+    [UnityTest]
+    public IEnumerator S2_4_ResourcePacksScaleWithMainBaseAndRespectWalletCap()
+    {
+        yield return FreshManager();
+        var cfg = SP("ShopConfig", "Instance") as ScriptableObject;
+        Assert.AreEqual("ShopConfig", cfg.name, "sayılar Resources/Config/ShopConfig.asset'ten");
+        CollectionAssert.AreEqual(new[] { 100, 550, 1250 }, (int[])F(cfg, "gemProductGems"));
+        Assert.AreEqual(40, (int)S("ShopService", "GoldPerGemAt", 1), "Ana Üs 1: 1 elmas = 40 altın (eski kur)");
+        Assert.AreEqual(Mathf.RoundToInt((600 + 90 * 9) / 15f), (int)S("ShopService", "GoldPerGemAt", 10), "Ana Üs 10: maden saatliği / 15");
+        SetMainBase(10);
+        var gold = Enum.Parse(T("ShopResource"), "Gold");
+        int small = (int)S("ShopService", "PackAmount", gold, 0), large = (int)S("ShopService", "PackAmount", gold, 2);
+        int next = (int)S("Progression", "UpgradeCost", Enum.Parse(T("BuildingType"), "MainBase"), 11);
+        Assert.AreEqual(next, large, "büyük altın paketi = sıradaki Ana Üs bedeli");
+        Assert.Greater(large, small);
+        int gemsSmall = (int)S("ShopService", "PackGems", gold, 0), gemsLarge = (int)S("ShopService", "PackGems", gold, 2);
+        Assert.Less(gemsLarge / (float)large, gemsSmall / (float)small, "büyük paket elmas başına daha çok altın (bonus)");
+        // Eksik altın tamamlama aynı kurla
+        int topUp = (int)S("GemEconomy", "GoldTopUpCost", 940);
+        Assert.AreEqual(Mathf.CeilToInt(940f / (int)S("ShopService", "GoldPerGemAt", 10)), topUp, "top-up = dükkân kuru");
+
+        SetF(save, "gems", 1000);
+        SetF(save, "gold", 0);
+        Assert.AreEqual("Ok", S("ShopService", "Buy", gold, 0).ToString());
+        Assert.AreEqual(small, (int)P(manager, "Gold"));
+        Assert.AreEqual(1000 - gemsSmall, (int)P(manager, "Gems"));
+        SetF(save, "gold", (int)M(manager, "GetMaxGoldCapacity") - 10);
+        Assert.AreEqual("WalletFull", S("ShopService", "CanBuy", gold, 2).ToString(), "cüzdan tavanını aşan paket satılmaz");
+        var meat = Enum.Parse(T("ShopResource"), "Meat");
+        int meatBefore = (int)F(F(save, "island"), "meat");
+        Assert.AreEqual("Ok", S("ShopService", "Buy", meat, 1).ToString());
+        Assert.AreEqual(meatBefore + (int)S("ShopService", "PackAmount", meat, 1), (int)F(F(save, "island"), "meat"));
+        SetMainBase(3);
+        Assert.AreEqual("Locked", S("ShopService", "CanBuy", meat, 0).ToString(), "ada kaynakları Ana Üs 5'ten önce kilitli");
+    }
+
+    [UnityTest]
+    public IEnumerator S2_4_FakeStorePurchaseInterruptedRestartCancelInvalid()
+    {
+        yield return FreshManager();
+        S("FakeStoreBackend", "ClearPending");
+        SetF(save, "gems", 0);
+        var iap = (Component)SP("IapService", "Instance");
+        yield return null;
+        Assert.IsTrue((bool)SP("IapService", "UseFakeStore"), "editör/testte sahte mağaza");
+        Assert.IsTrue((bool)P(iap, "Ready"));
+        StringAssert.Contains("TEST", (string)M(iap, "PriceLabel", "gems_medium"), "fiyat mağazadan (sahte katalog)");
+        // Normal satın alma
+        Assert.IsTrue((bool)M(iap, "Buy", "gems_medium"));
+        yield return null;
+        Assert.AreEqual(550, (int)P(manager, "Gems"));
+        Assert.AreEqual(1, ((IList)F(save, "iapLedger")).Count, "işlem deftere yazıldı");
+        Assert.AreEqual(0, ((IList)S("FakeStoreBackend", "LoadPending")).Count, "sipariş onaylandı");
+
+        // Yarıda kalan: ödendi, uygulama bildirimden önce kapandı → elmas yok; yeniden açılışta bir kez verilir
+        var backend = P(iap, "Backend");
+        SetF(backend, "InterruptNext", true);
+        Assert.IsTrue((bool)M(iap, "Buy", "gems_small"));
+        yield return null;
+        Assert.AreEqual(550, (int)P(manager, "Gems"), "onay gelmeden elmas yok");
+        Assert.AreEqual(1, ((IList)S("FakeStoreBackend", "LoadPending")).Count, "mağazada bekleyen sipariş var");
+        // "Uygulama yeniden açıldı": Busy temizlenir, yeni arka uç bekleyeni yeniden bildirir
+        T("IapService").GetProperty("Busy").GetSetMethod(true).Invoke(iap, new object[] { null });
+        M(iap, "UseBackend", Activator.CreateInstance(T("FakeStoreBackend")));
+        yield return null;
+        Assert.AreEqual(650, (int)P(manager, "Gems"), "yarıda kalan satın alma sonraki açılışta işlendi");
+        M(iap, "UseBackend", Activator.CreateInstance(T("FakeStoreBackend")));
+        yield return null;
+        Assert.AreEqual(650, (int)P(manager, "Gems"), "ikinci kez verilmez");
+
+        // İptal
+        backend = P(iap, "Backend");
+        SetF(backend, "CancelNext", true);
+        M(iap, "Buy", "gems_large");
+        yield return null;
+        Assert.AreEqual(650, (int)P(manager, "Gems"), "iptalde elmas yok");
+        // Geçersiz makbuz
+        SetF(backend, "InvalidNext", true);
+        M(iap, "Buy", "gems_large");
+        yield return null;
+        Assert.AreEqual(650, (int)P(manager, "Gems"), "doğrulanamayan makbuzda elmas yok");
+        S("FakeStoreBackend", "ClearPending");
+    }
+
+    [UnityTest]
+    public IEnumerator S2_4_ShopTabCapture()
+    {
+        S("FakeStoreBackend", "ClearPending");
+        yield return Session4Tests.LoadBaseWith(10, null, 2000);
+        var menu = SP("BuildMenuController", "Instance");
+        M(menu, "ShowShop");
+        yield return new WaitForSecondsRealtime(0.8f);
+        var view = Object.FindFirstObjectByType(T("ShopTabView")) as Component;
+        Assert.NotNull(view, "DÜKKÂN sekmesi");
+        Assert.IsTrue(view.gameObject.activeInHierarchy);
+        CardWorkshopTests.CaptureScreen("S2_4_shop_tab", "session6");
+        var scroll = view.GetComponent<UnityEngine.UI.ScrollRect>();
+        scroll.verticalNormalizedPosition = 0f;
+        yield return null;
+        CardWorkshopTests.CaptureScreen("S2_4_shop_tab_gems", "session6");
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]

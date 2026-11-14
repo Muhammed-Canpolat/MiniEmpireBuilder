@@ -62,7 +62,8 @@ public class GemEconomyTests
         Assert.AreEqual(42, Finish(6 * 3600));
         Assert.AreEqual(83, Finish(24 * 3600));
         Assert.AreEqual(118, Finish(48 * 3600));
-        Assert.AreEqual(2, Call("GemEconomy", "GoldTopUpCost", 41));
+        int per = (int)Static("ShopService", "GoldPerGem");   // 6. oturum (2.4): kur Ana Üs seviyesine göre (Ana Üs 1 = 40)
+        Assert.AreEqual(Mathf.CeilToInt(41f / per), Call("GemEconomy", "GoldTopUpCost", 41));
         Assert.AreEqual(0, Call("GemEconomy", "GoldTopUpCost", 0));
 
         long hour = TimeSpan.FromHours(1).Ticks;
@@ -155,7 +156,7 @@ public class GemEconomyTests
         SetField("gold", 100);
         Assert.IsTrue((bool)Invoke("TopUpGold", 181));
         Assert.AreEqual(181, Prop("Gold"));
-        Assert.AreEqual(997, Gems);
+        Assert.AreEqual(1000 - Mathf.CeilToInt(81f / (int)Static("ShopService", "GoldPerGem")), Gems);
 
         // Canları doldur.
         SetField("lives", 2);

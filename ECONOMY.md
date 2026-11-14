@@ -398,3 +398,18 @@ Simülasyon: `python Tools/economy_sim_v2.py --seeds 40` (yukarıdaki SIM bloğu
   savaşla ilerler, Ana Üs 5 (ada) ilk saatte yine açılıyor. Affedici giriş korunuyor ama "ilk saatte Ana Üs 8" artık yok — bilinçli.
 - **Modelde olmayan:** 2.2 (kahraman/çırak süreli) simülasyonda hâlâ anında; gerçek oyunda inşaatçı kuyruğu biraz daha yavaşlatır.
 - **Kayıt uyumu:** depodaki altın korunur (yeni kapasite eskisinden büyük). Maden seviyesi ve evler aynı; yalnız hız/depo formülü değişti.
+
+
+## 12. 6. oturum: Dükkân kurları (2.4) — `Resources/Config/ShopConfig.asset`
+- **Altın kuru Ana Üs'le ölçeklenir:** 1 elmas = (Ana Üs seviyesindeki madenin saatlik üretimi) / 15 (en az 40). Ana Üs 1: 40 (eski sabit kur),
+  Ana Üs 5: 64, Ana Üs 10: 94, Ana Üs 15: 124. Eski sabit 40 altın/elmas Ana Üs 15'te bir yükseltmeyi 345 elmasa çıkarıyordu (anlamsız);
+  yeni kurla ~110 elmas. **Eksik altın tamamlama aynı kuru kullanır** (iki ayrı fiyat yok).
+- **"Pahalı ama makul":** 1 saatlik toplam gelir (SIM 1. gün ~1.660 altın/sa, Ana Üs 10) ≈ 18 elmas; 1 saatlik inşaat hızlandırma = 17 elmas
+  (`GemEconomy.FinishCost`). Yani altın almak, beklemeyi elmasla atlamakla aynı pahalılıkta — ne kestirme ne ceza.
+- **Paket miktarları:** Altın = sıradaki Ana Üs bedelinin %15 / %40 / %100'ü (büyük paket = bir Ana Üs yükseltmesi; cüzdan tavanı 1,5× olduğu için
+  taşmaz; taşacaksa satılmaz, "CÜZDAN DOLU"). Et/Odun = ada cüzdan tavanının %15 / %40 / %100'ü, kur sabit (1 elmas = 8 Et — kullanıcı kararı;
+  1 elmas = 25 Odun). Bonus: orta +%10, büyük +%25 ("En iyi değer"). Ada kaynakları Ana Üs 5'ten önce kilitli.
+- **Örnek (Ana Üs 10):** Altın Kese 720 = 8 elmas, Sandık 1.900 = 19, Hazine 4.800 = 41 elmas.
+- **Gerçek para:** 100 / 550 / 1.250 elmas (taban 100 = 0,99 USD'ye göre +%10 / +%25 bonus). 550 elmas ≈ 32 saatlik inşaat hızlandırması.
+- **Altın değerli kalıyor mu?** Evet: elmasla altın, oynayarak kazanmaktan kestirme değildir (aynı saat değeri); büyük paket bile tek bir Ana Üs
+  yükseltmesini karşılar, süre hâlâ inşaatçı/sürelerle sınırlı.

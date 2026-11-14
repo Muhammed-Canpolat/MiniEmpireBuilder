@@ -97,7 +97,7 @@ Kaynaklar (13 Kasım 2026'da doğrulandı): [Hedef API şartı](https://support.
 - Şiddet: **Evet, fantastik/çizgi film tarzı şiddet** (kılıç/ok ile canavarlar, kan yok, gerçekçi insan şiddeti yok). Kan: Hayır.
 - Cinsellik/çıplaklık: Hayır. Küfür/kaba dil: Hayır. Uyuşturucu/alkol/tütün: Hayır. Kumar/şans oyunu: Hayır (kart üretimi rastgele değil;
   gerçek parayla şans kutusu yok). Korku: Hafif (cadı, ejder) — "korkutucu öğe: Hayır/hafif".
-- Kullanıcılar arası etkileşim/sohbet: Hayır. Konum paylaşımı: Hayır. Dijital satın alma: Hayır (şimdilik). Kullanıcı içeriği paylaşımı:
+- Kullanıcılar arası etkileşim/sohbet: Hayır. Konum paylaşımı: Hayır. Dijital satın alma: **Evet** (6. oturum: elmas paketleri, Google Play Billing). Kullanıcı içeriği paylaşımı:
   Hayır (ada adı yalnız cihazda).
 - Beklenen sonuç: PEGI 7 / ESRB Everyone 10+ / USK 6 civarı.
 - Hedef kitle: **13–15, 16–17, 18+** seç (13 altını seçme → Aileler politikası, öğretmen onaylı reklam vb. gerekmez). "Çocuklara hitap
@@ -111,4 +111,48 @@ Kaynaklar (13 Kasım 2026'da doğrulandı): [Hedef API şartı](https://support.
 4. Play Console'da: Veri güvenliği, İçerik derecelendirmesi, Hedef kitle, Reklam beyanı, Uygulama erişimi formları.
 5. Mağaza görselleri (ikon 512, öne çıkan 1024×500, ≥4 ekran görüntüsü yayın APK'sıyla — "Development Build" yazısı olmadan).
 6. 12+ test kullanıcısı bul, kapalı test kanalına ekle, 14 gün kesintisiz tut; sonra üretim erişimi anketini doldur.
-7. Reklam/satın alma istenirse: AdMob hesabı + uygulama/ödül birimi kimlikleri, Play Console ürün kimlikleri.
+7. Reklam istenirse: AdMob hesabı + uygulama/ödül birimi kimlikleri.
+8. **Uygulama içi ürünler (§9):** Play Console'da 3 ürünü tanımla, fiyatlarını ver, lisans test kullanıcısı ekle.
+9. **Makbuz doğrulama anahtarı (§9.3):** Play Console lisans anahtarıyla GooglePlayTangle üret. **Bu adım yapılmadan yayın
+   derlemesi gerçek satın almada elmas VERMEZ** (bilinçli güvenlik kuralı).
+
+
+## 9. Uygulama içi satın alma (6. oturum, 14 Kasım 2026)
+Kod: `Assets/Scripts/Systems/Shop/IapService.cs` (Unity IAP **5.4.0**, `com.unity.purchasing`; Google Play Billing paketle gelir),
+dükkân `UI/ShopTabView.cs` (İnşa Et → DÜKKÂN), sayılar `Resources/Config/ShopConfig.asset`.
+
+### 9.1 Play Console'da tanımlanacak ürünler 👤
+Play Console → uygulama → **Para kazanma → Ürünler → Uygulama içi ürünler → Ürün oluştur**. Tür: **Tüketilebilir** (consumable; Unity IAP
+onayladıktan sonra tüketir). Kimlikler BİREBİR aşağıdaki gibi olmalı (kod `ShopConfig.gemProductIds`):
+
+| Ürün kimliği | Ad (öneri) | Verilen elmas | Önerilen fiyat (TR) | Önerilen fiyat (USD) | Etiket |
+|---|---|---|---|---|---|
+| `gems_small`  | Elmas Kesesi  | 100   | 34,99 TL  | 0,99  | — |
+| `gems_medium` | Elmas Sandığı | 550 (500 + %10) | 149,99 TL | 4,99 | Popüler |
+| `gems_large`  | Elmas Hazinesi| 1.250 (1.000 + %25) | 299,99 TL | 9,99 | En iyi değer |
+
+- Fiyatı yalnız Play Console'da ver; oyun mağazadan **yerel para biriminde** çeker (kodda fiyat yok). "Fiyatları ülkelere göre otomatik
+  dönüştür" açık kalsın. Ürünleri **Etkin** yap.
+- Elmas miktarı değişecekse yalnız `ShopConfig.asset` → `gemProductGems` (ürün kimliği aynı kalmalı).
+
+### 9.2 Test 👤
+1. Play Console → **Ayarlar → Lisans testi**: test Gmail hesaplarını ekle (kapalı test kullanıcılarıyla aynı olabilir). Bu hesaplar
+   gerçek para ödemeden "Test kartı, her zaman onaylanır / reddedilir" seçebilir.
+2. Uygulama en az bir test kanalına (dahili test yeterli) **imzalı AAB** olarak yüklenmiş olmalı; ürünler ancak o zaman görünür.
+3. Editörde ve otomatik testlerde gerçek mağaza yerine **sahte mağaza** çalışır ("TEST" etiketli fiyatlar; `FakeStoreBackend`).
+   Testler: normal alım, yarıda kalan alım (sonraki açılışta bir kez verilir), iptal, geçersiz makbuz (`Session6Tests.S2_4_*`).
+
+### 9.3 Makbuz doğrulama (yerel) 👤
+1. Play Console → **Para kazanma kurulumu** → "Lisanslama" altındaki **Base64 genel anahtarı** kopyala.
+2. Unity → **Services → In-App Purchasing → Receipt Validation Obfuscator** → anahtarı yapıştır → **Obfuscate Google Play License Key**.
+   `Assets/Scripts/UnityPurchasing/generated/GooglePlayTangle.cs` oluşur; **commit et**.
+3. Bu sınıf yoksa: Development derlemesinde elmas uyarıyla verilir; **yayın derlemesinde verilmez** ve sipariş onaylanmaz (Google 3 gün
+   içinde iade eder). Yayından önce §9.3 zorunludur.
+- Sunucu tarafı doğrulama (Google Play Developer API) daha güçlüdür; sunucu olmadığı için şimdilik yerel doğrulama.
+
+### 9.4 Davranış (kontrol listesi)
+- Elmas yalnız mağaza "ödendi/bekliyor" bildirince ve makbuz doğrulanınca; önce kayda yazılır, sonra sipariş onaylanır.
+- Uygulama arada kapanırsa: sipariş onaysız kalır → sonraki açılışta mağaza yeniden bildirir → işlenir. Kayıttaki `iapLedger`
+  aynı işlemin iki kez elmas vermesini engeller (kayıt v12).
+- Ertelenen ödeme (ör. nakit/onay bekleyen): elmas verilmez, oyuncuya "onaylanınca gelir" denir.
+- Veri güvenliği formu: "Satın alma geçmişi" → toplanır mı? Hayır (yalnız cihazda işlem kimliği tutulur, sunucuya gitmez).

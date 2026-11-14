@@ -174,12 +174,15 @@ public static class DarkFantasyHudPolish
             StyleText(close, "Text", 18, Color.white, true);
         }
 
-        for (int i = 0; i < 2; i++)
+        // 6. oturum (2.4): üç sekme (Yapı, Dekor, Dükkân) eşit genişlikte.
+        string[] tabIds = { "Tab_YAPI", "Tab_DEKOR", "Tab_DUKKAN" };
+        for (int i = 0; i < tabIds.Length; i++)
         {
-            var tab = panel.Find(i == 0 ? "Tab_YAPI" : "Tab_DEKOR") as RectTransform;
+            var tab = panel.Find(tabIds[i]) as RectTransform;
             if (tab == null) continue;
-            tab.anchorMin = new Vector2(i == 0 ? 0.035f : 0.51f, 1f);
-            tab.anchorMax = new Vector2(i == 0 ? 0.49f : 0.965f, 1f);
+            float w = 0.93f / tabIds.Length;
+            tab.anchorMin = new Vector2(0.035f + i * w + 0.006f, 1f);
+            tab.anchorMax = new Vector2(0.035f + (i + 1) * w - 0.006f, 1f);
             tab.pivot = new Vector2(0.5f, 1f);
             tab.offsetMin = new Vector2(0f, -106f);
             tab.offsetMax = new Vector2(0f, -62f);
@@ -220,6 +223,7 @@ public static class DarkFantasyHudPolish
         }
         // Dekor kartları kaydırılabilir ızgarada; alan sekmelerin altından ipucunun üstüne.
         SetAnchors(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
+        SetAnchors(panel.Find("ShopScroll") as RectTransform, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.64f));
         ReferenceUiVisuals.Text(panel, "BuildMenuHint", L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows."), 12,
             SoftGold, TextAlignmentOptions.Center, new Vector2(0, 0.005f),
             new Vector2(1, 0.085f), new Vector2(12, 0), new Vector2(-12, 0));

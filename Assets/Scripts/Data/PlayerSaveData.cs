@@ -9,6 +9,8 @@ using System.Collections.Generic;
 public class PlayerSaveData
 {
     public int saveVersion = 0;
+    /// <summary>6. oturum (2.4, v12): işlenmiş gerçek para satın almaları ("ürün|işlemKimliği"); aynı işlem iki kez elmas vermez.</summary>
+    public List<string> iapLedger = new List<string>();
     // Genel
     public int gold = 50;                   // Başlangıç altını
     public int gems = 0;                    // Elmas (değerli para birimi)
@@ -210,7 +212,7 @@ public class PlayerSaveData
         return data;
     }
 
-    public const int CurrentVersion = 11;
+    public const int CurrentVersion = 12;
 
     /// <summary>Kışla ve Köylü Evi türleri kayıtta yoksa ekler (v9; eski kayıt göçü ve yeni oyun): açılış seviyesindeyse açık, yoksa kilitli.</summary>
     public static void EnsureBaseBondEntries(PlayerSaveData data)
@@ -780,6 +782,13 @@ public static class SaveSystem
                 data.island.nameOffered = false;
                 data.island.nameSeal = IslandNameRules.Seal("", 0);
                 data.saveVersion = 11;
+                Save(data);
+            }
+            // v12 (6. oturum 2.4): IAP defteri. Eski kayıtta satın alma yok → boş defter.
+            if (data.iapLedger == null) data.iapLedger = new List<string>();
+            if (data.saveVersion < 12)
+            {
+                data.saveVersion = 12;
                 Save(data);
             }
             MigrateTimings(data);

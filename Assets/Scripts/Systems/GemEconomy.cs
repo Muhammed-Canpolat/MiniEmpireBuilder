@@ -19,7 +19,7 @@ public static class GemEconomy
     public const int TempBuilderCost = 50;
     public const int TempBuilderHours = 24;
 
-    /// <summary>Eksik altını tamamlama kuru: 1 elmas = bu kadar altın.</summary>
+    /// <summary>Taban altın kuru (Ana Üs 1). Gerçek kur Ana Üs'le artar: ShopService.GoldPerGemAt. Et kuru bundan türetilir (sabit).</summary>
     public const int GoldPerGem = 40;
 
     /// <summary>4. oturum (2.6): "bedava bitir" kalktı. Kalan süresi bu kadar ya da daha az olan iş 1 elmasla biter.</summary>
@@ -88,8 +88,9 @@ public static class GemEconomy
     public static string FinishLabel(int gems) => L.T($"HEMEN BİTİR · {gems}", $"FINISH NOW · {gems}");
 
     /// <summary>Eksik altını tamamlamanın elmas bedeli (yukarı yuvarlanır).</summary>
+    /// <summary>6. oturum (2.4): eksik altın, Dükkân'la AYNI kurla (Ana Üs seviyesine göre, ShopService.GoldPerGem; Ana Üs 1'de 40).</summary>
     public static int GoldTopUpCost(int missingGold) =>
-        missingGold <= 0 ? 0 : Mathf.CeilToInt(missingGold / (float)GoldPerGem);
+        missingGold <= 0 ? 0 : Mathf.CeilToInt(missingGold / (float)ShopService.GoldPerGem);
 
     // ==================== ADA (island_base_v2 §6): Et ve Odun ====================
     /// <summary>1 elmas = 8 Et (GoldPerGem / 5; Et kıt tutulur). 1 elmas = 25 Odun.</summary>
