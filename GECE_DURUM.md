@@ -1,3 +1,68 @@
+# GECE_DURUM — Otonom çalışma (15 Kasım 2026, 7. oturum: bölgeye özgü savaş haritaları)
+
+DURUM: SÜRÜYOR
+ŞU ANKİ İŞ: AŞAMA 1 — veri modeli (bölge/seviye ScriptableObject) + rota/yuva üreteci + doğrulama testi
+Kararlar: DECISIONS.md D88+ · Başlangıç commit'i: 817558f (yarım kalan ada kadrajı düzeltmesi D87 bu oturumda bitti)
+Model notu (kullanıcı): harita veri yapısı / yol bulma / denge = Opus yüksek çaba; tilemap ve süsleme = Sonnet sınıfı orta çaba.
+
+7. OTURUM İŞ LİSTESİ:
+- [x] 0 Yarım kalan: dar telefonda ada kadrajı (D87, 817558f)
+- [ ] 1 Veri modeli: BattleRegionMap (bölge SO) + BattleLevelLayout (seviye SO), rota/yuva üreteci, Gizmo düzenleme, doğrulama testi
+- [ ] 2 Savaş haritası kurulumu: bölge zemini (karo + uçurum + su), yol, düşman rotası (üst köprü → Ana Üs), kahraman yürünebilir kara, yuvalar, maden
+- [ ] 3 Seviye türleri: Hayatta Kal / Üssü Koru / Madeni Koru (sapma rotası) / Zamana Karşı / Boss (uzun rota)
+- [ ] 4 Rota varyasyonları (5 seviye; 1. seviye = harita yolu; ileride çatallanan yol; boss ek dönemeç)
+- [ ] 5 Bölge atmosferi (sis / kar / kül / lav / karanlık / kalıntılar) + grafik kalitesine bağlı partikül sınırı
+- [ ] 6 Kar / koyu / volkanik zemin karoları (Tiny Swords'tan renk eşlemesi) + sefer haritası görselleri aynı karolarla; ART_NEEDS
+- [ ] 7 Denge: bölge başına dominant strateji (yalnız kule / yalnız kahraman / kahramansız) + telemetri
+- [ ] SON: her bölge × her tür ekran görüntüsü, harita ↔ savaş yan yana, REPORT.md
+
+ENGELLENENLER:
+- (yok)
+
+## Referans görseller — 7. oturum (Sefer Haritası, 3 görsel, dikey ~1280×2048, Development Build)
+Ortak çerçeve: üstte altın harf "SEFER HARİTASI"; altında solda kalpli parşömen "4 · +1 01:15" (can + yenilenme sayacı), ortada kırmızı
+kurdele "İSTİLA!", sağda yıldızlı parşömen "15/90". Altta tam genişlik koyu ahşap "ÜSSE DÖN" düğmesi. Arada dikey kaydırılan deniz
+(turkuaz, kısa açık dalga çizgileri); her bölge yatay bir ada (≈22×10 karo, kenarları düzensiz "blob"), adalar ortadan dikey ahşap
+köprülerle (kahverengi kalaslar, iki yanda koyu direk) birbirine bağlı. Her adanın çevresinde açık turkuaz sığ su halkası (bulanık),
+alt kenarında 1 karo yüksekliğinde mavi-gri taş uçurum (Tiny Swords yamaç karoları). Adanın üst kenarına oturan kurdele = bölge adı
+("N · AD", tamamlanmış: mavi, sıradaki: kırmızı, kilitli: koyu gri-mavi) ve altında parşömen fiş (yıldız "x/15 · Seviye n" / "TAMAM",
+kilitliyse asma kilit + "Ana Üs Sev. N"); kilitli adanın ortasında büyük sarı asma kilit, ada soluk/koyu.
+**Zikzak yol** (açık kahve toprak şerit, koyu kahve kenar, uçlar yuvarlak, hafif taş benekleri; Catmull-Rom): alt köprü ortasından
+çıkar, kısa düz yükselir, sonra **tek numaralı bölgelerde önce SAĞA** (x ≈ orta+300 px / 1560), sonra geniş bir yayla **SOLA**
+(orta−280, adanın %40 yüksekliği), sonra hafif sağa (orta+40, üst %15), üst köprü ortasında biter; **çift numaralı bölgelerde ayna**
+(önce sola, sonra sağa). Yol adanın ~%85 yüksekliğini kaplar, iki büyük dönemeç + üstte küçük kıvrım (S şekli).
+
+### Görsel 1 — Bölge 1 ve 2
+- **2 · SİSLİ ORMAN** (üst ada, kırmızı kurdele, "3/15 · Seviye 2"): parlak orta yeşil çim (Tilemap_color3). Çok yoğun ağaç: koyu yeşil
+  çamlar (Tree1/2) ve sarı-turuncu güz ağaçları (Tree3/4) karışık, ~22 adet, yolun iki yanına dağılmış; sol ortada mor çatılı ev
+  (Purple House2). Adanın sağ yarısında 2–3 yarı saydam beyaz sis bulutu (yatay, bulanık elips). Yol: alttan sola kıvrılır (sol alt),
+  sağa geniş yay (sağ orta), sonra yukarı. Ortada "BURADASIN" yazılı kahraman işareti (mavi tüylü miğfer, kalkan, kılıç).
+- **1 · YIKIK KALE YOLU** (alt ada, mavi kurdele, "12/15 · TAMAM"): sarımsı açık yeşil çim (Tilemap_color1). Seyrek: 6–7 çam (bazıları
+  açık yeşil), birkaç koyu yeşil çalı, 3 gri-mavi küçük kaya. Sağ ortada büyük kırmızı-kiremit çatılı kale (Red Castle, ~4 karo genişlik),
+  sol altta küçük kırmızı ev (Red House1). Yol: alttan önce sağa (sağ alt), sonra sola geniş yay, sonra hafif sağdan üste.
+
+### Görsel 2 — Bölge 3 ve 4 (ikisi de kilitli: koyu gri-mavi kurdele, büyük kilit)
+- **4 · DONMUŞ GEÇİT** ("Ana Üs Sev. 9"): zemin gri-mavi (teal çim karosuna beyaz ton bindirilmiş; çim dokusu hâlâ seçiliyor), üstünde
+  dağınık beyaz kar lekeleri (küçük yassı elipsler, ~30). Seyrek: 5 sarı yapraklı ağaç (Tree3), 8 mavi-gri kaya. Sağda mavi yuvarlak
+  kule (Blue Tower), sol altta mavi Kışla (Blue Barracks). Uçurum taşları aynı mavi-gri. Yol: alttan sola, sağa yay, yukarı.
+- **3 · TERK EDİLMİŞ MADEN** ("Ana Üs Sev. 6"): zeytin yeşili çim (Tilemap_color4). 6–7 sarı altın taşı kümesi (Gold Stone 1–6, büyük),
+  ~10 mavi-gri kaya. Sol ortada sarı çatılı ev (Yellow House3), sağ altta sarı yuvarlak kule (Yellow Tower). Yol: alttan sağa, sola yay.
+
+### Görsel 3 — Bölge 5 ve 6 (kilitli)
+- **6 · EJDERİN İNİ** ("Ana Üs Sev. 14"): koyu kahverengi-kızıl zemin (zeytin çime koyu kızıl ton), uçurumlar koyu kahve. 4 lav gölü
+  (koyu kenarlı oval, turuncu iç, sarı çekirdek, çevresinde turuncu ışıma; biri sağ ortada büyük), ~9 mavi-gri kaya, 4 kesik kütük
+  (küçük açık lekeler). Sol üstte kırmızı yuvarlak kule (Red Tower), sağda siyah Kışla (Black Barracks). Yol: alttan sola, sağa yay.
+- **5 · KARANLIK KALE** ("Ana Üs Sev. 12"): çok koyu lacivert-mor zemin (teal çime koyu mor ton %55), uçurumlar lacivert. Sağ ortada büyük
+  siyah kale (Black Castle, ~1,05 ölçek), solda siyah kule (Black Tower), 6 kütük (açık renkli küçük şekiller kemik gibi duruyor),
+  ~7 kaya. Yol: alttan sağa, sola geniş yay, yukarı.
+
+## Plan — 7. oturum (özet; ayrıntı DECISIONS D88+)
+- Savaş haritası dikey: 14×30 karo (1 karo = 1 birim, Tiny Swords 64 PPU), Ana Üs (0,0) yolun alt ucunda, düşmanlar üst köprüden.
+- 1. seviye rotası = harita yolu (generate.py'nin 6 noktası, aynı yön/sıra, dikeye ölçeklenir). Diğer seviyeler: farklı dönemeç (2),
+  sıkı S (3), çatallanıp birleşen yol (4), uzun boss rotası + ek dönemeç (5).
+- Kule yuvaları dönemeçlerin iç tarafında, yoldan ≥2 birim, sırayla sağlı sollu; doğrulama testi.
+
+---
 # GECE_DURUM — Otonom çalışma (14 Kasım 2026, 6. oturum: savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi)
 
 DURUM: TAMAMLANDI (6. oturum)

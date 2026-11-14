@@ -1,0 +1,119 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6556159f844865046ae20082a790c3ad, type: 3}
+  m_Name: Region_4
+  m_EditorClassIdentifier: Assembly-CSharp::BattleRegionMap
+  regionId: 4
+  tileset: {fileID: 2800000, guid: 28b56b39493740e19bc58faf53b57db3, type: 3}
+  terrainPrefab: {fileID: 0}
+  waterColor: {r: 0.2784314, g: 0.67058825, b: 0.6627451, a: 1}
+  shallowColor: {r: 0.40784314, g: 0.76862746, b: 0.74509805, a: 1}
+  roadColor: {r: 0.80784315, g: 0.65882355, b: 0.4392157, a: 1}
+  roadEdgeColor: {r: 0.47058824, g: 0.3372549, b: 0.20392157, a: 1}
+  bridgeColor: {r: 0.67058825, g: 0.47058824, b: 0.27450982, a: 1}
+  columns: 16
+  rows: 32
+  mask:
+  - ......####......
+  - ....#######.....
+  - ....########....
+  - ...###########..
+  - ...###########..
+  - ...###########..
+  - ...###########..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ..############..
+  - ................
+  - ................
+  atmosphere: 4
+  decor:
+  - name: Buzlu kaya
+    sprites:
+    - {fileID: 21300000, guid: 47a9c1d47c7748ab8a5e3c6ed533aa65, type: 3}
+    count: 7
+    height: {x: 0.9, y: 1.2}
+    blocksMovement: 1
+    footprint: 0.9
+    roadClearance: 0.8
+    shadow: 1
+    sway: 0
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    preferEdges: 0
+  - name: "Karl\u0131 a\u011Fa\xE7"
+    sprites:
+    - {fileID: -1922301785, guid: 9606510127d3043a5bbdf980402c1628, type: 3}
+    - {fileID: 2052243219, guid: 7649734177ed34f78a801612ab90a3a2, type: 3}
+    count: 6
+    height: {x: 2, y: 2.4}
+    blocksMovement: 1
+    footprint: 0.5
+    roadClearance: 0.9
+    shadow: 1
+    sway: 1
+    tint: {r: 0.86, g: 0.93, b: 1, a: 1}
+    preferEdges: 1
+  - name: Kaya
+    sprites:
+    - {fileID: 21300000, guid: 8ea2ea1f28e7447ac943714f1ef7fae9, type: 3}
+    - {fileID: 21300000, guid: 819d349f0d3f54eecac2ed309d6f97a1, type: 3}
+    - {fileID: 21300000, guid: 2ab63786853d5408b94f25ec2c8883b7, type: 3}
+    - {fileID: 21300000, guid: 50ba275dcd62e47b0b07e37b43a997fa, type: 3}
+    count: 7
+    height: {x: 0.6, y: 0.9}
+    blocksMovement: 0
+    footprint: 0.6
+    roadClearance: 0.5
+    shadow: 1
+    sway: 0
+    tint: {r: 0.86, g: 0.93, b: 1, a: 1}
+    preferEdges: 0
+  landmarks:
+  - name: Mavi Kule
+    sprite: {fileID: 21300000, guid: 9150ff9a3f88646ddaf1ed327afa1315, type: 3}
+    candidates:
+    - {x: 5.8, y: 13.1}
+    - {x: 5.8, y: 19}
+    - {x: -5.8, y: 19}
+    height: 2.4
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    blocksMovement: 1
+  - name: "Mavi K\u0131\u015Fla"
+    sprite: {fileID: 21300000, guid: 4140465d2d71b4a6a83a1be32f0a9880, type: 3}
+    candidates:
+    - {x: -5.4, y: 3.7}
+    - {x: -5.2, y: -2.4}
+    - {x: 5.2, y: -2.4}
+    height: 2.2
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    blocksMovement: 1
+  gloom: {r: 0, g: 0, b: 0, a: 0}

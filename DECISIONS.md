@@ -673,3 +673,34 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Düzeltme:** `IslandCameraController.MainlandBounds` (kale hücresine 4-komşulukla bağlı kara); genişlik yalnız ana adaya (19 u) sığar,
   adacıklar kenarda kesilebilir. 20:9'da ana ada %96 genişlik (≈×1,11 yakın); 16:9 ve tablet değişmedi (yükseklik bağlayıcı).
 - **Test:** `Session6Tests.S7_IslandFramingOnNarrowPhoneFitsMainland` (4 oran: sığma + bir eksenin dolu olması + görüntü).
+
+## D88 — Bölgeye özgü savaş haritası: veri modeli (7. oturum AŞAMA 1)
+- **Bölge SO** `BattleRegionMap` (Resources/BattleMaps/Region_N): Tiny Swords düzeninde karo seti (9×6, 64 px), kara maskesi (satırlar üstten
+  alta, '#' kara), atmosfer, süsleme seti (`BattleDecorEntry`: sprite, adet, boy, engel mi, yol payı, salınım, kenara yığılma), bölge yapıları
+  (`BattleLandmark`: aday konumlar; yol/yuva/üsle çakışmayan ilk aday). İsteğe bağlı `terrainPrefab` alanı var ama **zemin maskeden çalışma anında
+  kurulur** (karar: elle boyanmış prefab ile maske ayrı kalınca yürünebilirlik/görsel ayrışır; maske tek kaynak, Inspector'dan düzenlenir).
+- **Seviye SO** `BattleLevelLayout` (Resources/BattleMaps/Levels/RN_LM): rota(lar) (kontrol noktaları; Catmull-Rom = generate.py ile aynı eğri),
+  yuvalar, Ana Üs / maden / kahraman doğuşu, tür, isteğe bağlı dalga geçersiz kılma (boşsa bölge verisindeki dalgalar — tek kaynak bozulmasın).
+- **Izgara:** 16×32 karo, 1 karo = 1 birim; Ana Üs (0,0) yolun alt ucunda, düşmanlar üst köprüden (0, 28,5) girer. Haritanın kara kutusu 14×30.
+- **Düzenleme:** seviye varlığı seçiliyken Scene görünümünde rota noktaları, yuvalar, üs/maden/kahraman tutamaçla sürüklenir (Undo'lu);
+  Inspector'da Doğrula / Yuvaları yeniden üret / Rotayı şablona sıfırla. Üreteç var olan varlığa dokunmaz (`-force` ile baştan).
+
+## D89 — Kar / koyu / volkanik zemin: Tiny Swords karosundan renk eşlemesi
+- Projede (Tiny Swords, Cainos, Handpainted, DungeonMonsters2D) kar/koyu taş/lav **piksel** karosu yok (Handpainted boyama dokusu, stil çatışır).
+- Eskiden çim karosuna yarı saydam ton bindiriliyordu ("boyanmış çim"). Yeni yöntem `Tools/campaign_art/recolor_tilesets.py`: her piksel tonuna göre
+  sınıflanır (yeşil = zemin, mavi-gri = uçurum taşı, kontur, köpük) ve bölge paletine **gradyanla** eşlenir; Tiny Swords konturu/dokusu/kenarları aynen
+  kalır. Kar (gama 0,5: çoğu beyaz, gölge mavi), Karanlık Kale (kayrak-mor), Ejderin İni (bazalt-kahve). Gerçek karolar ART_NEEDS #8'de.
+
+## D90 — Rota şablonları ve yuva yerleşimi
+- **1. seviye = Sefer Haritası yolu:** generate.py map_region'ın 6 noktası normalize edilip (u = dx/704, v = (y−110)/640) dikeye ölçeklenir
+  (x = u·8,5 — dikey adada zikzak karakteri korunsun diye yanal %20 geniş; y = 26 − 24,25·v). Tek bölgelerde Ana Üs'e yakın kıvrım sağda (haritadaki gibi).
+- 2: üç büyük kıvrım · 3: ters başlangıç + sıkı S (maden orta kıvrımın yanında) · 4: ikiye ayrılıp birleşen yol (+1 yuva) · 5 (boss): 6 kıvrım, en uzun.
+- **Yuvalar:** ana yol ilerleyişi pencerelere bölünür; her pencerede bir öncekinin TERS tarafında (gidiş yönüne göre) kapsaması en yüksek aday →
+  zikzağı izleyen sağlı sollu dizi. Kurallar (üreteç = doğrulama): kara üstünde (kıyıdan 0,3 içeride), yol kenarından ≥ 2,0 (yuva yarıçapı dahil),
+  kule görseli (yuvadan 2,3 yukarı) yola binmez, üs/maden/kahraman/diğer yuvadan uzak, Topçu menzil çemberi (merkez yuva + 1,0, yarıçap 5 —
+  6. oturum merkez düzeltmesiyle aynı `RangeCenter`) en az bir dönemeç tepesini kapsar. Sayı = bölge tabanı (3/3/4/4/5/5) + çatallı yolda 1.
+- Test: `Session7Tests.V1` (30/30 doğrulama), `V2` (1. seviye = harita yolu, türler), `V3` (5 farklı rota, boss en uzun, çatal).
+
+## D91 — Eksik bölge süsleri kodla üretildi (geçici)
+- `Tools/campaign_art/battle_props.py`: yıkık kale/kule/duvar (Tiny Swords Kırmızı Kale → gri taş, testere kesik + moloz), maden girişi
+  (Tiny Swords kayaları 2× + karanlık ağız + ahşap çerçeve), buzlu kaya, kemik/kafatası, lav gölü. Resources/BattleMaps/Props. ART_NEEDS #9.
