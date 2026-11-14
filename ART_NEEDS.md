@@ -91,3 +91,4 @@ renginde (kırmızı/sarı/mor/siyah) ya da gri + kodla renk tonu.
 - **Keskin Oklar:** Tiny Swords `Units/Extra/Arrow/Arrow.png` 45° döndürülüp kırpıldı (`ui_icon_arrow.png`); 3 oklu demet simgesi daha iyi olur.
 - **Bilgi (i) simgesi:** `Icons/Icon_11` `ui_icon_info.png` olarak kopyalandı. Kart başına "savaş hakkı" için özel simge (kılıç+kart) yok; şimdilik `ui_icon_sword`.
 - Not: kopyalanan 3 PNG için .meta dosyaları `ui_icon_play.png.meta` şablonundan, yeni GUID ile elle yazıldı (Unity yeniden içe aktarır).
+- **Onay (✓) simgesi:** Tiny Swords Icon_09 (✗) ile eş stilde el çizimi ✓. Şimdilik `ui_icon_check` (Icon_07 paletiyle kodla üretilen geçici sürüm).

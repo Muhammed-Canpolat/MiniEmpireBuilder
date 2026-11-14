@@ -576,6 +576,93 @@ public class Session4Tests
         cam.orthographicSize = size;
     }
 
+    /// <summary>
+    /// Kaldırma kartı Tiny Swords kâğıt + kurdele; taşıma/inşa onayı nesnenin üstünde ✓/✗ (alt çubuk yok); GERİ AL yeni tasarım.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator RemoveCardConfirmButtonsAndUndoUseNewDesign()
+    {
+        yield return Nov13FeedbackTests.LoadBase(2);
+        yield return new WaitForSecondsRealtime(1.5f);
+        var setup = (Component)Object.FindFirstObjectByType(T("BaseSceneSetup"));
+        var tap = setup.GetType().GetMethod("HandleTap", BindingFlags.NonPublic | BindingFlags.Instance);
+        var map = T("BaseMapManager").GetProperty("Instance").GetValue(null);
+        var tree = Object.FindObjectsByType(T("MapObjectTag"), FindObjectsSortMode.None).Cast<Component>()
+            .FirstOrDefault(t => Field(t, "objectType").ToString() == "Tree"
+                && (bool)map.GetType().GetMethod("IsBuildablePosition").Invoke(map, new object[] { t.transform.position }));
+        Assert.NotNull(tree, "açık arazide ağaç");
+        Camera.main.transform.position = new Vector3(tree.transform.position.x, tree.transform.position.y + 1.5f, Camera.main.transform.position.z);
+        yield return null;
+        // 1) Kaldırma kartı
+        tap.Invoke(setup, new object[] { (Vector3)tree.GetComponent<Collider2D>().bounds.center });
+        yield return new WaitForSecondsRealtime(0.4f);
+        var card = GameObject.Find("RemovePrompt");
+        Assert.NotNull(card, "kaldırma kartı");
+        Assert.NotNull(card.transform.Find("Ribbon/Title"), "kurdele başlık");
+        Assert.NotNull(card.transform.Find("SubjectSlot/Subject"), "nesne görseli");
+        Assert.NotNull(card.transform.Find("RemoveConfirm"), "KALDIR");
+        StringAssert.DoesNotContain("(", Text(card.transform.Find("RemoveConfirm/Label")), "düğme metni tek satır, bedel ayrı satırda");
+        CardWorkshopTests.CaptureScreen("S5_remove_card", "session4");
+        tap.Invoke(setup, new object[] { new Vector3(-50f, -50f) });
+        yield return null;
+
+        // 2) Bina taşıma: ✓/✗ binanın üstünde, eski alt çubuk yok
+        var objs = ((IEnumerable)Prop(map, "MapObjects")).Cast<object>().ToList();
+        var mine = objs.First(o => Field(o, "buildingType") != null && Field(o, "buildingType").ToString() == "GoldMine");
+        var pc = T("PlacementController").GetProperty("Instance").GetValue(null);
+        pc.GetType().GetMethod("BeginMove").Invoke(pc, new object[] { mine });
+        var mineGo = (GameObject)Field(mine, "gameObject");
+        Camera.main.transform.position = new Vector3(mineGo.transform.position.x, mineGo.transform.position.y + 1f, Camera.main.transform.position.z);
+        yield return new WaitForSecondsRealtime(0.4f);
+        Assert.IsNull(GameObject.Find("PlacementConfirmBar"), "alt bar çubuğu kalktı");
+        var buttons = GameObject.Find("PlacementConfirm");
+        Assert.NotNull(buttons, "✓/✗ düğmeleri");
+        Assert.NotNull(buttons.transform.Find("Confirm/Icon").GetComponent<UnityEngine.UI.Image>().sprite, "✓ simgesi");
+        Assert.NotNull(buttons.transform.Find("Cancel/Icon").GetComponent<UnityEngine.UI.Image>().sprite, "✗ simgesi");
+        // Düğmeler hayaletin üstünde (ekranda hayaletin üst kenarının üstünde, yatayda ortalı)
+        var ghost = GameObject.Find("GhostPlacement").GetComponent<SpriteRenderer>();
+        Vector3 ghostTop = Camera.main.WorldToScreenPoint(new Vector3(ghost.bounds.center.x, ghost.bounds.max.y, 0f));
+        var corners = new Vector3[4];
+        ((RectTransform)buttons.transform).GetWorldCorners(corners);
+        Assert.GreaterOrEqual(corners[0].y, ghostTop.y - 2f, "düğmeler hayaletin üstünde");
+        Assert.AreEqual(ghostTop.x, (corners[0].x + corners[2].x) * 0.5f, 60f, "yatayda hayaletle hizalı");
+        CaptureUi("S5_move_confirm", 780, 1688, () => buttons.GetComponent(T("WorldConfirmButtons")).GetType().GetMethod("Follow").Invoke(buttons.GetComponent(T("WorldConfirmButtons")), null));
+        pc.GetType().GetMethod("CancelPlacement").Invoke(pc, null);
+        yield return null;
+        Assert.IsNull(GameObject.Find("PlacementConfirm"), "iptal düğmeleri kaldırır");
+
+        // 3) Yeni dekor: bedel hapı
+        var decor = T("DecorPlacementController").GetProperty("Instance").GetValue(null);
+        var catalog = (IEnumerable)T("DecorPlacementController").GetProperty("Catalog").GetValue(null);
+        var data = catalog.Cast<object>().First();
+        decor.GetType().GetMethod("BeginPlacement").Invoke(decor, new object[] { data });
+        yield return new WaitForSecondsRealtime(0.4f);
+        var decorButtons = GameObject.Find("DecorConfirm");
+        Assert.NotNull(decorButtons, "dekor ✓/✗");
+        Assert.IsNull(GameObject.Find("DecorConfirmBar"));
+        CaptureUi("S5_decor_confirm", 780, 1688, () => decorButtons.GetComponent(T("WorldConfirmButtons")).GetType().GetMethod("Follow").Invoke(decorButtons.GetComponent(T("WorldConfirmButtons")), null));
+        decor.GetType().GetMethod("Cancel").Invoke(decor, null);
+        yield return null;
+
+        // 4) GERİ AL
+        var before = mineGo.transform.position;
+        var nearest = (Vector3)map.GetType().GetMethod("NearestFreeSpot").Invoke(map, new object[] { new Vector2Int(4, 4), before + new Vector3(0f, -5f, 0f), mine });
+        Assert.IsTrue((bool)map.GetType().GetMethod("MoveObjectTo").Invoke(map, new object[] { mine, nearest }));
+        pc.GetType().GetMethod("ShowUndo", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(pc, new object[] { mine, before });
+        yield return new WaitForSecondsRealtime(0.5f);
+        var undo = T("UndoMoveButton").GetProperty("Current").GetValue(null) as Component;
+        Assert.NotNull(undo);
+        Assert.AreEqual("ui_icon_undo", undo.transform.Find("IconRing/Well/Icon").GetComponent<UnityEngine.UI.Image>().sprite.name, "Tiny Swords geri oku");
+        var rim = (RectTransform)undo.transform;
+        var ring = (RectTransform)undo.transform.Find("IconRing");
+        var rc = new Vector3[4]; var ic = new Vector3[4];
+        rim.GetWorldCorners(rc); ring.GetWorldCorners(ic);
+        Assert.GreaterOrEqual(ic[0].x, rc[0].x, "ikon halkası hapın içinde (sol)");
+        Assert.GreaterOrEqual(ic[0].y, rc[0].y - 0.5f, "ikon halkası hapın içinde (alt)");
+        Assert.LessOrEqual(ic[2].y, rc[2].y + 0.5f, "ikon halkası hapın içinde (üst)");
+        CardWorkshopTests.CaptureScreen("S5_undo", "session4");
+    }
+
     /// <summary>Açık arazideki her ağaç/çalı/kaya/kütüğe dokunmak kaldırma kartını açar; Ana Üs veya kahraman penceresi açılmaz.</summary>
     [UnityTest]
     public IEnumerator EveryOpenLandNatureTapOpensClearPromptNotBuildingOrHero()

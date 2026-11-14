@@ -391,7 +391,7 @@ public class Session3Tests
         var undo = T("UndoMoveButton").GetProperty("Current").GetValue(null) as Component;
         Assert.NotNull(undo, "GERİ AL düğmesi");
         Assert.NotNull(undo.transform.Find("IconRing/Well/Icon"), "ikonlu");
-        Assert.NotNull(undo.transform.Find("TimerTrack/Fill"), "süre çizgisi");
+        Assert.NotNull(undo.transform.Find("IconRing/Timer"), "süre halkası");
         yield return CaptureBase("S2_5_base_undo");
         undo.GetType().GetMethod("Press").Invoke(undo, null);
         yield return null;

@@ -420,3 +420,17 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   kahraman → binalar ve diğerleri.
 - Kahramanın dokunma alanı gövdesi kadar: karenin ~%40×%55’i, en az 0,8×1,1 birim (`HeroTapRect`).
 - Test: `Session4Tests.EveryOpenLandNatureTapOpensClearPromptNotBuildingOrHero` (biri kale kenarına, biri kahramanın yanına taşınmış 8 öğe).
+
+## D61 — Kaldırma kartı, nesne üstü ✓/✗ onayı, GERİ AL (14 Kasım, kullanıcı ekran görüntüleri)
+- **Kaldırma kartı:** bina pencereleriyle aynı Tiny Swords kâğıt + kurdele başlık. Solda nesnenin kendi görseli, sağda açıklama ve
+  simgeli bedel/süre satırı (yetmezse kırmızı). Altta Tiny Swords kırmızı KALDIR ve mavi VAZGEÇ. Bedel artık düğme metninde değil
+  ("KALDIR (15 ALTIN)" iki satıra kırılıyordu). Ağaç/kaya ve doğa nesneleri tek ortak kartı kullanır (`BuildRemoveCard`).
+- **Yerleştirme onayı:** alt bardaki YERLEŞTİR/İPTAL çubuğu kalktı. Nesnenin hemen üstünde yüzen iki yuvarlak düğme: ✓ ve ✗
+  (`WorldConfirmButtons`; altın halkalı koyu yüz, radyal menüyle aynı aile). Üstlerindeki küçük hap bedeli (altın simgesi + sayı)
+  ya da konamama nedenini kırmızı gösterir. Hayalet sürüklendikçe izler, ekrandan taşmaz. Ana Üs binası, Ana Üs dekoru ve Ada aynı bileşeni kullanır.
+- **Simgeler:** ✗ = Tiny Swords Icon_09 (`ui_icon_cross`). Pakette ✓ yok: `ui_icon_check` aynı piksel stilinde (koyu kontur, alt gölge,
+  Icon_07 yeşil paleti) `Tools/campaign_art/check_icon.py` ile üretildi; el çizimi sürümü ART_NEEDS’te.
+- **GERİ AL:** döndürülmüş yeşil "oynat" oku yerine Tiny Swords turuncu geri oku (Icon_08, `ui_icon_undo`). Simge halkası artık hapın
+  içinde. Alttan taşan süre çizgisi yerine simgenin çevresinde boşalan altın halka var. Hap gölgeli, etiket tek satır. Dekor taşıma da
+  aynı ortak düğmeyi kullanır (eskiden düz yazılı düğmeydi).
+- Eskimiş test düzeltildi: `ExpansionFeatureTests.DecorCatalogGridAndTabs` (4. oturumdan beri 32 dekor varlığı, ağaç 1×1, menüde emekli olmayanlar).

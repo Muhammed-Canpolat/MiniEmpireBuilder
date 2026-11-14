@@ -24,6 +24,7 @@ public sealed class DecorPlacementController : MonoBehaviour
     private GameObject moveGrid;
     private GameObject confirmBar;
     private Button confirmButton;
+    private WorldConfirmButtons confirmButtons;
     private GameObject actionPanel;
     private static Sprite square;
     private readonly GhostPointerDrag drag = new GhostPointerDrag();
@@ -224,6 +225,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         cells.Clear();
         if (confirmBar != null) Destroy(confirmBar);
         confirmBar = null;
+        confirmButtons = null;
         BaseWorldUI.Instance?.ToggleBottomButtons(true);
     }
 
@@ -243,7 +245,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         foreach (var tile in cells)
             tile.color = valid ? new Color32(0x4F, 0xCF, 0x74, 0x59) :
                 new Color32(0xC2, 0x45, 0x2D, 0x59);
-        if (confirmButton != null) confirmButton.interactable = valid;
+        RefreshConfirmState();
         if (moveArmed && (Touchscreen.current != null &&
             Touchscreen.current.primaryTouch.press.wasReleasedThisFrame ||
             Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame))
@@ -292,27 +294,17 @@ public sealed class DecorPlacementController : MonoBehaviour
 
     private void ShowUndo(DecorInstance moved, Vector2Int previous)
     {
-        if (undoToast != null) Destroy(undoToast);
+        // Bina taşımasıyla aynı ortak GERİ AL düğmesi (eskiden düz yazılı düğmeydi)
         var safe = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
-        if (safe == null) return;
-        undoToast = new GameObject("DecorUndoToast", typeof(RectTransform), typeof(Image));
-        undoToast.transform.SetParent(safe, false);
-        var rect = undoToast.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 106f);
-        rect.sizeDelta = new Vector2(150f, 48f);
-        undoToast.GetComponent<Image>().color = Color.clear;
-        var toast = undoToast;
-        MakeButton(rect, L.T("GERİ AL", "UNDO"), Vector2.zero, () =>
+        var button = UndoMoveButton.Show(safe, () =>
         {
             if (moved != null && CanPlace(moved.Data, previous, moved))
             {
                 moved.SetCell(previous);
                 Save();
             }
-            if (toast != null) Destroy(toast);
         });
-        Destroy(toast, 3f);
+        undoToast = button != null ? button.gameObject : null;
     }
 
     public void Delete(DecorInstance item)
@@ -450,24 +442,30 @@ public sealed class DecorPlacementController : MonoBehaviour
 
     private void CreateConfirmBar()
     {
+        // Alt bar çubuğu yerine dekorun hemen üstünde ✓ / ✗ (simgeler sprite: fontta ✓/✗ glifi yok)
         var parent = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
-        if (parent == null) return;
-        confirmBar = new GameObject("DecorConfirmBar", typeof(RectTransform), typeof(Image));
-        confirmBar.transform.SetParent(parent, false);
-        var rect = confirmBar.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.15f, 0f);
-        rect.anchorMax = new Vector2(0.85f, 0f);
-        rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 14f);
-        rect.sizeDelta = new Vector2(0f, 66f);
-        var barImage = confirmBar.GetComponent<Image>();
-        barImage.sprite = ReferenceUiVisuals.ToastSprite();
-        barImage.type = Image.Type.Sliced;
-        barImage.color = Color.white;
-        // ✓/✗ simgeleri fontta yoktu ve boş kare görünüyordu: yazılı düğmeler.
-        string confirmLabel = moving != null ? L.T("YERLEŞTİR", "PLACE") : L.T("YERLEŞTİR · ", "PLACE · ") + selected.cost;
-        confirmButton = MakeButton(rect, confirmLabel, new Vector2(-62f, 0f), Confirm, true, 140f);
-        MakeButton(rect, L.T("İPTAL", "CANCEL"), new Vector2(80f, 0f), Cancel, false, 96f);
+        confirmButtons = WorldConfirmButtons.Create(parent, () =>
+        {
+            if (ghostRenderer == null) return ghost != null ? ghost.transform.position : Vector3.zero;
+            var b = ghostRenderer.bounds;
+            return new Vector3(b.center.x, b.max.y, 0f);
+        }, Camera.main, Confirm, Cancel, "DecorConfirm");
+        if (confirmButtons == null) return;
+        confirmBar = confirmButtons.gameObject;
+        confirmButton = confirmButtons.Confirm;
+        RefreshConfirmState();
+    }
+
+    private void RefreshConfirmState()
+    {
+        if (confirmButtons == null || selected == null) return;
+        bool fits = CanPlace(selected, currentCell, moving);
+        bool gold = moving != null || (GameManager.Instance != null && GameManager.Instance.Gold >= selected.cost);
+        var coin = CampaignSceneSetup.Art("ui_icon_coin");
+        if (!fits) confirmButtons.SetState(false, L.T("Buraya sığmıyor", "Doesn't fit here"), null, true);
+        else if (!gold) confirmButtons.SetState(false, L.T("Altın yetersiz", "Not enough gold"), coin, true);
+        else if (moving == null) confirmButtons.SetState(true, NumberFormat.Short(selected.cost, 100000), coin);
+        else confirmButtons.SetState(true, null);
     }
 
     /// <summary>Ortak düğme görünümü (kabartmalı kenar, oyunun başlık fontu).</summary>

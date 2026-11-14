@@ -26,12 +26,12 @@ public class ExpansionFeatureTests
         for (int i = 0; i < 20; i++) yield return null;
         yield return new WaitForSecondsRealtime(0.5f);
         var decor = Resources.LoadAll("Decor", RuntimeType("DecorData"));
-        Assert.AreEqual(17, decor.Length); // 8 eski kimlik + 9 yeni köy/doğa dekoru
+        Assert.AreEqual(32, decor.Length); // 8 eski kimlik + 9 köy/doğa + 15 Tiny Swords (4. oturum; emekliler kayıt uyumu için durur)
         var fountain = decor.Single(item => (string)Value(item, "id") == "fountain");
         Assert.AreEqual(80, Value(fountain, "cost"));
         Assert.AreEqual(3, Value(fountain, "unlockMainBaseLevel"));
-        Assert.AreEqual(new Vector2Int(3, 3), Value(
-            decor.Single(item => (string)Value(item, "id") == "tree"), "footprint"));
+        Assert.AreEqual(new Vector2Int(1, 1), Value(
+            decor.Single(item => (string)Value(item, "id") == "tree"), "footprint"));   // 4. oturum (2.1): küçük dekorlar 1×1
         Assert.IsTrue(decor.All(item => Value(item, "sprite") != null));
         var placement = Object.FindFirstObjectByType(RuntimeType("DecorPlacementController"));
         Assert.NotNull(placement);
@@ -78,7 +78,8 @@ public class ExpansionFeatureTests
         Assert.NotNull(tab);
         tab.GetComponent<Button>().onClick.Invoke();
         Assert.IsTrue(tab.transform.Find("GoldUnderline").gameObject.activeSelf);
-        Assert.AreEqual(17, GameObject.Find("BuildMenuPanel").GetComponentsInChildren<Button>()
+        int catalog = ((Array)RuntimeType("DecorPlacementController").GetProperty("Catalog").GetValue(null)).Length;   // emekliler menüde yok
+        Assert.AreEqual(catalog, GameObject.Find("BuildMenuPanel").GetComponentsInChildren<Button>()
             .Count(button => button.name.StartsWith("Decor_")));
         yield return new WaitForSecondsRealtime(0.35f);
         Capture("expansion-decor-menu.png");

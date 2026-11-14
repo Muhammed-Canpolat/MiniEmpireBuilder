@@ -113,8 +113,7 @@ public sealed class IslandPlacementController : MonoBehaviour
     private SpriteRenderer ghostRenderer;
     private readonly List<SpriteRenderer> footprintCells = new List<SpriteRenderer>();
     private Button confirmButton;
-    private TextMeshProUGUI confirmText;
-    private string lastLabel;
+    private WorldConfirmButtons confirmButtons;
     private readonly GhostPointerDrag drag = new GhostPointerDrag();
 
     private static readonly Color Green = new Color(0.25f, 1f, 0.3f), Red = new Color(1f, 0.12f, 0.18f);
@@ -163,7 +162,7 @@ public sealed class IslandPlacementController : MonoBehaviour
         if (bar != null) Destroy(bar);
         ghost = overlayRoot = bar = null;
         footprintCells.Clear();
-        confirmButton = null; confirmText = null; lastLabel = null;
+        confirmButton = null; confirmButtons = null;
         drag.Reset();
         host = null;
         uiMode?.Invoke(false);
@@ -267,23 +266,16 @@ public sealed class IslandPlacementController : MonoBehaviour
     private void CreateBar()
     {
         if (safe == null) return;
-        bar = new GameObject("IslandPlacementBar", typeof(RectTransform), typeof(Image));
-        bar.transform.SetParent(safe, false);
-        var rect = bar.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.08f, 0f);
-        rect.anchorMax = new Vector2(0.92f, 0f);
-        rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 22f);
-        rect.sizeDelta = new Vector2(0f, 66f);
-        var image = bar.GetComponent<Image>();
-        image.sprite = ReferenceUiVisuals.ToastSprite();
-        image.type = Image.Type.Sliced;
-        image.color = Color.white;
-        confirmButton = DecorPlacementController.MakeButton(rect, L.T("YERLEŞTİR", "PLACE"), new Vector2(-70f, 0f), () => Confirm(), true, 190f);
-        confirmText = confirmButton.GetComponentInChildren<TextMeshProUGUI>();
-        confirmText.enableAutoSizing = true;
-        confirmText.fontSizeMax = 14f;
-        DecorPlacementController.MakeButton(rect, L.T("İPTAL", "CANCEL"), new Vector2(130f, 0f), Cancel, false, 96f);
+        // Alt çubuk yerine binanın hemen üstünde ✓ / ✗ (Ana Üs ile ortak WorldConfirmButtons)
+        confirmButtons = WorldConfirmButtons.Create(safe, () =>
+        {
+            if (ghostRenderer == null) return ghost != null ? ghost.transform.position : Vector3.zero;
+            var b = ghostRenderer.bounds;
+            return new Vector3(b.center.x, b.max.y, 0f);
+        }, cam, () => Confirm(), Cancel, "IslandPlacementConfirm");
+        if (confirmButtons == null) return;
+        bar = confirmButtons.gameObject;
+        confirmButton = confirmButtons.Confirm;
     }
 
     // ==================== GÜNCELLEME ====================
@@ -326,22 +318,16 @@ public sealed class IslandPlacementController : MonoBehaviour
 
     private void UpdateConfirm()
     {
-        if (confirmButton == null) return;
+        if (confirmButtons == null) return;
         bool affordable = host.CanAfford(out string affordReason);
-        string label;
-        if (!Valid) label = InvalidReason;
-        else if (!affordable) label = affordReason;
+        if (!Valid) { confirmButtons.SetState(false, InvalidReason, null, true); return; }
+        if (!affordable) { confirmButtons.SetState(false, affordReason, null, true); return; }
+        var cost = host.Cost;
+        if (host.MovingId != null) confirmButtons.SetState(true, null);
+        else if (host.ShortfallGems > 0)
+            confirmButtons.SetState(true, L.T($"Eksik: {host.ShortfallGems} elmas", $"Top up: {host.ShortfallGems} gems"), GemIcon.Sprite);
         else
-        {
-            var cost = host.Cost;
-            if (host.MovingId != null) label = L.T("YERLEŞTİR", "PLACE");
-            else if (host.ShortfallGems > 0) label = L.T($"TAMAMLA · {host.ShortfallGems} elmas", $"TOP UP · {host.ShortfallGems} gems");
-            else label = L.T($"YERLEŞTİR · {cost.wood} Odun" + (cost.meat > 0 ? $" {cost.meat} Et" : ""),
-                $"PLACE · {cost.wood} Wood" + (cost.meat > 0 ? $" {cost.meat} Meat" : ""));
-        }
-        confirmButton.interactable = Valid && affordable;
-        var face = confirmButton.GetComponent<Image>();
-        if (face != null) face.color = Valid && affordable ? Color.white : new Color(0.62f, 0.5f, 0.5f, 0.95f);
-        if (confirmText != null && label != lastLabel) { lastLabel = label; confirmText.text = label; }
+            confirmButtons.SetState(true, L.T($"{cost.wood} Odun" + (cost.meat > 0 ? $" · {cost.meat} Et" : ""),
+                $"{cost.wood} Wood" + (cost.meat > 0 ? $" · {cost.meat} Meat" : "")));
     }
 }

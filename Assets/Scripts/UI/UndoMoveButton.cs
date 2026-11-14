@@ -5,9 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 3. oturum (2.5): taşımadan sonra çıkan "GERİ AL" düğmesi — Ana Üs ve Ada aynı bileşeni kullanır. Oyunun stil ailesinde:
-/// altın kenarlı koyu hap, solda altın halkalı yuvarlak ikon (geri oku), sağda büyük harf etiket, altta kalan süreyi gösteren
-/// altın dolum çizgisi. Süre (varsayılan 4 sn) bitince ya da dokununca kapanır. Eski düz koyu dikdörtgenin yerini alır.
+/// Taşımadan sonra çıkan "GERİ AL" düğmesi — Ana Üs binası, Ana Üs dekoru ve Ada aynı bileşeni kullanır. Altın kenarlı koyu hap
+/// (alt gölgeli); solda Tiny Swords turuncu geri oku, çevresinde kalan süreyle boşalan altın halka; sağda etiket. Süre (varsayılan 4 sn)
+/// bitince ya da dokununca kapanır. (Eski hâl: döndürülmüş yeşil oynat oku, hapın dışına taşan halka, alttan taşan süre çizgisi.)
 /// </summary>
 public sealed class UndoMoveButton : MonoBehaviour
 {
@@ -25,42 +25,52 @@ public sealed class UndoMoveButton : MonoBehaviour
     {
         if (Current != null) Destroy(Current.gameObject);
         if (safe == null) return null;
+        // Hap: alt gölge + altın kenar + koyu yüz; içinde solda süre halkalı ikon yuvası, sağda etiket (taşma yok)
+        const float width = 188f, height = 58f;
         var rim = ReferenceUiVisuals.Image(safe, "MoveUndoToast", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-            new Vector2(-82f, 214f), new Vector2(82f, 260f), ReferenceUiVisuals.Gold);
+            new Vector2(-width * 0.5f, 214f), new Vector2(width * 0.5f, 214f + height), ReferenceUiVisuals.Gold);
         rim.sprite = ReferenceUiVisuals.SolidPillSprite();
         rim.type = Image.Type.Sliced;
         rim.raycastTarget = true;
-        var face = ReferenceUiVisuals.Image(rim.transform, "Face", Vector2.zero, Vector2.one, new Vector2(2.5f, 2.5f), new Vector2(-2.5f, -2.5f),
+        var shadow = ReferenceUiVisuals.Image(rim.transform, "Shadow", Vector2.zero, Vector2.one, new Vector2(2f, -5f), new Vector2(-2f, -3f),
+            new Color(0f, 0f, 0f, 0.35f));
+        shadow.sprite = ReferenceUiVisuals.SolidPillSprite();
+        shadow.type = Image.Type.Sliced;
+        shadow.raycastTarget = false;
+        shadow.transform.SetAsFirstSibling();
+        var face = ReferenceUiVisuals.Image(rim.transform, "Face", Vector2.zero, Vector2.one, new Vector2(3f, 3f), new Vector2(-3f, -3f),
             ReferenceUiVisuals.Hex(0x2A1A0E));
         face.sprite = ReferenceUiVisuals.SolidPillSprite();
         face.type = Image.Type.Sliced;
         face.raycastTarget = false;
-        // Sol: altın halkalı yuvarlak ikon yuvası
-        var ring = ReferenceUiVisuals.Image(rim.transform, "IconRing", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-            new Vector2(-6f, -25f), new Vector2(44f, 25f), ReferenceUiVisuals.Gold);
-        ring.sprite = BaseMapManager.MakeCircleSprite(Color.white);
-        ring.raycastTarget = false;
-        var well = ReferenceUiVisuals.Image(ring.transform, "Well", Vector2.zero, Vector2.one, new Vector2(3f, 3f), new Vector2(-3f, -3f),
+        // Sol: ikon yuvası — sönük halka üstünde kalan süreyi gösteren dolan altın halka (Radial360)
+        const float ring = 46f;
+        var iconRing = ReferenceUiVisuals.Image(rim.transform, "IconRing", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(6f, -ring * 0.5f), new Vector2(6f + ring, ring * 0.5f), new Color(0f, 0f, 0f, 0.5f));
+        iconRing.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+        iconRing.raycastTarget = false;
+        var fill = ReferenceUiVisuals.Image(iconRing.transform, "Timer", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
+        fill.sprite = iconRing.sprite;
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Radial360;
+        fill.fillOrigin = (int)Image.Origin360.Top;
+        fill.fillClockwise = false;
+        fill.raycastTarget = false;
+        var well = ReferenceUiVisuals.Image(iconRing.transform, "Well", Vector2.zero, Vector2.one, new Vector2(4f, 4f), new Vector2(-4f, -4f),
             ReferenceUiVisuals.Hex(0x3B2A16));
-        well.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+        well.sprite = iconRing.sprite;
         well.raycastTarget = false;
-        var icon = ReferenceUiVisuals.Image(well.transform, "Icon", Vector2.zero, Vector2.one, new Vector2(9f, 9f), new Vector2(-9f, -9f), Color.white);
-        icon.sprite = CampaignSceneSetup.Art("ui_icon_play");   // oynat oku 180° döner: "geri" (özel geri al simgesi ART_NEEDS'te)
+        var icon = ReferenceUiVisuals.Image(well.transform, "Icon", Vector2.zero, Vector2.one, new Vector2(5f, 6f), new Vector2(-5f, -4f), Color.white);
+        icon.sprite = CampaignSceneSetup.Art("ui_icon_undo");   // Tiny Swords Icon_08: turuncu geri oku
         icon.preserveAspect = true;
         icon.raycastTarget = false;
-        icon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 180f);
-        var label = ReferenceUiVisuals.Text(rim.transform, "Label", L.T("GERİ AL", "UNDO"), 17, ReferenceUiVisuals.Gold,
-            TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(46f, 4f), new Vector2(-10f, -2f), true);
+        var label = ReferenceUiVisuals.Text(rim.transform, "Label", L.T("GERİ AL", "UNDO"), 19, ReferenceUiVisuals.Gold,
+            TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(ring + 12f, 3f), new Vector2(-12f, -1f), true);
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 12f;
+        label.fontSizeMax = 19f;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
         label.raycastTarget = false;
-        // Kalan süre çizgisi
-        var track = ReferenceUiVisuals.Image(rim.transform, "TimerTrack", new Vector2(0f, 0f), new Vector2(1f, 0f),
-            new Vector2(26f, 5f), new Vector2(-14f, 8f), new Color(0f, 0f, 0f, 0.45f));
-        track.raycastTarget = false;
-        var fill = ReferenceUiVisuals.Image(track.transform, "Fill", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
-        fill.sprite = ReferenceUiVisuals.SolidPillSprite();
-        fill.type = Image.Type.Filled;
-        fill.fillMethod = Image.FillMethod.Horizontal;
-        fill.raycastTarget = false;
 
         var button = rim.gameObject.AddComponent<Button>();
         button.targetGraphic = rim;

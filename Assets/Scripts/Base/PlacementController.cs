@@ -31,8 +31,7 @@ public class PlacementController : MonoBehaviour
     private GameObject _undoToast;
     private GameObject _confirmBar;
     private Button _confirmButton;
-    private TextMeshProUGUI _confirmText;
-    private string _confirmLabel;
+    private WorldConfirmButtons _confirmButtons;
     private readonly GhostPointerDrag _drag = new GhostPointerDrag();
 
     private const float GoldMineMaxWorldSize = 2.2f;
@@ -146,7 +145,7 @@ public class PlacementController : MonoBehaviour
         if (_confirmBar != null) Destroy(_confirmBar);
         _ghostObj = _moveGrid = _footprint = _confirmBar = null;
         _confirmButton = null;
-        _confirmText = null;
+        _confirmButtons = null;
         _drag.Reset();
         bool wasPlacing = _isPlacing;
         _isPlacing = false;
@@ -244,20 +243,27 @@ public class PlacementController : MonoBehaviour
 
     private void UpdateConfirmButton()
     {
-        if (_confirmButton == null) return;
-        string label = L.T("YERLEŞTİR", "PLACE");
+        if (_confirmButtons == null) return;
         bool affordable = true;
-        if (_movingObject == null)
-        {
-            affordable = CanAffordNewBuilding(out string reason);
-            label = affordable ? L.T("YERLEŞTİR · ", "PLACE · ") + _buildCost : reason;
-        }
-        _confirmButton.interactable = _valid && affordable;
-        if (_confirmText != null && label != _confirmLabel)
-        {
-            _confirmLabel = label;
-            _confirmText.text = label;
-        }
+        string reason = null;
+        if (_movingObject == null) affordable = CanAffordNewBuilding(out reason);
+        if (!_valid)
+            _confirmButtons.SetState(false, L.T("Buraya sığmıyor", "Doesn't fit here"), null, true);
+        else if (!affordable)
+            _confirmButtons.SetState(false, reason, _movingObject == null && reason == L.T("Altın yetersiz", "Not enough gold")
+                ? CampaignSceneSetup.Art("ui_icon_coin") : null, true);
+        else if (_movingObject == null)
+            _confirmButtons.SetState(true, NumberFormat.Short(_buildCost, 100000), CampaignSceneSetup.Art("ui_icon_coin"));
+        else
+            _confirmButtons.SetState(true, null);
+    }
+
+    /// <summary>Hayaletin üst orta noktası (✓/✗ düğmeleri bunun üstünde durur).</summary>
+    private Vector3 GhostTop()
+    {
+        if (_ghostRenderer == null) return _lastValidWorldPos;
+        var b = _ghostRenderer.bounds;
+        return new Vector3(b.center.x, b.max.y, 0f);
     }
 
     private void OnConfirmClicked()
@@ -386,27 +392,13 @@ public class PlacementController : MonoBehaviour
 
     private void CreateConfirmBar()
     {
+        // Alt bar çubuğu yerine nesnenin hemen üstünde ✓ / ✗ (WorldConfirmButtons)
         var parent = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea");
-        if (parent == null) return;
-        _confirmBar = new GameObject("PlacementConfirmBar", typeof(RectTransform), typeof(Image));
-        _confirmBar.transform.SetParent(parent, false);
-        var rect = _confirmBar.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.15f, 0f);
-        rect.anchorMax = new Vector2(0.85f, 0f);
-        rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 14f);
-        rect.sizeDelta = new Vector2(0f, 66f);
-        var barImage = _confirmBar.GetComponent<Image>();
-        barImage.sprite = ReferenceUiVisuals.ToastSprite();
-        barImage.type = Image.Type.Sliced;
-        barImage.color = Color.white;
-        _confirmLabel = _movingObject != null ? L.T("YERLEŞTİR", "PLACE")
-            : L.T("YERLEŞTİR · ", "PLACE · ") + _buildCost;
-        _confirmButton = DecorPlacementController.MakeButton(rect, _confirmLabel, new Vector2(-62f, 0f),
-            OnConfirmClicked, true, 140f);
-        _confirmText = _confirmButton.GetComponentInChildren<TextMeshProUGUI>();
-        DecorPlacementController.MakeButton(rect, L.T("İPTAL", "CANCEL"), new Vector2(80f, 0f),
-            CancelPlacement, false, 96f);
+        _confirmButtons = WorldConfirmButtons.Create(parent, GhostTop, Camera.main, OnConfirmClicked, CancelPlacement);
+        if (_confirmButtons == null) return;
+        _confirmBar = _confirmButtons.gameObject;
+        _confirmButton = _confirmButtons.Confirm;
+        UpdateConfirmButton();
     }
 
     /// <summary>3. oturum (2.5): ortak süslü GERİ AL düğmesi (Ada da aynısını kullanır).</summary>
