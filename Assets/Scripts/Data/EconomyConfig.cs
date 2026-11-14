@@ -154,7 +154,8 @@ public sealed class EconomyConfig : ScriptableObject
         c.mainBaseCosts = new[] { 0, 0, 150, 250, 400, 600, 850, 1250, 1800, 2500, 3500, 4800, 6400, 8400, 10800, 13800 };
         c.mineGpsBase = 0.6f;
         c.mineGpsPerLevel = 0.2f;
-        c.apprenticeMineBonus = new[] { 5, 8, 10, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 };
+        // 6. oturum (2.1): çırak maden katkısı 1. seviyede %1, seviye başına +%1 (15. seviye %15). Eski V2: 5…25.
+        c.apprenticeMineBonus = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         c.heroCostBase = 75f;
         c.heroCostGrowth = 1.30f;
         c.apprenticeCostBase = 100f;

@@ -80,8 +80,8 @@ public class EconomyProfileTests
         Assert.AreEqual(850, Field(v2, "builder2GoldCost"), "2. inşaatçı Ana Üs tablosundan ayrık, 850");
         Assert.AreEqual(0.6f, (float)Call(v2, "MineGps", 1), 0.0001f);
         Assert.AreEqual(2.4f, (float)Call(v2, "MineGps", 10), 0.0001f);
-        Assert.AreEqual(5, Call(v2, "ApprenticeMineBonusPercent", 1));
-        Assert.AreEqual(25, Call(v2, "ApprenticeMineBonusPercent", 15));
+        Assert.AreEqual(1, Call(v2, "ApprenticeMineBonusPercent", 1));
+        Assert.AreEqual(15, Call(v2, "ApprenticeMineBonusPercent", 15));
         Assert.AreEqual(40, Call(v2, "VictoryRewardFormula", 1, 1));
         Assert.AreEqual(40 + 150 + 48, Call(v2, "VictoryRewardFormula", 6, 5));
         Assert.AreEqual(0.75f, (float)Field(v2, "killGoldTransferRate"), 0.0001f);

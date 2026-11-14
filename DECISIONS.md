@@ -547,3 +547,17 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   cihazda odak kaybı → savaş sürüyorsa duraklat, dönüşte Tiny Swords kâğıt pencere "DURAKLATILDI · DEVAM". DEVAM'a basılmadan oyun sürmez; ayarlar da
   açıksa ikisi de kapanmalı. Sahne kapanınca tüm nedenler temizlenir.
 - Test `Session6Tests.S1_5`; görüntü `Docs/playtest/session6/S1_5_paused_resume.png`.
+
+## D73 — Çırak maden katkısı = seviye kadar yüzde (6. oturum 2.1)
+- Economy_V2 (asset + `EconomyConfig.CreateV2`): çırak Sv.L → maden üretimine +%L (1…15). Eski V2: 5,8,10,13,15,16…25. LEGACY değişmedi.
+- Kayıtta yalnız `apprenticeLevel` var, katkı her an formülden hesaplanır → migration yok; mevcut oyuncu seviyesini korur, etkisi yeni formülle.
+- Öncesi/sonrası gelir: ECONOMY.md §11 (6. oturum).
+
+## D74 — Kahraman ve Çırak yükseltmesi süreli (6. oturum 2.2)
+- Anında yükseltme kalktı: inşaatçı görevi ("upgrade", slot `__hero` / `__apprentice`), süre = binalarla aynı `Progression.UpgradeSecondsTo(hedef)`,
+  elmasla bitirme = aynı `GemEconomy.FinishCost` (≤1 dk 1 elmas), altın eksikse aynı elmasla tamamlama penceresi. Bir inşaatçı tutar (binalarla tutarlı;
+  inşaatçı darboğazı bilinçli). Seviye SÜRE BİTİNCE artar → savaş ve maden süre boyunca tamamlanmış seviyeyi kullanır (D68).
+- Pencere: sonraki seviyenin kazandırdıkları HER ZAMAN "mevcut → sonraki" (yeşil) görünür — eskiden tavana (Ana Üs seviyesi) gelince karşılaştırma
+  gizleniyordu, oyuncunun "görünmüyor" dediği durum buydu. Tavanda düğme "Sv.N için Ana Üs Sv.N" yazar. Süre satırı (kum saati) eklendi.
+  Kahraman sayacı kahramanın başında, çırak görevi inşaatçıyı madene yollar.
+- Eski kayıt: süren görev yok, seviyeler aynen → migration gerekmez.

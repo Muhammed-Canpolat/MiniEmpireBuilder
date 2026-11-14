@@ -746,7 +746,9 @@ public class GameManager : MonoBehaviour
         foreach (var task in finished)
         {
             PlayerData.builderTasks.Remove(task);
-            if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
+            if (task.kind == "upgrade" && task.slotId == HeroTaskSlot) CompleteHeroUpgrade();
+            else if (task.kind == "upgrade" && task.slotId == ApprenticeTaskSlot) CompleteApprenticeUpgrade();
+            else if (task.kind == "upgrade" && Enum.TryParse(task.buildingType, out BuildingType type))
                 ApplyInstanceUpgrade(task.slotId, type);
             else if (task.kind == "build")
             {
@@ -841,23 +843,70 @@ public class GameManager : MonoBehaviour
     public int GetHeroUpgradeCost() => Progression.HeroUpgradeCost(PlayerData?.hero?.level ?? 1);
     public int GetApprenticeMaxLevel() => GetHeroMaxLevel();
 
-    /// <summary>
-    /// Ana Savaşçı seviye yükselt (anında)
-    /// </summary>
-    public bool UpgradeHero()
+    // 6. oturum (2.2): Kahraman ve Çırak yükseltmesi de inşaatçı görevi ("upgrade", aşağıdaki sahte slot kimlikleriyle).
+    // Süre = binalarla aynı eğri (Progression.UpgradeSecondsTo), elmasla bitirme = aynı formül (GemEconomy.FinishCost).
+    // Seviye SÜRE BİTİNCE artar; sürerken savaş ve maden tamamlanmış seviyeyi kullanır (D68 ilkesi).
+    public const string HeroTaskSlot = "__hero";
+    public const string ApprenticeTaskSlot = "__apprentice";
+
+    public BuilderTaskSave HeroUpgradeTask => TaskForSlot(HeroTaskSlot);
+    public BuilderTaskSave ApprenticeUpgradeTask => TaskForSlot(ApprenticeTaskSlot);
+
+    /// <summary>Kahraman (false) / Çırak (true) yükseltmesi neden başlatılamaz?</summary>
+    public UpgradeBlock CanUpgradeCharacter(bool apprentice)
     {
-        if (PlayerData == null) return false;
-        if (PlayerData.hero.level >= GetHeroMaxLevel()) return false;
-        if (!SpendGold(GetHeroUpgradeCost())) return false;
+        if (PlayerData == null) return UpgradeBlock.Missing;
+        if (TaskForSlot(apprentice ? ApprenticeTaskSlot : HeroTaskSlot) != null) return UpgradeBlock.Upgrading;
+        int level = apprentice ? Mathf.Max(1, PlayerData.apprenticeLevel) : PlayerData.hero.level;
+        int cap = apprentice ? GetApprenticeMaxLevel() : GetHeroMaxLevel();
+        if (level >= cap) return UpgradeBlock.MaxLevel;
+        if (IsBuilderBusy) return UpgradeBlock.BuilderBusy;
+        if (Gold < (apprentice ? GetApprenticeUpgradeCost() : GetHeroUpgradeCost())) return UpgradeBlock.NoGold;
+        return UpgradeBlock.None;
+    }
 
-        PlayerData.hero.level++;
-        PlayerData.hero.ApplyLevelStats();
+    /// <summary>Yükseltme süresi (sonraki seviyeye).</summary>
+    public float CharacterUpgradeSeconds(bool apprentice) =>
+        Progression.UpgradeSecondsTo((apprentice ? Mathf.Max(1, PlayerData?.apprenticeLevel ?? 1) : PlayerData?.hero?.level ?? 1) + 1);
 
-        OnHeroLevelUp?.Invoke(PlayerData.hero.level);
-        SaveGame();
-
-        Debug.Log($"[GameManager] Kahraman seviye atladı! Sev. {PlayerData.hero.level}");
+    private bool StartCharacterUpgrade(bool apprentice)
+    {
+        if (CanUpgradeCharacter(apprentice) != UpgradeBlock.None) return false;
+        int level = apprentice ? Mathf.Max(1, PlayerData.apprenticeLevel) : PlayerData.hero.level;
+        if (!SpendGold(apprentice ? GetApprenticeUpgradeCost() : GetHeroUpgradeCost())) return false;
+        Vector3 at = Vector3.zero;
+        if (!apprentice && HeroMovementController.Instance != null) at = HeroMovementController.Instance.transform.position;
+        if (apprentice)
+        {
+            // Çırak madende çalışır: inşaatçı madene yürür.
+            var mine = PlayerData.placedBuildings?.Find(p => p != null && p.buildingType == nameof(BuildingType.GoldMine) && p.hasPosition);
+            if (mine != null) at = new Vector3(mine.x, mine.y, 0f);
+        }
+        string label = (apprentice ? L.T("Çırak", "Apprentice") : L.T("Kahraman", "Hero")) + L.T($" Sev. {level + 1}", $" Lv. {level + 1}");
+        StartBuilderTask("upgrade", label, CharacterUpgradeSeconds(apprentice), at,
+            apprentice ? ApprenticeTaskSlot : HeroTaskSlot, apprentice ? "Apprentice" : "Hero");
+        DailyQuests.Report(QuestKind.StartUpgrade);
         return true;
+    }
+
+    /// <summary>Ana Savaşçı yükseltmesini başlatır (süreli; seviye süre bitince artar).</summary>
+    public bool UpgradeHero() => StartCharacterUpgrade(false);
+
+    private void CompleteHeroUpgrade()
+    {
+        PlayerData.hero.level = Mathf.Min(Progression.MaxLevel, PlayerData.hero.level + 1);
+        PlayerData.hero.ApplyLevelStats();
+        OnHeroLevelUp?.Invoke(PlayerData.hero.level);
+        AudioManager.Instance?.PlaySfx("levelUp");
+        Debug.Log($"[GameManager] Kahraman seviye atladı! Sev. {PlayerData.hero.level}");
+    }
+
+    private void CompleteApprenticeUpgrade()
+    {
+        ApplyOfflineGoldMineProduction();   // önceki üretim eski katkıyla yazılsın
+        PlayerData.apprenticeLevel = Mathf.Min(Progression.MaxLevel, Mathf.Max(1, PlayerData.apprenticeLevel) + 1);
+        OnApprenticeLevelUp?.Invoke(PlayerData.apprenticeLevel);
+        AudioManager.Instance?.PlaySfx("levelUp");
     }
 
     public int GetApprenticeUpgradeCost()
@@ -866,16 +915,8 @@ public class GameManager : MonoBehaviour
         return level >= Progression.MaxLevel ? 0 : Progression.ApprenticeUpgradeCost(level);
     }
 
-    public bool UpgradeApprentice()
-    {
-        if (PlayerData == null || PlayerData.apprenticeLevel >= GetApprenticeMaxLevel()) return false;
-        int cost = GetApprenticeUpgradeCost();
-        if (!SpendGold(cost)) return false;
-        PlayerData.apprenticeLevel++;
-        OnApprenticeLevelUp?.Invoke(PlayerData.apprenticeLevel);
-        SaveGame();
-        return true;
-    }
+    /// <summary>Çırak yükseltmesini başlatır (süreli).</summary>
+    public bool UpgradeApprentice() => StartCharacterUpgrade(true);
 
     // ==================== SAVAŞ YÖNETİMİ ====================
 

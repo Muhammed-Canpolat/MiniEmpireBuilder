@@ -179,11 +179,16 @@ public class BaseWorldUI : MonoBehaviour
         fancyHero.icon.enabled = fancyHero.icon.sprite != null;
         fancyHero.level.text = L.T($"Seviye {level} / {Progression.MaxLevel}", $"Level {level} / {Progression.MaxLevel}")
             + (level >= maxLevel && level < Progression.MaxLevel ? L.T("  · tavan: Ana Üs", "  · cap: Main Base") : "");
+        // 6. oturum (2.2): sonraki seviyenin kazandırdıkları her zaman görünür (tavanda da: kilit notuyla), süre binalarla aynı eğri.
         bool canGrow = level < maxLevel;
-        fancyHero.body.text = canGrow ? FancyInfoPanel.CompareStats(current, next) : current;
+        var task = apprentice ? gm.ApprenticeUpgradeTask : gm.HeroUpgradeTask;
+        fancyHero.body.text = level < Progression.MaxLevel ? FancyInfoPanel.CompareStats(current, next) : current;
+        string duration = Progression.FormatDuration(gm.CharacterUpgradeSeconds(apprentice));
+        bool showCost = canGrow && task == null;
         FancyInfoPanel.SetCost(fancyHero, CampaignSceneSetup.Art("ui_icon_coin"), cost, gm.Gold >= cost, null, 0, true,
-            L.T("Anında", "Instant"), canGrow);
-        fancyHero.timeIcon.gameObject.SetActive(false);
+            duration, showCost);
+        fancyHero.timeIcon.gameObject.SetActive(showCost);
+        GemConfirm.SetGemIcon(fancyHero.primary.transform, task != null);
     }
 
     /// <summary>3. oturum (2.4): bina penceresi ortak süslü bileşen; TAŞI düğmesi ve ikonlu maliyet satırı bu görünümle gelir.</summary>
@@ -383,6 +388,10 @@ public class BaseWorldUI : MonoBehaviour
         }
         if (buildingInfoPanel != null && buildingInfoPanel.activeSelf)
             ShowBuildingInfo(selectedBuilding, selectedSlotId);
+        // 6. oturum (2.2): kahraman/çırak yükseltmesi sürerken geri sayım yenilenir.
+        else if (heroInfoPanel != null && heroInfoPanel.activeSelf && GameManager.Instance != null
+            && (GameManager.Instance.HeroUpgradeTask != null || GameManager.Instance.ApprenticeUpgradeTask != null))
+            ShowCharacterInfo(showingApprentice);
 
         // Altın değişikliğini popup olarak göster
         if (lastKnownGold >= 0 && gold != lastKnownGold)
@@ -565,7 +574,7 @@ public class BaseWorldUI : MonoBehaviour
             if (fancyHero != null && appProgression != null)
             {
                 int cap = GameManager.Instance.GetApprenticeMaxLevel();
-                int nx = Mathf.Min(cap, apprenticeLevel + 1);
+                int nx = Mathf.Min(Progression.MaxLevel, apprenticeLevel + 1);
                 string Lines(int lv) =>
                     L.T("Can: ", "Health: ") + appProgression.Health(hero.weaponType, lv) + "\n" +
                     L.T("Hasar: ", "Damage: ") + appProgression.Damage(hero.weaponType, lv) + "\n" +
@@ -586,13 +595,7 @@ public class BaseWorldUI : MonoBehaviour
                         (next == apprenticeLevel ? "" : $" → +%{progression.MineBonus(next)} ▲");
                 }
             }
-            if (heroUpgradeCostText != null)
-                heroUpgradeCostText.text = apprenticeLevel >= Progression.MaxLevel ? L.T("EN YÜKSEK SEVİYE", "MAX LEVEL")
-                    : apprenticeLevel >= GameManager.Instance.GetApprenticeMaxLevel()
-                        ? L.T("Ana Üs seviyesini yükselt!", "Upgrade your Main Base!") : L.T("YÜKSELT · ", "UPGRADE · ") + apprenticeCost;
-            if (heroUpgradeButton != null)
-                heroUpgradeButton.interactable = apprenticeLevel < GameManager.Instance.GetApprenticeMaxLevel() &&
-                    GameManager.Instance.Gold >= apprenticeCost;
+            FillCharacterAction(true, apprenticeLevel, apprenticeCost);
             return;
         }
 
@@ -605,7 +608,7 @@ public class BaseWorldUI : MonoBehaviour
         if (fancyHero != null)
         {
             var nextHero = new HeroData { weaponType = hero.weaponType,
-                level = Mathf.Min(hero.level + 1, GameManager.Instance.GetHeroMaxLevel()) };
+                level = Mathf.Min(hero.level + 1, Progression.MaxLevel) };
             nextHero.ApplyLevelStats();
             string Lines(HeroData h) =>
                 L.T("Can: ", "Health: ") + h.maxHealth.ToString("F0") + "\n" +
@@ -631,23 +634,37 @@ public class BaseWorldUI : MonoBehaviour
                                  L.T($"Saldırı Hızı: {hero.attackSpeed:F1}/sn", $"Attack Speed: {hero.attackSpeed:F1}/s");
         }
 
-        int maxHeroLvl = GameManager.Instance.GetHeroMaxLevel();
-        int cost = GameManager.Instance.GetHeroUpgradeCost();
+        FillCharacterAction(false, hero.level, GameManager.Instance.GetHeroUpgradeCost());
+    }
+
+    /// <summary>
+    /// 6. oturum (2.2): Kahraman/Çırak düğmesi binalarla aynı kural: süren iş → elmasla bitir + kalan süre; inşaatçı meşgul; Ana Üs kilidi;
+    /// altın eksikse elmasla tamamlama; yoksa YÜKSELT · bedel · süre.
+    /// </summary>
+    private void FillCharacterAction(bool apprentice, int level, int cost)
+    {
+        var gm = GameManager.Instance;
+        var task = apprentice ? gm.ApprenticeUpgradeTask : gm.HeroUpgradeTask;
+        var block = gm.CanUpgradeCharacter(apprentice);
+        string duration = Progression.FormatDuration(gm.CharacterUpgradeSeconds(apprentice));
         if (heroUpgradeCostText != null)
         {
-            if (hero.level >= Progression.MaxLevel)
+            if (task != null)
+                heroUpgradeCostText.text = GemEconomy.FinishLabel(GameManager.FinishNowCost(task)) + " · "
+                    + Progression.FormatDuration(GameManager.SecondsRemaining(task));
+            else if (level >= Progression.MaxLevel)
                 heroUpgradeCostText.text = L.T("EN YÜKSEK SEVİYE", "MAX LEVEL");
-            else if (hero.level >= maxHeroLvl)
-                heroUpgradeCostText.text = L.T("Ana Üs seviyesini yükselt!", "Upgrade your Main Base!");
+            else if (block == GameManager.UpgradeBlock.MaxLevel)
+                heroUpgradeCostText.text = L.T($"Sv.{level + 1} için Ana Üs Sv.{level + 1}", $"Lv.{level + 1} needs Main Base Lv.{level + 1}");
+            else if (block == GameManager.UpgradeBlock.BuilderBusy)
+                heroUpgradeCostText.text = L.T("İNŞAATÇI MEŞGUL · ", "BUILDER BUSY · ") + Progression.FormatDuration(gm.BuilderSecondsRemaining);
+            else if (block == GameManager.UpgradeBlock.NoGold)
+                heroUpgradeCostText.text = L.T("YÜKSELT · ", "UPGRADE · ") + $"<color=#C2452D>{cost}</color> · {duration}";
             else
-                heroUpgradeCostText.text = L.T("YÜKSELT · ", "UPGRADE · ") + cost;
+                heroUpgradeCostText.text = L.T("YÜKSELT · ", "UPGRADE · ") + $"{cost} · {duration}";
         }
-
         if (heroUpgradeButton != null)
-        {
-            heroUpgradeButton.interactable = hero.level < maxHeroLvl
-                && GameManager.Instance.Gold >= cost;
-        }
+            heroUpgradeButton.interactable = task != null || block == GameManager.UpgradeBlock.None || block == GameManager.UpgradeBlock.NoGold;
     }
 
     // ==================== BUTON OLAYLARI ====================
@@ -688,13 +705,26 @@ public class BaseWorldUI : MonoBehaviour
 
     private void OnHeroUpgradeClicked()
     {
-        if (showingApprentice)
+        var gm = GameManager.Instance;
+        bool apprentice = showingApprentice;
+        System.Action refresh = () => { if (apprentice) ShowApprenticeInfo(); else ShowHeroInfo(); };
+        var task = apprentice ? gm.ApprenticeUpgradeTask : gm.HeroUpgradeTask;
+        if (task != null) { GemActions.OfferFinish(task, refresh); return; }   // aynı elmas kuralı (≤1 dk = 1 elmas)
+        if (gm.CanUpgradeCharacter(apprentice) == GameManager.UpgradeBlock.NoGold)
         {
-            if (GameManager.Instance.UpgradeApprentice()) ShowApprenticeInfo();
+            int cost = apprentice ? gm.GetApprenticeUpgradeCost() : gm.GetHeroUpgradeCost();
+            GemActions.OfferGoldTopUp(cost, apprentice ? L.T("Çırak yükseltmesi", "Apprentice upgrade") : L.T("Kahraman yükseltmesi", "Hero upgrade"),
+                () => apprentice ? gm.UpgradeApprentice() : gm.UpgradeHero(), () =>
+                {
+                    AudioManager.Instance?.PlaySfx("buildingPlace");
+                    refresh();
+                });
+            return;
         }
-        else if (GameManager.Instance.UpgradeHero())
+        if (apprentice ? gm.UpgradeApprentice() : gm.UpgradeHero())
         {
-            ShowHeroInfo();
+            AudioManager.Instance?.PlaySfx("buildingPlace");
+            refresh();
         }
     }
 

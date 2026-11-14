@@ -362,6 +362,80 @@ public class Session6Tests
             | System.Reflection.BindingFlags.Instance)?.Invoke(battle, null);
     }
 
+    // ==================== 2.1 / 2.2 Çırak katkısı, süreli kahraman/çırak yükseltmesi ====================
+
+    protected void SetMainBase(int level)
+    {
+        foreach (var entry in (IEnumerable)F(save, "buildings"))
+            if (F(entry, "buildingType").ToString() == "MainBase") SetF(entry, "level", level);
+        M(manager, "RebuildBuildingData");
+    }
+
+    [Test]
+    public void S2_1_ApprenticeMineBonusIsLevelPercent()
+    {
+        var v2 = S("Economy", "Load", "Economy_V2");
+        for (int level = 1; level <= 15; level++)
+            Assert.AreEqual(level, (int)M(v2, "ApprenticeMineBonusPercent", level), $"çırak Sv.{level} = %{level}");
+        var code = S("EconomyConfig", "CreateV2");
+        for (int level = 1; level <= 15; level++)
+            Assert.AreEqual(level, (int)M(code, "ApprenticeMineBonusPercent", level), "kod profili asset ile aynı");
+    }
+
+    [UnityTest]
+    public IEnumerator S2_2_HeroAndApprenticeUpgradesAreTimedAndBattleUsesCompletedLevel()
+    {
+        yield return FreshManager();
+        SetMainBase(5);
+        SetF(save, "gold", 100000);
+        SetF(save, "gems", 100);
+        SetF(save, "builderCount", 2);
+        var hero = F(save, "hero");
+        int heroBefore = (int)F(hero, "level");
+        float dmgBefore = (float)F(hero, "damage");
+        Assert.IsTrue((bool)M(manager, "UpgradeHero"), "kahraman yükseltmesi başladı");
+        Assert.AreEqual(heroBefore, (int)F(hero, "level"), "süre bitmeden seviye artmaz (savaş eski seviyeyi kullanır)");
+        Assert.AreEqual(dmgBefore, (float)F(hero, "damage"), 1e-4, "hasar da değişmez");
+        var heroTask = P(manager, "HeroUpgradeTask");
+        Assert.NotNull(heroTask, "inşaatçı görevi");
+        double seconds = (double)S("GameManager", "SecondsRemaining", heroTask);
+        double expected = Convert.ToDouble(S("Progression", "UpgradeSecondsTo", heroBefore + 1));
+        Assert.AreEqual(expected, seconds, 2.0, "süre binalarla aynı eğri");
+        Assert.IsFalse((bool)M(manager, "UpgradeHero"), "sürerken ikinci kez başlatılamaz");
+
+        int appBefore = Math.Max(1, (int)F(save, "apprenticeLevel"));
+        Assert.IsTrue((bool)M(manager, "UpgradeApprentice"));
+        Assert.AreEqual(appBefore, (int)F(save, "apprenticeLevel"), "çırak seviyesi süre bitince artar");
+        var appTask = P(manager, "ApprenticeUpgradeTask");
+        // Elmasla bitirme: aynı formül
+        int gemCost = (int)S("GameManager", "FinishNowCost", appTask);
+        Assert.AreEqual((int)S("GemEconomy", "FinishCost", (double)S("GameManager", "SecondsRemaining", appTask)), gemCost);
+        int gems = (int)P(manager, "Gems");
+        Assert.IsTrue((bool)M(manager, "FinishTaskNow", appTask));
+        Assert.AreEqual(gems - gemCost, (int)P(manager, "Gems"));
+        Assert.AreEqual(appBefore + 1, (int)F(save, "apprenticeLevel"), "elmasla bitince çırak yükseldi");
+
+        SetF(heroTask, "endTicks", DateTime.UtcNow.Ticks - 1);
+        M(manager, "CheckBuilderTask");
+        Assert.AreEqual(heroBefore + 1, (int)F(hero, "level"));
+        Assert.Greater((float)F(hero, "damage"), dmgBefore);
+    }
+
+    [UnityTest]
+    public IEnumerator S2_2_CharacterPanelCapture()
+    {
+        yield return Session4Tests.LoadBaseWith(6, s => { SetF(s, "apprenticeLevel", 4); }, 20000);
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        var ui = SP("BaseWorldUI", "Instance");
+        M(ui, "ShowApprenticeInfo");
+        yield return new WaitForSecondsRealtime(0.5f);
+        CardWorkshopTests.CaptureScreen("S2_2_apprentice_panel", "session6");
+        Assert.IsTrue((bool)M(gm, "UpgradeHero"));
+        M(ui, "ShowHeroInfo");
+        yield return new WaitForSecondsRealtime(0.7f);
+        CardWorkshopTests.CaptureScreen("S2_2_hero_upgrading", "session6");
+    }
+
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================
 
     [UnityTest]
