@@ -78,8 +78,9 @@ public class EconomyProfileTests
         int[] mb = { 0, 0, 150, 250, 400, 600, 850, 1250, 1800, 2500, 3500, 4800, 6400, 8400, 10800, 13800 };
         for (int level = 2; level <= 15; level++) Assert.AreEqual(mb[level], Call(v2, "MainBaseCost", level), "MB " + level);
         Assert.AreEqual(850, Field(v2, "builder2GoldCost"), "2. inşaatçı Ana Üs tablosundan ayrık, 850");
-        Assert.AreEqual(0.6f, (float)Call(v2, "MineGps", 1), 0.0001f);
-        Assert.AreEqual(2.4f, (float)Call(v2, "MineGps", 10), 0.0001f);
+        Assert.AreEqual(600f / 3600f, (float)Call(v2, "MineGps", 1), 0.0001f);   // 6. oturum (2.3): 600 altın/sa
+        Assert.AreEqual(1410f / 3600f, (float)Call(v2, "MineGps", 10), 0.0001f);
+        Assert.AreEqual(2400 + 360 * 9, Call(v2, "MineStorage", 10), "depo = 4 saatlik üretim");
         Assert.AreEqual(1, Call(v2, "ApprenticeMineBonusPercent", 1));
         Assert.AreEqual(15, Call(v2, "ApprenticeMineBonusPercent", 15));
         Assert.AreEqual(40, Call(v2, "VictoryRewardFormula", 1, 1));

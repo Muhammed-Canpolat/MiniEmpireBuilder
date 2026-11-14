@@ -129,8 +129,8 @@ LEGACY = {
     "sinks": None,
 }
 
-V2 = dict(LEGACY, **{
-    "name": "V2",  # 6. oturum: asagidaki "V2_S5" eski hali; V2 = oyundaki guncel Economy_V2
+V2_S5 = dict(LEGACY, **{
+    "name": "V2-5.oturum",  # 6. oturumdan onceki Economy_V2 (karsilastirma icin)
     "mb_costs": [0, 0, 150, 250, 400, 600, 850, 1250, 1800, 2500, 3500, 4800, 6400, 8400, 10800, 13800],
     "mine_gps_base": 0.6, "mine_gps_slope": 0.2,
     "apprentice_mine_bonus": [5, 8, 10, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
@@ -140,6 +140,16 @@ V2 = dict(LEGACY, **{
     "kill_transfer": 0.75,
     "x2_daily_limit": 5,
     "endless_formula": "v2", "endless_cost_k": 1.0,
+})
+
+# 6. oturum (2.1 + 2.3): oyundaki guncel Economy_V2. Maden saatlik uretim 600 + 90(L-1); depo = 4 saatlik uretim
+# (2400 + 360(L-1)); Koylu Evi +%5, seviye basina +%1; cirak katkisi = seviye kadar %.
+V2 = dict(V2_S5, **{
+    "name": "V2",
+    "mine_gps_base": 600 / 3600.0, "mine_gps_slope": 90 / 3600.0,
+    "mine_storage_base": 2400, "mine_storage_slope": 360,
+    "house_bonus_base": 0.05, "house_bonus_slope": 0.01,
+    "apprentice_mine_bonus": list(range(1, 16)),
 })
 
 V2_SINKS = dict(V2, **{
@@ -152,7 +162,7 @@ V2_SINKS = dict(V2, **{
     },
 })
 
-PROFILES = [LEGACY, V2, V2_SINKS]
+PROFILES = [LEGACY, V2_S5, V2, V2_SINKS]
 
 # ==================== OYUNCU ====================
 PLAYER = {

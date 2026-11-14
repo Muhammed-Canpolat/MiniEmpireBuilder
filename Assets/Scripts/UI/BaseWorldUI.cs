@@ -887,8 +887,18 @@ public class BaseWorldUI : MonoBehaviour
                        L.T("Menzil: ", "Range: ") + $"{building.attackRange:F1}";
 
             case BuildingType.GoldMine:
+            {
+                // 6. oturum (2.3): depo görünür; satırlar seviyeye göre (mevcut → sonraki karşılaştırması bunları kullanır).
+                var gmm = GameManager.Instance;
+                int perHour = gmm != null ? gmm.MineGoldPerHourAt(building.level) : Mathf.RoundToInt(Economy.Active.MineGps(building.level) * 3600f);
+                int cap = gmm != null ? gmm.MineCapacityAt(building.level) : Economy.Active.MineStorage(building.level);
+                int stored = gmm != null ? gmm.GoldMineStored : 0;
                 return L.T("Can: ", "Health: ") + $"{building.maxHealth:F0}\n" +
-                       L.T($"Üretim: {Economy.Active.MineGps(building.level):F1} altın/sn", $"Production: {Economy.Active.MineGps(building.level):F1} gold/s");
+                       L.T("Üretim: ", "Production: ") + MineStorageGauge.Thousands(perHour) + L.T(" altın/sa", " gold/h") + "\n" +
+                       L.T("Depo: ", "Storage: ") + MineStorageGauge.Thousands(cap) + "\n" +
+                       L.T("Biriken: ", "Stored: ") + MineStorageGauge.Thousands(stored) + (stored >= cap && cap > 0 ? L.T("  (DOLU, üretim durdu)", "  (FULL, production stopped)") : "") + "\n" +
+                       L.T("Depoyu büyütür: maden seviyesi + Köylü Evi", "Storage grows with: mine level + Cottage");
+            }
 
             case BuildingType.Monastery:
                 int healPct = Mathf.RoundToInt(Progression.MonasteryHealFraction(building.level) * 100f);
@@ -906,9 +916,13 @@ public class BaseWorldUI : MonoBehaviour
                     $"In campaign battles {lancers} blue Lancer(s) guard the Main Base (within {Progression.AllyGuardRadius:0.#} u)\nLancer Health: {Progression.AllyLancerHp(building.level):F0} · Damage: {Progression.AllyLancerDamage(building.level):F0}\nA fallen Lancer returns in {Progression.AllyRespawn:0} s");
 
             case BuildingType.House:
+            {
                 int storagePct = Mathf.RoundToInt(Progression.HouseStorageBonus(building.level) * 100f);
-                return L.T($"Altın madeni deposu +%{storagePct}\nÜretim hızı değişmez; seyrek girenin madeni dolmasın",
-                    $"Gold mine storage +{storagePct}%\nProduction speed is unchanged; helps when you visit rarely");
+                int extra = GameManager.Instance != null ? GameManager.Instance.HouseStorageGoldAt(building.level) : 0;
+                return L.T("Maden deposu: +%", "Mine storage: +") + storagePct + L.T("", "%") + "\n" +
+                       L.T("Ek depo: +", "Extra storage: +") + MineStorageGauge.Thousands(extra) + L.T(" altın", " gold") + "\n" +
+                       L.T("Üretim hızı değişmez; seyrek girenin madeni dolmasın", "Production speed is unchanged; helps when you visit rarely");
+            }
 
             default:
                 return "";

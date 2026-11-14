@@ -561,3 +561,14 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
   gizleniyordu, oyuncunun "görünmüyor" dediği durum buydu. Tavanda düğme "Sv.N için Ana Üs Sv.N" yazar. Süre satırı (kum saati) eklendi.
   Kahraman sayacı kahramanın başında, çırak görevi inşaatçıyı madene yollar.
 - Eski kayıt: süren görev yok, seviyeler aynen → migration gerekmez.
+
+## D75 — Maden deposu görünür ve 4 saatlik (6. oturum 2.3)
+- **Değerler (Economy_V2):** üretim 600 + 90(L−1) altın/sa; depo 2.400 + 360(L−1) (= 4 saatlik üretim); Köylü Evi +%5, seviye başına +%1 (ev başına).
+  Gerekçe ve öncesi/sonrası ECONOMY.md §11 (taşma %85 → %0; 1. gün gelir −%12; Ana Üs 15 ~3,5. gün).
+- **Görünürlük:** madenin üstünde `Base/MineStorageGauge.cs` (dünya tuvali): "1.240 / 3.000" + altın doluluk barı (ortak UiHealthBar); dolunca
+  kırmızı nabızlı "DOLU · 3.000". Maden penceresi: Üretim (altın/sa), Depo, Biriken (+ "DOLU, üretim durdu"), "Depoyu büyütür: maden seviyesi + Köylü Evi";
+  yükseltme karşılaştırması Depo ve Üretim için mevcut → sonraki. Köylü Evi penceresi: depo +% ve "Ek depo: +N altın" (mevcut → sonraki).
+- Tek formül: `GameManager.MineCapacityAt` (oyun = pencere = gösterge). Depo dolunca hem çevrimiçi hem çevrimdışı üretim durur (mevcut kısıt).
+- **Hata düzeltmesi:** çevrimdışı üretim 1 altından az biriktiğinde zaman damgası yine de ileri alınıyordu (kesir kayboluyordu); düşük saatlik
+  üretimde bu kayıp büyüyecekti → damga artık ilerlemez.
+- Eski kayıt: biriken altın korunur (yeni kapasite eskisinden büyük); migration gerekmez.

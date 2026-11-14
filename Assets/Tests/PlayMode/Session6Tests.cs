@@ -364,6 +364,22 @@ public class Session6Tests
 
     // ==================== 2.1 / 2.2 Çırak katkısı, süreli kahraman/çırak yükseltmesi ====================
 
+    /// <summary>Türün kayıt girdisi + kurulu binaları (yoksa slotuyla bir tane) aynı seviyeye.</summary>
+    internal static void SetTypeLevel(object s, string type, int level, string slot = null)
+    {
+        foreach (var entry in (IEnumerable)F(s, "buildings"))
+            if (F(entry, "buildingType").ToString() == type) { SetF(entry, "level", level); SetF(entry, "isUnlocked", true); }
+        bool found = false;
+        foreach (var p in (IList)F(s, "placedBuildings"))
+            if ((string)F(p, "buildingType") == type) { SetF(p, "level", level); found = true; }
+        if (!found && slot != null)
+        {
+            var p = Activator.CreateInstance(T("PlacedBuildingData"));
+            SetF(p, "slotId", slot); SetF(p, "buildingType", type); SetF(p, "level", level);
+            ((IList)F(s, "placedBuildings")).Add(p);
+        }
+    }
+
     protected void SetMainBase(int level)
     {
         foreach (var entry in (IEnumerable)F(save, "buildings"))
@@ -434,6 +450,66 @@ public class Session6Tests
         M(ui, "ShowHeroInfo");
         yield return new WaitForSecondsRealtime(0.7f);
         CardWorkshopTests.CaptureScreen("S2_2_hero_upgrading", "session6");
+    }
+
+    // ==================== 2.3 Maden deposu ====================
+
+    [UnityTest]
+    public IEnumerator S2_3_MineStorageCapacityFillsAndStops()
+    {
+        yield return FreshManager();
+        SetMainBase(6);
+        SetTypeLevel(save, "GoldMine", 5);
+        AddPlaced("House", 3, "house_test");
+        M(manager, "RebuildBuildingData");
+        int cap = (int)M(manager, "GetGoldMineStorageCapacity");
+        Assert.AreEqual(Mathf.RoundToInt((2400 + 360 * 4) * (1f + 0.05f + 0.02f)), cap, "maden Sv5 depo × (1 + Köylü Evi Sv3 %7)");
+        Assert.AreEqual(cap, (int)M(manager, "MineCapacityAt", 5), "pencere ile oyun aynı formül");
+        // 4 saatlik üretim depoyu ancak doldurur (oturumlar arası taşma yok)
+        int perHour = (int)M(manager, "MineGoldPerHourAt", 5);
+        Assert.AreEqual(Mathf.RoundToInt((600 + 90 * 4) * 1.01f), perHour, "üretim 960/sa × çırak Sv1 %1");
+        // Uzun ayrılık: depo dolar, fazlası üretilmez
+        SetF(save, "goldMineStoredGold", 0);
+        SetF(save, "goldMineLastCollectTime", DateTime.UtcNow.AddHours(-10).Ticks);
+        M(manager, "ApplyOfflineGoldMineProduction");
+        Assert.AreEqual(cap, (int)P(manager, "GoldMineStored"), "depo dolunca üretim durur");
+        // Kısa aralık: kesir kaybolmaz (damga ilerlemez)
+        SetF(save, "goldMineStoredGold", 0);
+        long t = DateTime.UtcNow.AddSeconds(-2).Ticks;   // 2 sn × ~0,27/sn < 1 altın
+        SetF(save, "goldMineLastCollectTime", t);
+        M(manager, "ApplyOfflineGoldMineProduction");
+        Assert.AreEqual(t, (long)F(save, "goldMineLastCollectTime"), "1 altından az üretimde zaman damgası korunur");
+    }
+
+    [UnityTest]
+    public IEnumerator S2_3_MineGaugeAndPanelsCapture()
+    {
+        yield return Session4Tests.LoadBaseWith(6, s =>
+        {
+            SetTypeLevel(s, "GoldMine", 5);
+            SetF(s, "goldMineStoredGold", 1240);
+            SetF(s, "goldMineLastCollectTime", DateTime.UtcNow.Ticks);
+        }, 20000);
+        var gauge = Object.FindFirstObjectByType(T("MineStorageGauge")) as Component;
+        Assert.NotNull(gauge, "madenin üstünde depo göstergesi");
+        StringAssert.StartsWith("1.240 / ", (string)P(gauge, "Text"));
+        yield return new WaitForSecondsRealtime(0.3f);
+        File.WriteAllText(Path.Combine(Folder, "S2_3_gauge_pos.txt"), gauge.transform.position + " " + gauge.transform.lossyScale + " active=" + gauge.gameObject.activeInHierarchy);
+        CardWorkshopTests.CaptureScreen("S2_3_mine_gauge", "session6");
+        var ui = SP("BaseWorldUI", "Instance");
+        M(ui, "ShowBuildingInfo", Enum.Parse(T("BuildingType"), "GoldMine"), "mine_1");
+        yield return new WaitForSecondsRealtime(0.6f);
+        CardWorkshopTests.CaptureScreen("S2_3_mine_panel", "session6");
+        // Dolu
+        var gm = T("GameManager").GetProperty("Instance").GetValue(null);
+        int cap = (int)M(gm, "GetGoldMineStorageCapacity");
+        M(gm, "AddGoldToMineStorage", cap, false);
+        yield return null;
+        Assert.IsTrue((bool)P(gauge, "Full"), "depo dolu");
+        StringAssert.Contains("DOLU", (string)P(gauge, "Text"));
+        M(ui, "CloseAllPanels");
+        yield return new WaitForSecondsRealtime(0.4f);
+        CardWorkshopTests.CaptureScreen("S2_3_mine_full", "session6");
     }
 
     // ==================== 1.2 Menzil çemberi kulenin merkezinde, dört yönde eşit ====================

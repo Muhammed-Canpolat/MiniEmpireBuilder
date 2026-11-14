@@ -173,9 +173,9 @@ public class BaseBarracksTests
     public void HouseStorageBonusFormula()
     {
         for (int level = 1; level <= 15; level++)
-            Assert.AreEqual(0.05f + 0.005f * (level - 1), P("HouseStorageBonus", level), 1e-5f);
-        Assert.AreEqual(0.12f, P("HouseStorageBonus", 15), 1e-5f, "L15 %12");
-        Assert.AreEqual(0.24f, 2f * P("HouseStorageBonus", 15), 1e-5f, "iki ev en çok %24");
+            Assert.AreEqual(0.05f + 0.01f * (level - 1), P("HouseStorageBonus", level), 1e-5f);   // 6. oturum (2.3): +%5, seviye başına +%1
+        Assert.AreEqual(0.19f, P("HouseStorageBonus", 15), 1e-5f, "L15 %19");
+        Assert.AreEqual(0.38f, 2f * P("HouseStorageBonus", 15), 1e-5f, "iki ev en çok %38");
     }
 
     // ==================== OYUN İÇİ DAVRANIŞ ====================
@@ -187,14 +187,14 @@ public class BaseBarracksTests
         var gm = Manager;
         int Capacity() => (int)gm.GetType().GetMethod("GetGoldMineStorageCapacity").Invoke(gm, null);
         float Rate() => (float)Field(((System.Collections.IDictionary)Prop(gm, "Buildings"))[BType("GoldMine")], "goldPerSecond");
-        Assert.AreEqual(800, Capacity(), "ev yok: 200 + 4 × 150");
+        Assert.AreEqual(3840, Capacity(), "ev yok: 2400 + 4 × 360 (6. oturum 2.3: depo = 4 saatlik üretim)");
         float rate = Rate();
 
         yield return Setup(9, 5000, ("mine_1", "GoldMine", 5), ("house_1", "House", 10), ("house_2", "House", 4));
         gm = Manager;
         float bonus = P("HouseStorageBonus", 10) + P("HouseStorageBonus", 4);
-        Assert.AreEqual(Mathf.RoundToInt(800f * (1f + bonus)), Capacity(), "iki ev: deposu seviyeye göre büyütür");
-        Assert.Greater(Capacity(), 800);
+        Assert.AreEqual(Mathf.RoundToInt(3840f * (1f + bonus)), Capacity(), "iki ev: deposu seviyeye göre büyütür");
+        Assert.Greater(Capacity(), 3840);
         Assert.AreEqual(rate, Rate(), 1e-5f, "üretim hızı değişmez");
         Assert.AreEqual(bonus, (float)gm.GetType().GetMethod("HouseStorageBonus").Invoke(gm, null), 1e-5f);
     }

@@ -152,8 +152,14 @@ public sealed class EconomyConfig : ScriptableObject
         c.name = "Economy_V2";
         c.profileName = "V2";
         c.mainBaseCosts = new[] { 0, 0, 150, 250, 400, 600, 850, 1250, 1800, 2500, 3500, 4800, 6400, 8400, 10800, 13800 };
-        c.mineGpsBase = 0.6f;
-        c.mineGpsPerLevel = 0.2f;
+        // 6. oturum (2.3): maden "geri dön, topla" yerine depolu pasif gelir. Saatlik üretim 600 + 90(L−1); depo = 4 saatlik üretim
+        // (2400 + 360(L−1)) → oturumlar arası (~3 sa) üretim taşmaz. Köylü Evi +%5, seviye başına +%1. Gerekçe ECONOMY.md §11.
+        c.mineGpsBase = 600f / 3600f;
+        c.mineGpsPerLevel = 90f / 3600f;
+        c.mineStorageBase = 2400;
+        c.mineStoragePerLevel = 360;
+        c.houseStorageBase = 0.05f;
+        c.houseStoragePerLevel = 0.01f;
         // 6. oturum (2.1): çırak maden katkısı 1. seviyede %1, seviye başına +%1 (15. seviye %15). Eski V2: 5…25.
         c.apprenticeMineBonus = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         c.heroCostBase = 75f;

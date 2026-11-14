@@ -72,6 +72,7 @@ public sealed class BaseMineVisual : MonoBehaviour
         sortingOrder = order;
         Rebuild();
         atmosphere = StartCoroutine(MineAtmosphere());
+        MineStorageGauge.Attach(transform);   // 6. oturum (2.3): depo göstergesi + DOLU uyarısı
         if (GameManager.Instance == null) return;
         GameManager.Instance.OnBuildingUpgraded += OnBuildingUpgraded;
         GameManager.Instance.OnGoldMineStoredChanged += OnStorageChanged;

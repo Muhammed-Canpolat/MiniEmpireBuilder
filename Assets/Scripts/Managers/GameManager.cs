@@ -153,7 +153,25 @@ public class GameManager : MonoBehaviour
         if (!mine.isUnlocked || mine.level <= 0)
             return 0;
 
-        return Mathf.RoundToInt(Economy.Active.MineStorage(mine.level) * (1f + HouseStorageBonus()));
+        return MineCapacityAt(mine.level);
+    }
+
+    /// <summary>6. oturum (2.3): madenin verilen seviyedeki depo kapasitesi (kurulu Köylü Evleri dahil). Tek formül: GetGoldMineStorageCapacity ile aynı.</summary>
+    public int MineCapacityAt(int mineLevel) =>
+        Mathf.RoundToInt(Economy.Active.MineStorage(Mathf.Max(1, mineLevel)) * (1f + HouseStorageBonus()));
+
+    /// <summary>Bir Köylü Evi'nin verilen seviyede depoya eklediği altın (madenin bugünkü seviyesiyle).</summary>
+    public int HouseStorageGoldAt(int houseLevel)
+    {
+        int mineLevel = Buildings != null && Buildings.TryGetValue(BuildingType.GoldMine, out var mine) ? Mathf.Max(1, mine.level) : 1;
+        return Mathf.RoundToInt(Economy.Active.MineStorage(mineLevel) * Progression.HouseStorageBonus(houseLevel));
+    }
+
+    /// <summary>Madenin verilen seviyedeki saatlik üretimi (çırak katkısı dahil, geçici takviyeler hariç).</summary>
+    public int MineGoldPerHourAt(int mineLevel)
+    {
+        int app = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;
+        return Mathf.RoundToInt(Economy.Active.MineGps(Mathf.Max(1, mineLevel)) * (1f + Economy.Active.ApprenticeMineBonusPercent(app) / 100f) * 3600f);
     }
 
     /// <summary>Kurulu Köylü Evleri'nin maden deposuna toplam katkısı (Progression.HouseStorageBonus, ev başına seviyeye göre; üretim hızı değişmez).</summary>
@@ -237,6 +255,9 @@ public class GameManager : MonoBehaviour
         long boostEnd = Math.Min(nowTicks, PlayerData.mineBoostUntilTicks);
         double boostedSeconds = Math.Max(0d, new TimeSpan(boostEnd - PlayerData.goldMineLastCollectTime).TotalSeconds);
         int produced = Mathf.FloorToInt((float)((elapsedSeconds + boostedSeconds) * gps));
+        // 6. oturum (2.3): saatlik üretim düşük (≈0,08/sn); 1 altından az birikmişse zaman damgası ilerlemez (kesir kaybolmasın).
+        if (produced <= 0 && GetGoldMineStorageCapacity() > GoldMineStored)
+            return;
         if (produced > 0)
             AddGoldToMineStorage(produced, false);
 
