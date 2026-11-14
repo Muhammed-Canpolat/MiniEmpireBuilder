@@ -1129,19 +1129,54 @@ public class BaseSceneSetup : MonoBehaviour
     /// Kahramanın çarpışma dairesi yürüme için küçük tutulur; dokunma ise görünen gövdeye
     /// (biraz pay ile) ve sarı kamp bayrağına göre algılanır.
     /// </summary>
+    /// <summary>
+    /// Kahramanın dokunma dikdörtgeni: animasyon karesinin tamamı değil gövdesi (Tiny Swords 192 px karede figür ortadaki ~%40×%55),
+    /// en az 0,8×1,1 birim. Eskiden kare sınırı +0,3 paydı (~4×4 birim); çevresindeki ağaç/kayalar dokunulamıyordu.
+    /// </summary>
+    public Rect HeroTapRect()
+    {
+        var sr = _heroObj != null ? _heroObj.GetComponent<SpriteRenderer>() : null;
+        if (sr == null || sr.sprite == null)
+        {
+            Vector2 p = _heroObj != null ? (Vector2)_heroObj.transform.position : Vector2.zero;
+            return new Rect(p.x - 0.4f, p.y - 0.45f, 0.8f, 1.1f);
+        }
+        var b = sr.bounds;
+        Vector2 size = new Vector2(Mathf.Max(0.8f, b.size.x * 0.4f), Mathf.Max(1.1f, b.size.y * 0.55f));
+        Vector2 center = (Vector2)b.center + new Vector2(0f, -b.size.y * 0.04f);
+        return new Rect(center - size * 0.5f, size);
+    }
+
+    /// <summary>Dokunulan noktadaki küçük hedef (dekor, kilitsiz arazideki ağaç/çalı/kaya/kütük, harita ağacı/kayası); birden çoksa merkezi en yakın.</summary>
+    private bool TrySmallTargetTap(Vector2 point)
+    {
+        Collider2D best = null;
+        float bestDistance = float.MaxValue;
+        foreach (var c in Physics2D.OverlapPointAll(point))
+        {
+            bool small = c.GetComponentInParent<DecorInstance>() != null || c.GetComponent<NatureObstacle>() != null;
+            if (!small && BaseMapManager.Instance != null)
+            {
+                var obj = BaseMapManager.Instance.GetMapObject(c.gameObject);
+                small = obj != null && (obj.objectType == MapObjectType.Tree || obj.objectType == MapObjectType.Rock);
+            }
+            if (!small) continue;
+            float d = ((Vector2)c.bounds.center - point).sqrMagnitude;
+            if (d < bestDistance) { bestDistance = d; best = c; }
+        }
+        if (best == null) return false;
+        var decor = best.GetComponentInParent<DecorInstance>();
+        if (decor != null) { DecorPlacementController.Instance?.ShowActions(decor); return true; }
+        var nature = best.GetComponent<NatureObstacle>();
+        if (nature != null) { ShowNaturePrompt(nature); return true; }
+        ShowRemovePrompt(BaseMapManager.Instance.GetMapObject(best.gameObject));
+        return true;
+    }
+
     private bool IsHeroTap(Vector3 worldPos)
     {
         Vector2 point = worldPos;
-        if (_heroObj != null)
-        {
-            foreach (var renderer in _heroObj.GetComponentsInChildren<SpriteRenderer>())
-            {
-                if (!renderer.enabled || renderer.sprite == null) continue;
-                var bounds = renderer.bounds;
-                bounds.Expand(new Vector3(0.3f, 0.3f, 10f));
-                if (bounds.Contains(new Vector3(point.x, point.y, bounds.center.z))) return true;
-            }
-        }
+        if (_heroObj != null && HeroTapRect().Contains(point)) return true;
         var camp = GameObject.Find("HeroCamp")?.GetComponent<SpriteRenderer>();
         if (camp != null)
         {
@@ -1163,17 +1198,20 @@ public class BaseSceneSetup : MonoBehaviour
             var again = Physics2D.Raycast(worldPos, Vector2.zero).collider?.GetComponentInParent<DecorInstance>();
             if (again == prevDecor) return;
         }
-        if (IsHeroTap(worldPos))
-        {
-            HideRemovePrompt();
-            GetComponent<BaseWorldUI>()?.ShowHeroInfo();
-            return;
-        }
         if (BaseWorldLayout.Buildable.Contains(new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y)))
             && BaseMapManager.Instance != null && !BaseMapManager.Instance.IsBuildablePosition(worldPos))
         {
             if (_lockedLandToastRoutine != null) StopCoroutine(_lockedLandToastRoutine);
             _lockedLandToastRoutine = StartCoroutine(ShowLockedLandToast());
+            return;
+        }
+        // Küçük hedefler (ağaç, çalı, kaya, kütük, dekor) büyük alanlardan (bina görsel kutusu, kahraman) önce gelir: bina ve kahramanın
+        // dokunma alanı saydam kenarlarıyla geniştir, yanlarındaki ağaç/kayaya dokunmak onların penceresini açıyordu.
+        if (TrySmallTargetTap(worldPos)) return;
+        if (IsHeroTap(worldPos))
+        {
+            HideRemovePrompt();
+            GetComponent<BaseWorldUI>()?.ShowHeroInfo();
             return;
         }
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);

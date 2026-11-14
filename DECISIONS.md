@@ -411,3 +411,12 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Çırak iş döngüsü:** kayayı kazar (Interact Pickaxe, kıvılcımlar yalnız bu sırada) → altını sırtlayıp yığına yürür (Run Gold) → bırakır
   (Idle Gold, külçe yığına sekip söner, yığın zıplar) → kazmasını alıp sırayla öbür kayaya yürür (Run Pickaxe). Hepsi Tiny Swords piyon kareleri;
   renk Çırak seviyesinden. Test: `Session4Tests.MineTapCollectsGoldAndOnlyApprenticeBodyOpensApprentice`.
+
+## D60 — Açık arazide ağaç/kaya dokunuşu (14 Kasım, kullanıcı ekran görüntüsü)
+- **Kök neden:** dokunuş tek `Raycast` ile çözülüyordu ve kahraman kontrolü en önce yapılıyordu. Kahramanın dokunma alanı animasyon karesinin
+  tamamı +0,3 pay (~4×4 birim), Ana Üs’ün alanı kale görselinin saydam kenarlarıyla birlikteydi; yanlarındaki ağaç/kayaya dokunmak kahraman ya da
+  Ana Üs penceresini açıyordu.
+- **Öncelik:** kilitli arazi uyarısı → küçük hedefler (dekor, ağaç, çalı, kaya, kütük; birden çoksa merkezi en yakın, `OverlapPointAll`) →
+  kahraman → binalar ve diğerleri.
+- Kahramanın dokunma alanı gövdesi kadar: karenin ~%40×%55’i, en az 0,8×1,1 birim (`HeroTapRect`).
+- Test: `Session4Tests.EveryOpenLandNatureTapOpensClearPromptNotBuildingOrHero` (biri kale kenarına, biri kahramanın yanına taşınmış 8 öğe).

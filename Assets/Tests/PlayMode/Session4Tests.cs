@@ -576,6 +576,52 @@ public class Session4Tests
         cam.orthographicSize = size;
     }
 
+    /// <summary>Açık arazideki her ağaç/çalı/kaya/kütüğe dokunmak kaldırma kartını açar; Ana Üs veya kahraman penceresi açılmaz.</summary>
+    [UnityTest]
+    public IEnumerator EveryOpenLandNatureTapOpensClearPromptNotBuildingOrHero()
+    {
+        yield return Nov13FeedbackTests.LoadBase(2);
+        yield return new WaitForSecondsRealtime(1.5f);
+        var setup = (Component)Object.FindFirstObjectByType(T("BaseSceneSetup"));
+        var tap = setup.GetType().GetMethod("HandleTap", BindingFlags.NonPublic | BindingFlags.Instance);
+        var map = T("BaseMapManager").GetProperty("Instance").GetValue(null);
+        var buildable = map.GetType().GetMethod("IsBuildablePosition");
+        bool Open(string n) { var p = GameObject.Find(n); return p != null && p.activeInHierarchy; }
+        var natures = Object.FindObjectsByType(T("NatureObstacle"), FindObjectsSortMode.None).Cast<Component>()
+            .Where(n => (bool)buildable.Invoke(map, new object[] { n.transform.position })).ToList();
+        // Harita ağaçları/kayaları (MapObjectTag Tree/Rock) da açık arazideki kaldırılabilir öğelerdir
+        natures.AddRange(Object.FindObjectsByType(T("MapObjectTag"), FindObjectsSortMode.None).Cast<Component>()
+            .Where(t => { string k = Field(t, "objectType").ToString(); return k == "Tree" || k == "Rock"; })
+            .Where(t => (bool)buildable.Invoke(map, new object[] { t.transform.position })));
+        Assert.GreaterOrEqual(natures.Count, 2, "açık arazide ağaç/kaya");
+        var heroRect = (Rect)setup.GetType().GetMethod("HeroTapRect").Invoke(setup, null);
+        // Zor durumlar: biri kalenin görsel kutusunun alt kenarına, biri kahramanın hemen yanına
+        var castle = GameObject.Find("Building_MainBase_main").GetComponent<Collider2D>().bounds;
+        natures[0].transform.position = new Vector3(castle.min.x + 0.4f, castle.min.y + 0.4f, natures[0].transform.position.z);
+        natures[1].transform.position = new Vector3(heroRect.xMax + 0.25f, heroRect.center.y, natures[1].transform.position.z);
+        Physics2D.SyncTransforms();
+        int nearBig = 0;
+        var failures = new List<string>();
+        foreach (var n in natures)
+        {
+            Vector2 point = n.GetComponent<Collider2D>().bounds.center;
+            if (heroRect.Contains(point) || Physics2D.OverlapPointAll(point).Length > 1) nearBig++;
+            tap.Invoke(setup, new object[] { (Vector3)point });
+            yield return null;
+            if (GameObject.Find("RemovePrompt") == null || Open("HeroInfo") || Open("BuildingInfo"))
+                failures.Add(n.name + " hero=" + Open("HeroInfo") + " bina=" + Open("BuildingInfo"));
+            tap.Invoke(setup, new object[] { new Vector3(-50f, -50f) });   // kapat
+            yield return null;
+        }
+        Debug.Log($"[NatureTap] {natures.Count} nesne, {nearBig} tanesi büyük bir alanla çakışıyor");
+        Assert.IsEmpty(failures, "kaldırma kartı açılmadı: " + string.Join("; ", failures));
+        // Kahramanın gövdesine dokunmak hâlâ kahraman penceresini açar
+        tap.Invoke(setup, new object[] { (Vector3)heroRect.center });
+        yield return new WaitForSecondsRealtime(0.3f);
+        Assert.IsTrue(Open("HeroInfo") || GameObject.Find("RemovePrompt") != null, "kahraman gövdesi dokunuşu");
+        Assert.Less(heroRect.width, 1.6f, "kahraman dokunma alanı gövde kadar");
+    }
+
     /// <summary>Madene dokunmak madeni açar/altın toplar; yalnız çırağın gövdesi Çırak penceresini açar. Çırak kazar, yürür, altın taşır.</summary>
     [UnityTest]
     public IEnumerator MineTapCollectsGoldAndOnlyApprenticeBodyOpensApprentice()
