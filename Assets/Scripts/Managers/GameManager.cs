@@ -66,6 +66,14 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void StartNewGame(WeaponType selectedWeapon)
     {
+        // 9. oturum (K-1): açılamayan bir kayıt varken yeni oyun yalnız oyuncunun açık onayıyla başlar (ana menü: YENİ OYUN →
+        // SaveSystem.DeleteSave kaydı arşivler ve kilidi kaldırır). Sahnelerin "veri yok → yeni oyun" kısayolu kaydı ezemez.
+        if (SaveLoadFailed)
+        {
+            Debug.LogWarning("[GameManager] Kayıt açılamadı; yeni oyun başlatılmadı, ana menüye dönülüyor.");
+            LoadMainMenu();
+            return;
+        }
         PlayerData = PlayerSaveData.CreateNew(selectedWeapon);
         RebuildBuildingData();
         IsGameStarted = true;
@@ -87,9 +95,13 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>Kayıt var ama açılamadı (bozuk kopyalar ya da göç hatası). Kopyalar korunur; oyun üstüne yazmaz.</summary>
+    public bool SaveLoadFailed => SaveSystem.LastLoadStatus == SaveLoadStatus.Failed;
+
     public void LoadGame()
     {
         PlayerData = SaveSystem.Load();
+        if (PlayerData == null) IsGameStarted = false;
         if (PlayerData != null)
         {
             PlayerData.hero.ApplyLevelStats();
@@ -320,6 +332,8 @@ public class GameManager : MonoBehaviour
         Buildings.Clear();
         PlayerSaveData.EnsureWorkshopEntry(PlayerData);   // Kart Atölyesi türü eski/elle kurulan kayıtta da bulunsun
         PlayerSaveData.EnsureBaseBondEntries(PlayerData); // Kışla + Köylü Evi (Faz F) aynı şekilde
+        // 9. oturum (KN-1): tür seviyesi ve kilitler kayıttan okunmaz, kuraldan yeniden üretilir (yükleme, yeni oyun, test verisi).
+        SaveInvariants.Repair(PlayerData);
         if (PlayerData.workshop == null) PlayerData.workshop = new WorkshopSaveData();
         PlayerData.workshop.Repair();
 

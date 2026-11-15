@@ -806,6 +806,15 @@ public class IntroSceneSetup : MonoBehaviour
     {
         Debug.Log("[Intro] Devam → BaseScene");
         GameManager.Instance.LoadGame();
+        // 9. oturum (K-1): kayıt açılamadıysa oyuna girilmez (girilirse sahneler yeni oyun kurup kaydın üstüne yazardı).
+        if (GameManager.Instance.PlayerData == null)
+        {
+            GemActions.Toast(GameManager.Instance.SaveLoadFailed
+                ? L.T("Kayıt açılamadı. Kaydın silinmedi, korunuyor: oyunu güncelle ya da destekle iletişime geç. Sıfırdan başlamak için YENİ OYUN'a iki kez dokun.",
+                    "Your save could not be opened. It was not deleted: update the game or contact support. To start over, tap NEW GAME twice.")
+                : L.T("Kayıt bulunamadı. YENİ OYUN ile başla.", "No save found. Start with NEW GAME."));
+            return;
+        }
         GameManager.Instance.LoadBaseWorld();
     }
 

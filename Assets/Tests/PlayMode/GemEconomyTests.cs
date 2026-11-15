@@ -33,7 +33,9 @@ public class GemEconomyTests
         yield return null;
         save = Type("PlayerSaveData").GetMethod("CreateNew").Invoke(null,
             new[] { Enum.Parse(Type("WeaponType"), "Axe") });
-        managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(manager, new[] { save });
+        // 9. oturum: DevSetPlayerData bina verisini de yeniden kurar (eskiden diskteki kaydın Ana Üs seviyesi kalıyor, elmas kuru ona göre
+        // değişiyordu: test, önceki koşunun bıraktığı kayda bağlıydı).
+        managerType.GetMethod("DevSetPlayerData").Invoke(manager, new[] { save });
         SetField("gems", 1000);
     }
 

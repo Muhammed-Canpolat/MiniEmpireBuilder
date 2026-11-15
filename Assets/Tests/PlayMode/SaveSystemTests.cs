@@ -38,6 +38,8 @@ public class SaveSystemTests
         if (savedFile != null) File.WriteAllText(FilePath, savedFile);
         else if (File.Exists(FilePath)) File.Delete(FilePath);
         PlayerPrefs.Save();
+        // 9. oturum: açılamayan kayıt kilidi sonraki testlere taşmasın.
+        Type("SaveSystem").GetMethod("ResetForTests", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.Invoke(null, null);
     }
 
     private static object NewSave(int gold)
