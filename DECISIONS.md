@@ -799,3 +799,46 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - **Geliştirici:** DevMenu "OCCUPANCY GÖSTER" (yalnız Editor/Development; `OccupancyDebugView`): dolu hücreler türüne göre renkli + dolduran nesnenin adı.
 - **Regresyon:** `O2` (mevcut/eski v12 kayıt ve yeni kayıt): 4 alanda 22 öğe (doğa anında/süreli + dekor) kaldırılır → 4 boyutta yeni bina kuralı, 4 türün taşıması
   ve geri alınması, yeni bina kurma; kayıt → yeniden yükleme. `O3` görünüm. 5. oturumun tüm yerleşim testleri yeni kodla geçti.
+
+## D101 — Kayıt açılamazsa üstüne yazılmaz; göç bellekte, göç öncesi yedekle (9. oturum; TECH_AUDIT K-1…K-5, E-2, E-6)
+- `SaveSystem` ayrı dosyada (`Data/SaveSystem.cs`). `Load` üç durum döndürür (`SaveLoadStatus`: NoSave / Loaded / Failed). **Failed** (hiçbir kopya
+  çözülemedi ya da göç/onarım istisna attı): bütün kopyalar yerinde kalır, `persistentDataPath/SaveBackups` altına karantinaya kopyalanır ve `Save`
+  kilitlenir. Kilidi yalnız oyuncunun onayladığı YENİ OYUN kaldırır (`DeleteSave`: önce `save.deleted.*` olarak arşivler).
+- `GameManager.StartNewGame` kilit varken yeni oyun kurmaz, ana menüye döner (savaş/ada sahnelerinin "veri yok → yeni oyun" kısayolu kaydı ezemez);
+  ana menüde DEVAM oyuncuya durumu söyler ve oyuna girmez.
+- Göç zinciri (`Migrate`) bellekte çalışır, sonunda TEK kayıt; göçten önce orijinal JSON `save.v<N>.premigration.*.json` (gelecek sürümden gelen
+  kayıt `save.v<N>.newer.*`). Yedek klasöründe tür başına en yeni 16 dosya tutulur.
+- Dosya `File.Replace` ile yerinde değişir; yarım kalmış sağlam `.tmp` yüklemede aday. En yeni kopya `saveSerial` (her kayıtta artar), eşitse kayıt anı.
+  `{}` gibi bina girdisi olmayan nesne kayıt sayılmaz.
+- **Yeni sürüm eklerken:** `CurrentVersion` artır + `Migrate` sonuna blok (içinde `Save` çağırma). `Session9SaveTests.B1` v1…güncel bütün sürümleri kapsar.
+- Bilinçli sınır: sahneye bağlı onarımlar (yerleşim, dekor 1×1, ada hayaletleri) hâlâ sahne açılınca çalışıyor; kayıt verisi üzerinde çalışan hâle
+  taşımak ayrı iş (TECH_AUDIT KN-3).
+
+## D102 — Türetilmiş kayıt alanları yüklemede kuraldan üretilir: `SaveInvariants` (9. oturum; KN-1a, KN-1b)
+- `SaveInvariants.Repair`: tür seviyesi = tamamlanmış en yüksek bina seviyesi; kilit = `Progression.FirstUnlockLevel` kuralı. Yalnız oyuncunun lehine
+  çalışır (kilit açar, kilitlemez; seviye uydurmaz). `SaveSystem.Load` ve `GameManager.RebuildBuildingData` içinde.
+- `SaveInvariants.Check`: kalan tutarsızlıkların listesi (geliştirici derlemesinde uyarı, `Session9SaveTests.I1` içinde hata).
+  Yeni türetilmiş alan eklenirse kaynağı, onarımı ve denetimi buraya yazılır.
+
+## D103 — Tek saat ve geliştirici anahtarı (9. oturum; K-6, KN-4a)
+- Oyun kurallarında ham `DateTime.UtcNow` yok: maden damgası, Kraliyet süresi, 2x maden, ağaç/kaya büyümesi, Sen Yokken, geri sayım yazıları
+  `GameClock.UtcNow`. `Session9RuleGuardTests.K6` kaynak taramasıyla yeni kaçakları yakalar (izinli: GameClock, SaveSystem kayıt anı, bildirimler).
+- `DevSettings.Enabled` artık oyun kuralı değiştirmez. Ada kilidi / oto-ateş atlaması ayrı seçenek (`IslandLockBypass`, DevMenu "ADA KİLİTLERİNİ ATLA",
+  **varsayılan kapalı**): Development APK ile yayın derlemesi aynı oyunu oynatır. ⚠️ Tablette oto-ateşin baştan açık olmasına alışıldıysa artık Kıyı Kalesi 5'te açılır.
+
+## D104 — Ana Üs kaydı eksik sahneden yazılmaz (9. oturum; KN-1d)
+- `BaseMapManager.SaveAll` bina listesini sahneden baştan yazıyordu; `LoadFromPlayerData` tanımadığı türdeki binayı kurmadan geçip sonunda `SaveAll`
+  çağırdığı için o bina kayıttan sessizce siliniyordu (daha yeni sürümün kaydıyla eski sürüm açılırsa). Yükleme bir hatayla yarıda kalırsa da yarım liste yazılabiliyordu.
+- Artık: yükleme sürerken/yarıda kaldıysa kayıttaki liste yeniden yazılmaz; kurulamayan binalar listede korunur. Test `Session9RuleGuardTests.KN1d`.
+- O-1: `CreateNew` maden deposunu 40 yazıp 55 satır sonra 0'lıyordu; ikinci atama kalktı (rehberin "madene dokun" adımı artık altın veriyor).
+
+## D105 — Tek geri tuşu yöneticisi (9. oturum; E-1, Y-6; uygulama Sonnet alt ajanı, gözden geçirme + test bende)
+- `UI/BackKeyRouter.cs`: kalıcı tek nesne, derleme koşulu yok (eski `SelectionBackKey` yalnız Development'ta kuruluyordu → yayında geri tuşu ölüydü).
+  Sıra (basış başına tek işlem): geçiş sürüyorsa yut → çıkış onayını kapat → en üstteki pencere (her birinin kendi kapatma yolu) → yerleştirme İPTAL →
+  seçim → radyal menü → sahne varsayılanı (savaş/akın: ayarlar = duraklat; sefer: panel → harita → ÜSSE DÖN; ada: ANA ÜS; Ana Üs ve ana menü: çıkış onayı).
+- **Yutulan zorunlu akışlar:** ödüllü reklam, "Ana Üs yıkıldı, devam?" teklifi (kapatmak yenilgi sayılırdı), ada tanıtımı/inşa öğreticisi/ilk ad verme,
+  savaş ve akın sonucu. "Sen yokken" geri tuşuyla toplamadan kapanır (altın madende kalır).
+- Yeni pencere eklerken: `BackKeyRouter.CloseWindow` içine kapatma yolunu ekle (ya da pencereyi `SelectionManager`'a kaydet). `LastStep` hangi basamağın
+  işlediğini söyler (tanılama/test).
+- Manifestte `enableOnBackInvokedCallback=false` (Unity `androidPredictiveBackSupport: 0`) → API 36'da tuş eski yoldan oyuna gelir; cihazda bir kez denenmeli.
+- Bilinen eksik: satın alma sürerken yutma yok (bekleyen satın alma bayrağı dışarı açık değil); DevMenu geri tuşuyla kapanmaz.

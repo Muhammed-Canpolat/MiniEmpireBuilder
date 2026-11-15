@@ -358,22 +358,22 @@ Ayrıntı: DATA_SAFETY.md. AdMob'un resmî beyan sayfası: [Play veri beyanı](h
 
 | Sıra | İş | Bulgular | Önem | Zorluk | Durum |
 |---|---|---|---|---|---|
-| 1 | Kayıt yükleme hatasında üstüne yazmama + karantina | K-1, E-2, E-6 | P0 | M | bu oturum |
-| 2 | Sürümlü göç hattı + göç öncesi yedek + göç testleri | K-2, K-5, KN-3, KN-4d | P0 | M | bu oturum |
-| 3 | Atomik dosya yazımı, kayıt sayacı | K-3, K-4 | P1 | S | bu oturum |
-| 4 | Tek saat | K-6 | P1 | S | bu oturum |
-| 5 | Kilit ve tür seviyesi yüklemede kuraldan + değişmezlik denetimi | KN-1a, KN-1b | P1 | M | bu oturum |
-| 6 | Geliştirici ayarı kural değiştirmez | KN-4a | P1 | S | bu oturum |
-| 7 | Yeni hesapta maden altını | O-1 | P1 | S | bu oturum |
-| 8 | Geri tuşu yöneticisi | E-1, Y-6 | P1 | M | bu oturum |
-| 9 | AAB denetimine RELRO + manifest kontrolleri | Y-5, E-10 | P0 doğrulama | S | bu oturum |
+| 1 | Kayıt yükleme hatasında üstüne yazmama + karantina | K-1, E-2, E-6 | P0 | M | ✅ §12 |
+| 2 | Sürümlü göç hattı + göç öncesi yedek + göç testleri | K-2, K-5, KN-3, KN-4d | P0 | M | ✅ §12 |
+| 3 | Atomik dosya yazımı, kayıt sayacı | K-3, K-4 | P1 | S | ✅ §12 |
+| 4 | Tek saat | K-6 | P1 | S | ✅ §12 |
+| 5 | Kilit ve tür seviyesi yüklemede kuraldan + değişmezlik denetimi | KN-1a, KN-1b | P1 | M | ✅ §12 |
+| 6 | Geliştirici ayarı kural değiştirmez | KN-4a | P1 | S | ✅ §12 |
+| 7 | Yeni hesapta maden altını | O-1 | P1 | S | ✅ §12 |
+| 8 | Geri tuşu yöneticisi | E-1, Y-6 | P1 | M | ✅ §12 |
+| 9 | AAB denetimine RELRO + manifest kontrolleri | Y-5, E-10 | P0 doğrulama | S | ✅ §12 |
 | 10 | Gizlilik URL'si, ürün adı, simge, imza | — | P0 | S | **sizde** |
 | 11 | Reklam kararı: gizle ya da AdMob + UMP (+ iOS ATT) | Y-1, Y-2, Y-14 | P0 (üretim) | L | **karar sizde** |
 | 12 | Makbuz anahtarı | Y-3 | P0 (satın alma) | S | **sizde** |
 | 13 | iOS: paket kimliği, bulut derleme, bildirimler, TestFlight turu | Y-10…Y-17 | P0 (App Store) | L | sizin hesap adımlarınızdan sonra |
 | 14 | Denge: REPORT §2.2 dört öneri + ilk oturum duvarı | O-2, O-5 | P1 | S | **karar sizde** |
 | 15 | Cihazda Profiler turu, ardından P-1…P-8 | §6 | P1/P2 | M | ölçümden sonra |
-| 16 | `BaseMapManager.SaveAll` eksik sahne koruması | KN-1d | P1 | S | incelenecek |
+| 16 | `BaseMapManager.SaveAll` eksik sahne koruması | KN-1d | P1 | S | ✅ §12 |
 | 17 | Savaş ortasında kapatma, reklam/satın alma kilidi zaman aşımı | E-3, E-4 | P2 | S | — |
 | 18 | Doku sıkıştırma, savaş atlası, kod ayıklama düzeyi | P-13…P-15 | P2 | M | — |
 | 19 | Oyun koduna asmdef, dev sınıfların bölünmesi | Q-1, Q-2 | P2 | L | — |
@@ -406,3 +406,43 @@ Taslaktan sonra her bulguya "gerçekten sorun mu, daha basit açıklaması var m
 reklamının ve sahte kahraman seçimi metinlerinin yayın derlemesinde gerçekten göründüğü ekranlar; (4) bütün performans maddelerinin cihazdaki etkisi;
 (5) `BaseMapManager.SaveAll`'un eksik kurulmuş sahnede çağrılma olasılığı (KN-1d). Tablet kaydınıza erişimim yok: göç testleri editördeki kayıt ve
 elle kurulmuş eski sürüm örnekleriyle yapıldı.
+
+---
+
+## 12. Uygulama Sonucu (9. oturum, 4. aşama)
+
+Yol haritasından bu oturumda uygulananlar. Her madde ayrı, geri alınabilir commit; mevcut kayıtlar bozulmadan açılıyor (v1…v13 göç testi + editör kaydının kopyası).
+
+| Sıra | İş | Durum | Commit | Kanıt |
+|---|---|---|---|---|
+| 1 | Kayıt açılamazsa üstüne yazmama + karantina (K-1, E-2, E-6) | ✅ | `aca6fd0` | `Session9SaveTests.K1_*` (3), `Session9RuleGuardTests.K1` |
+| 2 | Bellekte göç + göç öncesi yedek + göç testleri (K-2, K-5, KN-4d) | ✅ | `aca6fd0` | `B1` (v1…v13), `B2`, `B3` (editör kaydı), `K2_*`, `K5_*` |
+| 3 | Üzerine yazarak dosya değişimi, kayıt sayacı (K-3, K-4) | ✅ | `aca6fd0` | `K3`, `K4` |
+| 4 | Tek saat (K-6) | ✅ | `b854815` | `Session9RuleGuardTests.K6_*` (kaynak taraması + geri alınan saat) |
+| 5 | Kilit ve tür seviyesi kuraldan + değişmezlik denetimi (KN-1a, KN-1b) | ✅ | `aca6fd0` | `I1`, `I2`, `KN1` |
+| 6 | Geliştirici ayarı kural değiştirmez (KN-4a) | ✅ | `b854815` | `KN4`, `IslandLadderTests` |
+| 7 | Yeni hesapta maden altını (O-1) | ✅ | `aca6fd0` | `O1` |
+| 8 | Geri tuşu yöneticisi (E-1, Y-6) | ✅ | `d195837` | `Session9BackKeyTests` T1–T5; cihazda denenmedi |
+| 9 | AAB denetimi: RELRO + manifest (Y-5, E-10) | ✅ | `b076c7e` | 14 Kasım AAB'si: 7/7 `.so` uygun, `appCategory=game` var |
+| 16 | `SaveAll` eksik sahne koruması (KN-1d) | ✅ | `f928c66` | `Session9RuleGuardTests.KN1d` |
+
+**Denetimde "emin değilim" dediklerimden çözülenler**
+- *Geri tuşu API 36'da oyuna geliyor mu:* AAB manifestinde `android:enableOnBackInvokedCallback="false"` yazıyor (Unity ayarı `androidPredictiveBackSupport: 0`
+  bunu üretiyor), yani sistem eski yolu kullanıp tuşu oyuna iletir. Manifest düzeyinde **Kesin**; cihazda bir kez denenmeli.
+- *`libmain.so` RELRO hizası:* 14 Kasım AAB'sinde 7 kütüphanenin hepsi sezgisel kuraldan geçti (RELRO bitişi 16 KB'a hizalı ya da içeren LOAD'un bitişi).
+  Dört kütüphane (libmain, libswappywrapper, libunity, libc++_shared) ikinci koşuldan geçiyor; bu yüzden Y-5 **P0 doğrulama → P1 doğrulama**: kesin
+  sonuç Play Console'un yükleme sonrası "16 KB desteği" raporu.
+- *KN-1d:* gerçek bir silme yolu bulundu (tanınmayan türdeki bina yüklemede kurulmadan geçilip ardından liste baştan yazılıyordu) ve kapatıldı.
+
+**Bilerek yapılmayanlar (bu oturumda)**
+- Sahneye bağlı onarımların kayıt verisi üzerinde çalışan göçlere taşınması (KN-3'ün ikinci yarısı): yerleşim onarımı sahnedeki görsellere bakıyor
+  (KN-2); taşımak yerleşim kuralını yeniden yazmak demek. Risk/yarar oranı düşük, ayrı oturum işi.
+- Performans maddeleri (P-1…P-15): cihaz ölçümü olmadan dokunulmadı (ölçmeden iyileştirme, D100'ün doğruluk güvencesini riske atar).
+- E-3 (savaş ortasında kapatma), O-2/O-5 (denge), reklam/IAP/iOS: karar ya da hesap sizde (§9, §10).
+
+**Davranış değişiklikleri (bilmeniz gerekenler)**
+1. Development APK'da ada kilidi ve oto-ateş artık yayınla aynı kurala bağlı. Eski davranış: DEV menüsü → "ADA KİLİTLERİNİ ATLA".
+2. Bozuk/açılamayan kayıtta oyun artık yeni oyun başlatmıyor; ana menüde DEVAM bir açıklama gösteriyor. Kopyalar cihazda
+   `…/files/SaveBackups/` altında (destek için istenebilir).
+3. YENİ OYUN eski kaydı silmeden önce aynı klasöre `save.deleted.*` olarak koyuyor.
+4. Yeni hesap madende 40 altınla başlıyor.

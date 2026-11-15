@@ -289,3 +289,17 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
   Dev: DevMenu "OCCUPANCY GÖSTER" (`OccupancyDebugView`).
 - **Testler:** `Session8Tests` (A1/A2/E1/P1/V4/M0), `Session8BaseTests` (O0–O3), `Session8HudTests` (H1), `[Explicit]` `Session8BalanceTests`
   (90 savaş, özet `Tools/balance_s8.py`), `Session8SonTests`. `Session4Tests.CaptureUi` artık kamera görüş alanını tam ekrana açar.
+
+## 15 Kasım 2026 (9. oturum): teknik denetim + kayıt güvenliği + geri tuşu (D101–D105)
+- **Belgeler:** `ARCHITECTURE.md` (bugünkü mimari, §4.1 "tek doğru kaynak" tablosu), `TECH_AUDIT.md` (bulgular, yol haritası §10, uygulama sonucu §12).
+- **Kayıt:** `Data/SaveSystem.cs` (PlayerSaveData.cs'ten ayrıldı). `Load` → `SaveLoadStatus`; **Failed** iken `Save` kilitli, kopyalar
+  `persistentDataPath/SaveBackups` altında (karantina / `v<N>.premigration` / `deleted`). Göç `Migrate` içinde, bellekte, tek kayıt.
+  Yeni sürüm: `CurrentVersion` artır + `Migrate` sonuna blok (içinde `Save` çağırma). En yeni kopya `saveSerial` ile seçilir.
+- **Türetilmiş alanlar:** `Systems/SaveInvariants.cs` (`Repair` yüklemede kilit + tür seviyesini kuraldan üretir; `Check` tutarsızlık listesi).
+- **Saat:** oyun kuralında ham `DateTime.UtcNow` YASAK → `GameClock.UtcNow` (`Session9RuleGuardTests.K6` kaynak taramasıyla yakalar).
+- **DevSettings:** ana anahtar kural değiştirmez; ada kilidi/oto-ateş atlaması `DevSettings.IslandLockBypass` (DevMenu, varsayılan kapalı).
+- **Geri tuşu:** `UI/BackKeyRouter.cs` (yayında da çalışır). Yeni pencere → `CloseWindow` içine kapatma yolu ekle. Çıkış onayı `QuitConfirm`.
+- **Ana Üs kaydı:** `BaseMapManager.SaveAll` yükleme bitmeden bina listesini yazmaz; kurulamayan (tanınmayan tür) bina kayıtta kalır.
+- **Testler:** `Session9SaveTests` (göç v1…v13, karantina), `Session9RuleGuardTests`, `Session9BackKeyTests`; `SaveIsolation` ([SetUpFixture]) test
+  koşusunun geliştiricinin gerçek kaydını değiştirmesini engeller. AAB: `Tools/check_aab.py` RELRO + manifest denetimi.
+- Editör kapalıyken testler doğrudan projede koşturuldu (kopya gerekmez).
