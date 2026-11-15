@@ -108,6 +108,37 @@ public sealed class BattleRoute
 
     public float DistanceTo(Vector2 p) { Project(p, out float d); return d; }
 
+    /// <summary>
+    /// 8. oturum (D96): yalnız [<paramref name="sMin"/>, <paramref name="sMax"/>] aralığına izdüşüm. Zikzak yolda iki kol birbirine yakın
+    /// olabilir; tüm yola izdüşüm düşmanı başka kola (ileri ya da geri) atlatırdı. Düşmanın ilerlemesi bu pencereyle izlenir.
+    /// </summary>
+    public float ProjectRange(Vector2 p, float sMin, float sMax, out float distance)
+    {
+        sMin = Mathf.Clamp(sMin, 0f, Length);
+        sMax = Mathf.Clamp(sMax, sMin, Length);
+        int i0 = Mathf.Max(1, IndexAt(sMin));
+        int i1 = Mathf.Min(Points.Length - 1, IndexAt(sMax) + 1);
+        float best = float.MaxValue, bestS = sMin;
+        for (int i = i0; i <= i1; i++)
+        {
+            Vector2 a = Points[i - 1], b = Points[i], ab = b - a;
+            float len2 = ab.sqrMagnitude;
+            float t = len2 > 1e-8f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / len2) : 0f;
+            float s = Mathf.Clamp(cumulative[i - 1] + Mathf.Sqrt(len2) * t, sMin, sMax);
+            float d = (PointAt(s) - p).sqrMagnitude;
+            if (d < best) { best = d; bestS = s; }
+        }
+        distance = Mathf.Sqrt(best);
+        return bestS;
+    }
+
+    private int IndexAt(float s)
+    {
+        int lo = 0, hi = cumulative.Length - 1;
+        while (hi - lo > 1) { int mid = (lo + hi) >> 1; if (cumulative[mid] <= s) lo = mid; else hi = mid; }
+        return lo;
+    }
+
     /// <summary>Dönemeç tepeleri: ±1,5 birimlik pencerede yön değişimi en az <paramref name="minDegrees"/> olan yerel en büyükler.</summary>
     public List<float> Bends(float minDegrees = 30f)
     {

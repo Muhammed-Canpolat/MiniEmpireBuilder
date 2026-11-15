@@ -236,16 +236,41 @@ public class EnemyController : MonoBehaviour
     /// <summary>Sabit ara noktalar: düşman sırayla bu noktalara yürür, kale menzile girince durur.</summary>
     public void SetRoute(Vector2[] points) { route = points; routeIndex = 0; }
 
-    // ---- 7. oturum (D93): sefer haritası yolu. lane == null iken eski davranış (kenarlardan serbest yürüyüş). ----
+    // ---- 7. oturum (D93) → 8. oturum (D96): sefer haritası yolu, durum makinesi. lane == null iken eski davranış (serbest yürüyüş). ----
+    /// <summary>Yol durumları: Yolu izle → Hedefe kilitlen → Savaş → Yola dön (ileriden katılır).</summary>
+    public enum LaneState { FollowLane, Lock, Fight, Rejoin }
+
     private BattleRoute lane;
-    private float laneS, laneOffset;
-    /// <summary>Düşman yoldan en çok bu kadar uzaktaki (yol noktasına göre) hedefe sapar: yol kenarındaki kule/kahraman/Lancer.</summary>
+    /// <summary>Yolda kat edilen mesafe (birim). Yalnız ARTAR: sapma, savaş ve dönüş boyunca asla geri gitmez.</summary>
+    private float laneS;
+    private float laneOffset, sepOffset;
+    private float rejoinS, lockS, stateSince, relockAfter;
+    private LaneState laneState = LaneState.FollowLane;
+
+    /// <summary>Kilitlenme menzili: hedef yolun (düşmanın ilerleme noktası çevresi) bu kadar yakınındaysa düşman ona sapar.</summary>
     public const float LaneLeash = 3.0f;
+    /// <summary>Bırakma (leash) mesafesi: hedef ya da düşman yoldan bu kadar uzaklaşırsa takip biter, düşman ileriden yola döner.</summary>
+    public const float LeashDistance = 4.5f;
+    /// <summary>Hareketli hedef (kahraman/Çırak/Lancer) peşinde yol boyunca en çok bu kadar ileri gidilir; haritanın sonuna kadar kovalamaz.</summary>
+    public const float ChaseAhead = 6f;
+    /// <summary>Düşmanın gerisinde kalan hedefe (bu paydan fazla) kilitlenmez: geriye koşmaz.</summary>
+    public const float BackTolerance = 0.75f;
+    private const float RelockCooldown = 1.2f;   // bıraktıktan sonra yeniden kilitlenme beklemesi (titreme olmasın)
+    private const float ProgressWindow = 8f;     // ilerleme izdüşümü penceresi (paralel kola atlamaz)
+
     public BattleRoute Lane => lane;
+    public LaneState LaneMode => laneState;
+    /// <summary>Yolda kat edilen mesafe (birim, yalnız artar).</summary>
+    public float LaneDistance => laneS;
+    /// <summary>Son yola dönüşte: ayrıldığı ilerleme ve katıldığı ilerleme (test/telemetri).</summary>
+    public float LastLeaveS { get; private set; } = -1f;
+    public float LastJoinS { get; private set; } = -1f;
+    public int RejoinCount { get; private set; }
     /// <summary>Yolda ilerleyiş (0 köprü … 1 Ana Üs).</summary>
     public float LaneProgress => lane == null ? 0f : laneS / Mathf.Max(0.01f, lane.Length);
-    /// <summary>Yoldaki konumu (şerit kayması dahil).</summary>
-    public Vector2 LanePoint => lane == null ? (Vector2)transform.position : lane.PointAt(laneS) + lane.NormalAt(laneS) * laneOffset;
+    /// <summary>Yoldaki konumu (şerit kayması + ayrışma dahil).</summary>
+    public Vector2 LanePoint => lane == null ? (Vector2)transform.position : LanePointAt(laneS);
+    private Vector2 LanePointAt(float s) => lane.PointAt(s) + lane.NormalAt(s) * (laneOffset + sepOffset);
 
     /// <summary>Yolu izle: konum yola izdüşürülür; <paramref name="offset"/> şerit kayması (yan yana yürüyüş, ±0,35).</summary>
     public void SetLane(BattleRoute path, float offset)
@@ -253,10 +278,35 @@ public class EnemyController : MonoBehaviour
         lane = path;
         laneOffset = offset;
         laneS = path != null ? path.Project(transform.position, out _) : 0f;
+        laneState = LaneState.FollowLane;
+        stateSince = Time.time;
     }
 
-    /// <summary>Hedef yol kenarında mı (yoldaki konumdan LaneLeash + pay). Yol yoksa hep true.</summary>
-    private bool NearLane(Vector2 point, float extra = 0f) => lane == null || Vector2.Distance(point, LanePoint) <= LaneLeash + extra;
+    /// <summary>Konumun bu düşmanın ilerleme penceresindeki izdüşümü (yalnız ileri).</summary>
+    private float LocalProgress(Vector2 p, out float lateral) => lane.ProjectRange(p, laneS, laneS + ProgressWindow, out lateral);
+
+    /// <summary>
+    /// Hedef yol kenarında ve İLERİDE mi: yolun düşmanın ilerleme noktası çevresine (geri BackTolerance, ileri pencere) izdüşümü
+    /// <paramref name="reach"/> içinde. Yol yoksa hep true.
+    /// </summary>
+    private bool InLeash(Vector2 point, float reach)
+    {
+        if (lane == null) return true;
+        if (Time.time < relockAfter) return false;
+        float s = lane.ProjectRange(point, laneS - BackTolerance, laneS + ProgressWindow, out float lateral);
+        return lateral <= reach && s >= laneS - BackTolerance;
+    }
+
+    private bool NearLane(Vector2 point, float extra = 0f) => InLeash(point, LaneLeash + extra);
+
+    private void SetLaneState(LaneState next)
+    {
+        if (laneState == next) return;
+        if ((next == LaneState.Lock || next == LaneState.Fight) && (laneState == LaneState.FollowLane || laneState == LaneState.Rejoin)) { lockS = laneS; LastLeaveS = laneS; }
+        if (next == LaneState.Rejoin) rejoinS = laneS;
+        laneState = next;
+        stateSince = Time.time;
+    }
 
     /// <summary>Can ve hasarı çarpanla ölçekler (ada Akın ölçeği, AŞAMA 2 §4); can dolu başlar.</summary>
     public void ScaleStats(float hpMult, float damageMult)
@@ -283,6 +333,16 @@ public class EnemyController : MonoBehaviour
 
     /// <summary>Çağrılmış birimler altın düşürmez; boss ile altın kasılmasını önler.</summary>
     public void SuppressGoldReward() => goldReward = 0;
+
+    /// <summary>Havuza dönerken: ayrı nesne olan can/kalkan çubuklarını kaldırır (sahibi yaşamaya devam ettiği için kendileri silinmez).</summary>
+    public void DetachExternals()
+    {
+        if (healthBar != null) Destroy(healthBar.gameObject);
+        if (wardBar != null) Destroy(wardBar.gameObject);
+        healthBar = null; wardBar = null;
+    }
+    /// <summary>Öldürme altını (D97: dalga düşmanı, eski toplam altına eşitleme).</summary>
+    public void SetGoldReward(int gold) => goldReward = Mathf.Max(0, gold);
 
     // Hedef referansları (BattleManager tarafından atanır)
     private Transform mainBaseTransform;
@@ -526,6 +586,32 @@ public class EnemyController : MonoBehaviour
 
     // ==================== HEDEF BULMA ====================
 
+    // 8. oturum (D97 performans): her düşman saniyede ~4 kez hedef arıyordu; kahraman/Çırak sahnede aranmak yerine önbellekten
+    // (yok edilince Unity null'ı yeniden arar; bulunamazsa aynı karede tekrar aranmaz).
+    private static HeroController cachedHero;
+    private static BattleApprentice cachedApprentice;
+    private static int heroMissFrame = -1, apprenticeMissFrame = -1;
+    private static HeroController CachedHero
+    {
+        get
+        {
+            if (cachedHero != null || heroMissFrame == Time.frameCount) return cachedHero;
+            cachedHero = FindFirstObjectByType<HeroController>();
+            if (cachedHero == null) heroMissFrame = Time.frameCount;
+            return cachedHero;
+        }
+    }
+    private static BattleApprentice CachedApprentice
+    {
+        get
+        {
+            if (cachedApprentice != null || apprenticeMissFrame == Time.frameCount) return cachedApprentice;
+            cachedApprentice = FindFirstObjectByType<BattleApprentice>();
+            if (cachedApprentice == null) apprenticeMissFrame = Time.frameCount;
+            return cachedApprentice;
+        }
+    }
+
     /// <summary>Düşman rolü: kime öncelik verdiği (tasarım tablosu).</summary>
     public enum Role { Hunter, Besieger, Breaker, Siege }
 
@@ -590,7 +676,7 @@ public class EnemyController : MonoBehaviour
             else if (mainBaseTransform != null) SetTarget(mainBaseTransform, mainBaseTransform.position, BaseRadius);
             return;
         }
-        HeroController hero = FindFirstObjectByType<HeroController>();
+        HeroController hero = CachedHero;
         bool heroAlive = hero != null && hero.CurrentHealth > 0f;
         float heroDistance = heroAlive ? Vector2.Distance(position, hero.transform.position) : float.MaxValue;
 
@@ -614,7 +700,7 @@ public class EnemyController : MonoBehaviour
                 Transform prey = null;
                 float best = HunterAggro;
                 if (heroAlive && heroDistance <= best && NearLane(hero.transform.position)) { prey = hero.transform; best = heroDistance; }
-                var apprentice = FindFirstObjectByType<BattleApprentice>();
+                var apprentice = CachedApprentice;
                 if (apprentice != null && apprentice.CurrentHealth > 0f)
                 {
                     float d = Vector2.Distance(position, apprentice.transform.position);
@@ -635,7 +721,7 @@ public class EnemyController : MonoBehaviour
             {
                 // Boss üsse yürür; yolunun üstündeki kuleyi ezer.
                 var structure = NearestStructure(position, attackRange + 1f);
-                if (structure != null) { SetTarget(structure.transform, structure.BasePoint, StructureRadius); return; }
+                if (structure != null && NearLane(structure.BasePoint, 0.8f)) { SetTarget(structure.transform, structure.BasePoint, StructureRadius); return; }
                 break;
             }
         }
@@ -732,14 +818,9 @@ public class EnemyController : MonoBehaviour
     private void MoveToTarget()
     {
         if (currentTarget == null) return;
+        // 8. oturum (D96): yol durum makinesi (izle → kilitlen → savaş → ileriden yola dön).
+        if (lane != null) { LaneTick(moveSpeed * SpeedMultiplier * Time.deltaTime); return; }
         if (DistanceToTarget <= attackRange) return;
-        // 7. oturum (D93): yol izleme. Ana Üs'e giderken yoldan ayrılmaz; yol kenarındaki hedefe sapınca hedef yoksa yola döner.
-        // Maden yağmacısı (RaidTarget) yoldan ayrılıp yürünebilir karadan madene gider (GridSteer, aşağıdaki genel yol).
-        if (lane != null && currentTarget == mainBaseTransform)
-        {
-            LaneMove(moveSpeed * SpeedMultiplier * Time.deltaTime);
-            return;
-        }
         Vector3 aim = targetPoint;
         if (route != null && currentTarget == mainBaseTransform)
         {
@@ -766,36 +847,214 @@ public class EnemyController : MonoBehaviour
     }
     private GridSteer steer;
 
-    /// <summary>Yolda ilerle; yoldan uzaktaysa (hedefe sapmıştı) önce yoldaki noktasına dön. Işınlanınca (≥5 birim) yol konumu yeniden bulunur.</summary>
-    private void LaneMove(float step)
+    // ==================== YOL DURUM MAKİNESİ (8. oturum, D96) ====================
+
+    /// <summary>
+    /// Her kare: (1) ilerleme güncellenir (yalnız artar), (2) hedefe göre durum seçilir, (3) duruma göre hareket.
+    /// Ana Üs'e giderken yolu izler; yol kenarı hedefe kilitlenince ortak yol bulmayla (su/uçurum/yapı geçmez) ona yürür,
+    /// menzilde savaşır; hedef ölür/uzaklaşır/bırakma mesafesini aşarsa ileriden (geriye değil) eğriyle yola katılır.
+    /// </summary>
+    private void LaneTick(float step)
     {
         Vector2 pos = transform.position;
+        bool sideTarget = currentTarget != mainBaseTransform;
+
+        if (laneState != LaneState.FollowLane)
+        {
+            float s = LocalProgress(pos, out float lateral);
+            // Işınlanma/atılma (Cadı, Gölge Kurt): pencerede yol çok uzaksa tüm yola bakılır; yine yalnız ileri alınır.
+            // Maden yağmacısı karadan bilerek uzağa yürür: onun ilerlemesi tüm yola izdüşümle (yine yalnız ileri).
+            if (lateral > 6f || RaidTargetIsCurrent) s = Mathf.Max(s, lane.Project(pos, out _));
+            laneS = Mathf.Max(laneS, s);
+        }
+
+        if (sideTarget && !RaidTargetIsCurrent && LeashBroken(pos))
+        {
+            // Bırak: hedef ya da düşman yoldan çok uzak / hedef geride / yeterince kovalandı → ileriden yola dön.
+            SetTarget(mainBaseTransform, mainBaseTransform != null ? (Vector2)mainBaseTransform.position : pos, BaseRadius);
+            relockAfter = Time.time + RelockCooldown;
+            nextRetarget = Time.time + RetargetInterval;
+            sideTarget = false;
+        }
+
+        if (sideTarget)
+        {
+            bool inReach = DistanceToTarget <= attackRange;
+            SetLaneState(inReach ? LaneState.Fight : LaneState.Lock);
+            // Hareketli hedefin (kahraman/Çırak/Lancer) peşinde yol yönünde geri adım atılmaz; sabit yapıya (en çok BackTolerance geride) erişilir.
+            if (!inReach) StepOffLane(pos, targetPoint, step, allowBackward: targetObstacle != null || RaidTargetIsCurrent);
+            else ApplySeparation(pos, step);
+            return;
+        }
+
+        // Ana Üs hedefi: yolun sonuna kadar yol; sondaki üsse vuruş menzilinde durur.
+        if (DistanceToTarget <= attackRange) { ApplySeparation(pos, step); return; }
+        if (laneState == LaneState.Lock || laneState == LaneState.Fight) SetLaneState(LaneState.Rejoin);
+        if (laneState == LaneState.Rejoin) RejoinMove(pos, step);
+        else FollowLaneMove(pos, step);
+    }
+
+    private bool RaidTargetIsCurrent => RaidTarget != null && currentTarget == RaidTarget.transform;
+
+    /// <summary>Hedef bırakılmalı mı (leash): hedef ya da düşman yoldan BırakmaMesafesi'nden uzak, hareketli hedef geride ya da çok ileri kovalandı.</summary>
+    private bool LeashBroken(Vector2 pos)
+    {
+        lane.ProjectRange(pos, laneS - BackTolerance, laneS + ProgressWindow, out float selfLateral);
+        if (selfLateral > LeashDistance) return true;
+        float ts = lane.ProjectRange(targetPoint, laneS - 3f, laneS + ProgressWindow, out float targetLateral);
+        if (targetLateral > LeashDistance) return true;
+        bool moving = currentTarget != null && currentTarget.GetComponent<BattleStructure>() == null
+            && currentTarget.GetComponent<MainBaseController>() == null;
+        if (!moving) return false;
+        if (ts < laneS - BackTolerance - 0.5f) return true;   // kahraman geride kaldı: geriye koşmaz
+        bool engagedAlready = laneState == LaneState.Lock || laneState == LaneState.Fight;   // yeni kilitte lockS henüz atanmadı
+        return engagedAlready && laneS - lockS > ChaseAhead;   // yol boyunca yeterince kovaladı
+    }
+
+    /// <summary>Yolu izle: şeritte ilerler; itilip şeritten çıktıysa İLERİDEKİ şerit noktasına kayar.</summary>
+    private void FollowLaneMove(Vector2 pos, float step)
+    {
+        UpdateSeparation(pos, out float alongBlock);
         Vector2 lanePoint = LanePoint;
         float off = Vector2.Distance(pos, lanePoint);
-        if (off > 5f)
-        {
-            laneS = Mathf.Max(0f, lane.Project(pos, out _));
-            lanePoint = LanePoint;
-            off = Vector2.Distance(pos, lanePoint);
-        }
         Vector2 next;
         if (off > 0.35f)
         {
-            if (IsFlying) next = Vector2.MoveTowards(pos, lanePoint, step);
-            else
-            {
-                steer = steer ?? new GridSteer(BattleWalkGrid.Shared);
-                next = steer.Step(pos, lanePoint, step, out _);
-            }
+            // Şeritten çıkmış (ayrışma/geri tepme): bulunduğu yerin ilerisindeki şerit noktasına.
+            float s = LocalProgress(pos, out _);
+            laneS = Mathf.Max(laneS, s);
+            next = OffLaneStep(pos, LanePointAt(Mathf.Min(lane.Length, laneS + 0.6f)), step);
         }
         else
         {
-            laneS = Mathf.Min(lane.Length, laneS + step);
-            next = LanePoint;
+            laneS = Mathf.Min(lane.Length, laneS + step * alongBlock);
+            next = Vector2.MoveTowards(pos, LanePoint, Mathf.Max(step * 1.5f, 0.02f));
         }
+        Commit(pos, next);
+    }
+
+    /// <summary>
+    /// Yola dön: hedef nokta ilerlemenin İLERİSİNDE (yoldan uzaklıkla orantılı öncü pay) ve düşman ilerledikçe ileri kayar →
+    /// düşman yola açılı, doğal bir eğriyle katılır; ilerleme penceresi geriyi görmediği için geriye yönelmez.
+    /// </summary>
+    private void RejoinMove(Vector2 pos, float step)
+    {
+        float s = LocalProgress(pos, out float lateral);
+        float lead = Mathf.Clamp(lateral * 0.9f, 0.4f, 2.2f);
+        rejoinS = Mathf.Min(lane.Length, Mathf.Max(rejoinS, Mathf.Max(laneS, s) + lead));
+        Vector2 aim = LanePointAt(rejoinS);
+        Vector2 here = LanePointAt(Mathf.Max(laneS, s));
+        if (Vector2.Distance(pos, here) < 0.3f || Vector2.Distance(pos, aim) < 0.3f)
+        {
+            laneS = Mathf.Max(laneS, Vector2.Distance(pos, aim) < 0.3f ? rejoinS : s);
+            LastJoinS = laneS;
+            RejoinCount++;
+            SetLaneState(LaneState.FollowLane);
+            FollowLaneMove(pos, step);
+            return;
+        }
+        StepOffLane(pos, aim, step, allowBackward: false);
+    }
+
+    /// <summary>Yol dışı adım (ortak yol bulma) + ayrışma; <paramref name="allowBackward"/> false iken yol yönünde geri bileşen atılır.</summary>
+    private void StepOffLane(Vector2 pos, Vector2 aim, float step, bool allowBackward)
+    {
+        Vector2 next = OffLaneStep(pos, aim, step);
+        next += SeparationPush(pos) * step * 0.6f;
+        if (!allowBackward)
+        {
+            Vector2 tangent = lane.TangentAt(Mathf.Max(laneS, LocalProgress(pos, out _)));
+            float back = Vector2.Dot(next - pos, tangent);
+            if (back < 0f) next -= tangent * back;
+        }
+        if (!IsFlying && !BattleWalkGrid.Shared.Walkable(BattleWalkGrid.Shared.CellOf(next)) && BattleWalkGrid.Shared.Walkable(BattleWalkGrid.Shared.CellOf(pos)))
+            next = OffLaneStep(pos, aim, step);   // ayrışma su/yapıya itiyorsa yalnız yol bulma adımı
+        Commit(pos, next);
+    }
+
+    private Vector2 OffLaneStep(Vector2 pos, Vector2 aim, float step)
+    {
+        if (IsFlying) return Vector2.MoveTowards(pos, aim, step);
+        steer = steer ?? new GridSteer(BattleWalkGrid.Shared);
+        return steer.Step(pos, aim, step, out _);
+    }
+
+    private Vector2 facingVelocity;
+
+    private void Commit(Vector2 pos, Vector2 next)
+    {
         Vector2 delta = next - pos;
         transform.position = new Vector3(next.x, next.y, transform.position.z);
-        if (spriteRenderer != null && Mathf.Abs(delta.x) > 0.0005f) spriteRenderer.flipX = delta.x > 0;
+        // Titreme olmasın: bakış yönü yumuşatılmış hıza göre ve histerezisle (yatay hız, yürüme hızının %35'ini aşınca) döner.
+        // Dikey yol kesiminde ayrışmanın küçük yan kıpırtısı yönü çevirmez.
+        float dt = Mathf.Max(1e-4f, Time.deltaTime);
+        facingVelocity = Vector2.Lerp(facingVelocity, delta / dt, Mathf.Clamp01(dt * 6f));
+        float threshold = Mathf.Max(0.2f, moveSpeed * SpeedMultiplier * 0.35f);
+        if (spriteRenderer != null && Mathf.Abs(facingVelocity.x) > threshold) spriteRenderer.flipX = facingVelocity.x > 0;
+    }
+
+    // ---- Ayrışma (separation): kalabalıkta iç içe girmesin ----
+    private static readonly System.Collections.Generic.List<EnemyController> laneEnemies = new System.Collections.Generic.List<EnemyController>();
+    private float BodyRadius => EnemyTypeInfo.IsBoss(enemyType) ? 0.75f : enemyType == EnemyType.Troll ? 0.55f : 0.36f;
+
+    private void OnEnable() { if (!laneEnemies.Contains(this)) laneEnemies.Add(this); }
+    private void OnDisable() => laneEnemies.Remove(this);
+
+    /// <summary>Komşulardan itme vektörü (birim başına; örtüşme oranında).</summary>
+    private Vector2 SeparationPush(Vector2 pos)
+    {
+        Vector2 push = Vector2.zero;
+        for (int i = 0; i < laneEnemies.Count; i++)
+        {
+            var other = laneEnemies[i];
+            if (other == this || other == null || other.isDead || other.lane == null || other.IsFlying != IsFlying) continue;
+            Vector2 d = pos - (Vector2)other.transform.position;
+            float min = BodyRadius + other.BodyRadius;
+            float dist = d.magnitude;
+            if (dist >= min) continue;
+            if (dist < 1e-4f) d = new Vector2(GetInstanceID() > other.GetInstanceID() ? 1f : -1f, 0f);
+            push += d.normalized * (1f - dist / min);
+        }
+        return push;
+    }
+
+    /// <summary>
+    /// Yol izlerken ayrışma: yan itme şerit kaymasını yumuşakça değiştirir (sıçrama yok), öndeki komşu yavaşlatır (geri itmez).
+    /// <paramref name="alongBlock"/> 0,3–1 arası ilerleme çarpanı.
+    /// </summary>
+    private void UpdateSeparation(Vector2 pos, out float alongBlock)
+    {
+        alongBlock = 1f;
+        Vector2 tangent = lane.TangentAt(laneS), normal = new Vector2(-tangent.y, tangent.x);
+        float lateralPush = 0f;
+        for (int i = 0; i < laneEnemies.Count; i++)
+        {
+            var other = laneEnemies[i];
+            if (other == this || other == null || other.isDead || other.lane == null || other.IsFlying != IsFlying) continue;
+            Vector2 d = (Vector2)other.transform.position - pos;
+            float min = BodyRadius + other.BodyRadius;
+            if (d.sqrMagnitude >= min * min * 1.6f) continue;
+            float ahead = Vector2.Dot(d, tangent), side = Vector2.Dot(d, normal);
+            // Aynı noktada (eşit ilerleme) iki düşman: kimlikle sıra bozulur, biri öne geçer (yoksa hep iç içe yürürler).
+            if (Mathf.Abs(ahead) < 0.05f) ahead = GetInstanceID() < other.GetInstanceID() ? 0.06f : -0.06f;
+            float overlap = 1f - d.magnitude / (min * 1.26f);
+            lateralPush -= Mathf.Sign(side == 0f ? (GetInstanceID() > other.GetInstanceID() ? 1f : -1f) : side) * overlap;
+            if (ahead > 0.05f && Mathf.Abs(side) < min * 0.8f && other.moveSpeed * other.SpeedMultiplier <= moveSpeed * SpeedMultiplier + 0.01f)
+                alongBlock = Mathf.Min(alongBlock, Mathf.Lerp(0.1f, 1f, Mathf.Clamp01((ahead - 0.2f * min) / (0.8f * min))));
+        }
+        float targetOffset = Mathf.Clamp(lateralPush * 0.5f, -0.45f - laneOffset, 0.45f - laneOffset);
+        if (Mathf.Abs(lateralPush) < 0.01f) targetOffset = 0f;
+        sepOffset = Mathf.MoveTowards(sepOffset, targetOffset, 0.9f * Time.deltaTime);
+    }
+
+    /// <summary>Savaşırken (yerinde): yalnız örtüşmeyi çözer, su/yapıya itmez.</summary>
+    private void ApplySeparation(Vector2 pos, float step)
+    {
+        Vector2 push = SeparationPush(pos);
+        if (push.sqrMagnitude < 1e-4f) return;
+        Vector2 next = pos + Vector2.ClampMagnitude(push, 1f) * step * 0.5f;
+        if (!IsFlying && !BattleWalkGrid.Shared.Walkable(BattleWalkGrid.Shared.CellOf(next))) return;
+        transform.position = new Vector3(next.x, next.y, transform.position.z);
     }
 
     // ==================== SALDIRI ====================
@@ -930,7 +1189,7 @@ public class EnemyController : MonoBehaviour
         Died?.Invoke(this);
 
         // BattleManager'a bildir
-        BattleManager battleManager = FindFirstObjectByType<BattleManager>();
+        BattleManager battleManager = BattleManager.Instance != null ? BattleManager.Instance : FindFirstObjectByType<BattleManager>();
         if (battleManager != null)
             battleManager.OnEnemyKilled(goldReward);
 
@@ -959,6 +1218,9 @@ public class EnemyController : MonoBehaviour
 
         yield return new WaitForSeconds(0.35f);
 
+        // 8. oturum (D97): boss olmayan düşmanın kabuğu havuza döner.
+        var battle = BattleManager.Instance;
+        if (battle != null && battle.ReleaseEnemy(this)) yield break;
         Destroy(gameObject);
     }
 }

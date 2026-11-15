@@ -68,6 +68,18 @@ public class BattleManager : MonoBehaviour
 
     // Level verisi
     private LevelData currentLevel;
+    private float killGoldScale = 1f, killGoldCarry;
+    /// <summary>Düşman başına öldürme altını çarpanı (eski toplam / yeni toplam; D97).</summary>
+    public float KillGoldScale => killGoldScale;
+    /// <summary>Eski plana göre beklenen toplam öldürme altını (telemetri).</summary>
+    public int LegacyKillGold { get; private set; }
+    /// <summary>Savaşın toplam düşmanı (dalga planı; Cadı/boss çağrıları hariç) ve öldürülenler — üst bar "kalan / toplam".</summary>
+    public int EnemiesTotal { get; private set; }
+    public int EnemiesDefeated { get; private set; }
+    public int EnemiesRemaining => Mathf.Max(0, EnemiesTotal - EnemiesDefeated);
+    public int WaveCount => currentLevel != null ? currentLevel.waves.Count : 0;
+    /// <summary>(kalan, toplam) değişince.</summary>
+    public event System.Action<int, int> OnEnemyTallyChanged;
 
     // Event'ler — UI için
     public event System.Action<int, int> OnWaveChanged;          // (currentWave, totalWaves)
@@ -111,6 +123,15 @@ public class BattleManager : MonoBehaviour
         {
             battleLevel = BattleSession.BattleLevel;
             currentLevel = CreateCampaignWaves(BattleSession.Region, BattleSession.Level);
+            // 8. oturum (D97): düşman sayısı arttı diye toplam öldürme altını artmasın — eski plana eşitlenir.
+            killGoldScale = 1f; killGoldCarry = 0f;
+            if (!BattleSession.IsSpecial && CampaignEnemyConfig.Active.keepKillGoldTotal && BattleSession.Region != null && BattleSession.Level != null)
+            {
+                int legacyGold = ExpectedKillGold(CreateLegacyCampaignWaves(BattleSession.Region, BattleSession.Level), battleLevel);
+                int newGold = ExpectedKillGold(currentLevel, battleLevel);
+                if (legacyGold > 0 && newGold > 0) killGoldScale = legacyGold / (float)newGold;
+                LegacyKillGold = legacyGold;
+            }
             // Tekrar: sefer aşaması yıldızlıysa; Sonsuz Sefer'de geçilmiş kat; İstila'da haftanın ilk zaferi alındıysa.
             IsReplay = BattleSession.IsEndless ? BattleSession.Floor <= EndlessMode.BestFloor
                 : BattleSession.IsInvasion ? !DragonInvasion.FirstWinAvailable
@@ -118,7 +139,9 @@ public class BattleManager : MonoBehaviour
         }
         else currentLevel = LevelData.GenerateLevel(battleLevel);
 
-        Debug.Log($"[BattleManager] Level {battleLevel} başlıyor! {currentLevel.waves.Count} dalga");
+        EnemiesTotal = PlannedEnemies(currentLevel);
+        EnemiesDefeated = 0;
+        Debug.Log($"[BattleManager] Level {battleLevel} başlıyor! {currentLevel.waves.Count} dalga, {EnemiesTotal} düşman");
         if (BattleSession.IsCampaign)
         {
             startGold = Progression.BattleStartGold(GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1);
@@ -561,6 +584,65 @@ public class BattleManager : MonoBehaviour
         obj.transform.DOScaleY(targetY, 0.35f).SetEase(Ease.OutBack);
     }
 
+    // ==================== DÜŞMAN HAVUZU (8. oturum, D97) ====================
+    // Kalabalık dalgalarda her düşman için GameObject + SpriteRenderer + collider kurup yıkmak yerine kabuk geri kullanılır.
+    // Davranış bileşenleri (EnemyController, EnemyVisuals ve sonradan eklenenler) her kullanımda TAZE eklenir: eski referanslar
+    // (kule hedefi, olay aboneleri) ölü kalır, düşman "dirilmez". Boss'lar havuza girmez. Nesne bırakıldıktan 2 sn sonra yeniden
+    // verilir (uçuştaki mermi/efekt eski konuma gidip yeni düşmana çarpmasın).
+    private readonly System.Collections.Generic.Queue<(GameObject go, float readyAt)> enemyPool =
+        new System.Collections.Generic.Queue<(GameObject, float)>();
+    private const float PoolReuseDelay = 2f;
+    /// <summary>Telemetri: yeni oluşturulan / havuzdan gelen düşman kabuğu sayısı.</summary>
+    public int EnemyObjectsCreated { get; private set; }
+    public int EnemyObjectsReused { get; private set; }
+    public int EnemyPoolSize => enemyPool.Count;
+
+    private GameObject AcquireEnemyObject(Vector3 position)
+    {
+        while (enemyPool.Count > 0 && enemyPool.Peek().readyAt <= Time.time)
+        {
+            var go = enemyPool.Dequeue().go;
+            if (go == null) continue;
+            go.transform.SetPositionAndRotation(position, Quaternion.identity);
+            go.AddComponent<EnemyController>();
+            go.AddComponent<EnemyVisuals>();
+            EnemyObjectsReused++;
+            return go;
+        }
+        EnemyObjectsCreated++;
+        return Instantiate(enemyPrefab, position, Quaternion.identity);
+    }
+
+    /// <summary>Ölen düşmanın kabuğunu havuza alır (boss değilse). false: çağıran nesneyi yok etmeli.</summary>
+    public bool ReleaseEnemy(EnemyController enemy)
+    {
+        if (enemy == null || enemyPrefab == null) return false;
+        if (EnemyTypeInfo.IsBoss(enemy.Type) || EnemyTypeInfo.IsRegionBoss(enemy.Type)
+            || enemy.Type == EnemyType.ForestWitch || enemy.Type == EnemyType.DragonWarrior || enemy.HasRoute) return false;
+        var go = enemy.gameObject;
+        enemy.DetachExternals();
+        go.transform.DOKill();
+        var sr = go.GetComponent<SpriteRenderer>();
+        if (sr != null) sr.DOKill();
+        go.SetActive(false);
+        for (int i = go.transform.childCount - 1; i >= 0; i--) Destroy(go.transform.GetChild(i).gameObject);
+        foreach (var c in go.GetComponents<Component>())
+            if (!(c is Transform) && !(c is SpriteRenderer) && !(c is BoxCollider2D)) Destroy(c);
+        var templateRenderer = enemyPrefab.GetComponent<SpriteRenderer>();
+        if (sr != null && templateRenderer != null)
+        {
+            sr.sprite = templateRenderer.sprite; sr.color = templateRenderer.color; sr.sortingOrder = templateRenderer.sortingOrder;
+            sr.flipX = false; sr.flipY = false; sr.enabled = true;
+        }
+        var box = go.GetComponent<BoxCollider2D>(); var templateBox = enemyPrefab.GetComponent<BoxCollider2D>();
+        if (box != null && templateBox != null) { box.size = templateBox.size; box.offset = templateBox.offset; box.enabled = true; }
+        go.transform.localScale = enemyPrefab.transform.localScale;
+        go.transform.rotation = Quaternion.identity;
+        go.name = "Enemy_Pooled";
+        enemyPool.Enqueue((go, Time.time + PoolReuseDelay));
+        return true;
+    }
+
     private GameObject CreateEnemyPrefab()
     {
         // Geçici prefab — runtime'da oluştur
@@ -658,9 +740,10 @@ public class BattleManager : MonoBehaviour
             // Dalgalar arası bekleme
             if (w < currentLevel.waves.Count - 1)
             {
-                Debug.Log("[BattleManager] Sonraki dalga 5 saniye içinde...");
-                NextWaveAt = Time.time + 5f;
-                yield return new WaitForSeconds(5f);
+                // 8. oturum (D97): sefer savaşında dalga arası nefes payı yapılandırmadan (kule kurmaya yetsin).
+                float pause = BattleSession.IsCampaign && !BattleSession.IsSpecial ? CampaignEnemyConfig.Active.interWaveSeconds : 5f;
+                NextWaveAt = Time.time + pause;
+                yield return new WaitForSeconds(pause);
                 NextWaveAt = 0f;
             }
         }
@@ -721,6 +804,7 @@ public class BattleManager : MonoBehaviour
             var start = lane.PointAt(Random.Range(0f, 0.6f));
             var spawned = SpawnVariantAt(type, new Vector3(start.x, start.y, 0f), variant);
             if (spawned != null) spawned.SetLane(lane, Random.Range(-0.32f, 0.32f));
+            TrackWaveEnemy(spawned);
             return;
         }
         Vector3 spawnPos = Vector3.zero;
@@ -759,7 +843,28 @@ public class BattleManager : MonoBehaviour
             spawnPos = new Vector3(Mathf.Cos(angle) * 10f, Mathf.Sin(angle) * 10f, 0);
         }
 
-        SpawnVariantAt(type, spawnPos, variant);
+        TrackWaveEnemy(SpawnVariantAt(type, spawnPos, variant));
+    }
+
+    /// <summary>Dalga düşmanı: öldürme altını eski toplama eşitlenir (kesir taşımalı) ve ölünce "kalan" sayacı düşer.</summary>
+    private void TrackWaveEnemy(EnemyController enemy)
+    {
+        if (enemy == null) return;
+        if (!Mathf.Approximately(killGoldScale, 1f))
+        {
+            killGoldCarry += enemy.GoldValue * killGoldScale;
+            int gold = Mathf.FloorToInt(killGoldCarry + 1e-4f);
+            killGoldCarry -= gold;
+            enemy.SetGoldReward(gold);
+        }
+        enemy.Died += OnWaveEnemyDied;
+    }
+
+    private void OnWaveEnemyDied(EnemyController enemy)
+    {
+        enemy.Died -= OnWaveEnemyDied;
+        EnemiesDefeated++;
+        OnEnemyTallyChanged?.Invoke(EnemiesRemaining, EnemiesTotal);
     }
 
     /// <summary>Belirli bir noktada düşman doğurur (ör. Cadı'nın çağırdığı kurtlar).</summary>
@@ -770,7 +875,7 @@ public class BattleManager : MonoBehaviour
     public EnemyController SpawnVariantAt(EnemyType type, Vector3 spawnPos, EnemyVariant variant)
     {
         if (enemyPrefab == null) return null;
-        GameObject enemyObj = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+        GameObject enemyObj = AcquireEnemyObject(spawnPos);
         enemyObj.SetActive(true);
         enemyObj.name = $"Enemy_{type}";
 
@@ -787,7 +892,8 @@ public class BattleManager : MonoBehaviour
             {
                 enemy.SetLane(NearestRoute(spawnPos), Random.Range(-0.3f, 0.3f));
                 // 7. oturum denge (D95): uzun yol kulelere daha çok atış süresi veriyor; bölge haritasında düşman canı bölgeye göre artar.
-                if (!BattleSession.IsSpecial) enemy.ScaleStats(MapEnemyHealth(BattleSession.RegionId), 1f);
+                // 8. oturum (D97): tüm sefer düşmanlarına (boss dahil) yapılandırma can çarpanı (×1,1).
+                if (!BattleSession.IsSpecial) enemy.ScaleStats(MapEnemyHealth(BattleSession.RegionId) * CampaignEnemyConfig.Active.healthMultiplier, 1f);
             }
             // "Madeni koru": her iki düşmandan biri (boss hariç) madene yürür.
             if (DefendedMine != null && !EnemyTypeInfo.IsBoss(type) && variant != EnemyVariant.Saboteur)
@@ -1169,7 +1275,77 @@ public class BattleManager : MonoBehaviour
         wave.enemies.Add(new EnemySpawnInfo { enemyType = body, count = count, variant = variant });
     }
 
+    /// <summary>
+    /// 8. oturum (D97): sefer savaşı dalgaları <see cref="CampaignEnemyConfig"/> tablosundan (savaşta doğan toplam, boss dahil), artan ağırlıkla
+    /// dalgalara dağıtılır. Sonsuz/İstila ve tabloda olmayan bölge eski kuralla (<see cref="CreateLegacyCampaignWaves"/>).
+    /// </summary>
     private static LevelData CreateCampaignWaves(RegionData region, CampaignLevelData campaignLevel)
+    {
+        if (region == null || campaignLevel == null || BattleSession.IsSpecial) return CreateLegacyCampaignWaves(region, campaignLevel);
+        var config = CampaignEnemyConfig.Active;
+        int total = config.Total(region.id, campaignLevel.kind);
+        if (total <= 0) return CreateLegacyCampaignWaves(region, campaignLevel);
+        var split = config.Split(total, campaignLevel.waveCount);
+        var battle = new LevelData { levelNumber = campaignLevel.number };
+        for (int i = 0; i < split.Count; i++)
+        {
+            var wave = new WaveData { waveNumber = i + 1, timeBetweenSpawns = Progression.SpawnInterval(region.id) };
+            int count = split[i];
+            // Dalga sayısı arttıysa ek dalgalar asıl dalgalara ORANTILI eşlenir: tür karışımı (ör. Trol yalnız son asıl dalgada)
+            // ve karşı düşman payı eski seviye tasarımındaki gibi kalır; artan yalnız sayıdır.
+            int baseWaves = Mathf.Max(1, campaignLevel.waveCount);
+            int source = Mathf.Min(baseWaves - 1, i * baseWaves / split.Count);
+            EnemyType type = region.enemyTypes != null && region.enemyTypes.Length > 0
+                ? region.enemyTypes[Mathf.Min(source, region.enemyTypes.Length - 1)] : EnemyType.Wolf;
+            if (campaignLevel.kind == CampaignLevelKind.Boss && i == split.Count - 1)
+            {
+                wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = Mathf.Max(0, count - 1) });
+                wave.enemies.Add(new EnemySpawnInfo { enemyType = region.bossType, count = 1 });
+            }
+            else wave.enemies.Add(new EnemySpawnInfo { enemyType = type, count = count });
+            var mix = Progression.CounterMix(region.id, campaignLevel.number, source, wave.enemies[0].count);
+            AddVariant(wave, EnemyType.Orc, EnemyVariant.Armored, mix.armored);
+            AddVariant(wave, EnemyType.ShadowWolf, EnemyVariant.Flying, mix.flying);
+            AddVariant(wave, EnemyType.Wolf, EnemyVariant.Saboteur, mix.saboteur);
+            battle.waves.Add(wave);
+        }
+        return battle;
+    }
+
+    /// <summary>Savaşta doğacak toplam düşman (dalga planından; çağrılanlar hariç).</summary>
+    public static int PlannedEnemies(LevelData level)
+    {
+        int n = 0;
+        if (level != null) foreach (var w in level.waves) foreach (var e in w.enemies) n += e.count;
+        return n;
+    }
+
+    /// <summary>Dalga planının beklenen toplam öldürme altını (EnemyController.Initialize + ApplyVariant ile aynı yuvarlama).</summary>
+    public static int ExpectedKillGold(LevelData level, int battleLevel)
+    {
+        int total = 0;
+        if (level == null) return 0;
+        foreach (var w in level.waves)
+            foreach (var e in w.enemies)
+            {
+                var stats = EnemyStats.GetBaseStats(e.enemyType);
+                stats.ScaleToLevel(battleLevel);
+                int gold = stats.goldReward;
+                float mult = e.variant == EnemyVariant.Armored ? Progression.Counters.ArmoredGold
+                    : e.variant == EnemyVariant.Flying ? Progression.Counters.FlyingGold
+                    : e.variant == EnemyVariant.Saboteur ? Progression.Counters.SaboteurGold : 1f;
+                if (e.variant != EnemyVariant.None) gold = Mathf.Max(1, Mathf.RoundToInt(gold * mult));
+                total += gold * e.count;
+            }
+        return total;
+    }
+
+    /// <summary>Sefer planı (test/telemetri): verilen bölge/seviye için yeni ve eski dalga planı.</summary>
+    public static LevelData PlanFor(RegionData region, CampaignLevelData level, bool legacy) =>
+        legacy ? CreateLegacyCampaignWaves(region, level) : CreateCampaignWaves(region, level);
+
+    /// <summary>Eski (7. oturum) sefer dalgaları: bölge varlığındaki sayılar + 1. dalga sınırı + boss ek düşmanı. Altın eşitlemesinin referansı.</summary>
+    private static LevelData CreateLegacyCampaignWaves(RegionData region, CampaignLevelData campaignLevel)
     {
         if (region == null || campaignLevel == null)
             return LevelData.GenerateLevel(1);

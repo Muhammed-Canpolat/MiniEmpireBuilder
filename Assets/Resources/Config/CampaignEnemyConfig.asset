@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31df88716f5a49859ac78656235c50fe, type: 3}
+  m_Name: CampaignEnemyConfig
+  m_EditorClassIdentifier: Assembly-CSharp::CampaignEnemyConfig
+  totals:
+  - name: "1 Yıkık Kale Yolu"
+    survive: 8
+    defendBase: 14
+    defendMine: 17
+    timeTrial: 19
+    boss: 20
+  - name: "2 Sisli Orman"
+    survive: 16
+    defendBase: 20
+    defendMine: 21
+    timeTrial: 24
+    boss: 26
+  - name: "3 Terk Edilmiş Maden"
+    survive: 18
+    defendBase: 25
+    defendMine: 27
+    timeTrial: 30
+    boss: 32
+  - name: "4 Donmuş Geçit"
+    survive: 20
+    defendBase: 27
+    defendMine: 30
+    timeTrial: 33
+    boss: 38
+  - name: "5 Karanlık Kale"
+    survive: 22
+    defendBase: 32
+    defendMine: 35
+    timeTrial: 38
+    boss: 50
+  - name: "6 Ejderin İni"
+    survive: 24
+    defendBase: 35
+    defendMine: 38
+    timeTrial: 40
+    boss: 55
+  healthMultiplier: 1.1
+  maxPerWave: 12
+  waveRamp: 0.2
+  interWaveSeconds: 8
+  keepKillGoldTotal: 1
