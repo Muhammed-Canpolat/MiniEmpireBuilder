@@ -20,15 +20,21 @@ public class SaveIsolation
     private static string FilePath => Path.Combine(Application.persistentDataPath, "save.json");
     private static string BackupDir => Path.Combine(Application.persistentDataPath, "SaveBackups");
 
+    private const string BypassKey = "MiniEmpireBuilder_Dev_IslandLockBypass";   // DevSettings.IslandLockBypass
     private string[] savedKeys;
     private string savedFile;
     private DateTime startedUtc;
+    private int bypassWas = -1;
     [OneTimeSetUp]
     public void KeepRealSave()
     {
         savedKeys = Keys.Select(key => PlayerPrefs.HasKey(key) ? PlayerPrefs.GetString(key) : null).ToArray();
         savedFile = File.Exists(FilePath) ? File.ReadAllText(FilePath) : null;
         startedUtc = DateTime.UtcNow.AddSeconds(-2);
+        // Ada testleri adaya Ana Üs 5 şartı olmadan girer. Eskiden bunu geliştirici ana anahtarı kendiliğinden sağlıyordu (KN-4a);
+        // artık açık bir seçenek olduğundan test koşusu onu kendisi açar ve bitince eski değerine döndürür.
+        bypassWas = PlayerPrefs.HasKey(BypassKey) ? PlayerPrefs.GetInt(BypassKey) : -1;
+        PlayerPrefs.SetInt(BypassKey, 1);
     }
 
     [OneTimeTearDown]
@@ -39,6 +45,8 @@ public class SaveIsolation
             if (savedKeys[i] != null) PlayerPrefs.SetString(Keys[i], savedKeys[i]);
             else PlayerPrefs.DeleteKey(Keys[i]);
         }
+        if (bypassWas >= 0) PlayerPrefs.SetInt(BypassKey, bypassWas);
+        else PlayerPrefs.DeleteKey(BypassKey);
         PlayerPrefs.Save();
         if (savedFile != null) File.WriteAllText(FilePath, savedFile);
         else if (File.Exists(FilePath)) File.Delete(FilePath);

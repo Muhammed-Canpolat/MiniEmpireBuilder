@@ -446,3 +446,44 @@ Yol haritasından bu oturumda uygulananlar. Her madde ayrı, geri alınabilir co
    `…/files/SaveBackups/` altında (destek için istenebilir).
 3. YENİ OYUN eski kaydı silmeden önce aynı klasöre `save.deleted.*` olarak koyuyor.
 4. Yeni hesap madende 40 altınla başlıyor.
+
+### 12.1 Doğrulama (5. aşama)
+
+| Koşu | Sonuç |
+|---|---|
+| Hedefli: `Session9SaveTests`, `Session9RuleGuardTests`, `Session9BackKeyTests`, `SaveSystemTests` | 24/24 |
+| Tam PlayMode turu (400 test; `[Explicit]` 17 atlandı) | 304 geçti, 79 başarısız |
+| Başarısız sınıfların yeniden koşusu (test düzeneği düzeltildikten sonra, 213 test) | 197 geçti, 16 başarısız |
+
+**79 → 16 nasıl düştü.** 63 başarısızlığın nedeni bu oturumun kendi değişikliğiydi, ama oyunda değil test ortamında: ada testleri adaya Ana Üs 5 şartı
+olmadan girmek için geliştirici ana anahtarının kendiliğinden yaptığı atlamaya (KN-4a) dayanıyordu. Atlama açık bir seçenek olunca testler adaya
+giremedi. Düzeltme: `SaveIsolation` test koşusu boyunca `IslandLockBypass`'ı açar, bitince eski değerine döndürür. (Bu, KN-4a bulgusunun kendisini
+doğruluyor: 60'tan fazla test, oyuncunun hiç göremeyeceği bir kuralla koşuyordu.)
+
+**Kalan 16 başarısızlık — bu oturumun değişiklikleriyle ilişkisi**
+
+| Test | Belirti | Değerlendirme |
+|---|---|---|
+| `BaseShadowRevisionTests.ShadowsRemainSoft…`, `IslandPhaseCTests.MonsterFlips…`, `IslandRaidTests.LiveRaid…` | — | Bilinen eski (REPORT §5, 5. oturumdan beri) |
+| `UiNightTests.SaveVersionIs11…` | 11 bekliyor, 13 | Eskimiş test (sürüm 6. oturumda 13 oldu) |
+| `CounterEnemyTests.BossWard…` | 36,3 bekliyor, 33 | Eskimiş: 8. oturumun %10 can kuralı (D97) |
+| `BaseVisualCaptureTests.BattleCosmetics…` | `AlwaysAnimate` | Eskimiş: 6. oturum 1.4 (D71) |
+| `Session4Tests.BattleObjectiveSitsInTheTopBar…` | `ObjectivePill` yok | Eskimiş: 8. oturumun yeni üst barı (D98) |
+| `EnvironmentAudioReviewTests.ForestIdentity…`, `ViewportRevisionTests.ForestBattleViewport…` | `ForestRadialFog` / `BattleGround` yok | Eskimiş: 7. oturumun bölge haritaları |
+| `HudExpansionReviewTests.OwnershipBattleCard…` | hak 2 bekliyor, 0 | Eskimiş: test seviyesiz bina yazıyor; D68'den beri seviye 0 = bitmemiş |
+| `ExpansionFeatureTests.MonasteryAndApprentice…` | kahraman iyileşmedi | **Muhtemel** eski (savaş kodu); neden doğrulanmadı |
+| `IslandReviewScreenshots.FixedIslandCamera…`, `Nov13FeedbackTests.IslandFrame…` | dar oranda adacık kenardan %0,6–3 taşıyor | Eskimiş: D87 (adacıklar kenarda kesilebilir) |
+| `IslandReviewScreenshots.IslandSceneHasNoCodeDrawnSprites` | `BarTrail` kodla çizilmiş | Eskimiş: 6. oturum can barı izi (D70) |
+| `UiNightTests.IslandTopBar…`, `UiNightTests.NewPlayerIsAskedForName…` | ad teklifi açılmıyor | **Muhtemel** eski: 6. oturum tanıtım akışı + `Application.isBatchMode` dalı (KN-4b) |
+
+Kanıt düzeyi: bu 16 test **taban commit'te (`cbee273`) koşturulmadı**; "eski" değerlendirmesi belirtinin hangi oturumun değişikliğine karşılık geldiğine
+ve bu oturumun dokunduğu dosyalara dayanıyor (ör. `Assets/Scripts/Battle` altında bu oturumun tek değişikliği iki satırlık salt-okunur bir özellik).
+İki satır "Muhtemel" olarak işaretli. Ayrıca tam turda `Session8Tests.A2_CrowdSeparatesWithoutJitter` bir kez 4 çift ölçtü (sınır 3); yeniden koşulmadı,
+kalabalık ayrışması rastlantıya duyarlı bir ölçüm.
+
+**Öneri (yol haritasına 23. sıra, P2, S–M):** bu 13 eskimiş testi güncel tasarıma uyarlamak ya da emekli etmek. Tam tur şu an "79 kırmızı içinde gerçek
+gerilemeyi arama" işi; yeşil bir taban olmadan otomatik testin koruma değeri düşük.
+
+**Geri tuşu testi notu:** `Session9BackKeyTests` T2 tam turda "çıkış onayı açılmadı" diye başarısız oldu; tanılama (`BackKeyRouter.LastStep = radial`) nedeni
+gösterdi: radyal menünün açık/kapalı durumu PlayerPrefs'te saklanıyor ve önceki testlerden açık geliyordu. Geri tuşu önce menüyü kapattı (doğru davranış);
+test, kapatılacak bir şey kalmayana kadar basacak şekilde düzeltildi.

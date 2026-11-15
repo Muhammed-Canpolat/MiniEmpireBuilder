@@ -107,8 +107,9 @@ public class Session9BackKeyTests : Session9SaveFixture
 
         Assert.IsTrue(Back());
         yield return null;
-        // Açılışta geç beliren bir pencere (takvim, görev, Sen yokken) varsa ilk basış onu kapatır: kural gereği doğru davranış.
-        for (int extra = 0; extra < 3 && !QuitOpen() && (string)T("BackKeyRouter").GetProperty("LastStep").GetValue(null) == "window"; extra++)
+        // Açık kalmış radyal menü (durumu PlayerPrefs'te saklanır; tam koşuda önceki testlerden açık gelir) ya da geç beliren bir pencere varsa
+        // ilk basış onu kapatır: kural gereği doğru davranış. Çıkış onayı ancak kapatılacak bir şey kalmayınca açılır.
+        for (int extra = 0; extra < 3 && !QuitOpen() && (string)T("BackKeyRouter").GetProperty("LastStep").GetValue(null) != "scene"; extra++)
         {
             Assert.IsTrue(Back());
             yield return null;
