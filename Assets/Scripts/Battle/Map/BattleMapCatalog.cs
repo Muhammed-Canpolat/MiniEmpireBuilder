@@ -148,7 +148,15 @@ public static class BattleTerrain
         get
         {
             var b = BattleMapGeometry.Bounds;
-            return Rect.MinMaxRect(b.xMin - 0.5f, b.yMin - 0.5f, b.xMax + 0.5f, b.yMax + 2f);
+            // 8. oturum (D99): yatayda KARANIN kenarı (eskiden ızgara + 0,5 → kahramanı izleyen kamera bir yanda 1–2 birim deniz şeridi ve
+            // kıyıdaki yapının yarısını gösteriyordu). Ekran adadan genişse CameraFollow kamerayı adanın ortasına sabitler (iki yan eşit).
+            float landMin = float.MaxValue, landMax = float.MinValue;
+            if (Map != null)
+                for (float y = b.yMin + 0.5f; y < b.yMax; y += 1f)
+                    for (float x = b.xMin; x <= b.xMax; x += 0.25f)
+                        if (IsLand(new Vector2(x, y))) { landMin = Mathf.Min(landMin, x); landMax = Mathf.Max(landMax, x); }
+            if (landMin > landMax) { landMin = b.xMin - 0.5f; landMax = b.xMax + 0.5f; }
+            return Rect.MinMaxRect(landMin, b.yMin - 0.5f, landMax, b.yMax + 2f);
         }
     }
 }

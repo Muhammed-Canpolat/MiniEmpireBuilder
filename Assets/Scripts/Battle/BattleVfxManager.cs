@@ -226,8 +226,12 @@ public class BattleVfxManager : MonoBehaviour
         foreach (int edge in edges)
         {
             // Kenarın ortası ve dışa bakan yön (ok düşmanın geleceği yönü gösterir).
-            Vector2 anchor = edge == 0 ? new Vector2(0.5f, 0.86f) : edge == 1 ? new Vector2(0.9f, 0.5f)
-                : edge == 2 ? new Vector2(0.5f, 0.2f) : new Vector2(0.1f, 0.5f);
+            // 8. oturum (D98): üst bar + hedef kartı ekranın üstünü kaplar; ok, kameranın görünen dünya alanının (WorldViewportBars
+            // kırpması) içinde kalır — barın/kartın üstüne binmez.
+            var view = Camera.main != null ? Camera.main.rect : new Rect(0f, 0f, 1f, 1f);
+            float topY = Mathf.Min(0.86f, view.yMax - 0.045f), bottomY = Mathf.Max(0.2f, view.yMin + 0.07f);
+            Vector2 anchor = edge == 0 ? new Vector2(0.5f, topY) : edge == 1 ? new Vector2(0.9f, 0.5f)
+                : edge == 2 ? new Vector2(0.5f, bottomY) : new Vector2(0.1f, 0.5f);
             float angle = edge == 0 ? 90f : edge == 1 ? 0f : edge == 2 ? -90f : 180f;
             var arrow = new GameObject("WarnArrow" + edge);
             arrow.transform.SetParent(canvasObj.transform, false);

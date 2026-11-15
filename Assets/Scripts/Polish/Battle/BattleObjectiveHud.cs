@@ -5,18 +5,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Savaş görev göstergeleri: "Zamana karşı" süre sayacı, "Madeni koru" hatırlatması ve
-/// düşen savaşçının dirilme geri sayımı. Savaş kararlarını değiştirmez, yalnız okur.
+/// Savaş görev göstergeleri: etkin kart pulu ve (süre/maden göstergesi BattleTopBar kartına taşındı)
+/// düşen savaşçının dirilme geri sayımı; üst barı (BattleTopBar) kurar. Savaş kararlarını değiştirmez.
 /// </summary>
 public sealed class BattleObjectiveHud : MonoBehaviour
 {
-    private TextMeshProUGUI timerText;
-    private Image timerPill;
     private TextMeshProUGUI respawnText;
     private CanvasGroup respawnGroup;
     private HeroController hero;
-    private int lastWholeSecond = -1;
-    private float stackBottom;
 
     private void Start()
     {
@@ -28,25 +24,10 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         ReferenceUiVisuals.ConfigureCanvas(canvasObject.GetComponent<CanvasScaler>());
         var safe = ReferenceUiVisuals.SafeArea(canvas.transform);
 
-        var battle = BattleManager.Instance;
-        bool timed = battle != null && battle.HasTimeLimit;
-        bool mine = BattleSession.IsCampaign && BattleSession.Level?.kind == CampaignLevelKind.DefendMine;
-        if (timed || mine)
-        {
-            timerPill = ReferenceUiVisuals.Image(safe, "ObjectivePill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(-82f, -140f), new Vector2(82f, -110f), new Color(0.12f, 0.09f, 0.06f, 0.88f));
-            timerPill.sprite = ReferenceUiVisuals.PillSprite();
-            timerPill.type = Image.Type.Sliced;
-            var outline = timerPill.gameObject.AddComponent<Outline>();
-            outline.effectColor = timed ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Hex(0xE8B04A);
-            outline.effectDistance = new Vector2(1.5f, -1.5f);
-            timerText = ReferenceUiVisuals.Text(timerPill.transform, "ObjectiveText",
-                timed ? FormatTime(BattleManager.TimeTrialSeconds) : L.T("MADENİ KORU", "DEFEND THE MINE"), 16, ReferenceUiVisuals.Gold,
-                TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f), true);
-            // 4. oturum (3.4): gösterge üst barın ikinci satırına (bölge adının sağına) yerleşir; eskiden barın altında dünyanın üstünde
-            // durup inşa halkalarına (ve "N HAK" etiketine) biniyordu.
-            docked = DockIntoTopBar();
-        }
+        // 8. oturum (D98): süre / maden göstergesi artık BattleTopBar'ın hedef kartında; bar burada kurulur.
+        if (BattleTopBar.Instance == null) new GameObject("BattleTopBar").AddComponent<BattleTopBar>();
+        BattleTopBar.CardsPillStack = 0f;
+        bool hasCard = BattleTopBar.KindForBattle() != BattleTopBar.ObjectiveKind.None;
 
         // Bu savaşta açık kartlar: küçük bir pul (ör. "KART +%10: Hasar · Can").
         var cards = new System.Collections.Generic.List<string>();
@@ -57,7 +38,7 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         for (int i = 0; i < BattleCards.BasicCount; i++) basicActive |= BattleCards.ActiveInBattle((BattleCard)i);
         if (cards.Count > 0)
         {
-            float top = (timed || mine) && !docked ? -144f : -110f;
+            float top = -(BattleTopBar.BarHeight + BattleTopBar.Gap + (hasCard ? BattleTopBar.CardHeight + BattleTopBar.Gap : 0f));
             var cardPill = ReferenceUiVisuals.Image(safe, "ActiveCardsPill", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(-140f, top - 24f), new Vector2(140f, top), new Color(0.2f, 0.4f, 0.18f, 0.9f));
             cardPill.sprite = ReferenceUiVisuals.SolidPillSprite();
@@ -65,13 +46,8 @@ public sealed class BattleObjectiveHud : MonoBehaviour
             ReferenceUiVisuals.Text(cardPill.transform, "ActiveCardsText",
                 (basicActive ? L.T($"KART +%{BattleCards.ActiveBattlePercent}: ", $"CARDS +{BattleCards.ActiveBattlePercent}%: ") : L.T("KART: ", "CARDS: ")) + string.Join(" · ", cards), 12, ReferenceUiVisuals.Light,
                 TextAlignmentOptions.Center, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
-            stackBottom = -(top - 24f);
+            BattleTopBar.CardsPillStack = 28f;
         }
-        else if ((timed || mine) && !docked) stackBottom = 140f;
-
-        // Dalga duyurusu ("12 düşman yaklaşıyor") ve geri sayım bu pullarla aynı yüksekliğe denk geliyordu:
-        // pul varsa ikisi de pulların altına kayar.
-        if (stackBottom > 0f) StartCoroutine(ShiftWaveNotices(stackBottom + 6f));
 
         var respawnBox = ReferenceUiVisuals.Image(safe, "RespawnNotice", new Vector2(0.12f, 0.56f),
             new Vector2(0.88f, 0.56f), new Vector2(0f, -26f), new Vector2(0f, 26f),
@@ -113,95 +89,10 @@ public sealed class BattleObjectiveHud : MonoBehaviour
         AudioManager.Instance?.PlaySfx("levelUp");
     }
 
-    /// <summary>
-    /// HUD kurulumu (BattleHudRedesign) bitince "IncomingChip" ve "NextWaveCountdown"ı, üst kenarları
-    /// <paramref name="clearFromTop"/> biriminin altına düşecek kadar aşağı kaydırır.
-    /// </summary>
-    private bool docked;
-
-    /// <summary>Hedef göstergesini savaş üst barına (LevelText satırı, sağ) taşır; bölge adı sola kayar. Bar yoksa yerinde kalır.</summary>
-    private bool DockIntoTopBar()
-    {
-        if (timerPill == null) return false;
-        Transform top = null;
-        foreach (var t in FindObjectsByType<RectTransform>(FindObjectsSortMode.None))
-            if (t.name == "LevelText" && t.parent != null && t.parent.name == "TopBar") { top = t.parent; break; }
-        if (top == null) return false;
-        var levelRt = top.Find("LevelText") as RectTransform;
-        levelRt.anchorMin = new Vector2(0.04f, 0.12f);
-        levelRt.anchorMax = new Vector2(0.66f, 0.47f);
-        levelRt.offsetMin = levelRt.offsetMax = Vector2.zero;
-        var levelText = levelRt.GetComponent<TextMeshProUGUI>();
-        if (levelText != null) { levelText.enableAutoSizing = true; levelText.fontSizeMin = 14f; levelText.fontSizeMax = Mathf.Max(levelText.fontSize, 20f); }
-        var rt = timerPill.rectTransform;
-        rt.SetParent(top, false);
-        rt.anchorMin = new Vector2(0.67f, 0.16f);
-        rt.anchorMax = new Vector2(0.97f, 0.47f);
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-        if (timerText != null)
-        {
-            timerText.enableAutoSizing = true;
-            timerText.fontSizeMin = 14f;
-            timerText.fontSizeMax = 32f;
-            timerText.textWrappingMode = TextWrappingModes.NoWrap;
-        }
-        return true;
-    }
-
-    private IEnumerator ShiftWaveNotices(float clearFromTop)
-    {
-        yield return null;
-        yield return null;
-        RectTransform incoming = null, countdown = null;
-        foreach (var rt in FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if (rt.name == "IncomingChip") incoming = rt;
-            else if (rt.name == "NextWaveCountdown") countdown = rt;
-        }
-        if (incoming == null) yield break;
-        var parent = incoming.parent as RectTransform;
-        if (parent == null) yield break;
-        float incomingTop = parent.rect.height * (1f - incoming.anchorMax.y) - incoming.offsetMax.y;
-        float shift = clearFromTop - incomingTop;
-        if (shift <= 0f) yield break;
-        foreach (var rt in new[] { incoming, countdown })
-        {
-            if (rt == null) continue;
-            rt.offsetMin -= new Vector2(0f, shift);
-            rt.offsetMax -= new Vector2(0f, shift);
-        }
-    }
-
-    private static string FormatTime(float seconds)
-    {
-        int total = Mathf.CeilToInt(Mathf.Max(0f, seconds));
-        return L.T("SÜRE ", "TIME ") + $"{total / 60}:{total % 60:00}";
-    }
-
     private void Update()
     {
         var battle = BattleManager.Instance;
         if (battle == null) return;
-
-        if (timerText != null && battle.HasTimeLimit)
-        {
-            float remaining = battle.TimeRemaining;
-            timerText.text = FormatTime(remaining);
-            bool urgent = remaining <= 30f;
-            timerText.color = urgent ? ReferenceUiVisuals.Red : ReferenceUiVisuals.Gold;
-            int whole = Mathf.CeilToInt(remaining);
-            if (urgent && whole != lastWholeSecond && battle.IsBattleActive)
-            {
-                lastWholeSecond = whole;
-                timerPill.transform.DOKill(true);
-                timerPill.transform.DOPunchScale(Vector3.one * 0.08f, 0.25f, 4, 0.5f);
-            }
-        }
-        else if (timerText != null && battle.DefendedMine != null)
-        {
-            timerText.text = L.T($"MADEN %{Mathf.CeilToInt(battle.DefendedMine.HealthPercent * 100f)}", $"MINE {Mathf.CeilToInt(battle.DefendedMine.HealthPercent * 100f)}%");
-            timerText.color = battle.DefendedMine.HealthPercent < 0.35f ? ReferenceUiVisuals.Red : ReferenceUiVisuals.Gold;
-        }
 
         if (hero == null) hero = FindFirstObjectByType<HeroController>();
         bool downed = hero != null && hero.IsDowned && battle.IsBattleActive;

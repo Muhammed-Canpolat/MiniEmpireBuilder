@@ -893,6 +893,10 @@ public class Session4Tests
         var texture = new RenderTexture(w, h, 24);
         camera.targetTexture = texture;
         float aspect = camera.aspect;
+        // 8. oturum: savaş kamerası üst/alt barların arasına kırpılır (WorldViewportBars); tuval kameraya bağlanınca o kırpık alana
+        // sığdırılıyor ve görüntü cihazdakinden farklı çıkıyordu. Çekim tam ekran görüş alanıyla yapılır (cihazda tuval tam ekrandır).
+        var viewport = camera.rect;
+        camera.rect = new Rect(0f, 0f, 1f, 1f);
         camera.aspect = (float)w / h;
         var changed = new List<(Canvas, RenderMode, Camera, int, bool)>();
         foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
@@ -917,6 +921,7 @@ public class Session4Tests
         Object.Destroy(pixels);
         RenderTexture.active = previous;
         camera.targetTexture = null;
+        camera.rect = viewport;
         camera.aspect = aspect;
         texture.Release();
         Object.Destroy(texture);

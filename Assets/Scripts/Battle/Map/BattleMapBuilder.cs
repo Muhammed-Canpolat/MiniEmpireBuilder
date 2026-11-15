@@ -208,6 +208,19 @@ public sealed class BattleMapBuilder : MonoBehaviour
 
     // ==================== YOL ====================
 
+    private byte[] roadMask;
+    private int roadMaskW, roadMaskH;
+    private Vector2 roadMaskOrigin;
+
+    /// <summary>Dünya noktasında çizilmiş yol (kenar dahil, opaklık ≥ %25) var mı.</summary>
+    public bool RoadCovers(Vector2 world)
+    {
+        if (roadMask == null) return false;
+        int x = Mathf.FloorToInt((world.x - roadMaskOrigin.x) * RoadPixelsPerUnit), y = Mathf.FloorToInt((world.y - roadMaskOrigin.y) * RoadPixelsPerUnit);
+        if (x < 0 || y < 0 || x >= roadMaskW || y >= roadMaskH) return false;
+        return roadMask[y * roadMaskW + x] >= 64;
+    }
+
     /// <summary>Toprak yol dokusu: rotalar boyunca disk damgası (koyu kenar, açık toprak, taş benekleri) — generate.py path() karşılığı.</summary>
     private void BuildRoad()
     {
@@ -256,6 +269,11 @@ public sealed class BattleMapBuilder : MonoBehaviour
             c.a = (byte)(e * 255f);
             pixels[i] = c;
         }
+        // 8. oturum (D99): çizilen yolun kaplama maskesi (kenar dahil) saklanır — yuva/etiket/yapı yerleşimi testleri rota matematiğinden
+        // bağımsız olarak GERÇEKTEN çizilen yolu okur (doku okunamaz yapıldığı için ayrı, bayt başına bir piksel).
+        roadMask = new byte[w * h];
+        for (int i = 0; i < roadMask.Length; i++) roadMask[i] = (byte)(Mathf.Clamp01(edge[i]) * 255f);
+        roadMaskW = w; roadMaskH = h; roadMaskOrigin = new Vector2(x0, y0);
         var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
         tex.SetPixels32(pixels);
         tex.Apply(false, true);
@@ -348,7 +366,10 @@ public sealed class BattleMapBuilder : MonoBehaviour
             {
                 rect = new Rect(c.x - width * 0.5f, c.y, width, height);
                 foot = Rect.MinMaxRect(rect.xMin + width * 0.1f, rect.yMin, rect.xMax - width * 0.1f, rect.yMin + height * 0.45f);
-                return RectOnLand(foot) && !Overlaps(rect) && RoadDistance(rect) >= BattleMapGeometry.RoadEdgeWidth * 0.5f + 0.3f;
+                // 8. oturum (D99): yapının TAMAMI karada ve kıyıdan 0,4 içeride (eskiden yalnız alt tabanı aranıyordu; kıyıdaki kule/kışla
+                // yarısı suyun üstünde, ekran kenarında "başka adanın parçası" gibi kesik görünüyordu).
+                var whole = Rect.MinMaxRect(rect.xMin - 0.4f + width * 0.08f, rect.yMin - 0.4f, rect.xMax + 0.4f - width * 0.08f, rect.yMax + 0.2f);
+                return RectOnLand(whole) && RectOnLand(foot) && !Overlaps(rect) && RoadDistance(rect) >= BattleMapGeometry.RoadEdgeWidth * 0.5f + 0.3f;
             }
             // Önce tasarımdaki adaylar (haritadaki yer); tutmazsa ilk adayın tarafında, ona en yakın uygun yer (ızgara taraması).
             Vector2? spot = null;

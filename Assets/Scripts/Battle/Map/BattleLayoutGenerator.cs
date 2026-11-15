@@ -180,6 +180,10 @@ public static class BattleLayoutGenerator
         for (float dy = -0.3f; dy <= 2.2f; dy += 0.5f)
             for (float dx = -0.8f; dx <= 0.81f; dx += 0.4f)
                 if (layout.DistanceToRoad(c + new Vector2(dx, dy)) < BattleMapGeometry.RoadEdgeWidth * 0.5f + 0.05f) return "kule görseli yola biniyor";
+        // 8. oturum (D99): yuvanın altındaki "N HAK" etiketi (merkez −1,18; 1,24 × 0,40) de yola binmesin.
+        for (float lx = -0.62f; lx <= 0.621f; lx += 0.31f)
+            for (float ly = -1.38f; ly <= -0.979f; ly += 0.2f)
+                if (layout.DistanceToRoad(c + new Vector2(lx, ly)) < BattleMapGeometry.RoadEdgeWidth * 0.5f + 0.1f) return "hak etiketi yola biniyor";
         var baseRect = BaseRect(layout.basePosition);
         if (BattleObstacles.DistanceTo(baseRect, c) < BattleMapGeometry.SlotRadius + 0.6f) return "Ana Üs'e çok yakın";
         if (layout.HasMine && Vector2.Distance(c, layout.minePosition) < 2.6f) return "madene çok yakın";

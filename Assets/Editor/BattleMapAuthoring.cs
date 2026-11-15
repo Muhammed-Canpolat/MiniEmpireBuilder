@@ -42,6 +42,37 @@ public static class BattleMapAuthoring
         EditorApplication.Exit(errors.Count == 0 ? 0 : 1);
     }
 
+    /// <summary>
+    /// 8. oturum (D99): yalnız YUVALARI geçersiz olan seviyelerin yuvalarını yeni kurala (hak etiketi de yola binmez) göre yeniden üretir;
+    /// rota, maden, kahraman ve Ana Üs aynen kalır. -executeMethod BattleMapAuthoring.RegenerateInvalidSlotsFromCommandLine
+    /// </summary>
+    public static void RegenerateInvalidSlotsFromCommandLine()
+    {
+        int changed = 0;
+        for (int region = 1; region <= 6; region++)
+        {
+            var map = AssetDatabase.LoadAssetAtPath<BattleRegionMap>($"{Root}/Region_{region}.asset");
+            for (int level = 1; level <= 5; level++)
+            {
+                var layout = AssetDatabase.LoadAssetAtPath<BattleLevelLayout>($"{Root}/Levels/R{region}_L{level}.asset");
+                if (map == null || layout == null) continue;
+                bool slotProblem = BattleLayoutGenerator.Validate(map, layout).Any(e => e.Contains(" yuva ") || e.Contains("yuva sayısı"));
+                if (!slotProblem) continue;
+                var before = string.Join(" ", layout.slots ?? new Vector2[0]);
+                layout.slots = new Vector2[0];
+                layout.slots = BattleLayoutGenerator.GenerateSlots(map, layout, BattleLayoutGenerator.SlotCountFor(region, level, layout.Routes.Length));
+                EditorUtility.SetDirty(layout);
+                changed++;
+                Debug.Log($"[BattleMaps] B{region}-S{level} yuvalar: {before} → {string.Join(" ", layout.slots)}");
+            }
+        }
+        AssetDatabase.SaveAssets();
+        var errors = ValidateAll();
+        foreach (var e in errors) Debug.LogError("[BattleMaps] " + e);
+        Debug.Log($"[BattleMaps] yuvası yenilenen seviye {changed}, doğrulama hatası {errors.Count}");
+        EditorApplication.Exit(errors.Count == 0 ? 0 : 1);
+    }
+
     public static List<string> ValidateAll()
     {
         var errors = new List<string>();

@@ -39,7 +39,7 @@ MonoBehaviour:
   slots:
   - {x: 0.4, y: 15.2}
   - {x: 1.6, y: 6.9}
-  - {x: -3.8, y: 8.8}
+  - {x: -3.8, y: 9.1}
   - {x: -3.8, y: 3.1}
   basePosition: {x: 0, y: 0}
   minePosition: {x: 3, y: 9}

@@ -39,9 +39,9 @@ MonoBehaviour:
   slots:
   - {x: -0.6, y: 15.4}
   - {x: -2.6, y: 8.4}
-  - {x: 3.8, y: 8.8}
+  - {x: 3.8, y: 9.1}
   - {x: 4.2, y: 4.9}
-  - {x: -0.8, y: 5.8}
+  - {x: -1, y: 6.1}
   basePosition: {x: 0, y: 0}
   minePosition: {x: 3, y: 9}
   heroSpawn: {x: 2.6, y: 2.8}
