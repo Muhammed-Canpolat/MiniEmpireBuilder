@@ -274,3 +274,18 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - Atmosfer `BattleAtmosphereFx` + `BattleFxQuality` (düşük kalite: QualitySettings 0 ya da `MEB_LowFx`). Karolar `Tools/campaign_art/recolor_tilesets.py`,
   süsler `battle_props.py`, önizleme `layout_preview.py`, karşılaştırma `compare_maps.py`; denge özeti `Tools/balance_s7.py`.
 - Testler `Session7Tests` (V/B/G), `Session7BalanceTests` ([Explicit]). Test yardımcısı `Session4Tests.StartBattle` artık ada kipini temizler.
+
+## 15 Kasım 2026 (8. oturum): düşman YZ + sayılar + savaş üst barı + Ana Üs yerleşimi (D96–D100)
+- **Düşman yol durum makinesi** (`EnemyController.LaneState`: FollowLane/Lock/Fight/Rejoin): `LaneDistance` yalnız artar (`BattleRoute.ProjectRange`),
+  kilit 3 / bırakma 4,5 / kovalama 6 / geri tolerans 0,75, ileriden eğriyle yola dönüş, ayrışma (`laneEnemies`). Yol dışı adım hep `GridSteer`.
+- **Sayılar** `Resources/Config/CampaignEnemyConfig.asset` (doğan toplam, can ×1,1, dalga ≤ 12, ara 8 sn); eski dalga oranlarıyla dağıtım (`SplitLike`);
+  öldürme altını eski toplama eşit (`BattleManager.ExpectedKillGold`, `KillGoldScale`). Sonsuz/İstila eski kural. `EnemiesTotal/Remaining`, `OnEnemyTallyChanged`.
+- **Düşman havuzu** (`BattleManager.AcquireEnemyObject/ReleaseEnemy`, boss hariç; ayıklama bir sonraki karede, bağımlı bileşen önce).
+- **Üst bar** `Polish/UI/BattleTopBar.cs` (eski SafeArea/TopBar = kamera kırpması için boş yer tutucu). Giriş oku kamera görüş alanı içinde.
+- **Harita:** yuvanın "N HAK" etiketi de yoldan uzak (`BattleLayoutGenerator.SlotProblem`), çizilen yol maskesi `BattleMapBuilder.RoadCovers`,
+  yuva yenileme `-executeMethod BattleMapAuthoring.RegenerateInvalidSlotsFromCommandLine`; bölge yapıları tamamen karada; kamera x = kara kenarı.
+- **Ana Üs doluluğu tek kaynak:** `BaseOccupancyGrid.Occupants` (sahneden sıfırdan, kare başına + `MarkDirty`); `NatureObstacle.ByCell` salt-okunur
+  görünüm, kaldırma `MarkRemoved`. Dekor hizası `DecorData.VisibleBottom` (kök neden: çalı/koyun/altın taşı bir hücre yukarıda çiziliyordu).
+  Dev: DevMenu "OCCUPANCY GÖSTER" (`OccupancyDebugView`).
+- **Testler:** `Session8Tests` (A1/A2/E1/P1/V4/M0), `Session8BaseTests` (O0–O3), `Session8HudTests` (H1), `[Explicit]` `Session8BalanceTests`
+  (90 savaş, özet `Tools/balance_s8.py`), `Session8SonTests`. `Session4Tests.CaptureUi` artık kamera görüş alanını tam ekrana açar.

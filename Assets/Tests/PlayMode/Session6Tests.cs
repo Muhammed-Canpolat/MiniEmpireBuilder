@@ -228,6 +228,8 @@ public class Session6Tests
         foreach (var b in bars)
         {
             var mask = (RectTransform)P(b, "FillMask");
+            // 8. oturum: üst bardaki dalga ilerleme barı savaş başında %0 — dolgu maskesi gizlidir (oranı ayarlanmaz).
+            if ((float)P(b, "Shown") <= 0.001f) { Assert.IsFalse(mask.gameObject.activeSelf, b.name + ": %0'da dolgu gizli"); continue; }
             Assert.AreEqual(0f, mask.anchorMin.x, 1e-4, b.name + ": dolgu sol kenardan başlar");
             Assert.AreEqual((float)P(b, "Shown"), mask.anchorMax.x, 1e-3, b.name + ": dolgu genişliği oran kadar");
         }

@@ -1,0 +1,42 @@
+öğe | dolu hücreler | sıkı görsel [xMin,yMin–xMax,yMax] | alt kenar farkı | durum
+dekor:anvil (emekli) | (2,3,2,2) | [2,22,3,06–3,78,3,80] | +0,06 | tamam
+dekor:barrel (emekli) | (5,3,2,2) | [5,31,3,06–6,69,4,85] | +0,06 | tamam
+dekor:bush | (8,3,1,1) | [7,82,3,97–9,20,4,94] | +0,97 | UYUŞMAZ
+dekor:bush2 | (11,3,1,1) | [11,02,4,03–11,98,4,77] | +1,03 | UYUŞMAZ
+dekor:bush3 | (14,3,1,1) | [13,67,3,87–15,26,5,09] | +0,87 | UYUŞMAZ
+dekor:bush4 | (17,3,1,1) | [17,00,3,97–17,97,4,86] | +0,97 | UYUŞMAZ
+dekor:campfire (emekli) | (2,3,2,2) | [2,08,3,06–3,92,3,75] | +0,06 | tamam
+dekor:crate (emekli) | (5,3,2,2) | [5,28,3,06–6,75,4,53] | +0,06 | tamam
+dekor:flag (emekli) | (8,3,2,2) | [8,08,3,06–9,92,5,51] | +0,06 | tamam
+dekor:flowers (emekli) | (11,3,2,2) | [10,92,3,06–12,73,7,46] | +0,06 | tamam
+dekor:fountain (emekli) | (14,3,3,3) | [13,94,3,06–16,70,5,95] | +0,06 | tamam
+dekor:gold_pile | (x:17, y:3, width:1, height:1) | görsel yok | - | ?
+dekor:gold_stone | (2,3,1,1) | [2,22,3,79–2,78,4,31] | +0,79 | UYUŞMAZ
+dekor:gold_stone_big | (5,3,1,1) | [5,02,3,69–6,06,4,61] | +0,68 | UYUŞMAZ
+dekor:hay_bale (emekli) | (8,3,2,2) | [8,08,3,06–9,92,4,36] | +0,06 | tamam
+dekor:lantern (emekli) | (11,3,2,2) | [11,18,3,06–12,82,7,46] | +0,06 | tamam
+dekor:meat_pile | (x:14, y:3, width:1, height:1) | görsel yok | - | ?
+dekor:rock | (17,3,1,1) | [16,95,3,38–17,99,4,24] | +0,38 | tamam
+dekor:rock2 | (2,3,1,1) | [1,72,3,32–3,28,4,47] | +0,32 | tamam
+dekor:rock3 | (5,3,1,1) | [4,93,3,35–6,16,4,30] | +0,35 | tamam
+dekor:rock4 | (8,3,1,1) | [7,58,3,23–9,39,4,56] | +0,23 | tamam
+dekor:scarecrow (emekli) | (11,3,2,2) | [11,08,3,06–12,92,5,65] | +0,06 | tamam
+dekor:sheep | (14,3,1,1) | [13,82,4,21–15,16,5,52] | +1,21 | UYUŞMAZ
+dekor:statue (emekli) | (17,3,2,2) | [17,08,3,06–18,92,7,11] | +0,06 | tamam
+dekor:stone_path (emekli) | (2,3,1,1) | [2,04,3,06–2,96,3,90] | +0,06 | tamam
+dekor:stump | (5,3,1,1) | [5,17,3,26–5,92,3,89] | +0,26 | tamam
+dekor:tree | (8,3,1,1) | [7,64,3,25–9,41,6,04] | +0,25 | tamam
+dekor:tree2 | (11,3,1,1) | [10,71,3,13–12,29,6,70] | +0,13 | tamam
+dekor:tree3 | (14,3,1,1) | [13,88,3,32–15,12,5,29] | +0,32 | tamam
+dekor:tree4 | (17,3,1,1) | [16,95,3,35–18,05,5,00] | +0,35 | tamam
+dekor:wood_logs (emekli) | (2,3,3,2) | [2,12,3,06–4,88,4,56] | +0,06 | tamam
+dekor:wood_pile | (x:5, y:3, width:1, height:1) | görsel yok | - | ?
+
+UYUŞMAZ:
+dekor:bush | (8,3,1,1) | [7,82,3,97–9,20,4,94] | +0,97 | UYUŞMAZ
+dekor:bush2 | (11,3,1,1) | [11,02,4,03–11,98,4,77] | +1,03 | UYUŞMAZ
+dekor:bush3 | (14,3,1,1) | [13,67,3,87–15,26,5,09] | +0,87 | UYUŞMAZ
+dekor:bush4 | (17,3,1,1) | [17,00,3,97–17,97,4,86] | +0,97 | UYUŞMAZ
+dekor:gold_stone | (2,3,1,1) | [2,22,3,79–2,78,4,31] | +0,79 | UYUŞMAZ
+dekor:gold_stone_big | (5,3,1,1) | [5,02,3,69–6,06,4,61] | +0,68 | UYUŞMAZ
+dekor:sheep | (14,3,1,1) | [13,82,4,21–15,16,5,52] | +1,21 | UYUŞMAZ

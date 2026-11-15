@@ -1,16 +1,17 @@
 # GECE_DURUM — Otonom çalışma (15 Kasım 2026, 8. oturum: düşman YZ, düşman sayıları, savaş üst barı, Ana Üs yerleşimi)
 
-DURUM: SÜRÜYOR (8. oturum)
-ŞU ANKİ İŞ: Ana Üs yerleşimi (4) testleri · üst bar (3) görüntüleri
+DURUM: TAMAMLANDI (8. oturum)
+ŞU ANKİ İŞ: (yok) — rapor REPORT.md · SIRADAKİ: kullanıcı kararı (REPORT §2.2 dört denge önerisi), cihaz denemesi
+Commit'ler: 2346f9e (1–2), 2e0a062 (3), bf79567 (4), a681254 (havuz hatası), d29ea75 (dalga dağılımı), son commit (SON)
 Kararlar: DECISIONS.md D96+ · Başlangıç commit'i: 5d8ab18
 Model notu (kullanıcı): düşman YZ ve yerleşim = Opus 5.5 yüksek çaba (ben); UI (üst bar) = Sonnet alt ajanı orta çaba (ben test edip görüntüyle doğrularım).
 
 8. OTURUM İŞ LİSTESİ:
 - [x] 1 Düşman yol durum makinesi (izle → kilitlen → savaş → ileriden dön), ilerleme hiç azalmaz, leash, ayrışma (D96) — Session8Tests.A1/A2
-- [x] 2 Düşman sayıları tablosu + %10 can (CampaignEnemyConfig), dalga dağılımı, öldürme altını eşitlemesi, havuz (D97) — E1, P1 · [ ] telemetri ölçümü
-- [ ] 3 Savaş üst barı (BattleTopBar, Sonnet) + yol başına binen yuva + harita kenarı (D98, D99)
-- [ ] 4 Ana Üs yerleşimi kök neden + anlık görüntü + Occupancy göster + regresyon (D100) — Session8BaseTests.O0–O3
-- [ ] SON: bölge başına 2 seviye (biri boss) oynat + görüntüler, 10 öğe kaldır → kur/taşı, REPORT.md
+- [x] 2 Düşman sayıları tablosu + %10 can (CampaignEnemyConfig), dalga dağılımı, öldürme altını eşitlemesi, havuz (D97) — E1, P1 · [x] telemetri (90 savaş; kule+kahraman 28/30)
+- [x] 3 Savaş üst barı (BattleTopBar, Sonnet) + yol başına binen yuva + harita kenarı (D98, D99) — H1, V4, M0
+- [x] 4 Ana Üs yerleşimi kök neden + anlık görüntü + Occupancy göster + regresyon (D100) — Session8BaseTests.O0–O3
+- [x] SON: bölge başına 2 seviye (biri boss) oynatıldı + görüntüler, 44 öğe kaldır → kur/taşı (O2), REPORT.md; son koşu 64/64
 
 ENGELLENENLER:
 - (yok)

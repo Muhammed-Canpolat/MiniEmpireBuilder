@@ -1,366 +1,200 @@
-# REPORT — 7. oturum (15 Kasım 2026): bölgeye özgü savaş haritaları
+# REPORT — 8. oturum (15 Kasım 2026): düşman yapay zekâsı, düşman sayıları, savaş üst barı, Ana Üs yerleşimi
 
-Dal `gece-gelistirme` (push yok). Commit'ler: `817558f` (yarım kalan ada kadrajı), `0d98984` (AŞAMA 1 veri modeli), `662b52a` (AŞAMA 2 savaş
-haritası), son commit (denge + atmosfer + SON). Kararlar DECISIONS.md **D87–D95**. Görüntüler `Docs/playtest/session7/`.
+Dal `gece-gelistirme` (push yok). Başlangıç `5d8ab18`. Commit'ler: `2346f9e` (1–2), `2e0a062` (3), `bf79567` (4), `a681254` (havuz hatası),
+`d29ea75` (dalga dağılımı), son commit (SON + rapor). Kararlar DECISIONS.md **D96–D100**. Görüntüler `Docs/playtest/session8/`.
+7. oturum raporu: `Docs/playtest/session7/REPORT_s7.md`.
 
-## 1. Yapılanlar
-- **Yarım kalan iş (D87):** dar telefonda ada kadrajı uzaklaşmıştı (genişlik iki yandaki küçük adacıklara göre sığıyordu). Artık yalnız ana ada
-  sığdırılıyor: 20:9 telefonda ana ada ekran genişliğinin %96'sı (önce ~%80). Tablet aynı. Test `Session6Tests.S7` (4 oran).
-- **Veri tabanlı harita (D88):** bölge başına `BattleRegionMap` (karo seti, kara maskesi, atmosfer, süsleme seti, bölge yapıları), seviye başına
-  `BattleLevelLayout` (rota noktaları, yuvalar, Ana Üs / maden / kahraman, tür, isteğe bağlı dalgalar) → `Assets/Resources/BattleMaps`.
-  **Elle düzenleme:** seviye varlığını Project'te seç → Scene görünümünde rota noktaları, yuvalar (menzil çemberiyle), üs/maden/kahraman sürüklenir;
-  Inspector'da *Doğrula / Yuvaları yeniden üret / Rotayı şablona sıfırla*. Menü: Tools ▸ Mini Empire Builder ▸ Savaş Haritaları.
-- **Haritalar (D92):** her bölgenin tüm seviyeleri Sefer Haritası'ndaki adanın dikey sürümünde: aynı Tiny Swords karo kuralı, uçurumlar, sığ su,
-  dikey ahşap köprü (düşman girişi), bölge yapıları (yıkık kale/kule, mor ev, maden girişi + sarı ev/kule, mavi kule/kışla, kara kale/kule,
-  kızıl kule/kara kışla) ve süsler. Ana Üs yolun alt ucunda. Karşılaştırma: `compare_region1..6.png` (sol harita adası, sağ savaş haritası).
-- **Rota (D90, D93):** düşmanlar üst köprüden girer, yolu izler, yalnız yolun 3 birim yakınındaki kule/kahraman/Lancer'a sapar ve geri döner;
-  kahraman su/uçurum/yapılardan geçemez (ortak yol bulma araziyi tanır). 1. seviye = harita yolunun aynısı; 2 üç kıvrım; 3 ters başlangıç + maden;
-  4 ikiye ayrılıp birleşen yol (+1 yuva); 5 boss en uzun rota. Yuvalar zikzağı izleyerek sağlı sollu, her biri bir dönemeci menzilde tutar.
-- **Seviye türleri:** Hayatta Kal / Üssü Koru yolun sonundaki Ana Üs'e; **Madeni Koru** maden yolun yanında (Tiny Swords sprite + can barı),
-  yağmacılar yoldan karadan sapar; Zamana Karşı aynı rota + sayaç; Boss aynı yolda (en uzun rota). `kinds_region1..6.png`, `B2_region*_mine.png`.
-- **Zemin (D89):** kar / Karanlık Kale / Ejderin İni karoları Tiny Swords karosundan renk eşlemesiyle (renk bindirme değil); Sefer Haritası
-  görselleri de aynı karolarla yeniden üretildi (Bölge 4–6) → harita = savaşın önizlemesi.
-- **Atmosfer (D94):** sis bulutları, kar yağışı, kül/köz, lav ışıması/kabarcık, kasvet örtüsü, toz, altın parıltısı; düşük kalitede yarı partikül.
+## 1. Düşman yapay zekâsı: yola geri dönme (D96)
+**Sorun:** sapan düşmanın yoldaki konumu ayrıldığı noktada donuyordu; hedef uzaklaşınca o noktaya geri yürüyordu.
 
-## 2. Denge ölçümleri (bot, 4× hız; "good" = kule + kahraman; S5'te baskın strateji; Bölge 6 iki tohum, diğerleri tek tohum)
-| Bölge | Seviye | Profil | Kazanma | Ana Üs canı (son) | Süre (sn) | Kahraman hasar payı | Kahraman düşüş | Yenilgi nedeni |
-|---|---|---|---|---|---|---|---|---|
-| 1 | 1 Hayatta Kal | good | 1/1 | %100 | 24 | %100 | 0.0 | - |
-| 1 | 2 Üssü Koru | good | 1/1 | %100 | 100 | %100 | 3.0 | - |
-| 1 | 3 Madeni Koru | good | 1/1 | %100 | 62 | %71 | 1.0 | - |
-| 1 | 4 Zamana Karşı | good | 1/1 | %100 | 90 | %70 | 3.0 | - |
-| 1 | 5 Boss | good | 1/1 | %100 | 162 | %72 | 5.0 | - |
-| 1 | 5 Boss | heroOnly | 1/1 | %84 | 218 | %100 | 7.0 | - |
-| 1 | 5 Boss | noHero | 0/1 | %0 | 40 | %0 | 0.0 | base |
-| 1 | 5 Boss | towerOnly | 0/1 | %0 | 132 | %69 | 1.0 | base |
-| 2 | 1 Hayatta Kal | good | 1/1 | %90 | 54 | %100 | 2.0 | - |
-| 2 | 2 Üssü Koru | good | 1/1 | %95 | 83 | %74 | 3.0 | - |
-| 2 | 3 Madeni Koru | good | 1/1 | %100 | 73 | %96 | 1.0 | - |
-| 2 | 4 Zamana Karşı | good | 1/1 | %100 | 63 | %73 | 1.0 | - |
-| 2 | 5 Boss | good | 1/1 | %100 | 148 | %55 | 4.0 | - |
-| 2 | 5 Boss | heroOnly | 0/1 | %0 | 171 | %100 | 6.0 | base |
-| 2 | 5 Boss | noHero | 0/1 | %0 | 41 | %0 | 0.0 | base |
-| 2 | 5 Boss | towerOnly | 0/1 | %0 | 115 | %100 | 1.0 | base |
-| 3 | 1 Hayatta Kal | good | 1/1 | %100 | 39 | %69 | 1.0 | - |
-| 3 | 2 Üssü Koru | good | 1/1 | %100 | 75 | %37 | 2.0 | - |
-| 3 | 3 Madeni Koru | good | 1/1 | %98 | 99 | %62 | 1.0 | - |
-| 3 | 4 Zamana Karşı | good | 1/1 | %100 | 105 | %43 | 2.0 | - |
-| 3 | 5 Boss | good | 1/1 | %75 | 296 | %57 | 7.0 | - |
-| 3 | 5 Boss | heroOnly | 0/1 | %0 | 133 | %97 | 6.0 | base |
-| 3 | 5 Boss | noHero | 0/1 | %0 | 46 | %0 | 0.0 | base |
-| 3 | 5 Boss | towerOnly | 0/1 | %0 | 173 | %19 | 1.0 | base |
-| 4 | 1 Hayatta Kal | good | 1/1 | %100 | 47 | %100 | 1.0 | - |
-| 4 | 2 Üssü Koru | good | 1/1 | %100 | 114 | %40 | 2.0 | - |
-| 4 | 3 Madeni Koru | good | 1/1 | %100 | 85 | %67 | 0.0 | - |
-| 4 | 4 Zamana Karşı | good | 1/1 | %90 | 111 | %49 | 1.0 | - |
-| 4 | 5 Boss | good | 1/1 | %100 | 157 | %27 | 4.0 | - |
-| 4 | 5 Boss | heroOnly | 1/1 | %11 | 279 | %62 | 11.0 | - |
-| 4 | 5 Boss | noHero | 0/1 | %0 | 269 | %0 | 0.0 | base |
-| 4 | 5 Boss | towerOnly | 1/1 | %20 | 260 | %38 | 3.0 | - |
-| 5 | 1 Hayatta Kal | good | 1/1 | %100 | 38 | %46 | 1.0 | - |
-| 5 | 2 Üssü Koru | good | 1/1 | %100 | 100 | %25 | 1.0 | - |
-| 5 | 3 Madeni Koru | good | 0/1 | %100 | 74 | %38 | 1.0 | mine |
-| 5 | 4 Zamana Karşı | good | 1/1 | %100 | 111 | %38 | 2.0 | - |
-| 5 | 5 Boss | good | 1/1 | %80 | 273 | %32 | 5.0 | - |
-| 5 | 5 Boss | heroOnly | 0/1 | %0 | 165 | %70 | 7.0 | base |
-| 5 | 5 Boss | noHero | 0/1 | %0 | 216 | %0 | 0.0 | base |
-| 5 | 5 Boss | towerOnly | 1/1 | %45 | 248 | %9 | 0.0 | - |
-| 6 | 1 Hayatta Kal | good | 2/2 | %100 | 33 | %51 | 1.0 | - |
-| 6 | 2 Üssü Koru | good | 2/2 | %100 | 91 | %23 | 1.5 | - |
-| 6 | 3 Madeni Koru | good | 1/2 | %100 | 61 | %41 | 0.0 | mine |
-| 6 | 4 Zamana Karşı | good | 2/2 | %97 | 85 | %41 | 1.0 | - |
-| 6 | 5 Boss | good | 2/2 | %96 | 161 | %26 | 2.5 | - |
-| 6 | 5 Boss | heroOnly | 0/2 | %0 | 135 | %82 | 5.5 | base |
-| 6 | 5 Boss | noHero | 0/2 | %0 | 143 | %0 | 0.0 | base |
-| 6 | 5 Boss | towerOnly | 1/2 | %8 | 185 | %18 | 0.5 | base |
+**Yeni davranış — durum makinesi** (`EnemyController.LaneState`): **Yolu izle → Hedefe kilitlen → Savaş → Yola dön.**
+- Her düşmanın yolda kat ettiği mesafe (`LaneDistance`) tutulur ve **hiç azalmaz**. Sapma sırasında bile yalnız ileriye doğru güncellenir; izdüşüm
+  ileriye dönük 8 birimlik pencerede yapılır, böylece zikzakta yanlış kola atlamaz.
+- **Kilitlenme menzili 3 birim:** hedef yolun kenarında ve düşmanın **önünde** olmalı; 0,75 birimden fazla geride kalan hedefe kilitlenmez.
+- **Bırakma (leash) 4,5 birim.** Düşman şu durumlarda takibi bırakır ve 1,2 sn yeniden kilitlenmez (titreme olmaz):
+  - hedef ya da düşman yoldan 4,5 birimden fazla uzaklaşırsa,
+  - kahraman düşmanın gerisinde kalırsa,
+  - kahramanı yol boyunca 6 birimden fazla kovaladıysa (haritanın sonuna kadar kovalamaz).
+- **Yola dönüş:** düşman, ilerlemesine en yakın **ilerideki** yol noktasına yönelir. Hedef nokta düşman ilerledikçe öne kayar, böylece yola açılı ve
+  eğri bir yolla katılır. Yol yönünde geri hareket her adımda atılır. Yol dışındaki tüm adımlar ortak yol bulma servisini kullanır (su, uçurum ve
+  yapılardan geçmez).
+- **Kalabalık:**
+  - Gövde yarıçapına göre ayrışma: yan itme şerit kaymasını yumuşak değiştirir, öndeki komşu yavaşlatır, hiçbir zaman geri itmez.
+  - Bakış yönü histerezisle döner, düşman titremez.
+- **Test** (`Session8Tests.A1`): 6 bölge × S1/S3 × iki kaçış biçimi (yandan uzaklaşma / geriye kaçma) = 24 senaryo.
+  - **Geri adım 0**, ilerleme her karede arttı, düşman hep yürünebilir zeminde kaldı, her seferinde ileriden katıldı.
+  - Örnek: ayrıldığı nokta s=9,7, katıldığı nokta s=16,5.
+  - `A2` (14 düşman aynı noktada): iç içe giren çift ≤ 3, yön dönüşü saniyede 0,4.
+  - Görüntüler: `A1_rejoin_region4.png`, `A2_crowd_*`.
+- **Bilinmesi gereken:** "en yakın ilerideki nokta" kuralı yüzünden, zikzak yolda düşman 8 birimlik pencere içindeki paralel kola kısa yoldan
+  katılabiliyor. Ölçümde bir S3 senaryosunda 11 → 22'ye sıçradı. İstenirse pencere daraltılabilir.
 
-**Okuma:** kule + kahraman 30 seviyenin 28'ini her koşuda kazanıyor. Kayıplar Madeni Koru'da maden yıkılması: Bölge 5'te 0/1, Bölge 6'da 1/2. Bu tür planlama istiyor.
-Boss'larda tek strateji çoğunlukla kaybediyor: **yalnız kahraman** yalnız Bölge 1 (%84) ve 4'te (%11) kazandı, diğerlerinde kaybediyor, **yalnız kule** Bölge 4–6'da zayıf kazanabiliyor
-(Ana Üs %8–45; Bölge 6'da 1/2), **kahramansız** Bölge 1–3'te ilk kuleyi kuracak altın olmadığı için hızlı kaybediyor. Kule + kahraman sinerjisi her bölgede en iyi yol.
-Eski düzene göre (old_battles) Bölge 1–2 boss'ları belirgin kolaylaştı (Ana Üs %11–18 → %100): "ilk bölgeler affedici" hedefiyle uyumlu bırakıldı.
-**Dikkat:** tek tohum gürültülü (ör. Bölge 2 boss'u bir koşuda kaybedildi, tekrarında %100). Daha güvenilir ölçüm: `PLAYTEST_SEEDS=3` ile
-`-testFilter Session7BalanceTests`, özet `python Tools/balance_s7.py`.
+## 2. Düşman sayısı ve canı (D97)
+- **Yapılandırma:** tablonuz `Resources/Config/CampaignEnemyConfig.asset` içinde, Inspector'dan düzenlenebilir. İçindekiler:
+  - bölge × tür başına savaşta **doğan** toplam düşman (boss dahil; üst bardaki "kalan / toplam" bu sayı),
+  - tüm sefer düşmanlarına (boss ve çağrılanlar dahil) can ×1,1,
+  - dalga başına en fazla 12 düşman,
+  - dalga arası nefes payı 8 sn (eskiden 5; dalga duyurusunun 3 sn'si buna ek).
+- **Dağılım:** yeni toplam, **eski dalga büyüklükleri oranında** dağıtılır. 12'yi aşan dalga, türünü koruyarak ikiye bölünür.
+  - İlk ölçümde artan ağırlıklı bir dağılım denemiştim. Bu, boss dalgasını "boss + 7 Ork"a çevirdi ve 1–3. bölgelerin boss seviyelerini duvara
+    dönüştürdü. Oranlı dağılıma geçtim; dalga listesi ECONOMY.md §14'te.
+- **Ekonomi:** savaş sonu toplam altın değişmedi. Düşman başına öldürme altını, eski plana göre "eski toplam / yeni toplam" oranıyla ölçeklenir;
+  kesirler bir sonraki düşmana taşınır. Testte (`E1`) 30 seviyenin hepsi eski toplamla birebir aynı çıktı.
+  - Bu sayede savaş içi kule bütçesi, zafer ödemesi, tekrar oyunu (%30) ve 2x reklam da aynı kalıyor. ECONOMY.md §14 güncellendi.
+- **Tablonun "eski" sütunu hakkında:** "eski" değerler varlıktaki toplamlardı, oysa eskiden gerçekte daha fazla düşman doğuyordu (boss seviyesinde
+  her dalgaya +1/+3 ekleniyordu, 1. dalgaya da üst sınır vardı).
+  - Örnek: B2-S5'te eskiden gerçekte 27 düşman doğuyordu, yenisi 26.
+- **Performans:**
+  - Düşmanlar için nesne havuzu **yoktu**; her düşman yeniden oluşturulup siliniyordu. Boss dışındaki düşmanlar için havuz ekledim. Davranış
+    bileşenleri her kullanımda taze eklenir; kabuk 2 sn sonra yeniden verilir, böylece uçuştaki mermi yeni düşmana çarpmaz.
+  - Düşman başına saniyede ~4 kez yapılan kahraman/Çırak sahne araması önbelleğe alındı.
+  - **Ölçüm (`P1`):** 3 dalga × 18 düşman (Gölge Kurt dahil) + 4 kule, düşük kalite. Ortalama kare süresi 16,7 ms, %95 16,7 ms (masaüstünde vsync
+    tavanı); 54 düşmanın 36'sı havuzdan geldi, takılan 0.
+  - **Uyarı:** bu ölçüm masaüstü CPU'sunda yapıldı; düşük cihazda ayrıca denenmeli.
+- **Ölçümün yakaladığı hata (düzeltildi, `a681254`):** Gölge Kurt'un davranış bileşeni EnemyController'a bağımlı olduğu için kabuk temizlenemiyordu.
+  Havuzdan dönen düşman köprüde hedefsiz kalıyor, savaş bitmiyordu. Ayıklama artık bağımlıları önce silerek yapılıyor; `P1` bunu denetliyor.
 
-## 3. Testler
-- `Session7Tests` 8/8: V1 30 seviye doğrulama (rota köprü→Ana Üs kesintisiz ve kara üstünde, yuva-yol/su/üs/maden çakışması yok, her yuva bir
-  dönemeci kapsıyor, maden karadan ulaşılır), V2 1. seviye = harita yolu + türler, V3 rota çeşitliliği, B1–B4 oynanış, G1 30 görüntü + partikül sayısı.
-- Gerileme seti (BattleStructure, CounterEnemy, ForestRegionMechanics, RegionMechanics, Session4/5/6, Barracks, BattleSettings, CardWorkshop,
-  LivesAndCards): 107/107. Ada testinin açık bıraktığı ada kipi sonraki savaş testlerini bozuyordu → testler temizliyor.
-- Çalıştırılmadı: tam takım, PlaytestBotTests (eski), FreshAccountJourney. Cihazda denenmedi.
+### 2.1 Denge ölçümleri (bot, 4× hız, tek tohum; Ana Üs canı savaş sonu; tam tablo `Docs/playtest/session8/balance_s8.md`)
+| Bölge | Seviye | Kule + kahraman | Yalnız kule | Yalnız kahraman |
+|---|---|---|---|---|
+| 1 | 1 Hayatta Kal | ✅ %100, 43 sn | ❌ %0, 41 sn (üs) | ✅ %100, 41 sn |
+| 1 | 2 Üssü Koru | ✅ %89, 120 sn | ❌ %0, 52 sn (üs) | ✅ %89, 120 sn |
+| 1 | 3 Madeni Koru | ❌ maden düştü, 76 sn | ❌ maden, 24 sn | ❌ maden, 76 sn |
+| 1 | 4 Zamana Karşı | ✅ %42, 132 sn | ❌ %0, 40 sn (üs) | ❌ %0, 119 sn (üs) |
+| 1 | 5 Boss | ✅ %100, 173 sn | ❌ %0, 65 sn (üs) | ✅ %70, 241 sn |
+| 2 | 1 Hayatta Kal | ✅ %43, 102 sn | ❌ %0, 91 sn (üs) | ✅ %62, 112 sn |
+| 2 | 2 Üssü Koru | ✅ %31, 96 sn | ❌ %0, 44 sn (üs) | ❌ %0, 100 sn (üs) |
+| 2 | 3 Madeni Koru | ✅ %98, 75 sn | ❌ maden, 24 sn | ❌ maden, 40 sn |
+| 2 | 4 Zamana Karşı | ✅ %62, 103 sn | ❌ %0, 37 sn (üs) | ❌ %0, 135 sn (üs) |
+| 2 | 5 Boss | ❌ %0, 196 sn (üs) | ❌ %0, 61 sn (üs) | ❌ %0, 94 sn (üs) |
+| 3 | 1 Hayatta Kal | ✅ %100, 79 sn | ❌ %0, 59 sn (üs) | ✅ %50, 118 sn |
+| 3 | 2 Üssü Koru | ✅ %100, 107 sn | ❌ %0, 159 sn (üs) | ❌ %0, 159 sn (üs) |
+| 3 | 3 Madeni Koru | ✅ %100, 149 sn | ❌ maden, 32 sn | ❌ maden, 109 sn |
+| 3 | 4 Zamana Karşı | ✅ %100, 151 sn | ❌ süre (üs %7) | ❌ süre (üs %89) |
+| 3 | 5 Boss | ✅ %100, 245 sn | ❌ %0, 246 sn (üs) | ❌ %0, 386 sn (üs) |
+| 4 | 1 Hayatta Kal | ✅ %100, 80 sn | ✅ %100, 74 sn | ✅ %74, 109 sn |
+| 4 | 2 Üssü Koru | ✅ %100, 155 sn | ❌ %0, 224 sn (üs) | ✅ %83, 207 sn |
+| 4 | 3 Madeni Koru | ✅ %100, 171 sn | ❌ maden, 30 sn | ❌ maden, 114 sn |
+| 4 | 4 Zamana Karşı | ✅ %96, 168 sn | ❌ süre (üs %1) | ❌ süre (üs %24) |
+| 4 | 5 Boss | ✅ %80, 222 sn | ✅ %88, 243 sn | ✅ %67, 346 sn |
+| 5 | 1 Hayatta Kal | ✅ %99, 85 sn | ✅ %96, 80 sn | ✅ %96, 113 sn |
+| 5 | 2 Üssü Koru | ✅ %100, 147 sn | ✅ %98, 241 sn | ✅ %93, 245 sn |
+| 5 | 3 Madeni Koru | ✅ %94, 135 sn | ❌ maden, 31 sn | ❌ maden, 126 sn |
+| 5 | 4 Zamana Karşı | ❌ süre (üs %99) | ❌ süre (üs %100) | ❌ süre (üs %45) |
+| 5 | 5 Boss | ✅ %100, 282 sn | ✅ %37, 467 sn | ❌ %0, 403 sn (üs) |
+| 6 | 1 Hayatta Kal | ✅ %99, 61 sn | ✅ %100, 62 sn | ✅ %93, 72 sn |
+| 6 | 2 Üssü Koru | ✅ %100, 184 sn | ✅ %95, 187 sn | ✅ %62, 246 sn |
+| 6 | 3 Madeni Koru | ✅ %96, 130 sn | ❌ maden, 28 sn | ❌ maden, 94 sn |
+| 6 | 4 Zamana Karşı | ✅ %100, 161 sn | ❌ süre (üs %100) | ❌ süre (üs %44) |
+| 6 | 5 Boss | ✅ %98, 283 sn | ✅ %80, 312 sn | ❌ %0, 404 sn (üs) |
 
-## 4. Engellenenler
-- (yok)
+### 2.2 Duvara dönüşen seviyeler ve öneriler (sayılara dokunmadım — karar sizin)
+Hedef orta zorluk. Kule + kahraman **30 seviyenin 28'ini** kazanıyor. Tek tohumla ölçüldü, sonuçlar gürültülü olabilir.
 
-## 5. ART_NEEDS (yeni, #15–#23)
-Kar / karanlık taş / volkanik karo setleri (576×384, Tiny Swords düzeni), yıkık kale/kule/duvar, maden girişi, kemik/kafatası/kara sancak,
-lav gölü animasyonu + ejder kafatası, karlı çam + buzlu kaya, sis dokusu. Şu an yerlerinde renk eşlemesi ve Tiny Swords'tan türetilmiş görseller var
-(aynı dosya adıyla değiştirilir, kod değişmez).
-
-## 6. Bilinen / öneriler
-- Bot görüntüleri (`PlaytestOutput/shots`) en-boy uyumsuzluğundan yatay sıkışık (botun yakalama yöntemi; oyunla ilgisi yok).
-- Bölge 5 tam harita görüntüsünde üst yarı koyu bant: kameraya bağlı kasvet örtüsü, görüntü alırken kamera ani taşındığı için; oyunda kamerayı izler.
-- İstersen Ayarlar'a "Düşük efekt" düğmesi eklenebilir (anahtar hazır: `MEB_LowFx`).
-
----
-
-# REPORT — 6. oturum (14 Kasım 2026): savaş hataları, kahraman/çırak/ekonomi, dükkân, ada ilerlemesi, arazi
-
-Dal `gece-gelistirme` (push yok). Başlangıç `b2605ef`. Kararlar DECISIONS.md **D68–D85**. Testler `Assets/Tests/PlayMode/Session6Tests.cs`.
-Görüntüler `Docs/playtest/session6/`.
-
-## 1. Kısa özet
-- **Savaş:** inşası bitmemiş bina savaşa girmez (tek kaynak `BuildingLevels`); menzil çemberi kulenin ortasında ve hedeflemeyle aynı;
-  can barları sola sabit + gecikmeli beyaz iz; uzun yürüyüşte animasyon donmaz; ayarlar/arka plan duraklatması (zaman, sayaçlar, ses) + DEVAM.
-- **Ekonomi:** çırak katkısı %1…%15; kahraman/çırak yükseltmesi süreli (inşaatçı + aynı elmas kuralı) ve "mevcut → sonraki" her zaman görünür;
-  maden deposu görünür (4 saatlik üretim, "DOLU", Köylü Evi +%5/+%1); DÜKKÂN sekmesi (elmasla kaynak, Unity IAP 5.4 ile elmas).
-- **Ada:** ilk girişte tanıtım + "Adanızın adı ne olsun?" (kök neden bulundu), yalnız kale ile başlangıç + zorunlu Okçuluk öğreticisi,
-  ada seviyeleri Ana Üs'ten bağımsız (Kale Sv.N ← Ana Üs Sv.N+1 kilidi), akın eğrisi yeni başlangıca göre.
-- **Arazi/temizleme:** kilitli araziye dokununca tüm alan vurgulanır + koşul/büyüklük/kaynak kartı + AÇ (bulut dağılması); temizleme süreli
-  (3/5/10 sn), küçük eylem menüsü, halka, işçi, ödül.
-- **Savaş kartı penceresi:** eşit boyutlu "▶ REKLAM İZLE (hak)" / "💎 N İLE AÇ"; hak bitince kalan süre.
-- Kayıt **v11 → v13** (v12: IAP defteri; v13: ada ilk giriş/öğretici/bağımsız seviye göçü). Eski kayıtta hiçbir şey kaybolmaz (test S7).
-
-## 2. Madde madde
-| Madde | Durum | Not |
+| Seviye | Ne oluyor | Öneri |
 |---|---|---|
-| 1.1 Tamamlanmamış inşaat | ✅ D68 | `Systems/BuildingLevels.cs`; savaş kule hakkı/seviyesi, Kışla, ev deposu, Kart Atölyesi, ipucu |
-| 1.2 Menzil çemberleri | ✅ D69 | Kök neden: halka ölçeği tweenlenen kulenin çocuğuydu (Y 0,2 → 1, merkez ×5 aşağı) |
-| 1.3 Can barları | ✅ D70 | `UI/UiHealthBar.cs` + dünya `HealthBar`; Slider iç boşlukları ve yarım ofset hatası |
-| 1.4 Uzun yürüyüş animasyonu | ✅ D71 | Kök neden: gizli renderer + `CullUpdateTransforms`; ayrıca 181 klipte döngü kapalıydı |
-| 1.5 Duraklatma | ✅ D72 | `Battle/BattlePause.cs` (ayarlar + arka plan/telefon/kilit), ses de durur |
-| 2.1 Çırak katkısı | ✅ D73 | öncesi/sonrası ECONOMY §11.1 |
-| 2.2 Kahraman/Çırak | ✅ D74 | süreli, elmasla bitir, mevcut → sonraki |
-| 2.3 Maden deposu | ✅ D75 | ECONOMY §11.2–11.3 |
-| 2.4 Dükkân | ✅ D76 | ECONOMY §12, PLAY_RELEASE §9 |
-| 3.1 Adaya ilk giriş | ✅ D77 | Kök neden: `DevSettings.Enabled` (Development APK'da açık) adı hiç sormuyordu |
-| 3.2 Ada başlangıcı + öğretici | ✅ D78 | yalnız kale; Okçuluk ücretsiz; Oduncu/Ağıl 100 altın (ECONOMY §13) |
-| 3.3 Bağımsız ada seviyeleri | ✅ D79 | adil göç: girilmiş adada o anki etkin seviye korunur |
-| 3.4 Akın dengesi | ✅ D80 | Kale 1: düşman ölçeği 0,5 (öldürme süresi eski Kale 5 ile aynı) |
-| 4.1 Arazi genişletme | ✅ D81 | Ana Üs + ada aynı vurgu |
-| 4.2 Temizleme | ✅ D82 | Ana Üs + ada aynı sistem |
-| 5 Savaş kartı UI | ✅ D83 | |
-| 6 Bütünsel denetim | ✅ D84 | §4 |
+| **B1-S3 Madeni Koru** (ve tüm bölgelerin Madeni Koru seviyeleri) | Kule + kahraman madeni 76 sn'de kaybediyor. Yalnız kuleyle her bölgede maden 24–32 sn'de düşüyor: düşmanların yarısı köprüden karadan doğrudan madene koşuyor, ilk dalga büyüdüğü için yağmacı da arttı. | (a) Yağmacı oranını 1/2'den 1/3'e indirmek. (b) Maden canını düşman sayısıyla ölçeklemek (`DefendedMineHealthRatio` 0,6 → ~0,8). (c) Yağmacıları 2. dalgadan başlatmak. En az dokunuşla (a)'yı öneririm. |
+| **B2-S5 Boss (Orman Cadısı)** | Ana Üs düşüyor. 7. oturumda %100 canla kazanılıyordu; sayı neredeyse aynı (27 → 26), fark ağırlıkla %10 can. | 2. bölgenin harita can çarpanını 1,0 → 0,92 yapmak (`MapEnemyHealth`; %10'u yalnız bu bölgede geri alır) ya da bu bölgede dalga arasını 8 → 10 sn yapmak. |
+| **B5-S4 Zamana Karşı** | Ana Üs %99, ama 180 sn yetmiyor. 38 düşman, 4 dalga ve dalga aralarıyla bitirmek mümkün değil, saf süre duvarı. Yalnız kule / yalnız kahraman 3, 4, 5 ve 6. bölgelerin Zamana Karşı seviyelerinde de süreye takılıyor. | Süreyi düşman sayısıyla ölçeklemek (180 × yeni/eski ≈ 240 sn) ya da Zamana Karşı'da dalga arası nefes payını saymamak (sayaç aralarda durur). Ben ikincisini öneririm; nefes payı isteğiyle çelişmiyor. |
+| Sınırda: B1-S4 (üs %42), B2-S1 (%43), B2-S2 (%31; SON oynatmada başka tohumla kaybedildi), B3-S2 (SON'da kaybedildi) | İlk bölgeler "affedici" hedefin altında kalıyor. B2-S1 9 → 16 (en büyük artış). | B2-S1'i 13–14'e çekmek ya da bu seviyede dalga başına sınırı 9'a indirip 3 dalgaya bölmek. |
 
-## 3. Ekonomi metrikleri (öncesi → sonrası, SIM 40 tohum)
-| Metrik | V2 (5. oturum) | V2 (6. oturum) |
+- **Kolaylaşanlar:** 4–6. bölgelerde yalnız kule de Hayatta Kal / Üssü Koru seviyelerini çoğunlukla kazanıyor (kuleler uzun zikzak yolda çok etkili;
+  7. oturumda da böyleydi). Yalnız kahraman ise 2–3. bölgelerde neredeyse hiç kazanamıyor. Bu, "kahraman + kule birlikte" tasarımına uygun.
+
+## 3. Savaş üst barı ve harita (D98, D99)
+- **Yeni bar** (`Polish/UI/BattleTopBar.cs`, Ana Üs süslü çerçevesiyle aynı aile):
+  - sol: düşman ikonu ve "kalan / toplam",
+  - orta: "Dalga n/m", altında dalga noktaları ve "Bölge · Seviye n",
+  - sağ: altın ve ayarlar/duraklat (eski düğme, aynı işlevle),
+  - altta belirgin ilerleme barı (öldürülen / toplam).
+- **Hedef kartı:** ayrı kart, kendi ikonu ve barıyla. Madeni Koru'da maden canı, Zamana Karşı'da kalan süre, Üssü Koru'da üs canı gösterir;
+  tehlikede kırmızıya döner.
+- **Yerleşim:** bar güvenli alanın içinde. Metinler otomatik küçülür, sığmazsa üç noktayla kesilir. Test 4 ekran oranında taşma ve güvenli alanı
+  denetliyor (`H1`).
+- **Sonnet alt ajanı (orta çaba) yazdı;** testleri ben koşturup görüntülerle doğruladım.
+- **Bu sırada düzelttiklerim:**
+  - Düşman giriş oku artık barın/kartın üstüne binmiyor.
+  - Test görüntü yardımcısı arayüzü kırpık kamera alanına sığdırıyordu; artık cihazdaki gibi tam ekran çekiyor.
+- **Ekran görüntüsündeki sol üst yuva:** B4-S3'teki (−0,3; 15,1) yuvasının "3 HAK" etiketi yolun üstündeydi.
+  - Eski doğrulama yalnız halkanın yola uzaklığına bakıyordu, **etiketi hiç denetlemiyordu**; bu yüzden 30/30 "geçerli" diyordu.
+  - Kural eklendi ve 26 seviyenin **yalnız yuvaları** yeniden üretildi (rota, maden, üs aynı).
+  - Yeni bağımsız test `V4`, **gerçekten çizilen** yol maskesini okur: 30 seviyede halka, etiket ve kule görseli yola değmiyor.
+- **Sağ kenardaki kesik ada/kule:**
+  - Bölge yapısında yalnız alt tabanın karada olması aranıyordu; mavi kule yarısı suyun üstündeydi. Artık yapının tamamı kıyıdan 0,4 birim içeride.
+  - Kamera yatayda ızgara + 0,5 birime kadar gidiyordu. Artık **karanın kenarında** duruyor; ekran adadan genişse adanın ortasına sabitleniyor ve
+    tek yanda deniz şeridi kalmıyor.
+- Görüntüler: `H1_topbar_*` (4 oran × 4 tür), `M0_r4_l3_phone.png`, `M0_r4_l3_wide.png`.
+
+## 4. Ana Üs yerleşim hatası — kesin kök neden ve kalıcı çözüm (D100)
+**Kök neden (ölçüldü):** küçük dekorlar — **çalı (4 tür), altın taşı (2 tür) ve koyun** — dolu sayılan hücrelerinin **0,7–1,2 birim yukarısında**
+çiziliyordu.
+- **Neden:** `DecorData.VerticalOffset`, görselin tabanını sprite'ın **tam çerçevesinin** alt kenarına göre hizalıyordu. Tiny Swords karelerinin
+  altında saydam boşluk var.
+- **Oyuncuya etkisi:** çalıyı/koyunu bir sırada görüyorsunuz, oysa yerleşim kuralı **altındaki boş görünen hücreyi** dolu sayıyor. O hücreye inşa
+  ya da taşıma reddediliyor ("Buraya sığmıyor"). Tersine, çalının çizildiği hücre boş sayılıyordu.
+  - Örnek (5. oturumun ayak izi raporu): `decor:bush` dolu hücre (15,23), çizim y 24,0–24,9. Her ağıl çalısı ve koyun bunu yapıyordu.
+  - Yeni testte (`O1`, eski kod) uyuşmazlıklar: `bush +0,97`, `bush2 +1,03`, `bush3 +0,87`, `bush4 +0,97`, `gold_stone +0,79`,
+    `gold_stone_big +0,68`, `sheep +1,21` birim. Kaya, kütük, ağaç dekorları ve 2×2'lik dekorlar doğru hizalıydı.
+- **Neden iki kez kaçtı:**
+  - Önceki düzeltmeler yapıların görsel alanına ve doğa nesnesi kaydına odaklanmıştı.
+  - 5. oturumun "görünüşte boş" denetimi, kuralla **aynı veriyi** (nesne hücreleri) kullanıyordu. Görünmeyen ama kayıtlı bir engeli dolu sayıyor,
+    hatayı hiç yakalayamıyordu.
+- **Keşifte elenenler:**
+  - Doğa nesnesi kaldırma (anında ve süreli) hücreleri zaten tamamen boşaltıyordu; kayıt, nesne, collider ve ızgara 10/10 temizdi, yeniden
+    yüklemede de (`O0`).
+  - Gölgeler doluluğa girmiyor (alfa 0,30 < 0,35).
+  - Eski kodun gerçek risk noktaları da kapatıldı:
+    - elle güncellenen statik doğa sözlüğü (yok edilmiş nesnenin kaydı bir sonraki yüklemeye kadar kalabiliyordu),
+    - kuralın gizli dekoru engel sayması, ızgaranın ise saymaması.
+
+**Çözüm:**
+1. Dekor hizası görünen tabandan (`DecorData.VisibleBottom`, sıkı ağın en alt noktası). Kayıtlı dekorlar yüklemede kendi hücrelerine oturur;
+   kayıt değişmez.
+2. **Tek doğru kaynak:** `BaseOccupancyGrid.Occupants` anlık görüntüsü sahnedeki canlı nesnelerden sıfırdan kurulur.
+   - Kapsadıkları: yapı = ayak izi ∪ görsel hücreleri; kahraman kampı; **etkin** dekor; **etkin ve kaldırılmamış** doğa nesnesi.
+   - Ne zaman: her karede ve her yerleştirme, taşıma, silme ve kaldırma sonrası. Yükleme doğrulaması da bunu kullanır.
+   - Kayıttaki hücre verisi doluluğa hiç girmez. `NatureObstacle.ByCell` artık bu görüntünün salt-okunur görünümü; hayalet kayıt oluşamaz.
+   - Kaldırma tek yoldan yapılır (`MarkRemoved`): görsel, collider ve doluluk aynı karede kapanır.
+   - Yerleşim kuralı, kırmızı ızgara ve yürünemez hücreler aynı listeyi okur.
+3. **Geliştirici ayarı:** DevMenu → "OCCUPANCY GÖSTER" (yalnız Editor / Development). Dolu hücreler türüne göre renkli, dolduran nesnenin adı
+   ızgarada yazılı (`O3_occupancy_debug.png`).
+4. **Kalıcı regresyon testi `O2`,** "mevcut kayıt" (eski v12, eski hizayla yerleşmiş ağıl, kayıtta hayalet doğa kimlikleri ve sahnesiz dekor
+   kaydı) ve "yeni kayıt" ile ayrı ayrı:
+   - 4 alanda **22 öğe** kaldırılır: ağaç, kaya, çalı, kütük (doğa nesnesi: anında ve süreli temizleme) ile çalı ve kütük (dekor).
+   - Aynı hücrelere 4 boyutta (4×4, 3×2, 3×3, 2×3) yeni bina kuralla kabul edilir.
+   - 4 türün taşınması ve geri alınması kabul edilir; yeni Köylü Evi istenen yere kurulur.
+   - Kayıt → yeniden yükleme sonrasında kaldırılanlar geri gelmez, yerler boş kalır. **Hepsi geçti.**
+   - 5. oturumun tüm yerleşim testleri yeni kodla geçti.
+
+## 5. SON — oynatma ve kayıtlar
+**Savaş — her bölgenin 2. seviyesi ve boss'u, bot ile kule + kahraman, 3× hız** (`Session8SonTests`, `SON_play.txt`, görüntüler `SON_r*_fight.png`):
+
+| Bölge | 2. seviye | Boss (5. seviye) |
 |---|---|---|
-| Toplam gelir, 1. gün (altın/sa) | 1.890 | 1.659 |
-| Toplam gelir, 3. gün | 1.643 | 2.107 |
-| Ana Üs medyanı 1 sa / 1. g / 3. g / 7. g | 8 / 10 / 13 / 15 | 5 / 10 / 14 / 15 |
-| Maden deposu taşması 1. gün | %85 | %0 |
-| Cüzdan tavanında geçen oturum (1. gün) | %2,8 | %0,2 |
-| Çırak Sv10 + maden Sv10 (eski hızla) | 10.368 altın/sa | 9.504 altın/sa (−%8,3) |
-| Altın kuru (Ana Üs 10) | 40 altın/elmas (sabit) | 94 altın/elmas (dükkân + top-up aynı) |
-Yorum: altın değerli kalıyor (1. günde sıradaki Ana Üs ~20 savaş, tavanda boşa giden altın ~0); depo artık anlamlı; Ana Üs 15'e ~3,5. gün.
+| 1 Yıkık Kale Yolu | ✅ Ana Üs %75, 129 sn, 14 düşman | ✅ %100, 145 sn, 20 düşman |
+| 2 Sisli Orman | ❌ üs düştü, 114 sn (17/20 öldürüldü) | ✅ %8, 163 sn (Cadı'nın çağırdıklarıyla 35 düşman) |
+| 3 Terk Edilmiş Maden | ❌ üs düştü, 177 sn (21/25) | ✅ %37, 300 sn |
+| 4 Donmuş Geçit | ✅ %100, 150 sn | ✅ %95, 170 sn |
+| 5 Karanlık Kale | ✅ %100, 196 sn | ✅ %99, 390 sn (çağrılanlarla 60) |
+| 6 Ejderin İni | ✅ %100, 169 sn | ✅ %82, 373 sn, 7 dalga |
 
-## 4. Bütünsel denetim (AŞAMA 6) — bulunan sorunlar ve çözümler
-| # | Bulgu | Çözüm |
-|---|---|---|
-| 1 | İnşaatçı görevleri ve maden ham `DateTime.UtcNow`: saat geri alınınca süreler oynuyordu | GameManager tümüyle `GameClock` (geri alınmaz saat) |
-| 2 | Ada tekrar ödülü günlük sınırı ham saatle | `GameClock` |
-| 3 | Saati İLERİ alma çevrimdışı doğrulanamaz | Belgelendi: sunucu saati/bulut kaydıyla kapatılmalı (açık iş) |
-| 4 | Eksik altın tamamlama sabit 40 altın/elmas (Ana Üs 15'te anlamsız) | Dükkânla aynı Ana Üs'e bağlı kur |
-| 5 | Kahraman/çırak eğitimi tek inşaatçıyı tıkıyordu (baştan oynatmada kahraman Sv2'de kaldı) | Ayrı eğitim yuvası (D85) |
-| 6 | Arazi kilidi formülü iki yerde | `LandExpansion.RequiredMainBase` tek kaynak |
-| 7 | Inşası bitmemiş bina 6 farklı okuma noktasında sayılıyordu | `BuildingLevels` |
-| 8 | Ada adı Development derlemesinde hiç sorulmuyordu | Kapı yalnız otomatik testte |
-| 9 | Tiny Swords Run/Idle klipleri döngüsüz (çırak, işçi, koyun, okçular da etkileniyordu) | 181 klipte döngü |
-| 10 | Çevrimdışı maden: <1 altın birikince zaman damgası ilerliyor, kesir kayboluyordu | Damga korunur |
-| 11 | Eski test `OldV9Save…` 4. oturumdan beri yanlış regex (clearedNature) | Regex düzeltildi |
-Elmasla hızlandırma: Ana Üs, ada, Kart Atölyesi, kahraman/çırak hepsi `GemEconomy.FinishCost`. Öğretici sırası: tanıtım → ad → Okçuluk → akın öğreticisi (çakışma yok).
+- **Savaştan doğrulananlar:**
+  - Takılan ya da hedefsiz düşman yok; her savaş bitti.
+  - Yeni durum makinesi 12 savaşta da sorunsuz çalıştı.
+  - Üst bardaki "kalan / toplam" sayısı plandaki toplamla aynı (çağrılanlar hariç).
+- **Tohum farkına dikkat:** B2-S2 ve B3-S2 bu tohumla kaybedildi; aynı seviyeler denge ölçümünde (başka tohum) %31 ve %100 canla kazanılmıştı.
+  Gürültülü, sınırda seviyeler. B2-S2'yi bölüm 2.2'ye "sınırda" olarak ekledim; birden fazla tohumla ölçmeyi öneririm (`PLAYTEST_SEEDS=3`).
+- **Görüntü notu:** botun savaş görüntüleri yalnız dünyayı çeker. Yeni üst bar oyun içinde `H1_topbar_*` (4 oran × Madeni Koru / Zamana Karşı /
+  Üssü Koru / Boss) ve `M0_r4_l3_phone.png` görüntülerinde.
+- **Ana Üs:** `O2`'de iki kayıtta toplam 44 öğe kaldırıldı (her kayıtta 22: ağaç, kaya, çalı, kütük — doğa ve dekor). Aynı yerlere bina kuruldu ve
+  taşındı, yeniden yüklendi; tüm işlemler kabul edildi (`O2_*_after_reload.png`). Occupancy görünümü: `O3_occupancy_debug.png`.
+- **Son test koşusu:**
+  - Session8 (A1, A2, E1, P1, V4, M0, O0–O3, H1), Session7 V/B, Session5 (yerleşim), Session6, BattleStructure ve ForestRegion takımları:
+    64 test; 63ü ilk koşuda geçti, kalan 1 düzeltilip yeniden koşturuldu ve geçti (**64/64**).
+  - Tek uyarlama: Session6'daki bir test, %0 ilerleme barının gizli dolgusunu "%100 genişlik" sanıyordu; görünüm doğruydu, testi düzelttim.
+  - 7. oturumdan bilinen eski başarısızlar (IslandRaid LiveRaid, MonsterFlips, BaseShadowRevision) bu oturumda koşturulmadı.
 
-## 5. Testler
-- `Session6Tests` 22/22 (S1_1 … S7). Güncellenen eski testler: IslandFreshStartTests 8/8, IslandPhaseBTests, IslandPhaseE2, RaidAbilityTests,
-  Session4/5 (kaldırma menüsü, fikstür: eski kayıt arazisi `landOpened = -1`, okçu seviyesi = kale), EconomyProfileTests, BaseBarracksTests, GemEconomyTests.
-- Geniş koşu (108 test: ada C/E2, akın, yetenek, Nov13, Session4/5, Kışla, Atölye): düzeltmelerden sonra yalnız **önceden bilinen 2** başarısız:
-  `IslandPhaseCTests.MonsterFlips…`, `IslandRaidTests.LiveRaid…` (5. oturum raporunda da vardı).
-- Not: `-testFilter "Island"` gibi geniş filtre `[Explicit]` uzun ölçümleri de koşturur; ilk koşum bu yüzden ~30 dk sürdü (takılma değil).
-
-## 6. SON — baştan oynatma ve kayıt yükleme
-**Yeni kayıt, sınırsız elmas KAPALI** (`FreshAccountJourneyTests`, bot oyuncu; rapor `Docs/playtest/session6/journey/journey.md`):
-- Ana Üs 1 → 5 ~6 sa 40 dk simüle süre; 15 savaş (9 zafer, 6 yenilgi; en ileri B2-4). Kahraman Sv4, çırak Sv4 (eğitim yuvası sonrası).
-- Ada: tanıtım gösterildi → "Adanızın adı ne olsun?" → "Kartal Adası" (ücretsiz, 2 hak kaldı) → öğretici → Okçuluk Alanı ücretsiz → okçu binadan çıktı.
-- Akın 1, 2, 3 Kıyı Kalesi Sv1 + Okçu Sv1 ile kazanıldı (kale %100; bot "iyi" profil — gerçek oyuncu için de kazanılabilir).
-- Dükkân: sahte mağazayla `gems_small` → +100 elmas (defter + onay); Odun Kesesi 4 elmas → +90 Odun.
-- Duraklatma, menzil, can barları sefer savaşında `S1_*` testleriyle doğrulandı (görüntüler session6/S1_*).
-**Mevcut kayıt:** telefonundaki kayda buradan erişemem (editördeki kayıt test koşularınca yenilenmiş). Onun yerine ilerlemesi olan bir **v11 kaydı**
-(Ana Üs 10, kahraman 9, çırak 7, maden 8, ada Kale 4/Akın 12, madende 900 altın) birebir kurulup tam yükleme yolundan geçirildi (`S7`): hiçbir değer
-kaybolmadı, ada seviyesi 10'a sabitlendi, arazi 3 genişleme açık kaldı, tanıtım tekrar gösterilmez. **Cihazda ilk açılışta kontrol et.**
-
-## 7. Engellenenler / bilinen sınırlar
-- ENGELLENEN yok.
-- Bilinen sınırlar: saati ileri alma (sunucu gerekir); ada temizlik işleri gerçek zamanlı (yarıda kapanırsa bedel alınmaz, iş kaybolur);
-  test görüntülerinde öğretici deliği ekran ölçeği farkı yüzünden kayık görünebilir (oyunda değil); cihaz testi yapılmadı (Development APK ile dene).
-- Ana Üs 1. genişleme kademesi eski kayıtlarda doğa tabanı yüzünden "0 ağaç" gösterebilir (alan zaten temizdi).
-
-## 8. PLAY_RELEASE.md'de senin yapman gerekenler (yeni)
-1. **Play Console → Uygulama içi ürünler:** `gems_small` (100), `gems_medium` (550), `gems_large` (1.250) — tüketilebilir, fiyatı sen ver (öneri §9.1).
-2. **Lisans test kullanıcıları** ekle; dahili test kanalına imzalı AAB yükle (ürünler ancak o zaman görünür).
-3. **GooglePlayTangle üret** (Services → In-App Purchasing → Receipt Validation Obfuscator, Play Console lisans anahtarı) ve commit et —
-   yapılmazsa yayın derlemesi gerçek satın almada elmas VERMEZ.
-4. İçerik derecelendirmesi formunda "Dijital satın alma: Evet".
-5. Önceki maddeler (upload key, gizlilik URL'si, formlar, 12 test kullanıcısı) aynen bekliyor (§8).
-
----
-# REPORT — 5. oturum (14 Kasım 2026): yerleşim, yol bulma, Taşı/Sil · ✓/✗ · GERİ AL
-
-Dal: `gece-gelistirme` (push yok) · Başlangıç `21bd545` · Kararlar `DECISIONS.md` D62–D67 · Durum `GECE_DURUM.md` ·
-Görüntüler ve test çıktıları `Docs/playtest/session5/` (ham: `PlaytestOutput/session5/`).
-
-## 1. Kısa özet
-- Bütün maddeler yapıldı. Kısmen kalan tek şey: **2.1 eylem menüsü adaya bağlanmadı** (adada bina dokunuşu zaten TAŞI'lı kendi panelini açıyor; ayrıntı §2).
-- ⚠️ Ulaşan 3 görselin 1. ve 2.'si aynıydı (Taşı/Sil paneli), 3.'sü GERİ AL. **"Buraya sığmıyor" görseli ulaşmadı**; o madde yazılı tarifine göre
-  yapıldı ve testle yeniden üretildi (kalenin hemen altına bina taşıma).
-- Unity editörü kapalıydı; testleri doğrudan projede batchmode ile koşturdum.
-- Model dağılımı: yerleşim + yol bulma + testler Opus/yüksek çaba; 2.1 eylem menüsü Sonnet alt ajanı (orta çaba) — çıktısını ben inceleyip test ettim.
-- ⚠️ Cihazda denenmedi; doğrulama test ekran görüntüleriyle.
-
-## 2. Madde madde
-### AŞAMA 1 — Kritik
-| # | Kök neden | Yapılan |
-|---|---|---|
-| 1.1 "Buraya sığmıyor" | Hücre denetimine ek olarak **görünmeyen bir sprite-örtüşme denetimi** vardı. Kalenin görseli ayak izinin 1,7 birim altına taşıyor, taşınan binanın çatısı da kendi ayak izinden taşıyor → ızgarada yeşil görünen hücrelerde ret. Ters yönde: maden (alt satırı boş görünür) ve kamp bayrağı (2×2 kare) görselinden büyük. Yeni bina hayaleti gerçek binadan farklı ölçekle (0,9) çiziliyordu. | Tek kural hücreler: her yapının engel alanı = ayak izi ∪ görselinin gerçekten kapladığı hücreler. Yerleşim modunda dolu hücreler kırmızı, çit payı soluk kırmızı, hayaletin hücreleri tek tek yeşil/kırmızı (bina ve dekor). Kamp = bayrağın kendi hücreleri. Hayalet = gerçek görsel ve ölçek. Yükleme doğrulaması (hayalet kayıt temizliği + kayıttan sıfırdan doluluk karşılaştırması). **Bulunan gerçek hata:** doğa nesnelerinin hücresi oluşturma sırasında kaydolmuyor, (0,0)'da hayalet kalıyordu — düzeltildi. Kahraman, üstüne bina kurulursa kenara **yürür**. Eski kayıtlı düzenin kıpırdamaması için yükleme onarımı yumuşak (yalnız gerçek çakışmada taşır; test: "taşınan yok"). |
-| 1.2 Yapı içinden geçme | Savaşta her yapı görselinden bağımsız sabit **1,25×1** birimlik engel kaydediyordu; Madeni Koru madeni ~2,7×1,65 | Savaş engeli görselden (maden 1,25×1 → 2,27×1,48; kale 3,4×2,76). Düşman vuruş mesafesi engelin kenarından da ölçülür (saldırı gecikmez). Çırak, kahraman yapının öbür yanındayken yol bulmayla dolanır. Ana Üs yürüme ızgarası yeni engel alanlarını kullanır; ada zaten hücre ızgarasıyla kapalıydı. |
-| 1.3 Dekor ölçeği | 1×1'e geçişte görsel genişlik `visualWidth`'ten okundu, eski büyütme (`visualScale`) yok sayıldı: koyun %37, çalı %50 boyuna düştü | `DecorScale` ortak tablosu (ayak izinden bağımsız): koyun 3,5 · çalı 2,48 · kaya 1,84 · ağaç 2,76 (eski boyutlar); sonradan eklenenler Tiny Swords doğal boyunda. |
-
-### AŞAMA 2 — UI/UX
-- **2.1 Taşı/Sil:** yeni ortak `WorldActionMenu`: öğenin hemen üstünde (sığmazsa altında), ekran içinde, öğeyi izler; yuvarlak altın halkalı ikonlu
-  düğmeler + kısa etiket. Dekor: TAŞI (dört yönlü ok) · SİL (çöp kovası; altında altın simgesi + "+iade"; kısa onay: "Silinsin mi? +N ✓/✗").
-  Seçili öğe altın dış hatla vurgulanır; boş yere dokununca kapanır. **Binalar/kuleler de aynı menüyü kullanır** (YÜKSELT + TAŞI; kalede yalnız
-  YÜKSELT; maden önce altını toplar). ⚠️ Bu, bina dokunuş akışını değiştirdi: pencere artık YÜKSELT'e basınca açılır. **Ada bağlanmadı** (bkz. D67).
-- **2.2 ✓/✗:** hayaletin yanında (sağ, sığmazsa sol/alt/üst), onu izler, hayaletin ya da arkasındaki kalenin üstüne binmez. Geçersizken ✓ soluk ve basılamaz.
-- **2.3 GERİ AL:** 188×58 hap → 52 çaplı yuvarlak düğme + küçük etiket (alanın ~%45'i), sol alt köşe, radyal menünün üstü. 3 sn, azalan altın halka, yumuşak sönme.
-- **2.4 Önerilen düzen:** `FeatureConfig.recommendedLayout = false` ile gizli; kod silinmedi.
-
-## 3. Öncesi / sonrası görüntüler (`Docs/playtest/session5/`)
-- 1.1: öncesi = senin tarifin (görsel ulaşmadı); sonrası `S1_1_move_under_castle_red.png`, `S1_1_move_into_castle_red.png` (kırmızı hücreler),
-  `S1_1_hero_walked_away.png`, tarama `S1_1_scan_debug.png` (mavi = ayak izi, camgöbeği = engel alanı, sarı = görsel, kırmızı = sprite boşluğu reddi).
-- 1.2: `S1_2_defend_mine_walkgrid.png` (F6: maden ve kale kırmızı, rotalar dolanıyor), `S1_2_battle_towers.png`.
-- 1.3: öncesi = senin 2./3. görselin (ağıl küçücük); sonrası `S1_3_sheep_pen_after.png`.
-- 2.1: `S5_action_menu_*.png` (4 ekran oranı). 2.2: `S2_2_confirm_beside_invalid.png` / `_valid.png`. 2.3: `S2_3_undo_small.png`. 2.4: `S2_4_build_menu.png`.
-
-## 4. 1.1 yerleşim testi sonuçları (Ana Üs 15, tam düzen, 3316 aday yer × 7 bina türü)
-```
-GoldMine 4×4: aday 435, kabul 112, görünür engel 322, sprite-boşluk reddi 1, çirkin kabul 0, ızgara uyuşmazlığı 0
-CannonTower 3×2: aday 496, kabul 124, görünür engel 357, sprite-boşluk reddi 15, çirkin kabul 0, ızgara uyuşmazlığı 0
-ArcherTower 4×4: aday 435, kabul 113, görünür engel 318, sprite-boşluk reddi 4, çirkin kabul 0, ızgara uyuşmazlığı 0
-Monastery 3×3: aday 480, kabul 115, görünür engel 348, sprite-boşluk reddi 17, çirkin kabul 0, ızgara uyuşmazlığı 0
-CardWorkshop 3×3: aday 480, kabul 117, görünür engel 342, sprite-boşluk reddi 21, çirkin kabul 0, ızgara uyuşmazlığı 0
-Barracks 3×3: aday 480, kabul 119, görünür engel 339, sprite-boşluk reddi 22, çirkin kabul 0, ızgara uyuşmazlığı 0
-House 2×3: aday 510, kabul 174, görünür engel 332, sprite-boşluk reddi 4, çirkin kabul 0, ızgara uyuşmazlığı 0
-```
-- **Izgara uyuşmazlığı 0:** ızgarada kırmızısız görünen her hücre grubu kabul edildi; her ret kırmızı hücreyle gösterildi.
-- **Çirkin kabul 0:** kabul edilen hiçbir yerde bina başka yapının görseline binmiyor.
-- "Sprite boşluğu reddi" (%2,6): iki görsel aynı hücreye karşı yönlerden 1 birimden az taşıyınca hücre kuralı gözden biraz katıdır; bu retler
-  ızgarada kırmızı hücreyle görünür (gizli değil). Önceki kuralda bu sayı ayrıca **görünmeyen** retlerle birlikte 60+ idi.
-- Yükleme doğrulaması: `S1_1_load_validation.txt`; yeniden yüklemede düzen değişmedi (`S1_1_reload_moves.txt`: "taşınan yok").
-- 1.2 rotaları: Ana Üs 14 yapı / 14 rota, ada 9 rota, savaş 8 rota, Madeni Koru 4 rota — hepsi engelsiz; kahraman ve çırak yapı görseline girmedi.
-
-## 5. Testler
-- **Yeni:** `Session5Tests` 18 test (yerleşim taraması, kırmızı hücreler, kahramanın çekilmesi, yükleme doğrulaması, düzenin kıpırdamaması, Ana Üs /
-  ada / savaş / Madeni Koru rotaları + kahraman-çırak yürütmesi, dekor ölçeği, ✓/✗ konumu, GERİ AL, önerilen düzen, iki baştan-sona oynatma) ve
-  `Session5UiTests` 3 test (eylem menüsü: ekran içi + ikonlar + iade, sil onayı + vurgu, bina menüsü/kalede TAŞI yok) — **hepsi geçti**.
-- **Gerileme:** Ana Üs, savaş, ada, UI ve önceki oturum grupları (~230 test) koşturuldu. Değişikliğe bağlı kırılanlar düzeltildi (imzası değişen
-  metotları yansımayla çağıran eski testler; bir testin taşıdığı Topçu artık Okçu Kulesinin görünen tepesine biniyordu → en yakın geçerli yer).
-- ⚠️ **Bu oturumdan önce de başarısız olan 3 test** (başlangıç commit'inin betikleriyle ayrı kopyada koşturup doğruladım; bu oturumun işi değil):
-  `IslandRaidTests.LiveRaidInTheScene…` (akın 180 sn'de bitmiyor), `IslandPhaseCTests.MonsterFlips…`, `BaseShadowRevisionTests.ShadowsRemainSoft…`
-  (gölge köşe parlaklığı, kararsız).
-- ⚠️ Toplu koşuda sıraya bağlı kararsızlık: `UiFixPassTests.BattleSlotsClear…` ve savaş yolculuğu testi başka testlerden sonra savaş sahnesini
-  bazen bulamıyor; tek başına ya da kendi grubunda geçiyor.
-
-## 6. Oynatma (SON)
-- Ana Üs (`SON_base_journey.txt`): 12 binanın hepsi taşındı ve GERİ AL ile döndü; koyun/çalı/kaya kuruldu, biri taşındı, biri silindi.
-  Bu sırada gerçek bir hata yakalandı ve düzeltildi: GERİ AL eski yeri katı kuralla denetliyordu; eski düzende yerinde kalan bir binada geri alma
-  başarısız oluyordu → geri alma yumuşak denetime bağlandı.
-- Savaş (`SON_battles.txt`, ×4 hız, ~100 sn oyun süresi): normal savaşta 323, Madeni Koru'da 92 düşman konumu denetlendi; hiçbiri yapının içinde
-  değildi. Madeni Koru oyuncu girdisi olmadan yenilgiyle bitti (beklenen: kahraman kımıldamıyor).
-
-## 7. Açık işler / sonraki adım
-- 2.1 menüsünün adaya bağlanması (D67'de nasıl yapılacağı yazılı).
-- Bina dokunuşunun artık önce menü açması bir alışkanlık değişikliği; cihazda dene, istersen tek dokunuşta pencere + menüdeki TAŞI'ya dönebiliriz.
-- `ui_icon_move` / `ui_icon_trash` üretilmiş ikonlar; el çizimi gelirse değiştirilir (ART_NEEDS).
-- Google Play işleri (PLAY_RELEASE §8) senin kararınla bekliyor.
-
----
-# REPORT — 4. oturum (14 Kasım 2026): hatalar, temel sistemler ve UI/UX
-
-Dal: `gece-gelistirme` (push yok) · Başlangıç `d1d8d5a` · Commit'ler: AŞAMA 1 `2bc05b8`, AŞAMA 2.1–2.6 `49811d1`, AŞAMA 2.7 + 3 + SON (bu rapor)
-· Kararlar `DECISIONS.md` D45–D58 · Durum `GECE_DURUM.md` · Görüntüler `Docs/playtest/session4/`.
-
-## 1. Kısa özet
-- Bütün maddeler yapıldı; **engellenen iş yok**. Google Play işleri (PLAY_RELEASE §8) senin kararınla bekliyor.
-- ⚠️ Mesajında bahsettiğin **3 görsel (ve 2.7'deki 4. görsel) bana ulaşmadı**; yalnız metin geldi. Görsel detaylarını yazılı tariflerinden
-  GECE_DURUM.md'ye kaydettim. Görselleri yeniden gönderirsen karşılaştırıp kalan farkları düzeltirim.
-- Unity editörün açıktı; senin çalışmanı bozmamak için PlayMode testlerini projenin bir kopyasında (`D:/UnityProjects/MEB_TestRunner`)
-  koşturdum. Editörü kapatmadım.
-- İstediğin model dağılımı: yol bulma, seçim, ölçek, ekonomi ve test işleri Opus/yüksek çaba; Kart Atölyesi (2.7) ve Ayarlar (3.3) Sonnet sınıfı
-  alt ajanlarda (orta çaba). İkisinin çıktısını ben inceledim, görüntüde gördüğüm hataları düzelttim (kart hücresi iç boşluğu, yeniden
-  boyutlamada "hayalet" kopya, ayarlar penceresinin boyu).
-- ⚠️ Hiçbiri cihazda denenmedi; doğrulama test ekran görüntüleriyle.
-
-## 2. Madde madde
-### AŞAMA 1 — Hatalar ve temel sistemler
-| # | Kök neden | Yapılan |
-|---|---|---|
-| 1.1 Yol bulma (madde 9) | Ada işçileri ve savaş birimleri hedefe düz çizgide yürüyordu; yalnız Ana Üs inşaatçısında küçük bir A* vardı | Tek ortak A* servisi (`GridPathfinder`) + 3 yürünebilirlik ızgarası (Ana Üs, Ada, Savaş). Bina kur/taşı/sil, ağaç/çalı temizliği, alan açma ızgarayı günceller; yoldaki karakter rotasını yeniden hesaplar. Ulaşılamayan hedefte en yakın noktada durur. Adada yükseklik yalnız merdivenden değişir. F6 ile hata ayıklama görseli (`S1_1_*`). |
-| 1.2 Dekor seçimi (madde 3) | Dekorun TAŞI/SİL paneli hiçbir dokunuşla kapanmıyordu | Tek seçim yöneticisi (`SelectionManager`): boş yer, başka öğe, aynı dekora ikinci dokunuş ve geri tuşu seçimi kapatır. Bina, kahraman, ada paneli ve kaldırma istemi de buna bağlı. |
-| 1.3 Beyaz kare (madde 11) | Madenin savaşta kullanılacak bir sprite'ı yoktu; kod düz renkli kareye düşüyordu | Maden = Tiny Swords altın kayası + seviye renkli maden evi + küçük taşlar, can barıyla (`S1_3_defend_mine`). Tüm sahne/prefab taraması: oyunu etkileyen kayıp referans yok; paket demo dosyaları raporlandı (`missing_refs_scan.txt`). |
-| 1.4 Temizlenebilir öğeler (madde 1) | Çalı ve kayalar yalnız süstü | Dokununca panel açılır: çalı 5 altın → +4 odun, kaya 3 odun → +10 altın; zıplayıp küçülerek söner, toz + kırıntı parçacıkları. Kayda yazılır. Bina altında kalanlar kendiliğinden kalkar (eski kayıtlar dahil). |
-
-### AŞAMA 2 — Ana üs
-- **2.1 Dekor 1×1:** ağaç, çalı, kaya, koyun ve yenilerin hepsi 1×1. Görsel boyu ayrı tutuldu, yan yana doğal dizilir (`S2_1_decor_row`).
-  Eski kayıttaki 3×3 ağaçlar eski alanlarının ortasına geçer (çakışma olamaz).
-- **2.2 Katalog:** Cainos (pixel platformer) ve yer tutucu 13 dekor katalogdan çıktı. Kuruluysa yerinde kalır, SİL tam bedeli iade eder.
-  Tiny Swords'tan 15 yeni dekor eklendi (ağaç ×3, çalı ×3, kaya ×3, kütük, odun/et/altın yığını, iki altın taşı); katalogda 19 dekor var.
-  Çit, fener, bayrak ve patika ücretsiz Tiny Swords paketinde yok → ART_NEEDS.
-- **2.3 Maden:** madende tek figür kaldı, o da Çırak (dokununca Çırak penceresi). Adadaki kazma animasyonuyla sürekli kazar, arada altın
-  kıvılcımı çıkar (`S2_3_mine_apprentice`).
-- **2.4 Kışla + ölçek:** Kışla damında mızraklı devriye gezer, durup sağa sola bakar (`S2_4_barracks_roof`). Savaştaki mızraklılar 1,7 kat
-  büyüktü; ortak ölçek tablosu (`UnitScale`) ile kahramanla aynı boya geldiler (`S2_4_battle_lancers`, testle doğrulanır).
-- **2.5 Pencereler:** Kahraman/Çırak penceresi binalarla aynı süslü pencere oldu: kurdele, portre, "Seviye N / 15", "Can 200 → 230",
-  altın ikonlu bedel, sekmeler (`S2_5_*`). Başka eski tasarımlı yükseltme/bilgi penceresi kalmadı.
-- **2.6 Bitirme:** "Bedava bitir" yok. ≤1 dk kalan iş 1 elmas, daha uzunu eski formül. Fiyat elmas ikonu + sayı. Öğretici/görev bağımlılığı yoktu.
-- **2.7 Kart Atölyesi:** başlık ve X panelin içinde; panel güvenli alana göre boylanır, kart listesi kaydırılır, alt panel sabit.
-  "165 Et eksik — Ağıl'da üret ya da [elmas] 21 ile tamamla"; Et yetmezse ÜRET düğmesi "[elmas] 21 ile üret" olur. HIZLANDIR başlığı kalktı.
-  Kart ikonları: ok (Keskin Oklar), okçu avatarı (Gök Avcısı), kalkan + kırık çarpı (Kalkan Kıran). Reklam düğmesi tek satır, yeşil ikon kalktı;
-  "+3 kullanım" kılıç ikonlu; kural tek satır + ⓘ; YÜKSELT altında bedel ve sonraki seviyenin getirisi; iç boşluklar düzeldi.
-  16:9, 19,5:9, 20:9 ve tablet görüntüleri: `S2_7_workshop_*`.
-
-### AŞAMA 3 — UI/UX
-- **3.1:** Alt bardaki aslan armalı eski şerit aynı varlıkla geri geldi, 72'lik ana düğmeyle uyumlu.
-- **3.2:** ADA düğmesi Tiny Swords parçalarından yeni ikon (su + ada + mavi Gözcü Kulesi + ağaç), aynı halka stili.
-- **3.3:** Ayarlar baştan: SES (müzik/efekt kaydırıcıları), TİTREŞİM, DİL, BİLDİRİMLER, GİZLİLİK, DESTEK, sürüm; açılış/kapanış animasyonu;
-  dar ekranda kaydırılır (`S3_settings_*`). ⚠️ Gizlilik URL'si ve destek e-postası şimdilik yer tutucu (Play hazırlığında girilecek).
-- **3.4 (senin buldukların):** radyal yay genişledi, etiketler çakışmıyor (testle denetlenir), menü açıkken alttan yükselen karartma;
-  kahraman artık bayrak/şapel görselinin üstünde durmuyor (gerçek sprite sınırıyla kontrol); "MADEN %100" göstergesi üst barın içinde,
-  dünyadaki halkalara binmiyor; "6 HAK" pulu genişledi (`S3_battle_mine_hud_*`).
-
-## 3. Kendi bulup düzelttiğim UI/UX ve kod sorunları
-- `GetComponent<T>() ?? AddComponent<T>()` kalıbı Unity'nin sahte-null'u yüzünden editörde hata atıyordu; 5 yerde düzeltildi (ada yanma etkisi dahil).
-- Süslü pencere ve elmas onayı kapatma düğmeleri 30–38 birimdi; 44–46'ya büyütüldü (dokunma alanı).
-- Kahraman penceresinde "Seviye" yazısı portrenin üstüne biniyordu (eski kutu düzenini uygulayan stil kodu); düzeltildi.
-- Kart Atölyesi yeniden boyutlanınca eski yerleşim bir kare görünüyordu ("hayalet" kopya); düzeltildi.
-- Yol takipçisinde kayan nokta yüzünden sonsuz döngü riski vardı (test sırasında yakalandı); düzeltildi.
-- Ayarlar penceresi güvenli alan değişince yeniden boylanır.
-
-## 4. Testler
-- Yeni `Session4Tests` (yol bulma ×4, seçim, maden, doğa temizliği, dekor ×2, çırak, kışla/ölçek, kahraman penceresi, bitirme bedeli,
-  radyal/ayarlar, savaş HUD, Kart Atölyesi) + güncellenen eski testler (GemEconomy, IslandPhaseB, Session3, UiNight).
-- Koşular: Session4 + GemEconomy 17/17; geniş UI grubu (Session3/4, UiNight, Kart Atölyesi, Ayarlar, Radyal) 58/59 (kararsız devriye testi
-  düzeltildi). SON koşusunun sonucu §6'da.
-
-## 5. ART_NEEDS'e eklenenler
-Tiny Swords stilinde çit/fener/sancak/patika/çiçek tarhı/kuyu/heykel dekorları; Lancer renk kademeleri; Ayarlar simgeleri (hoparlör, titreşim,
-zil, küre, zarf, gizlilik) ve kaydırıcı; gerçek kırık kalkan, okçu, üç oklu ve "savaş hakkı" kart simgeleri; el çizimi ada ikonu.
-
-## 6. SON — baştan oynatma
-Baştan oynatma testleri son kodla koşturuldu, **49/49 geçti** (Session4 + UiNight + Kart Atölyesi + Ayarlar + iki yolculuk testi):
-- `FreshAccountJourneyTests` — yeni hesap: Ana Üs → SEFER → savaş → … → ADA (ad, Akın 1, Tüccar) → SEFER paneli.
-- `Nov13FeedbackTests.JourneyIslandRaidReturnBase…` — ada → akın → ADAYA DÖN → Ana Üs → ada (üst bar değerleri iki yönde aynı).
-- `Session4Tests.DefendTheMine…` ve `BattleObjective…` — sefer "Madeni Koru" (Bölge 1 Aşama 3): maden Tiny Swords görselli, gösterge üst barda.
-- Son düzeltmelerden (atölye üst boşluğu, ad tek satır) sonra Session4 + UiNight + Kart Atölyesi yeniden: **39/39**.
-- Tam test takımı (~1 saat+) koşturulmadı; yalnız etkilenen gruplar.
-
-## 7. Bekleyenler (senin kararınla sonraya)
-PLAY_RELEASE §8: paket adı onayı, upload keystore, gizlilik politikası URL'si (Ayarlar'daki yer tutucuya da girilecek), Play Console formları,
-mağaza görselleri, 12+ test kullanıcısı × 14 gün, AdMob/ürün kimlikleri.
+## 6. Açık konular / sizin kararınız
+- Bölüm 2.2'deki dört öneri (Madeni Koru yağmacı oranı, B2 boss, Zamana Karşı süresi, B2-S1).
+- Düşük cihazda kare hızı denemesi (masaüstü ölçümü iyi; cihaz APK'sıyla doğrulanmalı).
+- Üst bar cihazda görülmedi. Çentikli telefonda güvenli alan Unity'nin `Screen.safeArea` değeriyle ölçülüyor; test 4 oranda geçti.

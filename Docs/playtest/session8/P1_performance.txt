@@ -1,0 +1,1 @@
+B6 boss, düşük kalite: 774 kare, ortalama 16,7 ms, %95 16,7 ms, en kötü 23,5 ms; bellek artışı 37768 KB; düşman kabuğu yeni 18, havuzdan 36, havuzda 18, ayıklama hatası 0, takılan 0

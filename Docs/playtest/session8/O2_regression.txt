@@ -1,0 +1,12 @@
+== mevcut_kayit == yükleme: [Doluluk] hayalet harita 0, doğa 0, dekor 0, yapı altındaki doğa 0; kayıtta olup sahnede olmayan hücre 0, sahnede olup kayıtta olmayan 0
+boş alanlar: (x:2, y:6, width:4, height:4), (x:13, y:6, width:4, height:4), (x:16, y:19, width:4, height:4), (x:2, y:26, width:4, height:4)
+kaldırılan 22: dekor bush (3, 9), doğa Rock_4_7, doğa Stump_5_9, doğa Rock_5_8, doğa Rock_4_9, doğa Bush_5_6, doğa Stump_3_8, doğa Stump_2_6, dekor stump (16, 8), doğa Tree_13_6, doğa Bush_14_9, doğa Rock_15_7, dekor bush (17, 22), dekor stump (19, 21), doğa Rock_18_20, doğa Tree_16_19, dekor bush (3, 29), dekor stump (5, 28), doğa Stump_4_26, doğa Rock_4_27, doğa Tree_2_26, doğa Rock_2_29
+yeniden yükleme: [Doluluk] hayalet harita 0, doğa 0, dekor 0, yapı altındaki doğa 0; kayıtta olup sahnede olmayan hücre 0, sahnede olup kayıtta olmayan 0
+Köylü Evleri (yeniden yükleme): (19.00, 25.50, 0.00) (3.00, 7.50, 0.00); beklenen alan (x:2, y:6, width:4, height:4); onay öncesi geçerli True, onay sonrası ev sayısı 2
+== yeni_kayit == yükleme: [Doluluk] hayalet harita 0, doğa 0, dekor 0, yapı altındaki doğa 0; kayıtta olup sahnede olmayan hücre 0, sahnede olup kayıtta olmayan 0
+boş alanlar: (x:2, y:6, width:4, height:4), (x:13, y:6, width:4, height:4), (x:16, y:19, width:4, height:4), (x:2, y:26, width:4, height:4)
+kaldırılan 22: dekor bush (3, 9), doğa Rock_4_9, doğa Rock_4_7, doğa Stump_3_8, doğa Rock_5_8, doğa Stump_5_9, doğa Bush_5_6, doğa Stump_2_6, dekor stump (16, 8), doğa Bush_14_9, doğa Tree_13_6, doğa Rock_15_7, dekor bush (17, 22), dekor stump (19, 21), doğa Rock_18_20, doğa Tree_16_19, dekor bush (3, 29), dekor stump (5, 28), doğa Stump_4_26, doğa Rock_2_29, doğa Tree_2_26, doğa Rock_4_27
+yeniden yükleme: [Doluluk] hayalet harita 0, doğa 0, dekor 0, yapı altındaki doğa 0; kayıtta olup sahnede olmayan hücre 0, sahnede olup kayıtta olmayan 0
+Köylü Evleri (yeniden yükleme): (19.00, 25.50, 0.00) (3.00, 7.50, 0.00); beklenen alan (x:2, y:6, width:4, height:4); onay öncesi geçerli True, onay sonrası ev sayısı 2
+
+HATALAR:
