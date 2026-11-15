@@ -100,6 +100,10 @@ public class BaseMapManager : MonoBehaviour
     public const int GrowRockCap = 3;
     private float _growCheckTimer;
     private bool _terrainLoaded;
+    // 9. oturum (KN-1d): bina yüklemesi sürüyor / yarıda kaldı → SaveAll kayıttaki bina listesini yeniden yazmaz.
+    private bool _buildingLoadInProgress;
+    // Kayıtta olup bu sürümde sahneye kurulamayan binalar (tanınmayan tür): SaveAll listeye geri ekler.
+    private readonly List<PlacedBuildingData> _unloadedBuildings = new List<PlacedBuildingData>();
 
     private void Awake()
     {
@@ -1467,7 +1471,13 @@ public class BaseMapManager : MonoBehaviour
             });
         }
 
-        GameManager.Instance.PlayerData.placedBuildings = list;
+        // 9. oturum (TECH_AUDIT KN-1d): liste sahneden baştan yazılır; sahne eksik kurulmuşken kaydı ezmesin.
+        // Yükleme sürerken (ya da yarıda kesildiyse) kayıttaki bina listesine dokunulmaz; bu sürümün tanımadığı binalar listede kalır.
+        if (!_buildingLoadInProgress)
+        {
+            list.AddRange(_unloadedBuildings);
+            GameManager.Instance.PlayerData.placedBuildings = list;
+        }
 
         // Ağaç/kayalar sahneye yüklendikten sonra yazılır; bina yüklemesi sırasındaki SaveAll
         // henüz sahnede olmayan ağaçları silmesin.
@@ -1495,14 +1505,24 @@ public class BaseMapManager : MonoBehaviour
         if (GameManager.Instance?.PlayerData?.placedBuildings == null) return;
         var saved = GameManager.Instance.PlayerData.placedBuildings;
         // Ana Üs önce yerleşir; diğerleri çakışırsa en yakın boş geçerli yere kayar (bkz. SpawnBuildingInternal).
+        // 9. oturum (KN-1d): döngü bir hatayla yarıda kalırsa bayrak açık kalır ve SaveAll yarım listeyi kayda yazamaz.
+        _buildingLoadInProgress = true;
+        _unloadedBuildings.Clear();
         foreach (var data in saved.Where(d => d != null)
                      .OrderBy(d => d.buildingType == nameof(BuildingType.MainBase) ? 0 : 1).ToList())
         {
-            if (Enum.TryParse<BuildingType>(data.buildingType, out BuildingType type))
+            if (Enum.TryParse<BuildingType>(data.buildingType, out BuildingType type) && Enum.IsDefined(typeof(BuildingType), type))
                 SpawnSavedBuilding(type, data.hasPosition ? new Vector2(data.x, data.y)
                     : BaseWorldLayout.TryGet(data.slotId, out var slot)
                         ? slot.center : Vector2.zero, data.slotId, data.level);
+            else
+            {
+                // Bu sürümün tanımadığı tür (daha yeni sürümün kaydı): sahneye kurulamaz ama kayıttan da silinmez.
+                _unloadedBuildings.Add(data);
+                Debug.LogWarning("[BaseMapManager] Tanınmayan bina türü kayıtta korunuyor: " + data.buildingType);
+            }
         }
+        _buildingLoadInProgress = false;
         SaveAll();
     }
 

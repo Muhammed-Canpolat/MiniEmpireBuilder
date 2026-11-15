@@ -111,6 +111,42 @@ public class Session9RuleGuardTests : Session9SaveFixture
         managerType.GetMethod("DevSetPlayerData").Invoke(manager, new[] { NewSave() });   // test verisi oyunda kalmasın
     }
 
+    [UnityTest]
+    public IEnumerator KN1d_BaseSceneSaveKeepsBuildingsItCouldNotLoad()
+    {
+        // Bu sürümün tanımadığı türde bir bina (daha yeni sürümün kaydı): sahneye kurulamaz; SaveAll listeyi sahneden baştan
+        // yazarken kayıttan düşürmemeli (eskiden sessizce siliniyordu).
+        var save = NewSave();
+        var placed = (IList)Get(save, "placedBuildings");
+        placed.Clear();
+        var future = Activator.CreateInstance(T("PlacedBuildingData"));
+        Set(future, "slotId", "future_1");
+        Set(future, "buildingType", "FutureTower");
+        Set(future, "level", 3);
+        placed.Add(future);
+
+        var manager = Manager();
+        var managerType = manager.GetType();
+        yield return null;
+        managerType.GetMethod("DevSetPlayerData").Invoke(manager, new[] { save });
+        var mapObject = new GameObject("S9BaseMapManager");
+        try
+        {
+            var map = mapObject.AddComponent(T("BaseMapManager"));
+            yield return null;
+            map.GetType().GetMethod("LoadFromPlayerData").Invoke(map, null);
+            var after = (IList)Get(managerType.GetProperty("PlayerData").GetValue(manager), "placedBuildings");
+            Assert.AreEqual(1, after.Count, "tanınmayan bina kayıtta kalmalı");
+            Assert.AreEqual("FutureTower", Get(after[0], "buildingType"));
+            Assert.AreEqual(3, Get(after[0], "level"));
+        }
+        finally
+        {
+            UnityEngine.Object.Destroy(mapObject);
+            managerType.GetMethod("DevSetPlayerData").Invoke(manager, new[] { NewSave() });
+        }
+    }
+
     private static void Boom() => throw new InvalidOperationException("test: göç hatası");
 
     [UnityTest]
