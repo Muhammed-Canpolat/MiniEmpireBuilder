@@ -18,6 +18,9 @@ public static class RewardedAds
 
     private static bool showing;
 
+    /// <summary>Deneme reklam ekranı açık mı (geri tuşu reklamı kapatamaz).</summary>
+    public static bool IsShowing => showing;
+
     /// <summary>Reklam gösterir; izlenip bitince done(true), kapatılır/başarısızsa done(false).</summary>
     public static void Show(string placement, Action<bool> done)
     {

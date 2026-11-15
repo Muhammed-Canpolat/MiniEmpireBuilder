@@ -1,12 +1,9 @@
 using System;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 /// <summary>
 /// 4. oturum (1.2): Ana Üs ve adadaki seçilebilir öğelerin (bina, dekor, kule, ağaç/kaya istemi) TEK seçim yöneticisi. Aynı anda en
-/// çok bir seçim açıktır: yeni seçim öncekini kapatır; boş yere ya da başka bir öğeye dokunmak ve geri tuşu (Android geri = Escape)
+/// çok bir seçim açıktır: yeni seçim öncekini kapatır; boş yere ya da başka bir öğeye dokunmak ve geri tuşu (BackKeyRouter)
 /// seçimi iptal eder. Her seçim kendi kapatma işlevini verir (panel/eylem düğmeleri yok edilir).
 /// </summary>
 public static class SelectionManager
@@ -63,22 +60,4 @@ public static class SelectionManager
         closer = null;
     }
 
-    /// <summary>Sahneye geri tuşu dinleyicisini kurar (bir kez).</summary>
-    public static void InstallBackKey()
-    {
-        Reset();
-        if (UnityEngine.Object.FindFirstObjectByType<SelectionBackKey>() != null) return;
-        new GameObject("SelectionBackKey").AddComponent<SelectionBackKey>();
-    }
-}
-
-/// <summary>Geri tuşu (Android) / Escape: açık seçimi iptal eder.</summary>
-public sealed class SelectionBackKey : MonoBehaviour
-{
-    private void Update()
-    {
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) SelectionManager.Clear();
-#endif
-    }
 }

@@ -41,8 +41,33 @@ public sealed class AudioSettingsUI : MonoBehaviour
     public static bool BattleModalOpen { get; internal set; }
     public bool IsBattleModalOpen => battleScene && isOpen;
 
+    private static AudioSettingsUI current;
+    /// <summary>Ayarlar penceresi açık mı (BackKeyRouter / testler).</summary>
+    public static bool IsSettingsOpen => current != null && current.isOpen;
+
+    /// <summary>
+    /// Geri tuşu (BackKeyRouter): PES ET onayı açıksa yalnız onu kapatır (VAZGEÇ), değilse ayarlar penceresini mevcut Close yoluyla
+    /// kapatır (savaşta devam ettirir). Açık bir şey yoksa false.
+    /// </summary>
+    public static bool CloseIfOpen()
+    {
+        if (current == null || !current.isOpen) return false;
+        if (current.confirmation != null && current.confirmation.activeSelf) current.confirmation.SetActive(false);
+        else current.Close();
+        return true;
+    }
+
+    /// <summary>Geri tuşu: ayar düğmesinin yaptığını yapar (savaşta oyunu duraklatır). Açılırsa true.</summary>
+    public static bool OpenIfPossible()
+    {
+        if (current == null || current.isOpen) return false;
+        current.Open();
+        return current.isOpen;
+    }
+
     private void Start()
     {
+        current = this;
         var canvasObject = new GameObject("AudioSettingsCanvas");
         canvasObject.transform.SetParent(transform, false);
         var canvas = canvasObject.AddComponent<Canvas>();
@@ -487,6 +512,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
     private void OnDestroy()
     {
         anim?.Kill();
+        if (current == this) current = null;
         if (battleScene) BattlePause.Resume(BattlePause.Settings);
         if (battleScene) BattleModalOpen = false;
         if (gearSprite != null) Destroy(gearSprite);

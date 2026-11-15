@@ -69,10 +69,30 @@ public class CampaignSceneSetup : MonoBehaviour
             nextLivesRefresh = Time.unscaledTime + 0.5f;
             livesLabel.text = LivesText();
         }
-        if (regionRoot != null && regionRoot.gameObject.activeInHierarchy && detailOpen
-            && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            CloseDetail();
     }
+
+    /// <summary>
+    /// Geri tuşu (BackKeyRouter). Bölge ekranında: seviye paneli açıksa kapatır (CloseDetail), değilse haritaya döner ("‹ Harita");
+    /// harita ekranında "ÜSSE DÖN" düğmesinin yaptığını yapar. İşlendiyse true.
+    /// </summary>
+    public bool HandleBackKey()
+    {
+        if (regionRoot != null && regionRoot.gameObject.activeInHierarchy)
+        {
+            if (detailOpen) CloseDetail();
+            else ShowMap();
+            return true;
+        }
+        if (mapRoot != null && mapRoot.gameObject.activeInHierarchy && GameManager.Instance != null)
+        {
+            GameManager.Instance.LoadBaseWorld();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>Bölge seviye paneli açık mı (test).</summary>
+    public bool DetailIsOpen => detailOpen && regionRoot != null && regionRoot.gameObject.activeInHierarchy;
 
     private void LateUpdate()
     {

@@ -14,6 +14,8 @@ public sealed class ModeLaunchPanel : MonoBehaviour
     private static ModeLaunchPanel open;
     private TextMeshProUGUI hintLabel;
 
+    public static bool IsOpen => open != null;
+
     /// <summary>
     /// extraHeight &gt; 0 ve extra verilirse başlat düğmesinin üstünde o yükseklikte bir kap açılır (AŞAMA 4: savaş kartları);
     /// pencere o kadar uzar.

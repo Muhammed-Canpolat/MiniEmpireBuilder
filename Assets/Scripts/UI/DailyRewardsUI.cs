@@ -18,8 +18,19 @@ public sealed class DailyRewardsUI : MonoBehaviour
     private GameObject popup;
     private TextMeshProUGUI resultText;
 
+    private static DailyRewardsUI current;
+
+    /// <summary>Geri tuşu (BackKeyRouter): giriş takvimi penceresi açıksa mevcut kapatma yoluyla kapatır.</summary>
+    public static bool CloseIfOpen()
+    {
+        if (current == null || current.popup == null) return false;
+        current.Close();
+        return true;
+    }
+
     private IEnumerator Start()
     {
+        current = this;
         var canvasObject = new GameObject("DailyRewardsCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
         var canvas = canvasObject.GetComponent<Canvas>();
@@ -46,7 +57,11 @@ public sealed class DailyRewardsUI : MonoBehaviour
         else Open();
     }
 
-    private void OnDestroy() => DailyRewards.OnChanged -= RefreshDot;
+    private void OnDestroy()
+    {
+        DailyRewards.OnChanged -= RefreshDot;
+        if (current == this) current = null;
+    }
 
     // 3. oturum (1.2): gün dönümünde OnChanged gelmez; rozet saniyede bir koşuldan yeniden hesaplanır.
     private float nextPoll;

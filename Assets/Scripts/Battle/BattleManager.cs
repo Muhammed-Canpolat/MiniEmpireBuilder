@@ -1120,6 +1120,8 @@ public class BattleManager : MonoBehaviour
     /// <summary>Bu savaşta elmasla "devam et" kullanıldı mı (savaş başına 1 kez).</summary>
     public bool ContinueUsed { get; private set; }
     private bool awaitingContinue;
+    /// <summary>"Ana Üs yıkıldı, devam et?" teklifi açık (geri tuşu bu zorunlu karara karışmaz).</summary>
+    public bool AwaitingContinue => awaitingContinue;
 
     public void OnMainBaseDestroyed()
     {

@@ -18,9 +18,27 @@ public sealed class AwayReportUI : MonoBehaviour
 
     private RectTransform safe;
     private GameObject popup;
+    private static AwayReportUI current;
+
+    /// <summary>
+    /// Geri tuşu (BackKeyRouter): "Sen yokken" açıksa (ya da hazırlanıyorsa) tuşu yutar; pencere görünüyorsa altın TOPLANMADAN kapatır
+    /// (altın madende kalır, kaybolmaz). Pencere yoksa false.
+    /// </summary>
+    public static bool CloseIfOpen()
+    {
+        if (!IsOpen) return false;
+        if (current != null && current.popup != null)
+        {
+            Destroy(current.popup);
+            current.popup = null;
+            IsOpen = false;
+        }
+        return true;
+    }
 
     private IEnumerator Start()
     {
+        current = this;
         var canvasObject = new GameObject("AwayReportCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
         var canvas = canvasObject.GetComponent<Canvas>();
@@ -38,6 +56,7 @@ public sealed class AwayReportUI : MonoBehaviour
     private void OnDestroy()
     {
         AwayReport.OnReady -= HandleReady;
+        if (current == this) current = null;
         IsOpen = false;
     }
 

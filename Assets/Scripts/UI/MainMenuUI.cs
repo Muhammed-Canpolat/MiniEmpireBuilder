@@ -62,6 +62,14 @@ public class MainMenuUI : MonoBehaviour
             backButton.onClick.AddListener(ShowMainMenu);
     }
 
+    /// <summary>Geri tuşu (BackKeyRouter): silah seçimi açıksa ana menüye döner ("GERİ" düğmesi). İşlendiyse true.</summary>
+    public bool HandleBackKey()
+    {
+        if (weaponSelectPanel == null || !weaponSelectPanel.activeSelf) return false;
+        ShowMainMenu();
+        return true;
+    }
+
     private void ShowMainMenu()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);

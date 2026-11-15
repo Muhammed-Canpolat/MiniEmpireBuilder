@@ -16,8 +16,19 @@ public sealed class DailyQuestsUI : MonoBehaviour
     private GameObject dot;
     private GameObject popup;
 
+    private static DailyQuestsUI current;
+
+    /// <summary>Geri tuşu (BackKeyRouter): günlük görevler penceresi açıksa mevcut kapatma yoluyla kapatır.</summary>
+    public static bool CloseIfOpen()
+    {
+        if (current == null || current.popup == null) return false;
+        current.Close();
+        return true;
+    }
+
     private void Start()
     {
+        current = this;
         var canvasObject = new GameObject("DailyQuestsCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
         var canvas = canvasObject.GetComponent<Canvas>();
@@ -30,7 +41,11 @@ public sealed class DailyQuestsUI : MonoBehaviour
         RefreshDot();
     }
 
-    private void OnDestroy() => DailyQuests.OnChanged -= RefreshDot;
+    private void OnDestroy()
+    {
+        DailyQuests.OnChanged -= RefreshDot;
+        if (current == this) current = null;
+    }
 
     // 3. oturum (1.2): gün dönümünde OnChanged gelmez; rozet saniyede bir koşuldan yeniden hesaplanır (pencereyi açmaz).
     private float nextPoll;

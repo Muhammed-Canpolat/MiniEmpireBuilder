@@ -74,9 +74,9 @@ public class BaseSceneSetup : MonoBehaviour
             SpawnTerrainResources(4, false);
         });
         SetupCamera();
+        SelectionManager.Reset();   // geri tuşunu BackKeyRouter yönetir; burada yalnız önceki sahneden kalan seçim kaydı sıfırlanır
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (DevSettings.DebugOverlay) gameObject.AddComponent<BaseDebugOverlay>();
-        SelectionManager.InstallBackKey();   // 4. oturum (1.2): geri tuşu seçimi iptal eder
         WalkGridDebug.Install(BaseWalkGrid.Shared);   // 4. oturum (1.1): F6 yürünebilirlik + rotalar
 #endif
         StartCoroutine(LogBaseWidthAfterSpawn());

@@ -1013,6 +1013,39 @@ public sealed class IslandHud : MonoBehaviour
         GameManager.Instance?.LoadBaseWorld();
     }
 
+    // ==================== GERİ TUŞU (BackKeyRouter) ====================
+
+    /// <summary>Ada penceresinde bu karedeki sonuç/akın sonu ekranı (zorunlu akış: geri tuşu kapatmaz).</summary>
+    public bool ResultShowing => raid != null && (raid.Phase == IslandRaidManager.State.Won || raid.Phase == IslandRaidManager.State.Lost);
+
+    /// <summary>
+    /// Geri tuşu, pencere basamağı: akın sonuç ekranı açıksa tuşu yutar (true, bir şey kapanmaz); Akın panosu ya da inşa menüsü/paneli
+    /// açıksa mevcut kapatma yolunu çağırır (true). Hiçbiri yoksa false.
+    /// </summary>
+    public bool CloseWindowForBack()
+    {
+        if (ResultShowing) return true;
+        if (board != null && board.Visible) { prepOpen = false; Refresh(); return true; }
+        if (buildUi != null && buildUi.Open) { buildUi.Close(); return true; }
+        return false;
+    }
+
+    /// <summary>Geri tuşu, yerleştirme/taşıma basamağı: İPTAL yolu (IslandPlacementController.Cancel). İptal edildiyse true.</summary>
+    public bool CancelPlacementForBack()
+    {
+        if (!placing && (placement == null || !placement.IsPlacing)) return false;
+        if (placement != null) placement.Cancel();
+        return true;
+    }
+
+    /// <summary>Geri tuşu, varsayılan: ANA ÜS düğmesinin yaptığı (akın sürmüyorsa Ana Üs'e dön). Akın sürüyorsa false (ayarlar açılır).</summary>
+    public bool GoHomeForBack()
+    {
+        if (raid != null && raid.Phase == IslandRaidManager.State.Running) return false;
+        GoHome();
+        return true;
+    }
+
     public void Toast(string text) => Toast(text, 2.4f);
 
     public void Toast(string text, float seconds)

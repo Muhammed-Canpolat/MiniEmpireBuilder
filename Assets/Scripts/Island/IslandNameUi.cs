@@ -70,6 +70,17 @@ public sealed class IslandNameUi : MonoBehaviour
         Destroy(go);
     }
 
+    /// <summary>
+    /// Geri tuşu (BackKeyRouter): ad penceresi açıksa true (tuş işlendi). Yalnız kullanıcının kendi açtığı yeniden adlandırma
+    /// kapatılır (Dismiss); ilk ad verme ve ad teklifi zorunlu akıştır, tuşu yutar.
+    /// </summary>
+    public static bool CloseIfOpen()
+    {
+        if (open == null) return false;
+        if (open.mode == Mode.Rename) open.Dismiss();
+        return true;
+    }
+
     private void Build(RectTransform safe)
     {
         var dim = ReferenceUiVisuals.Image(safe, "Dim", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0.62f));
