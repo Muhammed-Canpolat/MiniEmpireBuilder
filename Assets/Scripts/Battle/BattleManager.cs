@@ -603,6 +603,7 @@ public class BattleManager : MonoBehaviour
         {
             var go = enemyPool.Dequeue().go;
             if (go == null) continue;
+            if (go.GetComponent<EnemyController>() != null) { EnemyObjectsStripFailed(go); continue; }   // güvenlik: ayıklanmamış kabuk kullanılmaz
             go.transform.SetPositionAndRotation(position, Quaternion.identity);
             go.AddComponent<EnemyController>();
             go.AddComponent<EnemyVisuals>();
@@ -612,6 +613,10 @@ public class BattleManager : MonoBehaviour
         EnemyObjectsCreated++;
         return Instantiate(enemyPrefab, position, Quaternion.identity);
     }
+
+    private readonly System.Collections.Generic.List<GameObject> pendingStrip = new System.Collections.Generic.List<GameObject>();
+    /// <summary>Telemetri: ayıklanamayıp yok edilen kabuk sayısı (0 olmalı).</summary>
+    public int EnemyPoolStripFailures { get; private set; }
 
     /// <summary>Ölen düşmanın kabuğunu havuza alır (boss değilse). false: çağıran nesneyi yok etmeli.</summary>
     public bool ReleaseEnemy(EnemyController enemy)
@@ -625,9 +630,51 @@ public class BattleManager : MonoBehaviour
         var sr = go.GetComponent<SpriteRenderer>();
         if (sr != null) sr.DOKill();
         go.SetActive(false);
+        // Ayıklama bir sonraki karede (çağıran EnemyController'ın kendi eş yordamı içindeyiz; bileşen bağımlılıkları sırayla çözülür).
+        pendingStrip.Add(go);
+        return true;
+    }
+
+    private void LateUpdate()
+    {
+        if (pendingStrip.Count == 0) return;
+        foreach (var go in pendingStrip)
+        {
+            if (go == null) continue;
+            if (StripShell(go)) enemyPool.Enqueue((go, Time.time + PoolReuseDelay));
+            else { EnemyObjectsStripFailed(go); }
+        }
+        pendingStrip.Clear();
+    }
+
+    private void EnemyObjectsStripFailed(GameObject go)
+    {
+        EnemyPoolStripFailures++;
+        Destroy(go);
+    }
+
+    private static bool IsShellComponent(Component c) => c is Transform || c is SpriteRenderer || c is BoxCollider2D;
+
+    /// <summary>
+    /// Kabuğu şablon haline döndürür: çocuklar ve sonradan eklenen bileşenler silinir. Bağımlı bileşenler (RequireComponent, ör. Gölge Kurt
+    /// davranışı → EnemyController) önce silinsin diye birkaç geçişte, EnemyController en sonda. Ayıklanamazsa false (kabuk yok edilir).
+    /// </summary>
+    private bool StripShell(GameObject go)
+    {
         for (int i = go.transform.childCount - 1; i >= 0; i--) Destroy(go.transform.GetChild(i).gameObject);
-        foreach (var c in go.GetComponents<Component>())
-            if (!(c is Transform) && !(c is SpriteRenderer) && !(c is BoxCollider2D)) Destroy(c);
+        for (int pass = 0; pass < 4; pass++)
+        {
+            bool any = false;
+            foreach (var c in go.GetComponents<Component>())
+            {
+                if (c == null || IsShellComponent(c) || c is EnemyController && pass < 2) continue;
+                DestroyImmediate(c);
+                any = true;
+            }
+            if (!any && pass >= 2) break;
+        }
+        foreach (var c in go.GetComponents<Component>()) if (c != null && !IsShellComponent(c)) return false;
+        var sr = go.GetComponent<SpriteRenderer>();
         var templateRenderer = enemyPrefab.GetComponent<SpriteRenderer>();
         if (sr != null && templateRenderer != null)
         {
@@ -639,7 +686,6 @@ public class BattleManager : MonoBehaviour
         go.transform.localScale = enemyPrefab.transform.localScale;
         go.transform.rotation = Quaternion.identity;
         go.name = "Enemy_Pooled";
-        enemyPool.Enqueue((go, Time.time + PoolReuseDelay));
         return true;
     }
 

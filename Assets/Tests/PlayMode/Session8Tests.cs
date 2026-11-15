@@ -318,19 +318,27 @@ public class Session8Tests
         for (int k = 0; k < Mathf.Min(4, slots.Count); k++)
             tryBuild.Invoke(slots[k], new object[] { Enum.Parse(T("BuildingType"), k % 2 == 0 ? "ArcherTower" : "CannonTower") });
         var frames = new List<float>();
+        var stuck = new List<string>();
         long memStart = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
-        string[] types = { "Zombie", "Orc", "Wolf" };
+        string[] types = { "Zombie", "Orc", "Wolf", "ShadowWolf" };   // Gölge Kurt: RequireComponent bağımlılığı (havuz ayıklama hatasını yakalar)
         for (int wave = 0; wave < 3; wave++)
         {
             var spawned = new List<Component>();
             for (int i = 0; i < 18; i++)
             {
-                spawned.Add(SpawnAt(types[i % 3], RoutePoint(route, Mathf.Min(len - 2f, 0.5f + i * 0.7f))));
+                spawned.Add(SpawnAt(types[i % 4], RoutePoint(route, Mathf.Min(len - 2f, 0.5f + i * 0.7f))));
                 frames.Add(Time.unscaledDeltaTime * 1000f);
                 yield return null;
             }
             float t = 0f;
             while (t < 4f) { frames.Add(Time.unscaledDeltaTime * 1000f); t += Time.unscaledDeltaTime; yield return null; }
+            foreach (var e in spawned)
+            {
+                if (e == null) continue;
+                int controllers = e.GetComponents(T("EnemyController")).Length;
+                if (controllers != 1) stuck.Add($"dalga {wave + 1} {e.name}: {controllers} EnemyController");
+                else if (P(e, "CurrentTarget") == null) stuck.Add($"dalga {wave + 1} {e.name}: hedefsiz {(Vector2)e.transform.position}");
+            }
             foreach (var e in spawned) if (e != null && !(bool)P(e, "IsDead")) M(e, "TakeDamage", 1e9f, Enum.Parse(T("DamageSource"), "Env"));
             yield return new WaitForSeconds(2.6f);   // ölüm efekti + havuz bekleme süresi
         }
@@ -339,9 +347,11 @@ public class Session8Tests
         float avg = frames.Average(), p95 = frames[(int)(frames.Count * 0.95f)];
         int created = (int)P(battle, "EnemyObjectsCreated"), reused = (int)P(battle, "EnemyObjectsReused");
         string line = $"B6 boss, düşük kalite: {frames.Count} kare, ortalama {avg:0.0} ms, %95 {p95:0.0} ms, en kötü {frames[frames.Count - 1]:0.0} ms; " +
-                      $"bellek artışı {(memEnd - memStart) / 1024f:0} KB; düşman kabuğu yeni {created}, havuzdan {reused}, havuzda {P(battle, "EnemyPoolSize")}";
+                      $"bellek artışı {(memEnd - memStart) / 1024f:0} KB; düşman kabuğu yeni {created}, havuzdan {reused}, havuzda {P(battle, "EnemyPoolSize")}, ayıklama hatası {P(battle, "EnemyPoolStripFailures")}, takılan {stuck.Count}";
         File.WriteAllLines(Path.Combine(Folder, "P1_performance.txt"), new[] { line });
         S("BattleFxQuality", "Force", new object[] { null });
+        Assert.AreEqual(0, (int)P(battle, "EnemyPoolStripFailures"), "her kabuk ayıklandı: " + line);
+        Assert.IsEmpty(stuck, "havuzdan gelen düşmanlar tek controller'lı ve hedefli: " + string.Join("; ", stuck));
         Assert.Greater(reused, 20, "ölen düşmanların kabuğu sonraki dalgalarda yeniden kullanıldı: " + line);
         Assert.Less(p95, 50f, "kalabalıkta %95 kare süresi makul: " + line);
     }
