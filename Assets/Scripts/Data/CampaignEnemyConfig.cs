@@ -75,6 +75,43 @@ public sealed class CampaignEnemyConfig : ScriptableObject
         totals != null && regionId >= 1 && regionId <= totals.Length ? totals[regionId - 1].For(kind) : 0;
 
     /// <summary>
+    /// 8. oturum (D97, ölçüm sonrası): toplam, ESKİ dalga büyüklükleri oranında dağıtılır (her dalga aynı oranda büyür; boss dalgası küçük kalır,
+    /// eski tasarımın ritmi korunur). <see cref="maxPerWave"/> aşılırsa en büyük dalga ikiye bölünür (tek dalgaya yığılmaz). Toplam korunur.
+    /// </summary>
+    public List<int> SplitLike(int total, IList<int> legacyWaves) => SplitLike(total, legacyWaves, out _);
+
+    /// <summary><see cref="SplitLike(int, IList{int})"/>; <paramref name="sources"/>: her yeni dalganın geldiği eski dalga (tür karışımı için).</summary>
+    public List<int> SplitLike(int total, IList<int> legacyWaves, out List<int> sources)
+    {
+        sources = new List<int>();
+        if (legacyWaves == null || legacyWaves.Count == 0) { var plain = Split(total, 1); foreach (var _ in plain) sources.Add(0); return plain; }
+        for (int i = 0; i < legacyWaves.Count; i++) sources.Add(i);
+        float sum = 0f; foreach (var w in legacyWaves) sum += Mathf.Max(1, w);
+        var counts = new List<int>(); var rems = new List<(float r, int i)>(); int used = 0;
+        for (int i = 0; i < legacyWaves.Count; i++)
+        {
+            float exact = total * Mathf.Max(1, legacyWaves[i]) / sum;
+            int c = Mathf.Max(1, Mathf.FloorToInt(exact));
+            counts.Add(c); used += c; rems.Add((exact - Mathf.Floor(exact), i));
+        }
+        rems.Sort((x, y) => y.r != x.r ? y.r.CompareTo(x.r) : x.i.CompareTo(y.i));
+        for (int k = 0; used < total; k = (k + 1) % counts.Count) { counts[rems[k].i]++; used++; }
+        for (int i = counts.Count - 1; used > total && i >= 0; i--) while (counts[i] > 1 && used > total) { counts[i]--; used--; }
+        int cap = Mathf.Max(1, maxPerWave);
+        for (int guard = 0; guard < 20; guard++)
+        {
+            int big = 0;
+            for (int i = 1; i < counts.Count; i++) if (counts[i] > counts[big]) big = i;
+            if (counts[big] <= cap) break;
+            int half = counts[big] / 2;
+            counts[big] -= half;
+            counts.Insert(big, half);   // bölünen dalganın küçük yarısı önce gelir
+            sources.Insert(big, sources[big]);
+        }
+        return counts;
+    }
+
+    /// <summary>
     /// Dalga dağılımı: en az <paramref name="minWaves"/> dalga, dalga başına ≤ maxPerWave; ağırlık 1 + i·ramp (artan), en büyük kalanla yuvarlama.
     /// Her dalga en az 1 düşman. Toplam korunur.
     /// </summary>

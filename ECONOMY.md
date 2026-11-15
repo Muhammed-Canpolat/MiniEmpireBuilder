@@ -431,41 +431,44 @@ Simülasyon: `python Tools/economy_sim_v2.py --seeds 40` (yukarıdaki SIM bloğu
 ## 14. 8. oturum (15 Kasım 2026): düşman sayıları arttı, savaş altını aynı kaldı (D97)
 - Kaynak: `Resources/Config/CampaignEnemyConfig.asset` (`CampaignEnemyConfig`): bölge × tür başına savaşta **doğan** toplam düşman (boss dahil;
   eski 1. dalga sınırı ve boss ek düşmanı bu toplamın içinde), tüm sefer düşmanlarına can ×1,1, dalga başına en çok 12, dalga arası 8 sn.
+- Dağılım: yeni toplam **eski dalga büyüklükleri oranında** (boss dalgası küçük kalır); 12'yi aşan dalga ikiye bölünür (bölünen dalga türünü korur).
 - **Öldürme altını eşitlemesi** (`keepKillGoldTotal`): savaş başında eski plan (bölge varlığındaki eski sayılar + eski kurallar) ile yeni planın
   beklenen öldürme altını hesaplanır (`BattleManager.ExpectedKillGold`); düşman başına altın `eski / yeni` ile çarpılır, kesir bir sonraki düşmana
   taşınır (toplam ±1). Böylece savaş içi kule bütçesi, zafer ödemesi (`BattleGoldNet` + ödül), tekrar oyunu (%30) ve 2x reklam **değişmez**.
   Zafer ödülü (`reward`) zaten düşman sayısından bağımsızdır. Sonsuz Sefer / İstila etkilenmez.
-- Doğrulama: `Session8Tests.E1` (30 seviye: toplam = tablo, dalga ≤ 12, ilk dalga en küçük, ödenen öldürme altını = eski ±1).
+- Not: "eski doğan" = 7. oturumda gerçekten doğan (varlık toplamı + boss ek düşmanı, 1. dalga sınırı). Tablodaki eski değerler varlık toplamıydı; B2 boss'ta
+  yeni 26, eski gerçek 27'den 1 az (eskiden her dalgaya +3 ekleniyordu).
+- Doğrulama: `Session8Tests.E1` (30 seviye: toplam = tablo, dalga ≤ 12, dalgalar eski oranlarda, ödenen öldürme altını = eski ±1).
 
-| Seviye | Tür | Eski doğan | Yeni doğan | Dalgalar | Eski öldürme altını | Yeni (ölçekli) | Düşman başına çarpan |
+| Seviye | Tür | Eski doğan (dalgalar) | Yeni doğan | Dalgalar | Eski öldürme altını | Yeni (ölçekli) | Düşman başına çarpan |
 |---|---|---|---|---|---|---|---|
-| B1-S1 | Survive | 7 | 8 | 8 | 70 | 70 | 0,875 |
-| B1-S2 | DefendBase | 12 | 14 | 6+8 | 157 | 157 | 0,809 |
-| B1-S3 | DefendMine | 13 | 17 | 8+9 | 186 | 186 | 0,747 |
-| B1-S4 | TimeTrial | 14 | 19 | 9+10 | 217 | 217 | 0,728 |
-| B1-S5 | Boss | 18 | 20 | 5+7+8 | 436 | 436 | 0,768 |
-| B2-S1 | Survive | 8 | 16 | 7+9 | 112 | 112 | 0,500 |
-| B2-S2 | DefendBase | 15 | 20 | 9+11 | 267 | 267 | 0,730 |
-| B2-S3 | DefendMine | 16 | 21 | 10+11 | 276 | 276 | 0,738 |
-| B2-S4 | TimeTrial | 17 | 24 | 7+8+9 | 305 | 305 | 0,731 |
-| B2-S5 | Boss | 27 | 26 | 7+9+10 | 752 | 752 | 1,012 |
-| B3-S1 | Survive | 9 | 18 | 8+10 | 162 | 162 | 0,500 |
-| B3-S2 | DefendBase | 18 | 25 | 7+8+10 | 387 | 387 | 0,732 |
-| B3-S3 | DefendMine | 19 | 27 | 7+9+11 | 522 | 522 | 0,755 |
-| B3-S4 | TimeTrial | 20 | 30 | 8+10+12 | 569 | 569 | 0,729 |
-| B3-S5 | Boss | 32 | 32 | 9+11+12 | 1405 | 1405 | 0,944 |
-| B4-S1 | Survive | 10 | 20 | 9+11 | 220 | 220 | 0,500 |
-| B4-S2 | DefendBase | 21 | 27 | 7+9+11 | 628 | 628 | 0,820 |
-| B4-S3 | DefendMine | 22 | 30 | 8+10+12 | 790 | 790 | 0,804 |
-| B4-S4 | TimeTrial | 23 | 33 | 6+8+9+10 | 802 | 802 | 0,668 |
-| B4-S5 | Boss | 37 | 38 | 7+9+10+12 | 1779 | 1779 | 0,994 |
-| B5-S1 | Survive | 11 | 22 | 10+12 | 286 | 286 | 0,500 |
-| B5-S2 | DefendBase | 26 | 32 | 9+11+12 | 966 | 966 | 0,887 |
-| B5-S3 | DefendMine | 27 | 35 | 7+8+9+11 | 1039 | 1039 | 0,733 |
-| B5-S4 | TimeTrial | 28 | 38 | 7+9+10+12 | 1105 | 1105 | 0,724 |
-| B5-S5 | Boss | 46 | 50 | 5+7+8+9+10+11 | 2605 | 2605 | 0,861 |
-| B6-S1 | Survive | 12 | 24 | 7+8+9 | 504 | 504 | 0,500 |
-| B6-S2 | DefendBase | 29 | 35 | 7+8+9+11 | 1458 | 1458 | 0,773 |
-| B6-S3 | DefendMine | 30 | 38 | 7+9+10+12 | 1534 | 1534 | 0,738 |
-| B6-S4 | TimeTrial | 31 | 40 | 8+9+11+12 | 1627 | 1627 | 0,741 |
-| B6-S5 | Boss | 50 | 55 | 6+7+9+10+11+12 | 3389 | 3389 | 0,860 |
+| B1-S1 | Survive | 7 (7) | 8 | 8 | 70 | 70 | 0,875 |
+| B1-S2 | DefendBase | 12 (7+5) | 14 | 8+6 | 157 | 157 | 0,853 |
+| B1-S3 | DefendMine | 13 (7+6) | 17 | 9+8 | 186 | 186 | 0,762 |
+| B1-S4 | TimeTrial | 14 (7+7) | 19 | 10+9 | 217 | 217 | 0,746 |
+| B1-S5 | Boss | 18 (7+9+2) | 20 | 8+10+2 | 436 | 436 | 0,930 |
+| B2-S1 | Survive | 8 (8) | 16 | 8+8 | 112 | 112 | 0,500 |
+| B2-S2 | DefendBase | 15 (8+7) | 20 | 11+9 | 267 | 267 | 0,754 |
+| B2-S3 | DefendMine | 16 (8+8) | 21 | 11+10 | 276 | 276 | 0,750 |
+| B2-S4 | TimeTrial | 17 (8+9) | 24 | 11+6+7 | 305 | 305 | 0,735 |
+| B2-S5 | Boss | 27 (8+13+6) | 26 | 8+12+6 | 752 | 752 | 1,033 |
+| B3-S1 | Survive | 9 (9) | 18 | 9+9 | 162 | 162 | 0,500 |
+| B3-S2 | DefendBase | 18 (9+9) | 25 | 6+7+12 | 387 | 387 | 0,707 |
+| B3-S3 | DefendMine | 19 (9+10) | 27 | 6+7+7+7 | 522 | 522 | 0,678 |
+| B3-S4 | TimeTrial | 20 (9+11) | 30 | 7+7+8+8 | 569 | 569 | 0,653 |
+| B3-S5 | Boss | 32 (9+15+8) | 32 | 9+7+8+8 | 1405 | 1405 | 0,979 |
+| B4-S1 | Survive | 10 (10) | 20 | 10+10 | 220 | 220 | 0,500 |
+| B4-S2 | DefendBase | 21 (10+11) | 27 | 6+7+7+7 | 628 | 628 | 0,763 |
+| B4-S3 | DefendMine | 22 (10+12) | 30 | 7+7+8+8 | 790 | 790 | 0,683 |
+| B4-S4 | TimeTrial | 23 (10+13) | 33 | 7+7+9+10 | 802 | 802 | 0,668 |
+| B4-S5 | Boss | 37 (10+17+10) | 38 | 10+9+9+10 | 1779 | 1779 | 1,009 |
+| B5-S1 | Survive | 11 (11) | 22 | 11+11 | 286 | 286 | 0,500 |
+| B5-S2 | DefendBase | 26 (11+15) | 32 | 7+7+9+9 | 966 | 966 | 0,750 |
+| B5-S3 | DefendMine | 27 (11+16) | 35 | 7+7+10+11 | 1039 | 1039 | 0,741 |
+| B5-S4 | TimeTrial | 28 (11+17) | 38 | 7+8+11+12 | 1105 | 1105 | 0,717 |
+| B5-S5 | Boss | 46 (11+21+14) | 50 | 12+11+12+7+8 | 2605 | 2605 | 0,942 |
+| B6-S1 | Survive | 12 (12) | 24 | 12+12 | 504 | 504 | 0,500 |
+| B6-S2 | DefendBase | 29 (12+17) | 35 | 7+7+10+11 | 1458 | 1458 | 0,768 |
+| B6-S3 | DefendMine | 30 (12+18) | 38 | 7+8+11+12 | 1534 | 1534 | 0,748 |
+| B6-S4 | TimeTrial | 31 (12+19) | 40 | 7+8+12+6+7 | 1627 | 1627 | 0,705 |
+| B6-S5 | Boss | 50 (12+23+15) | 55 | 6+7+12+6+7+8+9 | 3389 | 3389 | 0,939 |

@@ -1331,7 +1331,10 @@ public class BattleManager : MonoBehaviour
         var config = CampaignEnemyConfig.Active;
         int total = config.Total(region.id, campaignLevel.kind);
         if (total <= 0) return CreateLegacyCampaignWaves(region, campaignLevel);
-        var split = config.Split(total, campaignLevel.waveCount);
+        var legacyPlan = CreateLegacyCampaignWaves(region, campaignLevel);
+        var legacySizes = new System.Collections.Generic.List<int>();
+        foreach (var w in legacyPlan.waves) { int n = 0; foreach (var e in w.enemies) n += e.count; legacySizes.Add(n); }
+        var split = config.SplitLike(total, legacySizes, out var sources);
         var battle = new LevelData { levelNumber = campaignLevel.number };
         for (int i = 0; i < split.Count; i++)
         {
@@ -1339,8 +1342,7 @@ public class BattleManager : MonoBehaviour
             int count = split[i];
             // Dalga sayısı arttıysa ek dalgalar asıl dalgalara ORANTILI eşlenir: tür karışımı (ör. Trol yalnız son asıl dalgada)
             // ve karşı düşman payı eski seviye tasarımındaki gibi kalır; artan yalnız sayıdır.
-            int baseWaves = Mathf.Max(1, campaignLevel.waveCount);
-            int source = Mathf.Min(baseWaves - 1, i * baseWaves / split.Count);
+            int source = sources[i];   // bölünmüş dalga, geldiği eski dalganın türünü ve karşı düşman payını taşır
             EnemyType type = region.enemyTypes != null && region.enemyTypes.Length > 0
                 ? region.enemyTypes[Mathf.Min(source, region.enemyTypes.Length - 1)] : EnemyType.Wolf;
             if (campaignLevel.kind == CampaignLevelKind.Boss && i == split.Count - 1)

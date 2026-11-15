@@ -238,8 +238,8 @@ public class Session8Tests
     }
 
     /// <summary>
-    /// E1 (D97): 6 bölge × 5 seviye — savaşta doğan toplam düşman tabloyla aynı (CampaignEnemyConfig), hiçbir dalga üst sınırı aşmıyor ve
-    /// ilk dalga en küçük; düşman başına ölçeklenen öldürme altınının toplamı eski planın toplamıyla aynı (±1 yuvarlama).
+    /// E1 (D97): 6 bölge × 5 seviye — savaşta doğan toplam düşman tabloyla aynı (CampaignEnemyConfig), hiçbir dalga üst sınırı aşmıyor,
+    /// dalgalar eski dalga oranlarında (bölünmediyse ±1); düşman başına ölçeklenen öldürme altınının toplamı eski planın toplamıyla aynı (±1 yuvarlama).
     /// </summary>
     [Test]
     public void E1_EnemyCountsMatchTableAndKillGoldStaysTheSame()
@@ -284,10 +284,16 @@ public class Session8Tests
                         for (int k = 0; k < (int)F(e, "count"); k++) { carry += baseGold * scale; int g = Mathf.FloorToInt(carry + 1e-4f); carry -= g; paid += g; }
                     }
                 string kind = F(levelData, "kind").ToString();
-                lines.Add($"B{region}-S{level} | {kind} | {legacyCount} | {planned} | {string.Join("+", waves)} | {legacyGold} | {paid} | {scale:0.000}");
+                lines.Add($"B{region}-S{level} | {kind} | {legacyCount} ({string.Join("+", ((IList)F(legacy, "waves")).Cast<object>().Select(w => ((IList)F(w, "enemies")).Cast<object>().Sum(e => (int)F(e, "count"))))}) | {planned} | {string.Join("+", waves)} | {legacyGold} | {paid} | {scale:0.000}");
                 if (planned != table[region - 1, level - 1]) errors.Add($"B{region}-S{level}: toplam {planned} ≠ tablo {table[region - 1, level - 1]}");
                 if (waves.Max() > maxPerWave) errors.Add($"B{region}-S{level}: dalga {waves.Max()} > {maxPerWave}");
-                if (waves.Count > 1 && waves[0] > waves[waves.Count - 1]) errors.Add($"B{region}-S{level}: ilk dalga sondan büyük ({string.Join("+", waves)})");
+                var legacyWaves = ((IList)F(legacy, "waves")).Cast<object>().Select(w => ((IList)F(w, "enemies")).Cast<object>().Sum(e => (int)F(e, "count"))).ToList();
+                if (waves.Count == legacyWaves.Count)
+                    for (int w = 0; w < waves.Count; w++)
+                    {
+                        float expected = planned * legacyWaves[w] / (float)legacyWaves.Sum();
+                        if (Mathf.Abs(waves[w] - expected) > 1.01f) errors.Add($"B{region}-S{level}: dalga {w + 1} = {waves[w]}, eski orana göre {expected:0.0}");
+                    }
                 if (Mathf.Abs(paid - legacyGold) > 1) errors.Add($"B{region}-S{level}: öldürme altını {paid} ≠ eski {legacyGold}");
             }
         S("BattleSession", "Clear");
