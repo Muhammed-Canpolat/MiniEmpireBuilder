@@ -1,14 +1,9 @@
 # GECE_DURUM — 9. oturum: Fable teknik denetim ve profesyonelleştirme (15 Kasım 2026)
 
 AKTİF GÖREV: Fable Teknik Denetim
-AŞAMA: 5 Doğrulama (1 Keşif ✅ · 2 Denetim ✅ · 3 Rapor ✅ `9a27ff5` · 4 Uygulama ✅ `aca6fd0` `b854815` `b076c7e` `f928c66` `d195837` · 5 Doğrulama ⏳)
-SON AKTİVİTE: 2026-11-15 — 4. aşama bitti: 8 geri tuşu (`d195837`, Session9BackKeyTests 5/5), 16 SaveAll koruması (`f928c66`), 9 AAB denetimi (`b076c7e`); Session9 + kayıt grubu 24/24; DECISIONS D101–D105, TECH_AUDIT §12, AI_README yazıldı (belge commit'i bekliyor)
-SIRADAKİ İŞ: tam PlayMode turu koşuyor (PlaytestOutput/s9_full.xml) → sonuçları 8. oturumun bilinen başarısızlarıyla karşılaştır, yeni kırılan varsa düzelt → `git checkout -- UIReviewScreenshots` → belge commit'i → REPORT.md'ye 9. oturum özeti → görev TAMAM
-
-Yol haritası (TECH_AUDIT §10) uygulama durumu: 1–9 ve 16 ✅ (ayrıntı TECH_AUDIT §12). Kalanlar kullanıcı kararı/hesabı ya da cihaz ölçümü ister (§10 sıra 10–15, 17–22).
-- [ ] 5. aşama: tam test turu sonucu + karşılaştırma
-- [ ] Belge commit'i (DECISIONS, TECH_AUDIT §12, AI_README, GECE_DURUM, REPORT)
-- Not: Session9BackKeyTests T2 ilk birleşik koşuda 1 kez başarısız oldu, sonraki iki koşuda geçti (olası neden: açılışta geç beliren pencere); test bu duruma dayanıklı hâle getirildi, kök neden doğrulanmadı.
+AŞAMA: TAMAMLANDI (1 Keşif ✅ · 2 Denetim ✅ · 3 Rapor ✅ `9a27ff5` · 4 Uygulama ✅ `aca6fd0` `b854815` `b076c7e` `f928c66` `d195837` · 5 Doğrulama ✅ TECH_AUDIT §12.1)
+SON AKTİVİTE: 2026-11-15 — 5. aşama bitti: hedefli 24/24; tam tur 400 testte 79 başarısızın 63'ü test ortamıydı (düzeltildi), yeniden koşuda 197/213; kalan 16 = 3 bilinen eski + 13 eskimiş test (sınıflandırma §12.1; taban commit'te ölçülmedi)
+SIRADAKİ İŞ: (bu görev için yok) Kullanıcıda: `git checkout -- UIReviewScreenshots` (tam koşu görüntülerin üstüne yazdı; komut izin denetiminde reddedildi), cihazda geri tuşu denemesi, TECH_AUDIT §10 sıra 10–14 kararları. Sonraki oturum adayı: 13 eskimiş testin güncellenmesi (§12.1 önerisi), cihaz Profiler turu (§6).
 
 Dokunulmayacak commit'siz dosyalar (bu görevin değil): `mainTemplate.gradle`, `ground_mine_rocks.png.meta`, `IslandTerrain.prefab`,
 `ProjectSettings.asset` (Q-8), izlenmeyen varlık paketleri ve `UIReviewScreenshots/CurrentReview/*`.
