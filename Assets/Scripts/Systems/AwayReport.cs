@@ -31,7 +31,7 @@ public static class AwayReport
             storedBefore = save.goldMineStoredGold,
             livesBefore = save.lives
         };
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         if (save.builderTasks != null)
             foreach (var task in save.builderTasks)
                 if (task != null && task.IsActive && task.endTicks <= now)

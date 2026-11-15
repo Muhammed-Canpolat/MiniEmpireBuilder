@@ -114,7 +114,7 @@ public static class DailyRewards
                 break;
             case DailyRewardKind.MineBoost:
                 gm.ApplyOfflineGoldMineProduction(); // önceki üretim normal hızla yazılsın
-                long now = DateTime.UtcNow.Ticks;
+                long now = GameClock.UtcNow.Ticks;
                 data.mineBoostUntilTicks = Math.Max(now, data.mineBoostUntilTicks) + TimeSpan.FromMinutes(reward.amount).Ticks;
                 break;
             case DailyRewardKind.UnlimitedLives:

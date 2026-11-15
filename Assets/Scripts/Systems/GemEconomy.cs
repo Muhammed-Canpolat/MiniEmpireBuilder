@@ -116,7 +116,8 @@ public static class GemEconomy
         return remainingTicks - windowTicks * (PotionSpeed - 1);
     }
 
-    public static long Now => DateTime.UtcNow.Ticks;
+    /// <summary>Oyunun "şimdi"si (tick): tek saat GameClock (saat geri alınınca süreler uzamaz).</summary>
+    public static long Now => GameClock.UtcNow.Ticks;
 
     public static string FormatRemaining(long untilTicks) =>
         Progression.FormatDuration(Math.Max(0d, new TimeSpan(untilTicks - Now).TotalSeconds));

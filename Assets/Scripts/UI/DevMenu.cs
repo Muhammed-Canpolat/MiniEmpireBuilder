@@ -72,6 +72,8 @@ public sealed class DevMenu : MonoBehaviour
                 () => DevSettings.Enabled = !DevSettings.Enabled, true),
             (L.T("SINIRSIZ ELMAS: ", "UNLIMITED GEMS: ") + (DevSettings.UnlimitedGems ? L.T("AÇIK", "ON") : L.T("KAPALI", "OFF")),
                 () => DevSettings.UnlimitedGems = !DevSettings.UnlimitedGems, true),
+            (L.T("ADA KİLİTLERİNİ ATLA: ", "SKIP ISLAND LOCKS: ") + (DevSettings.IslandLockBypass ? L.T("AÇIK", "ON") : L.T("KAPALI", "OFF")),
+                () => DevSettings.IslandLockBypass = !DevSettings.IslandLockBypass, true),
             ("+1000 ALTIN", () => gm?.AddGold(1000), false),
             ("+100 ELMAS", () => gm?.AddGems(100), false),
             ("ALTIN = 0", () => { if (gm != null) { gm.PlayerData.gold = 0; gm.SaveGame(); } }, true),

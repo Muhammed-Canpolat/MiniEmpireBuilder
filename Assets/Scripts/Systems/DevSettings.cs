@@ -38,6 +38,13 @@ public static class DevSettings
     /// <summary>Elmas sayacına / dükkândaki elmas hapına 5 hızlı dokunuş = +100 elmas.</summary>
     public static bool GemTapShortcut { get => Enabled && Get("GemTap", true); set => Set("GemTap", value); }
 
+    /// <summary>
+    /// 9. oturum (TECH_AUDIT KN-4a): ada kilitlerini atla (Ana Üs 5 şartı olmadan adaya gir, oto-ateş baştan açık). Varsayılan KAPALI:
+    /// Development APK da yayın derlemesiyle AYNI kuralları oynatır. Eskiden bu atlama ana anahtara (<see cref="Enabled"/>) bağlıydı
+    /// ve varsayılan açıktı; cihazda denenen oyun ile oyuncunun göreceği oyun farklıydı.
+    /// </summary>
+    public static bool IslandLockBypass { get => Enabled && Get("IslandLockBypass", false); set => Set("IslandLockBypass", value); }
+
     /// <summary>Ana Üs hata ayıklama katmanı (ızgara, sınırlar).</summary>
     public static bool DebugOverlay { get => Enabled && Get("DebugOverlay", true); set => Set("DebugOverlay", value); }
 }

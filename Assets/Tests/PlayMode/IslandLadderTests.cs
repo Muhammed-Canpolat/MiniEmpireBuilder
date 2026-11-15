@@ -100,12 +100,16 @@ public class IslandLadderTests
     }
 
     [Test]
-    public void AutoFireIsGatedByKeepLevelButDevSettingsOpensItForTests()
+    public void AutoFireIsGatedByKeepLevelAndOnlyTheExplicitDevBypassOpensIt()
     {
         Assert.AreEqual(5, Const(IslandType, "AutoFireUnlockKeepLevel"));
         Assert.AreEqual(0.75f, (float)Const(IslandType, "AutoFireRateMult"), 0.0001f);
         var dev = Type("DevSettings");
-        var enabled = dev.GetProperty("Enabled");
+        // 9. oturum (KN-4a): ana anahtar (Enabled) tek başına kural değiştirmez; yalnız açıkça seçilen "ada kilitlerini atla".
+        var master = dev.GetProperty("Enabled");
+        bool masterWas = (bool)master.GetValue(null);
+        master.SetValue(null, true);
+        var enabled = dev.GetProperty("IslandLockBypass");
         bool original = (bool)enabled.GetValue(null);
         var session = Type("IslandSession");
         try
@@ -116,10 +120,10 @@ public class IslandLadderTests
                 Assert.IsFalse((bool)Call(session, "AutoFireUnlocked", 4));
                 Assert.IsTrue((bool)Call(session, "AutoFireUnlocked", 5));
                 enabled.SetValue(null, true);
-                Assert.IsTrue((bool)Call(session, "AutoFireUnlocked", 1), "DevSettings açıkken test için açık");
+                Assert.IsTrue((bool)Call(session, "AutoFireUnlocked", 1), "atlama açıkken test için açık");
             }
         }
-        finally { enabled.SetValue(null, original); }
+        finally { enabled.SetValue(null, original); master.SetValue(null, masterWas); }
     }
 
     [Test]

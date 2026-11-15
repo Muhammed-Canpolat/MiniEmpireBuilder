@@ -26,10 +26,10 @@ public static class IslandSession
 
     /// <summary>
     /// Oto-ateş açılmış mı: Kıyı Kalesi seviyesi eşiği geçmeli. MVP'de kalenin yükseltmesi yok;
-    /// DevSettings açıkken (editör/Development) test için de açılır. Eşik sabiti değişmez.
+    /// Geliştirici menüsündeki "ADA KİLİTLERİNİ ATLA" açıkken (yalnız editör/Development, varsayılan kapalı) test için de açılır.
     /// </summary>
     public static bool AutoFireUnlocked(int keepLevel) =>
-        keepLevel >= Progression.Island.AutoFireUnlockKeepLevel || DevSettings.Enabled;
+        keepLevel >= Progression.Island.AutoFireUnlockKeepLevel || DevSettings.IslandLockBypass;
 
     /// <summary>Akın ödülü (ilk zafer tam, tekrar %30; elmas yalnız ilk zaferde).</summary>
     public struct Reward

@@ -129,7 +129,7 @@ public class BaseMapManager : MonoBehaviour
         {
             seed?.Invoke();
             data.terrainResourcesSeeded = true;
-            data.terrainLastGrowTicks = DateTime.UtcNow.Ticks;
+            data.terrainLastGrowTicks = GameClock.UtcNow.Ticks;
             SaveAll();
             return;
         }
@@ -151,7 +151,7 @@ public class BaseMapManager : MonoBehaviour
     {
         var data = GameManager.Instance?.PlayerData;
         if (data == null || !data.terrainResourcesSeeded || BaseSceneSetup.Instance == null) return false;
-        long now = DateTime.UtcNow.Ticks;
+        long now = GameClock.UtcNow.Ticks;
         bool roomForTree = CountObjects(MapObjectType.Tree) < GrowTreeCap;
         bool roomForRock = CountObjects(MapObjectType.Rock) < GrowRockCap;
         if (data.terrainLastGrowTicks <= 0 || data.terrainLastGrowTicks > now || (!roomForTree && !roomForRock))

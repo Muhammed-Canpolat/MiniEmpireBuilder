@@ -39,7 +39,7 @@ public static class BattleCards
 
     private static PlayerSaveData Data => GameManager.Instance != null ? GameManager.Instance.PlayerData : null;
 
-    public static bool IsRoyal => Data != null && Data.royalUntilTicks > DateTime.UtcNow.Ticks;
+    public static bool IsRoyal => Data != null && Data.royalUntilTicks > GameClock.UtcNow.Ticks;
     public static float Bonus => IsRoyal ? RoyalBonus : AdBonus;
     public static int BonusPercent => (int)Math.Round(Bonus * 100f);
 

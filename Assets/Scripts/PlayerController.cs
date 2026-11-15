@@ -36,7 +36,7 @@ public class BaseWorldController : MonoBehaviour
         if (periodicSaveTimer >= 10f)
         {
             periodicSaveTimer = 0f;
-            GameManager.Instance.PlayerData.goldMineLastCollectTime = System.DateTime.UtcNow.Ticks;
+            GameManager.Instance.PlayerData.goldMineLastCollectTime = GameClock.UtcNow.Ticks;   // GameManager aynı alanı GameClock ile okur
             GameManager.Instance.SaveGame();
         }
     }
@@ -55,6 +55,6 @@ public class BaseWorldController : MonoBehaviour
         mineAccumulator -= produced;
 
         GameManager.Instance.AddGoldToMineStorage(produced, false);
-        GameManager.Instance.PlayerData.goldMineLastCollectTime = System.DateTime.UtcNow.Ticks;
+        GameManager.Instance.PlayerData.goldMineLastCollectTime = GameClock.UtcNow.Ticks;
     }
 }

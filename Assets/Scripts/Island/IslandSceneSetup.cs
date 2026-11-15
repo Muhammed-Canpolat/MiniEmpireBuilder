@@ -62,7 +62,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
             yield break;
         }
         if (gm.PlayerData.island == null) gm.PlayerData.island = new IslandSaveData();
-        if (!IslandSession.Unlocked(gm.GetMainBaseLevel()) && !DevSettings.Enabled)
+        if (!IslandSession.Unlocked(gm.GetMainBaseLevel()) && !DevSettings.IslandLockBypass)
         {
             IslandSession.Clear();
             gm.LoadBaseWorld();
