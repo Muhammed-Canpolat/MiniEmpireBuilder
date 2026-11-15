@@ -55,10 +55,26 @@ public sealed class DecorData : ScriptableObject
         return scale;
     }
 
-    /// <summary>Görselin alt kenarı footprint'in tabanına otursun diye merkezden dikey kayma.</summary>
+    /// <summary>
+    /// Görselin GÖRÜNEN alt kenarı footprint'in tabanına otursun diye merkezden dikey kayma.
+    /// 8. oturum (D100, Ana Üs yerleşim hatasının kök nedeni): eskiden sprite'ın TAM ÇERÇEVESİNİN alt kenarı (<c>bounds.min.y</c>) kullanılıyordu.
+    /// Tiny Swords çalı/koyun/altın taşı karelerinin altında saydam boşluk var; bu dekorlar dolu sayılan hücrenin 0,7–1,2 birim YUKARISINDA
+    /// çiziliyordu → oyuncu dolu hücreyi boş görüyor (yerleşim "sığmıyor"), çizildiği hücre ise boş sayılıyordu. Artık sıkı ağın (saydam
+    /// hariç) en alt noktası kullanılır; çizim ile doluluk aynı hücrededir (Session8BaseTests.O1).
+    /// </summary>
     public float VerticalOffset(Sprite visual, float scale)
     {
         if (visual == null) return 0f;
-        return -footprint.y * 0.5f + 0.06f - visual.bounds.min.y * scale;
+        return -footprint.y * 0.5f + 0.06f - VisibleBottom(visual) * scale;
+    }
+
+    /// <summary>Sprite'ın görünen (saydam olmayan) alt kenarı, yerel birimde (sıkı ağ; yoksa çerçeve).</summary>
+    public static float VisibleBottom(Sprite visual)
+    {
+        var vertices = visual.vertices;
+        if (vertices == null || vertices.Length == 0) return visual.bounds.min.y;
+        float min = float.MaxValue;
+        foreach (var v in vertices) if (v.y < min) min = v.y;
+        return min;
     }
 }

@@ -1,3 +1,21 @@
+# GECE_DURUM — Otonom çalışma (15 Kasım 2026, 8. oturum: düşman YZ, düşman sayıları, savaş üst barı, Ana Üs yerleşimi)
+
+DURUM: SÜRÜYOR (8. oturum)
+ŞU ANKİ İŞ: Ana Üs yerleşimi (4) testleri · üst bar (3) görüntüleri
+Kararlar: DECISIONS.md D96+ · Başlangıç commit'i: 5d8ab18
+Model notu (kullanıcı): düşman YZ ve yerleşim = Opus 5.5 yüksek çaba (ben); UI (üst bar) = Sonnet alt ajanı orta çaba (ben test edip görüntüyle doğrularım).
+
+8. OTURUM İŞ LİSTESİ:
+- [x] 1 Düşman yol durum makinesi (izle → kilitlen → savaş → ileriden dön), ilerleme hiç azalmaz, leash, ayrışma (D96) — Session8Tests.A1/A2
+- [x] 2 Düşman sayıları tablosu + %10 can (CampaignEnemyConfig), dalga dağılımı, öldürme altını eşitlemesi, havuz (D97) — E1, P1 · [ ] telemetri ölçümü
+- [ ] 3 Savaş üst barı (BattleTopBar, Sonnet) + yol başına binen yuva + harita kenarı (D98, D99)
+- [ ] 4 Ana Üs yerleşimi kök neden + anlık görüntü + Occupancy göster + regresyon (D100) — Session8BaseTests.O0–O3
+- [ ] SON: bölge başına 2 seviye (biri boss) oynat + görüntüler, 10 öğe kaldır → kur/taşı, REPORT.md
+
+ENGELLENENLER:
+- (yok)
+
+---
 # GECE_DURUM — Otonom çalışma (15 Kasım 2026, 7. oturum: bölgeye özgü savaş haritaları)
 
 DURUM: TAMAMLANDI (7. oturum)

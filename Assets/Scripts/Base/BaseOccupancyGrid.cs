@@ -103,6 +103,81 @@ public static class BaseOccupancyGrid
         return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
     }
 
+    // ==================== TEK DOĞRU KAYNAK: DOLULUK ANLIK GÖRÜNTÜSÜ (8. oturum, D100) ====================
+
+    /// <summary>Doluluğa giren bir nesne: hücreleri, adı, türü (structure / camp / decor / nature) ve sahibi.</summary>
+    public sealed class Occupant
+    {
+        public RectInt cells;
+        public string name;
+        public string kind;
+        public GameObject go;
+        public PlacedMapObject obj;
+        public DecorInstance decor;
+        public NatureObstacle nature;
+    }
+
+    private static readonly List<Occupant> occupants = new List<Occupant>();
+    private static readonly Dictionary<Vector2Int, NatureObstacle> natureByCell = new Dictionary<Vector2Int, NatureObstacle>();
+    private static int builtFrame = -1;
+    private static bool dirty = true;
+    /// <summary>Kaç kez sıfırdan kuruldu (test/hata ayıklama).</summary>
+    public static int RebuildCount { get; private set; }
+
+    /// <summary>Yerleştirme, taşıma, silme, kaldırma sonrası: bir sonraki sorgu doluluğu sıfırdan kurar.</summary>
+    public static void MarkDirty() => dirty = true;
+
+    /// <summary>Şu anki doluluk (gerekirse sıfırdan kurulur).</summary>
+    public static IReadOnlyList<Occupant> Occupants { get { Ensure(); return occupants; } }
+
+    /// <summary>Doğa nesneleri hücreye göre — anlık görüntüden türetilir (NatureObstacle.ByCell bunun görünümüdür; elle yazılmaz).</summary>
+    public static IReadOnlyDictionary<Vector2Int, NatureObstacle> NatureByCell { get { Ensure(); return natureByCell; } }
+
+    private static void Ensure()
+    {
+        if (dirty || builtFrame != Time.frameCount) Rebuild();
+    }
+
+    /// <summary>
+    /// Doluluğu SAHNEDEKİ CANLI nesnelerden sıfırdan kurar: yapılar (ayak izi ∪ görsel hücreleri), kahraman kampı, ETKİN dekorlar ve
+    /// ETKİN, kaldırılmamış doğa nesneleri. Kayıttaki hücre verisi ve eski artımlı sözlük kullanılmaz; gölge/işaret/yazı katmanları
+    /// görsel ölçümünden zaten dışlanır (<see cref="BaseVisualBounds"/>). Kare başına bir kez ve her değişiklikten sonra çalışır.
+    /// </summary>
+    public static void Rebuild()
+    {
+        occupants.Clear();
+        natureByCell.Clear();
+        dirty = false;
+        builtFrame = Time.frameCount;
+        RebuildCount++;
+        foreach (var (campCells, campGo) in CampCells())
+            occupants.Add(new Occupant { cells = campCells, name = "Kahraman kampı", kind = "camp", go = campGo });
+        var map = BaseMapManager.Instance;
+        if (map != null)
+            foreach (var o in map.MapObjects)
+                if (IsStructure(o))
+                    occupants.Add(new Occupant
+                    {
+                        cells = BlockOf(o), kind = "structure", go = o.gameObject, obj = o,
+                        name = o.objectType == MapObjectType.BuilderHut ? "İnşaatçı kulübesi" : o.buildingType.Value.ToString()
+                    });
+        var decor = DecorPlacementController.Instance;
+        if (decor != null)
+            foreach (var item in decor.Placed)
+                if (item != null && item.Data != null && item.gameObject != null && item.gameObject.activeInHierarchy)
+                    occupants.Add(new Occupant
+                    {
+                        cells = new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y),
+                        kind = "decor", name = "Dekor: " + item.Data.id, go = item.gameObject, decor = item
+                    });
+        foreach (var n in Object.FindObjectsByType<NatureObstacle>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            if (n == null || !n.isActiveAndEnabled || n.Removed) continue;
+            natureByCell[n.cell] = n;
+            occupants.Add(new Occupant { cells = new RectInt(n.cell.x, n.cell.y, 1, 1), kind = "nature", name = n.DisplayName + " " + n.Id, go = n.gameObject, nature = n });
+        }
+    }
+
     // ==================== ENGEL ALANLARI ====================
 
     private static bool IsStructure(PlacedMapObject o) =>
@@ -211,36 +286,28 @@ public static class BaseOccupancyGrid
                 }
         }
 
-        foreach (var (campCells, _) in CampCells())
-            if (Overlaps(block, campCells)) { Mark(block, campCells); reasons?.Add("kamp " + campCells + " / aday " + block); if (Bail()) return false; }
-
-        var map = BaseMapManager.Instance;
-        if (map != null)
-            foreach (var other in map.MapObjects)
+        foreach (var occ in Occupants)
+        {
+            switch (occ.kind)
             {
-                if (other == ignoreObject || !IsStructure(other)) continue;
-                if (onlyObjects != null && !onlyObjects.Contains(other)) continue;
-                var otherBlock = BlockOf(other);
-                if (Overlaps(block, otherBlock)) { Mark(block, otherBlock); reasons?.Add(other.gameObject.name + " " + otherBlock + " / aday " + block); if (Bail()) return false; }
+                case "camp":
+                    if (Overlaps(block, occ.cells)) { Mark(block, occ.cells); reasons?.Add("kamp " + occ.cells + " / aday " + block); }
+                    break;
+                case "structure":
+                    if (occ.obj == ignoreObject) break;
+                    if (onlyObjects != null && !onlyObjects.Contains(occ.obj)) break;
+                    if (Overlaps(block, occ.cells)) { Mark(block, occ.cells); reasons?.Add(occ.go.name + " " + occ.cells + " / aday " + block); }
+                    break;
+                case "nature":
+                    if (Overlaps(cells, occ.cells)) { Mark(cells, occ.cells); reasons?.Add("doğa " + occ.cells.x + "," + occ.cells.y + " (" + occ.name + ")"); }
+                    break;
+                case "decor":
+                    if (!includeDecor || occ.decor == ignoreDecor) break;
+                    if (Overlaps(cells, occ.cells)) { Mark(cells, occ.cells); reasons?.Add("dekor " + occ.decor.Data.id + " " + occ.cells); }
+                    break;
             }
-
-        for (int y = cells.yMin; y < cells.yMax; y++)
-            for (int x = cells.xMin; x < cells.xMax; x++)
-                if (NatureObstacle.ByCell.ContainsKey(new Vector2Int(x, y)))
-                {
-                    Mark(cells, new RectInt(x, y, 1, 1));
-                    reasons?.Add("doğa " + x + "," + y);
-                    if (Bail()) return false;
-                }
-
-        var decor = includeDecor ? DecorPlacementController.Instance : null;
-        if (decor != null)
-            foreach (var item in decor.Placed)
-            {
-                if (item == null || item == ignoreDecor || item.Data == null) continue;
-                var itemCells = new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y);
-                if (Overlaps(cells, itemCells)) { Mark(cells, itemCells); reasons?.Add("dekor " + item.Data.id + " " + itemCells); if (Bail()) return false; }
-            }
+            if (Bail()) return false;
+        }
         return free;
     }
 
@@ -253,23 +320,19 @@ public static class BaseOccupancyGrid
         bool includeDecor, ICollection<PlacedMapObject> onlyObjects)
     {
         if (!InsideUnlockedArea(cells, edgeMargin)) return false;
-        foreach (var (campCells, _) in CampCells()) if (Overlaps(cells, campCells)) return false;
-        var map = BaseMapManager.Instance;
-        if (map != null)
-            foreach (var other in map.MapObjects)
+        foreach (var occ in Occupants)
+        {
+            switch (occ.kind)
             {
-                if (other == ignoreObject || !IsStructure(other)) continue;
-                if (onlyObjects != null && !onlyObjects.Contains(other)) continue;
-                if (Overlaps(cells, CellsFor((Vector2)BaseMapManager.FootprintOf(other), other.gameObject.transform.position))) return false;
+                case "camp": if (Overlaps(cells, occ.cells)) return false; break;
+                case "structure":
+                    if (occ.obj == ignoreObject || onlyObjects != null && !onlyObjects.Contains(occ.obj)) break;
+                    if (Overlaps(cells, CellsFor((Vector2)BaseMapManager.FootprintOf(occ.obj), occ.go.transform.position))) return false;
+                    break;
+                case "nature": if (Overlaps(cells, occ.cells)) return false; break;
+                case "decor": if (includeDecor && occ.decor != ignoreDecor && Overlaps(cells, occ.cells)) return false; break;
             }
-        if (NatureObstacle.AnyIn(cells)) return false;
-        var decor = includeDecor ? DecorPlacementController.Instance : null;
-        if (decor != null)
-            foreach (var item in decor.Placed)
-            {
-                if (item == null || item == ignoreDecor || item.Data == null) continue;
-                if (Overlaps(cells, new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y))) return false;
-            }
+        }
         return true;
     }
 
@@ -291,17 +354,14 @@ public static class BaseOccupancyGrid
     {
         var set = new HashSet<Vector2Int>();
         void Add(RectInt r) { for (int y = r.yMin; y < r.yMax; y++) for (int x = r.xMin; x < r.xMax; x++) set.Add(new Vector2Int(x, y)); }
-        foreach (var (campCells, _) in CampCells()) Add(campCells);
         var map = BaseMapManager.Instance;
-        if (map != null)
-            foreach (var other in map.MapObjects)
-                if (other != ignoreObject && IsStructure(other)) Add(BlockOf(other));
-        if (includeSmall) foreach (var cell in NatureObstacle.ByCell.Keys) set.Add(cell);
-        var decor = includeSmall ? DecorPlacementController.Instance : null;
-        if (decor != null)
-            foreach (var item in decor.Placed)
-                if (item != null && item != ignoreDecor && item.Data != null && item.gameObject.activeSelf)
-                    Add(new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
+        foreach (var occ in Occupants)
+        {
+            if (occ.kind == "structure" && occ.obj == ignoreObject) continue;
+            if (occ.kind == "decor" && (!includeSmall || occ.decor == ignoreDecor)) continue;
+            if (occ.kind == "nature" && !includeSmall) continue;
+            Add(occ.cells);
+        }
         if (structure && map != null)
         {
             var area = map.BuildableRect;
@@ -324,19 +384,8 @@ public static class BaseOccupancyGrid
             for (int y = r.yMin; y < r.yMax; y++)
             for (int x = r.xMin; x < r.xMax; x++) blocked.Add(new Vector2Int(x, y));
         }
-        var map = BaseMapManager.Instance;
-        if (map == null) return blocked;
-        foreach (var (campCells, _) in CampCells()) Add(campCells);
-        foreach (var other in map.MapObjects)
-            if (IsStructure(other)) Add(BlockOf(other));
-        var decor = DecorPlacementController.Instance;
-        if (decor != null)
-            foreach (var item in decor.Placed)
-            {
-                if (item == null || item.Data == null) continue;
-                Add(new RectInt(item.Cell.x, item.Cell.y, item.Data.footprint.x, item.Data.footprint.y));
-            }
-        foreach (var cell in NatureObstacle.ByCell.Keys) blocked.Add(cell);
+        if (BaseMapManager.Instance == null) return blocked;
+        foreach (var occ in Occupants) Add(occ.cells);
         if (ignoreCells != null)
             foreach (var r in ignoreCells)
                 for (int y = r.yMin; y < r.yMax; y++)

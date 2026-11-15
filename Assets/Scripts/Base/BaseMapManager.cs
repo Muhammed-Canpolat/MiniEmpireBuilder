@@ -428,6 +428,8 @@ public class BaseMapManager : MonoBehaviour
         MapObjectTag tag = go.AddComponent<MapObjectTag>();
         tag.objectType = MapObjectType.Fence;
 
+        BaseOccupancyGrid.MarkDirty();
+
         _mapObjects.Add(new PlacedMapObject
         {
             gameObject = go,
@@ -540,6 +542,7 @@ public class BaseMapManager : MonoBehaviour
             if (_mapObjects[i].objectType != MapObjectType.Fence) continue;
             if (_mapObjects[i].gameObject != null)
                 Destroy(_mapObjects[i].gameObject);
+            BaseOccupancyGrid.MarkDirty();
             _mapObjects.RemoveAt(i);
         }
     }
@@ -736,6 +739,8 @@ public class BaseMapManager : MonoBehaviour
             isBeingRemoved = false
         };
 
+        BaseOccupancyGrid.MarkDirty();
+
         _mapObjects.Add(obj);
 
         BaseGroundPaths.Instance?.Refresh();
@@ -843,6 +848,8 @@ public class BaseMapManager : MonoBehaviour
             size = size
         };
 
+        BaseOccupancyGrid.MarkDirty();
+
         _mapObjects.Add(obj);
         return obj;
     }
@@ -880,6 +887,8 @@ public class BaseMapManager : MonoBehaviour
             isBeingRemoved = false,
             size = size
         };
+
+        BaseOccupancyGrid.MarkDirty();
 
         _mapObjects.Add(obj);
         return obj;
@@ -928,6 +937,7 @@ public class BaseMapManager : MonoBehaviour
         }
 
         obj.isBeingRemoved = true;
+        BaseOccupancyGrid.MarkDirty();
         // 6. oturum (4.2): süre öğenin büyüklüğüne göre (FeatureConfig): ağaç 10 sn, kaya 5 sn.
         float duration = NatureClear.SecondsFor(obj.objectType == MapObjectType.Tree ? NatureClear.Size.Tree : NatureClear.Size.Rock);
 
@@ -1016,6 +1026,7 @@ public class BaseMapManager : MonoBehaviour
             .WaitForCompletion();
 
         if (obj.gameObject != null) Destroy(obj.gameObject);
+        BaseOccupancyGrid.MarkDirty();
         _mapObjects.Remove(obj);
         BaseGroundPaths.Instance?.Refresh();
 
@@ -1086,6 +1097,7 @@ public class BaseMapManager : MonoBehaviour
             objectType = MapObjectType.BuilderHut,
             id = "builder_hut_" + index
         };
+        BaseOccupancyGrid.MarkDirty();
         _mapObjects.Add(placed);
         return placed;
     }
@@ -1318,19 +1330,19 @@ public class BaseMapManager : MonoBehaviour
     public string ValidateOccupancy()
     {
         int ghosts = _mapObjects.RemoveAll(o => o == null || o.gameObject == null);
+        // 8. oturum (D100): doluluk artık sahneden sıfırdan kurulur (hayalet sözlük kaydı olamaz). Burada yalnız kayıtta "kaldırıldı"
+        // yazan ama sahnede hâlâ duran doğa nesneleri (ör. temizleme oyun kapalıyken bitti) kaldırılır.
         int natureGhosts = 0;
         var natureNames = new List<string>();
         var removedNature = GameManager.Instance?.PlayerData?.removedNatureIds;
-        foreach (var key in NatureObstacle.ByCell.Keys.ToList())
-        {
-            var n = NatureObstacle.ByCell[key];
-            if (n == null || !n.isActiveAndEnabled || n.cell != key || removedNature != null && removedNature.Contains(n.Id))
+        BaseOccupancyGrid.Rebuild();
+        foreach (var n in NatureObstacle.ByCell.Values.ToList())
+            if (n != null && removedNature != null && removedNature.Contains(n.Id))
             {
-                NatureObstacle.ByCell.Remove(key);
                 natureGhosts++;
-                natureNames.Add($"{key.x},{key.y}:" + (n == null ? "yok edilmiş" : !n.isActiveAndEnabled ? "kapalı " + n.Id : n.cell != key ? "yanlış hücre " + n.Id : "kaldırılmış " + n.Id));
+                natureNames.Add($"{n.cell.x},{n.cell.y}:kaldırılmış " + n.Id);
+                n.MarkRemoved();
             }
-        }
         int decorGhosts = DecorPlacementController.Instance != null ? DecorPlacementController.Instance.PruneGhosts() : 0;
 
         // Bina/dekor altında kalan doğa nesnesi (eski kayıtlarda doğa hücresi kaydolmadığı için üstüne kurulabiliyordu): bedelsiz kalkar,
@@ -1346,15 +1358,15 @@ public class BaseMapManager : MonoBehaviour
         if (DecorPlacementController.Instance != null)
             foreach (var item in DecorPlacementController.Instance.Placed)
                 if (item != null && item.Data != null) covered.Add(item.Cell);
-        foreach (var key in NatureObstacle.ByCell.Keys.ToList())
+        foreach (var pair in NatureObstacle.ByCell.ToList())
         {
-            var n = NatureObstacle.ByCell[key];
-            if (n == null || !covered.Contains(key)) continue;
+            var n = pair.Value;
+            if (n == null || !covered.Contains(pair.Key)) continue;
             if (removedNature != null && !removedNature.Contains(n.Id)) removedNature.Add(n.Id);
-            NatureObstacle.ByCell.Remove(key);
-            Destroy(n.gameObject);
+            n.MarkRemoved();
             underBuilding++;
         }
+        BaseOccupancyGrid.Rebuild();
 
         // Kayıttan sıfırdan kurulan doluluk ↔ sahnedeki doluluk (ayak izleri)
         var fromSave = new HashSet<Vector2Int>();
@@ -1404,6 +1416,7 @@ public class BaseMapManager : MonoBehaviour
         if (!BaseOccupancyGrid.FootprintFree(cells, obj, null, true, true, null)) return false;
         obj.gameObject.transform.DOKill();
         obj.gameObject.transform.position = new Vector3(previous.x, previous.y, obj.gameObject.transform.position.z);
+        BaseOccupancyGrid.MarkDirty();
         obj.gameObject.transform.DOPunchScale(Vector3.one * 0.08f, 0.2f);
         BaseGroundPaths.Instance?.Refresh();
         obj.gameObject.GetComponent<BuilderHut>()?.OnMoved();
@@ -1420,6 +1433,7 @@ public class BaseMapManager : MonoBehaviour
         Vector3 target = new Vector3(newPos.x, newPos.y, obj.gameObject.transform.position.z);
         obj.gameObject.transform.DOKill();
         obj.gameObject.transform.position = target;
+        BaseOccupancyGrid.MarkDirty();
         obj.gameObject.transform.DOPunchScale(Vector3.one * 0.08f, 0.2f);
         BaseGroundPaths.Instance?.Refresh();
         var hut = obj.gameObject.GetComponent<BuilderHut>();

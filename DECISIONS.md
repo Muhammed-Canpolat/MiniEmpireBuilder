@@ -741,3 +741,61 @@ Biçim: **Karar** · Alternatifler · Gerekçe · Nasıl geri alınır. ⚠️ =
 - Madeni Koru: maden köprüye yakınken ilk düşmanlarla 23 sn'de yıkılıyordu → yolun üsse yakın yarısına (ilerleyiş %55–80) alındı.
 - Sonuç ve tablo: REPORT.md §2. Bilinen: tek tohum gürültülü; erken bölgelerde (1–2) kule+kahraman çok rahat — "ilk bölgeler affedici" kararıyla uyumlu bırakıldı.
 - Test uyarlaması: `BattleStructureTests` iki testi (eski 4 köşe yuva düzeni, serbest düzende rol/kışkırtma) haritayı geçici kapatarak eski düzeni denetler.
+
+## D96 — Düşman yol davranışı durum makinesiyle (8. oturum 1; Opus yüksek çaba)
+- **Sorun:** sapan düşman, hedef uzaklaşınca ayrıldığı noktaya (`laneS` orada donuyordu) GERİ yürüyordu.
+- **Durumlar** (`EnemyController.LaneState`): Yolu izle → Kilitlen (hedefe yürü) → Savaş (menzilde) → Yola dön. `LaneDistance` = yolda kat edilen mesafe,
+  **yalnız artar** (sapma/savaş/dönüşte pencereli izdüşümle güncellenir: `BattleRoute.ProjectRange`, [ilerleme, ilerleme + 8]; zikzakta paralel kola atlamaz).
+- **Kilitlenme menzili** `LaneLeash` 3 (hedef yolun ilerleme noktası çevresinde ve İLERİDE; geride 0,75'ten fazla kalan hedefe kilitlenmez).
+  **Bırakma** `LeashDistance` 4,5 (hedef ya da düşman yoldan bu kadar uzaklaşırsa), hareketli hedef geride kalırsa ya da yol boyunca `ChaseAhead` 6 birim
+  kovalandıysa; bıraktıktan sonra 1,2 sn yeniden kilitlenmez (titreme yok). Maden yağmacısı ve sabit yapı hedefi bu kuralların dışında (yapıya en çok 0,75 geri).
+- **Yola dönüş:** hedef nokta ilerlemenin ilerisinde (öncü pay = yoldan uzaklık × 0,9, 0,4–2,2) ve düşman ilerledikçe ileri kayar → açılı, doğal eğri;
+  yol yönündeki geri bileşen her adımda atılır. Yol dışı her adım ortak yol bulma (`GridSteer` / `BattleWalkGrid`: su, uçurum, yapı kapalı).
+- **Ayrışma:** gövde yarıçapı (0,36 / Trol 0,55 / boss 0,75); yolda yan itme şerit kaymasını yumuşak değiştirir (±0,45), öndeki komşu yavaşlatır
+  (geri itmez; eşit ilerlemede kimlikle sıra bozulur). Bakış yönü yumuşatılmış hız + histerezisle (titreme yok).
+- Test `Session8Tests.A1` (6 bölge × S1/S3 × yandan kaçış / geriye kaçış: geri adım 0, ilerleme hep arttı, hep yürünebilir, ileriden katıldı),
+  `A2` (14 düşman aynı noktada: örtüşme ≤ 3 çift, yön dönüşü 0,4/sn). Not: dönüşte en yakın İLERİDEKİ yol noktası seçildiği için zikzakta paralel kola
+  (8 birim pencere içinde) kısa yoldan katılabilir (ölçümde S3'te 11 → 22).
+
+## D97 — Düşman sayıları + %10 can tek yapılandırmadan; öldürme altını eşit; havuz (8. oturum 2)
+- `Resources/Config/CampaignEnemyConfig.asset`: kullanıcının tablosu = savaşta **doğan** toplam (boss dahil). Eski Wave1Cap/boss ek düşmanı sefer
+  savaşında artık uygulanmaz (toplama katıldı; üst bardaki "kalan / toplam" bu sayıdır). Can ×1,1 tüm sefer düşmanlarına (boss ve çağrılanlar dahil).
+- Dalga dağılımı: en az seviyenin dalga sayısı; dalga başına ≤ 12 (aşılırsa dalga eklenir); ağırlık 1 + 0,2·i (ilk dalga en küçük). Eklenen dalgalar asıl
+  dalgalara **orantılı** eşlenir (tür karışımı ve karşı düşman payı eski tasarımdaki gibi; ilk denemede ek dalgalar Trol alıyordu → düzeltildi).
+  Dalga arası nefes 5 → 8 sn (duyuru 3 sn ayrıca). Sonsuz/İstila eski kural.
+- Ekonomi: düşman başına öldürme altını × (eski beklenen / yeni beklenen), kesir taşımalı → savaş toplamı aynı (E1: 30/30 ±1). ECONOMY.md §14.
+- Performans: düşman kabuğu havuzu (boss hariç; davranış bileşenleri her kullanımda TAZE eklenir, kabuk 2 sn sonra yeniden verilir), kahraman/Çırak
+  aramaları önbellekte. P1: 3 × 18 düşman + 4 kule, %95 kare 16,7 ms (masaüstü, vsync), 54 düşmandan 36'sı havuzdan.
+
+## D98 — Savaş üst barı Ana Üs süslü çerçeve stilinde (8. oturum 3; Sonnet alt ajanı orta çaba — ben test edip görüntüyle doğruladım)
+- `Polish/UI/BattleTopBar.cs`: sol düşman "kalan / toplam" (`BattleManager.EnemiesRemaining/EnemiesTotal`), orta "Dalga n/m" + dalga noktaları + bölge·seviye,
+  sağ altın + ayar (eski düğme taşındı), altında belirgin ilerleme barı (toplam öldürülen / toplam), ayrı hedef kartı (Madeni Koru maden canı, Zamana Karşı
+  kalan süre, Üssü Koru üs canı). Güvenli alan içinde, metinler otomatik boyut + üç nokta. Eski TopBar boş yer tutucu (kamera kırpması için).
+- Düşman giriş oku artık kameranın görünen dünya alanının içinde (barın/kartın üstüne binmez). Test görüntü yardımcısı (`Session4Tests.CaptureUi`) çekimde kamera
+  görüş alanını tam ekrana açar (önceki görüntülerde arayüz kırpık alana sığdırılıyordu).
+
+## D99 — Yuva etiketi yoldan uzak; bölge yapıları tamamen karada; kamera karada (8. oturum 3)
+- Ekran görüntüsündeki B4-S3 (−0,3; 15,1) yuvasının "N HAK" etiketi yolun üstündeydi. Eski doğrulama yalnız rota uzaklığını ve halkayı ölçüyordu; etiket
+  (merkez −1,18, 1,24 × 0,40) hiç denetlenmiyordu → kural eklendi, 26 seviyenin yuvaları yalnız yuva kısmı yeniden üretildi
+  (`BattleMapAuthoring.RegenerateInvalidSlotsFromCommandLine`; rota/maden/üs aynı). Yeni bağımsız test `Session8Tests.V4`: GERÇEKTEN çizilen yol maskesi
+  (`BattleMapBuilder.RoadCovers`) halka/etiket/kule görseliyle kesişmez.
+- Bölge yapısı: eskiden yalnız alt tabanı karada aranıyordu (kıyıdaki mavi kule yarısı suyun üstünde). Artık tamamı kıyıdan 0,4 içeride.
+- Kamera yatay sınırı ızgara + 0,5 yerine **karanın kenarı**; ekran adadan genişse kamera adanın ortasına sabitlenir (bir yanda deniz şeridi görünmez).
+
+## D100 — Ana Üs yerleşim hatasının kök nedeni ve kalıcı çözüm (8. oturum 4; Opus yüksek çaba)
+- **Kök neden (ölçüldü, `Session8BaseTests.O1`, eski kod):** küçük dekorların (çalı ×4, altın taşı ×2, koyun) dikey hizası `DecorData.VerticalOffset`
+  sprite'ın TAM ÇERÇEVESİNİN alt kenarıyla hesaplanıyordu; Tiny Swords karelerinin altında saydam boşluk var → görsel, dolu sayılan hücrenin 0,7–1,2 birim
+  YUKARISINDA çiziliyordu. Oyuncu çalıyı/koyunu bir sırada görüyor; kural ise altındaki BOŞ GÖRÜNEN hücreyi dolu sayıyor (red, kırmızı hücre) ve çizildiği
+  hücreyi boş sayıyordu. 5. oturumun ayak izi raporunda da vardı (`decor:bush (15,23) görsel y 24,0–24,9`) ama "görünüşte boş" denetimi kuralla AYNI veriyi
+  (nesne hücreleri) kullandığı için hiç yakalanmadı. Önceki iki düzeltme yapıların görsel alanına ve doğa kaydına odaklanmıştı.
+- Keşif (`O0`): doğa nesnesi kaldırma (anında + süreli) hücreleri zaten tamamen boşaltıyordu (kayıt/nesne/collider/ızgara 10/10, yeniden yüklemede de).
+  O0'daki retlerin hepsi, yeni kulenin kendi görselinin (ayak izinin ~1,8 altına sarkar) Ana Üs'ün çizimine binmesinden — meşru.
+- **Çözüm:** (1) hiza sıkı ağın görünen alt kenarından (`DecorData.VisibleBottom`); (2) doluluk TEK KAYNAK: `BaseOccupancyGrid.Occupants` anlık görüntüsü
+  sahnedeki canlı nesnelerden sıfırdan kurulur (yapı = ayak izi ∪ görsel hücreleri, kamp, ETKİN dekor, ETKİN ve kaldırılmamış doğa), kare başına ve her
+  yerleştirme/taşıma/silme/kaldırma sonrası (`MarkDirty`) yeniden; `NatureObstacle.ByCell` artık elle yazılan statik sözlük değil, bunun görünümü (hayalet
+  kayıt olamaz); kaldırma tek yoldan (`MarkRemoved`: görsel + collider + doluluk aynı karede). Kayıttaki hücre verisi doluluğa hiç girmez. Kural, ızgara
+  gösterimi ve yürünemez hücreler aynı listeyi okur (eskiden dekor etkinliği gösterimde vardı kuralda yoktu). Gölgeler alfa < 0,35 ve ad süzgeciyle görsel
+  ölçümünden dışlı.
+- **Geliştirici:** DevMenu "OCCUPANCY GÖSTER" (yalnız Editor/Development; `OccupancyDebugView`): dolu hücreler türüne göre renkli + dolduran nesnenin adı.
+- **Regresyon:** `O2` (mevcut/eski v12 kayıt ve yeni kayıt): 4 alanda 22 öğe (doğa anında/süreli + dekor) kaldırılır → 4 boyutta yeni bina kuralı, 4 türün taşıması
+  ve geri alınması, yeni bina kurma; kayıt → yeniden yükleme. `O3` görünüm. 5. oturumun tüm yerleşim testleri yeni kodla geçti.

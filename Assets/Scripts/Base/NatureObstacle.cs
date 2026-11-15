@@ -10,7 +10,15 @@ public enum NatureKind { Tree, Bush, Rock, Stump }
 /// </summary>
 public sealed class NatureObstacle : MonoBehaviour
 {
-    public static readonly Dictionary<Vector2Int, NatureObstacle> ByCell = new Dictionary<Vector2Int, NatureObstacle>();
+    /// <summary>
+    /// 8. oturum (D100): hücreye göre doğa nesneleri — artık elle yazılan statik sözlük DEĞİL, sahnedeki etkin ve kaldırılmamış
+    /// nesnelerden kurulan doluluk anlık görüntüsünün görünümü (<see cref="BaseOccupancyGrid.NatureByCell"/>). Yok edilmiş/kaldırılmış
+    /// nesnenin hayalet kaydı kalamaz.
+    /// </summary>
+    public static IReadOnlyDictionary<Vector2Int, NatureObstacle> ByCell => BaseOccupancyGrid.NatureByCell;
+
+    /// <summary>Kaldırıldı (altın/temizleme): aynı karede Destroy beklenirken bile doluluğa girmez.</summary>
+    public bool Removed { get; private set; }
 
     public NatureKind kind;
     [SerializeField] private Vector2Int _cell;
@@ -24,9 +32,8 @@ public sealed class NatureObstacle : MonoBehaviour
         get => _cell;
         set
         {
-            if (ByCell.TryGetValue(_cell, out var current) && current == this) ByCell.Remove(_cell);
             _cell = value;
-            if (isActiveAndEnabled) ByCell[_cell] = this;
+            BaseOccupancyGrid.MarkDirty();
         }
     }
 
@@ -41,13 +48,13 @@ public sealed class NatureObstacle : MonoBehaviour
 
     private void OnEnable()
     {
-        ByCell[_cell] = this;
+        BaseOccupancyGrid.MarkDirty();
         if (GameManager.Instance != null) GameManager.Instance.OnBuilderTaskCompleted += OnTaskCompleted;   // 6. oturum (4.2)
     }
 
     private void OnDisable()
     {
-        if (ByCell.TryGetValue(_cell, out var current) && current == this) ByCell.Remove(_cell);
+        BaseOccupancyGrid.MarkDirty();
         if (GameManager.Instance != null) GameManager.Instance.OnBuilderTaskCompleted -= OnTaskCompleted;
     }
 
@@ -97,8 +104,7 @@ public sealed class NatureObstacle : MonoBehaviour
     {
         if (task == null || task.slotId != TaskSlot) return;
         NatureClear.Finish(Id, transform.position, RewardText(kind));
-        ByCell.Remove(cell);
-        Destroy(gameObject);
+        MarkRemoved();
     }
 
     /// <summary>Ödülü verir (GameManager görev bitişinde çağırır; sahne olmasa da).</summary>
@@ -136,8 +142,21 @@ public sealed class NatureObstacle : MonoBehaviour
         if (!data.removedNatureIds.Contains(Id)) data.removedNatureIds.Add(Id);
         BaseMapManager.Instance?.SaveAll();
         BaseBuildingVisual.SpawnDust(transform.position, 110);
-        ByCell.Remove(cell);
-        Destroy(gameObject);
+        MarkRemoved();
         return true;
+    }
+
+    /// <summary>
+    /// Kaldırma tek yerden: görsel (sprite + gölge çocukları), collider ve doluluk AYNI KAREDE kapanır, sonra nesne yok edilir.
+    /// Eskiden yalnız sözlük kaydı silinip Destroy çağrılıyordu (Destroy kare sonunu bekler; kayıt elle tutulduğundan hayalet kalabiliyordu).
+    /// </summary>
+    public void MarkRemoved()
+    {
+        Removed = true;
+        foreach (var sr in GetComponentsInChildren<SpriteRenderer>(true)) sr.enabled = false;
+        foreach (var col in GetComponentsInChildren<Collider2D>(true)) col.enabled = false;
+        enabled = false;
+        BaseOccupancyGrid.MarkDirty();
+        Destroy(gameObject);
     }
 }

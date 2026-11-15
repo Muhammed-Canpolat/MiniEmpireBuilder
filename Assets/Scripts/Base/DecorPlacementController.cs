@@ -161,6 +161,7 @@ public sealed class DecorPlacementController : MonoBehaviour
             if (TryFindNearestFree(item.Data, item.Cell, 8, out var cell))
             {
                 item.SetCell(cell);
+                BaseOccupancyGrid.MarkDirty();
                 placed.Add(item);
             }
             else
@@ -312,6 +313,7 @@ public sealed class DecorPlacementController : MonoBehaviour
     public void Delete(DecorInstance item)
     {
         if (item == null || !placed.Remove(item)) return;
+        BaseOccupancyGrid.MarkDirty();
         int refund = RefundFor(item.Data);
         Destroy(item.gameObject);
         GameManager.Instance?.AddGold(refund);
@@ -373,6 +375,7 @@ public sealed class DecorPlacementController : MonoBehaviour
             animator.runtimeAnimatorController = data.animatorController;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
         }
+        BaseOccupancyGrid.MarkDirty();
         placed.Add(item);
         return item;
     }
@@ -538,6 +541,7 @@ public sealed class DecorInstance : MonoBehaviour
     public void SetCell(Vector2Int cell)
     {
         Cell = cell;
+        BaseOccupancyGrid.MarkDirty();
         var renderer = GetComponent<SpriteRenderer>();
         float offset = renderer != null && renderer.sprite != null
             ? Data.VerticalOffset(renderer.sprite, transform.localScale.y) : 0f;

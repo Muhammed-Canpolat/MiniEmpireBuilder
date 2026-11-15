@@ -291,19 +291,21 @@ public class Session5Tests
         Assert.IsTrue(found);
         var ghost = new GameObject("GhostNature");
         var nature = ghost.AddComponent(T("NatureObstacle"));
-        var byCell = (IDictionary)T("NatureObstacle").GetField("ByCell").GetValue(null);
+        var byCell = (IDictionary)T("NatureObstacle").GetProperty("ByCell").GetValue(null);
         T("NatureObstacle").GetProperty("cell").SetValue(nature, free);
-        Assert.AreSame(nature, byCell[free], "hücre atanınca doğru hücreye kaydolur (eski hata: (0,0)'da kalıyordu)");
+        byCell = (IDictionary)T("NatureObstacle").GetProperty("ByCell").GetValue(null);
+        Assert.AreSame(nature, byCell[free], "hücre atanınca doğru hücrede (eski hata: (0,0)'da kalıyordu)");
         Assert.IsFalse(byCell.Contains(Vector2Int.zero) && byCell[Vector2Int.zero] == (object)nature, "(0,0)'da hayalet kalmaz");
-        Object.DestroyImmediate(ghost);
-        byCell[free] = null;   // yok edilmiş nesne kaydı (hayalet: ör. Destroy sırasında kayıt silinmemiş)
         Assert.IsFalse((bool)grid.GetMethod("IsFree").Invoke(null, new object[] { new RectInt(free.x, free.y, 1, 1), null, null, false, true, null, null }),
-            "hayalet kayıt hücreyi kapatıyor (hata durumu)");
+            "canlı doğa nesnesi hücreyi kapatır");
+        // 8. oturum (D100): doluluk sahneden sıfırdan kurulur — nesne yok edilince AYNI KAREDE hücre boşalır (hayalet kayıt olamaz).
+        Object.DestroyImmediate(ghost);
+        Assert.IsTrue((bool)grid.GetMethod("IsFree").Invoke(null, new object[] { new RectInt(free.x, free.y, 1, 1), null, null, false, true, null, null }),
+            "yok edilen doğa nesnesinin hücresi hemen boş");
         var save = Prop(T("GameManager").GetProperty("Instance").GetValue(null), "PlayerData");
         ((IList)Field(save, "placedDecor")).Add(DecorRecord("orphan_decor", "bush", free.x, free.y + 1));
         string line = (string)Map.GetType().GetMethod("ValidateOccupancy").Invoke(Map, null);
         File.WriteAllText(Path.Combine(Folder, "S1_1_load_validation.txt"), line);
-        StringAssert.Contains(free.x + "," + free.y + ":yok edilmiş", line);
         StringAssert.DoesNotContain("0,0:", line, "oluşturma sırasında (0,0) hayaleti kalmadı");
         Assert.IsTrue((bool)grid.GetMethod("IsFree").Invoke(null, new object[] { new RectInt(free.x, free.y, 1, 1), null, null, false, true, null, null }),
             "doğrulama hayalet hücreyi temizledi: " + line);

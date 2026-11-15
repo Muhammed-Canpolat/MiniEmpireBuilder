@@ -92,6 +92,8 @@ public sealed class DevMenu : MonoBehaviour
             ("BASKINI GETİR", () => { if (gm != null) { IslandRaidScheduler.DevBring(gm.PlayerData.island, IslandRepair.Now); gm.SaveGame(); } }, false),
             ("SONSUZ SEFER +5 KAT", () => { if (gm != null) { gm.PlayerData.endlessBestFloor += 5; gm.SaveGame(); } }, true),
             ("İSTİLAYI AÇ/KAPAT", () => { DragonInvasion.ForceActive = !DragonInvasion.ForceActive; if (gm != null) { gm.PlayerData.invasionRewardWeek = 0; gm.SaveGame(); } }, true),
+            ("OCCUPANCY GÖSTER: " + (OccupancyDebugView.Enabled ? L.T("AÇIK", "ON") : L.T("KAPALI", "OFF")),
+                () => OccupancyDebugView.Enabled = !OccupancyDebugView.Enabled, false),
             ("TAKVİMİ SIFIRLA", () => { if (gm != null) { gm.PlayerData.dailyStreak = 0; gm.PlayerData.dailyLastClaimDay = 0; DailyRewards.TodayOverride = null; gm.SaveGame(); } }, true),
         };
 
