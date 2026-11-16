@@ -77,7 +77,7 @@ jobs:
   archive_upload:
     name: Archive + TestFlight (macOS)
     needs: unity_xcode
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Download Xcode project
         uses: actions/download-artifact@v4
@@ -89,10 +89,36 @@ jobs:
           tar -xzf xcode-project.tar.gz
           ls -la iOS
 
-      - name: Select Xcode
+      - name: Checkout (icon only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: Tools/ios
+          path: src
+
+      # App Store artık iOS 26 SDK (Xcode 26+) istiyor: en yeni kararlı Xcode 26'yı seç
+      - name: Select Xcode 26
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app || true
+          XC=$(ls -d /Applications/Xcode_26*.app | grep -v -i beta | sort -V | tail -1)
+          echo "Using $XC"
+          sudo xcode-select -s "$XC"
           xcodebuild -version
+
+      # Unity projesinde iOS simgesi yok: 1024x1024 tek-boyut AppIcon yerleştir
+      - name: Install app icon
+        run: |
+          SET=iOS/Unity-iPhone/Images.xcassets/AppIcon.appiconset
+          test -d "$SET" || SET=$(find iOS -type d -name 'AppIcon.appiconset' | head -1)
+          echo "AppIcon set: $SET"
+          rm -f "$SET"/*.png
+          cp src/Tools/ios/AppIcon-1024.png "$SET/AppIcon-1024.png"
+          cat > "$SET/Contents.json" <<'JSON'
+          {
+            "images" : [
+              { "filename" : "AppIcon-1024.png", "idiom" : "universal", "platform" : "ios", "size" : "1024x1024" }
+            ],
+            "info" : { "author" : "xcode", "version" : 1 }
+          }
+          JSON
 
       - name: Import signing certificate
         uses: apple-actions/import-codesign-certs@v3
