@@ -1,0 +1,26 @@
+name: Unity iOS Build and TestFlight
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build_with_unity:
+    name: Build for iOS and Upload to TestFlight
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Unity Project for iOS
+        uses: game-ci/unity-builder@v4
+        with:
+          targetPlatform: iOS
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v3
+        with:
+          app-path: 'build/iOS/unity-iphone.ipa'
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}

@@ -5,6 +5,9 @@ apply from: '../shared/common.gradle'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    // kotlin-stdlib 1.8+ jdk7/jdk8 siniflarini icerir; eski (1.6.21) -jdk7/-jdk8 ile "Duplicate class" verir.
+    // BOM tum kotlin-stdlib parcalarini ayni surume hizalar (launcher'a da yayilir).
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
 **DEPS**}
 
 android {
