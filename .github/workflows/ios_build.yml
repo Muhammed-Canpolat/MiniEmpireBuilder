@@ -1,39 +1,180 @@
-name: Unity iOS Build and TestFlight
+name: iOS Build → TestFlight
 
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUNDLE_ID: com.kingdomforgegames.miniempirebuilder
+  PROFILE_NAME: "MiniEmpireBuilder AppStore"
 
 jobs:
-  build_with_unity:
-    name: Build for iOS and Upload to TestFlight
-    runs-on: macos-latest
+  # ---------------------------------------------------------------------------
+  # 1) Ubuntu: Unity (game-ci) ile Xcode projesini üret
+  # ---------------------------------------------------------------------------
+  unity_xcode:
+    name: Unity → Xcode project (Ubuntu)
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Free Disk Space
+      - name: Free disk space
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
           android: true
-          dotnet: false
+          dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          docker-images: false
+          swap-storage: true
 
-      - name: Build Unity Project for iOS
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: |
+            Library-iOS-
+
+      - name: Build Xcode project
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: iOS
           unityVersion: auto
+          buildName: iOS
+          buildsPath: build
+          versioning: None
+
+      # tar: sembolik linkleri ve çalıştırma izinlerini korur
+      - name: Pack Xcode project
+        run: |
+          sudo chown -R "$USER" build
+          tar -czf xcode-project.tar.gz -C build/iOS iOS
+
+      - name: Upload Xcode project
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-project
+          path: xcode-project.tar.gz
+          retention-days: 3
+
+  # ---------------------------------------------------------------------------
+  # 2) macOS: imzala, archive, export, TestFlight'a yükle
+  # ---------------------------------------------------------------------------
+  archive_upload:
+    name: Archive + TestFlight (macOS)
+    needs: unity_xcode
+    runs-on: macos-15
+    steps:
+      - name: Download Xcode project
+        uses: actions/download-artifact@v4
+        with:
+          name: xcode-project
+
+      - name: Unpack
+        run: |
+          tar -xzf xcode-project.tar.gz
+          ls -la iOS
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app || true
+          xcodebuild -version
+
+      - name: Import signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Install provisioning profile
+        env:
+          PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PP_DIR"
+          echo "$PROFILE_B64" | base64 --decode > profile.mobileprovision
+          UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
+          cp profile.mobileprovision "$PP_DIR/$UUID.mobileprovision"
+          # Xcode 16+ bu klasörü de okur
+          mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          cp profile.mobileprovision "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$UUID.mobileprovision"
+          echo "PROFILE_UUID=$UUID" >> "$GITHUB_ENV"
+          echo "Installed profile $UUID"
+
+      - name: Set build number & export compliance
+        run: |
+          PLIST=iOS/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+
+      # İmzalama ayarları Unity Player Settings'ten (Team ID + Profile ID) Xcode
+      # projesine yalnızca Unity-iPhone hedefine yazılır; UnityFramework'e profil
+      # verilmemesi için burada PROVISIONING_PROFILE_* override edilmez.
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project iOS/Unity-iPhone.xcodeproj \
+            -scheme Unity-iPhone \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/MiniEmpireBuilder.xcarchive" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            | xcbeautify || exit ${PIPESTATUS[0]}
+
+      - name: Export IPA
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key><string>${PROFILE_UUID}</string>
+            </dict>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MiniEmpireBuilder.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export"
+          ls -la "$RUNNER_TEMP/export"
+          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+          echo "IPA_PATH=$IPA" >> "$GITHUB_ENV"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa
+          path: ${{ env.IPA_PATH }}
+          retention-days: 7
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v3
         with:
-          app-path: 'build/iOS/unity-iphone.ipa'
+          app-path: ${{ env.IPA_PATH }}
           issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
           api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
