@@ -28,6 +28,7 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
           targetPlatform: iOS
+          unityVersion: auto
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v3
