@@ -109,6 +109,9 @@ public sealed class FeatureConfig : ScriptableObject
     /// <summary>Ana Üs arazisi PixelCastle duvar/kule/kapıyla çevrili ve kadraj sabit, zoom yok (D108; yalnız görünüm).
     /// Kapalıysa eski ahşap çit + taş direk ve eski kamera (sıkıştırma/tekerlek zoom). Çarpışma her iki durumda aynı.</summary>
     public bool pixelCastleWalls = true;
+    /// <summary>Ana Üs sağ üst açılır menü: Günlük / Görev / Etkinlik (D109; yalnız görünüm/yerleşim). Açıkken sol üst GÜNLÜK/GÖREV
+    /// düğmeleri kurulmaz; kapalıysa (ya da katalog yoksa) eski sol düğmeler.</summary>
+    public bool miniEmpireDropMenu = true;
     /// <summary>Ada adı: ilk açılışta sorulur, üst çubuktan değiştirilir (3. değişiklikten itibaren elmasla).</summary>
     public bool islandNaming = true;
     /// <summary>Ana Üs radyal alt menüsü (AŞAMA 3 §3F; henüz uygulanmadı).</summary>

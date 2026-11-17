@@ -20,6 +20,9 @@ public class MiniEmpireUiCatalog : ScriptableObject
     [Header("Ana Üs duvarları (PixelCastle, D108)")]
     public Sprite wallCrenellated, wallVertical, cornerOuterLeft, cornerOuterRight, towerSmallClosed, gatehouseDoors;
 
+    [Header("Sağ üst droplist (D109)")]
+    public Sprite resCapsule, iconChevronDown;
+
     private static MiniEmpireUiCatalog instance;
     private static bool loaded;
 
@@ -63,6 +66,17 @@ public class MiniEmpireUiCatalog : ScriptableObject
             var c = Instance;
             return c != null && c.wallCrenellated != null && c.wallVertical != null && c.cornerOuterLeft != null
                 && c.cornerOuterRight != null && c.towerSmallClosed != null && c.gatehouseDoors != null && c.bannerLeft != null;
+        }
+    }
+
+    /// <summary>Ana Üs sağ üst açılır menü (D109) açık ve gerekli sprite'lar var mı (çerçeve: <see cref="menuFrame"/>).</summary>
+    public static bool DropMenuReady
+    {
+        get
+        {
+            var c = Instance;
+            return FeatureConfig.Instance.miniEmpireDropMenu && c != null && c.menuFrame != null && c.resCapsule != null
+                && c.iconChevronDown != null;
         }
     }
 

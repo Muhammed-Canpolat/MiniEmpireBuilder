@@ -382,6 +382,43 @@ public class UiAnaUsCapture
         Debug.Log($"UiAnaUsCapture wrote {outPath} (world y {lower:0}-{upper:0} px, ortho {shotSize:0.00})");
     }
 
+    /// <summary>
+    /// D109: sağ üst droplist. Çıktılar (UI_CAPTURE_DIR): 04-droplist-kapali.png (rozetli), 04-droplist-acik.png (rozetli, açık),
+    /// 04-droplist-etkinlik.png ("Yakında" kutusu). Denetim: eski sol düğmeler yok, ok düğmesi + satır sayısı.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator CaptureBaseDropMenu()
+    {
+        string dir = CaptureDir;
+        PlayerPrefs.SetInt("MEB_BaseBarOpen", 1);
+        if (Full) yield return LoadBase(7, 43, 227, 2581, 8, save => FillReferenceBase(save, 4));
+        else yield return LoadBase(7, 43, 227, 2581, 8);
+        yield return new WaitForSecondsRealtime(1.0f);
+        T("AwayReportUI").GetMethod("CloseIfOpen").Invoke(null, null);
+        T("DailyRewardsUI").GetMethod("CloseIfOpen").Invoke(null, null);
+        yield return null;
+        var hud = Hud;
+        Assert.IsNull(GameObject.Find("DailyButton"), "eski GÜNLÜK düğmesi yok");
+        Assert.IsNull(GameObject.Find("QuestsButton"), "eski GÖREV düğmesi yok");
+        var menu = (Component)hud.GetComponentInChildren(T("BaseDropMenu"), true);
+        Assert.NotNull(menu, "BaseDropMenu");
+        var type = menu.GetType();
+        type.GetMethod("Refresh").Invoke(menu, null);
+        Assert.IsTrue((bool)type.GetProperty("ToggleBadgeShown").GetValue(menu), "günlük ödül hazır: ok düğmesinde rozet");
+        ShootFramed(1080, 1920, Path.Combine(dir, "04-droplist-kapali.png"));
+        type.GetMethod("Open").Invoke(menu, null);
+        yield return new WaitForSecondsRealtime(0.5f);
+        Assert.AreEqual(3, (int)type.GetProperty("RowCount").GetValue(menu));
+        ShootFramed(1080, 1920, Path.Combine(dir, "04-droplist-acik.png"));
+        type.GetMethod("Close").Invoke(menu, null);
+        yield return new WaitForSecondsRealtime(0.4f);
+        type.GetMethod("ShowComingSoon").Invoke(menu, null);
+        yield return null;
+        ShootFramed(1080, 1920, Path.Combine(dir, "04-droplist-etkinlik.png"));
+        type.GetMethod("CloseComingSoon").Invoke(menu, null);
+        PlayerPrefs.DeleteKey("MEB_BaseBarOpen");
+    }
+
     private static readonly string[] PackTextures =
     {
         "topbar_bg", "res_pill_bg", "level_shield_empty", "banner_left", "banner_right", "btn_settings",

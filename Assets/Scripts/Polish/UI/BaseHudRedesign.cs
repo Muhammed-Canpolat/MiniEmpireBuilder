@@ -31,6 +31,7 @@ public static class BaseHudRedesign
         if (hud == null) return;
         StyleTopBar(hud);
         StyleDock(hud);
+        BaseDropMenu.Apply(hud);   // D109: sağ üst Günlük/Görev/Etkinlik menüsü (bayrak/katalog yoksa kurulmaz)
     }
 
     // ==================== ÜST BAR ====================

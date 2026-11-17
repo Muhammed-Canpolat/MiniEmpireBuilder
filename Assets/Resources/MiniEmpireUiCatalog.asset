@@ -39,3 +39,5 @@ MonoBehaviour:
   cornerOuterRight: {fileID: 21300000, guid: f89d9521bdf88754ebd24ef10c131469, type: 3}
   towerSmallClosed: {fileID: 21300000, guid: f1f2ce8fb08648a449c3fb8f06de4042, type: 3}
   gatehouseDoors: {fileID: 21300000, guid: c774370df3a650c4fb5d69e896ff21ff, type: 3}
+  resCapsule: {fileID: 21300000, guid: 39518d7c30dd23f45b886d6bc25f4e83, type: 3}
+  iconChevronDown: {fileID: 21300000, guid: 20f97adf0e0351642b3d14ad5c716aee, type: 3}

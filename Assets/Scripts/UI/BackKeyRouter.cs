@@ -116,6 +116,7 @@ public sealed class BackKeyRouter : MonoBehaviour
         if (AwayReportUI.CloseIfOpen()) return true;
         if (DailyRewardsUI.CloseIfOpen()) return true;
         if (DailyQuestsUI.CloseIfOpen()) return true;
+        if (BaseDropMenu.CloseComingSoonIfOpen()) return true;   // D109: Etkinlik "Yakında" kutusu
         // Ana Üs inşa menüsü (Yapılar / Dekor / Dükkân sekmeleri) — PanelController.OpenModal'ın kapatma yolu BuildMenuController.Hide
         var buildMenu = BuildMenuController.Instance;
         if (buildMenu != null && buildMenu.IsOpen) { buildMenu.Hide(); return true; }

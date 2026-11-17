@@ -28,6 +28,9 @@ public sealed class DailyRewardsUI : MonoBehaviour
         return true;
     }
 
+    /// <summary>Sağ üst açılır menü (BaseDropMenu) "Günlük" maddesi: takvim penceresini açar.</summary>
+    public static void OpenFromMenu() { if (current != null) current.Open(); }
+
     private IEnumerator Start()
     {
         current = this;
@@ -38,7 +41,8 @@ public sealed class DailyRewardsUI : MonoBehaviour
         canvas.sortingOrder = 45;
         ReferenceUiVisuals.ConfigureCanvas(canvasObject.GetComponent<CanvasScaler>());
         safe = ReferenceUiVisuals.SafeArea(canvas.transform);
-        CreateSideButton();
+        // D109: bayrak açıkken Günlük sağ üst açılır menüdedir (BaseDropMenu); eski sol düğme kurulmaz.
+        if (!MiniEmpireUiCatalog.DropMenuReady) CreateSideButton();
         DailyRewards.OnChanged += RefreshDot;
         RefreshDot();
         if (GemRewards.ClaimRoyalDaily())
@@ -53,8 +57,10 @@ public sealed class DailyRewardsUI : MonoBehaviour
         if (data == null || !data.firstBaseGuideDone || !DailyRewards.CanClaim) yield break;
         // İlk gün pencere kendiliğinden açılmaz (yeni oyuncunun ilk savaş dönüşünü kapatmasın): yalnız bildirim.
         if (data.dailyLastClaimDay == 0)
-            GemActions.Toast(L.T("Günlük ödülün hazır: soldaki takvime dokun.", "Your daily reward is ready: tap the calendar on the left."));
-        else Open();
+            GemActions.Toast(MiniEmpireUiCatalog.DropMenuReady
+                ? L.T("Günlük ödülün hazır: sağ üstteki menüden Günlük maddesine dokun.", "Your daily reward is ready: open the top-right menu and tap Daily.")
+                : L.T("Günlük ödülün hazır: soldaki takvime dokun.", "Your daily reward is ready: tap the calendar on the left."));
+        else { BaseDropMenu.Current?.Close(); Open(); }
     }
 
     private void OnDestroy()

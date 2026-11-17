@@ -41,6 +41,9 @@ public static class MiniEmpireUiCatalogBuilder
         catalog.iconExpedition = Load("Icons/icon_expedition.png");
         catalog.iconHero = Load("Icons/icon_hero.png");
         catalog.iconIsland = Load("Icons/icon_island.png");
+        // D109: sağ üst droplist (satır kapsülü + ok).
+        catalog.resCapsule = Load("TopBar/res_capsule_bg.png");
+        catalog.iconChevronDown = Load("Icons/icon_chevron_down.png");
         // D108: Ana Üs duvarları (PixelCastle; Resources dışı → katalogdan).
         catalog.wallCrenellated = LoadCastle("wall_crenellated");
         catalog.wallVertical = LoadCastle("wall_vertical");

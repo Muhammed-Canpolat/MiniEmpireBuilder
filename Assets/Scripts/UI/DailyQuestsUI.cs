@@ -26,6 +26,15 @@ public sealed class DailyQuestsUI : MonoBehaviour
         return true;
     }
 
+    /// <summary>Sağ üst açılır menü (BaseDropMenu) "Görev" maddesi: görev penceresini açar (eski düğmeyle aynı ilk-kez ipucu).</summary>
+    public static void OpenFromMenu()
+    {
+        if (current == null) return;
+        current.Open();
+        FirstTimeTips.Show("quests", L.T("Her gün 3 yeni görev gelir. Üçünü de bitirirsen bonus elmas!",
+            "3 new quests every day. Finish all three for bonus gems!"));
+    }
+
     private void Start()
     {
         current = this;
@@ -36,7 +45,8 @@ public sealed class DailyQuestsUI : MonoBehaviour
         canvas.sortingOrder = 45;
         ReferenceUiVisuals.ConfigureCanvas(canvasObject.GetComponent<CanvasScaler>());
         safe = ReferenceUiVisuals.SafeArea(canvas.transform);
-        CreateSideButton();
+        // D109: bayrak açıkken Görev sağ üst açılır menüdedir (BaseDropMenu); eski sol düğme kurulmaz.
+        if (!MiniEmpireUiCatalog.DropMenuReady) CreateSideButton();
         DailyQuests.OnChanged += RefreshDot;
         RefreshDot();
     }

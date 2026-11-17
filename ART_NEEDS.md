@@ -119,3 +119,8 @@ parçalarından **türetilmiş** (`Tools/campaign_art/battle_props.py`, D91). Ge
 | # | Varlık | Dosya | Ölçü | Not |
 |---|---|---|---|---|
 | 24 | **EKSİK ASSET:** mavi konik çatılı yuvarlak köşe kulesi (referans `Docs/UIReference/ana-us-referans.png` dört köşe) | Assets/PixelCastle/PixelCastle/Sprites/tower_round_blue_roof.png | ≈200×250 px, 84 PPU, alt-orta pivot, tek kare | Şimdilik altta `tower_small_closed` boyasız, üstte `corner_outer_left/right`; renk/tint ile uydurma YOK. Gelince `BaseCastleWalls` köşe parçası değişir. |
+
+## 10. oturum (17 Kasım 2026): Ana Üs sağ üst droplist (D109)
+| # | Varlık | Dosya | Ölçü | Not |
+|---|---|---|---|---|
+| 25 | **EKSİK ASSET:** kupa simgesi `icon_trophy` (referans `Docs/UIReference/ana-us-droplist-acik.png` Etkinlik satırı) | Assets/MiniEmpireUI/MiniEmpireUI/Sprites/Icons/icon_trophy.png | ≈80×80 px, MiniEmpireUI stili, şeffaf zemin, tek kare, Bilinear | Gelene kadar Etkinlik satırı İKONSUZ (yalnız etiket); yer tutucu/başka ikon kullanılmaz. Görev satırı mevcut parşömen `ui_scroll`; referanstaki çapraz kılıç yalnız Sefer'de. |
