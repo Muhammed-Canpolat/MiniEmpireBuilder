@@ -44,14 +44,30 @@ MonoBehaviour:
     volume: 0.99
   baseWindLoop: {fileID: 0}
   baseBirdLoop: {fileID: 0}
+  baseAmbience:
+    clip: {fileID: 8300000, guid: 25334528765772846a772b438d39b052, type: 3}
+    volume: 1
+  islandAmbience:
+    clip: {fileID: 8300000, guid: 0a9a095cf61f741459228c47e6df75f2, type: 3}
+    volume: 1
+  stormAmbience:
+    clip: {fileID: 8300000, guid: cc0cf01a7535411469d7feddc7a18651, type: 3}
+    volume: 1
   buttonClick: {fileID: 0}
   buildingPlace: {fileID: 0}
-  goldCollect: {fileID: 0}
+  goldCollect: {fileID: 8300000, guid: b50693ce3424c2d42a2653267a176936, type: 3}
   levelUp: {fileID: 0}
-  swordHit: {fileID: 0}
+  swordHit: {fileID: 8300000, guid: 58e073bff647d8546aceb4c57cd47d15, type: 3}
   arrowShoot: {fileID: 0}
   enemyDeath: {fileID: 0}
   victory: {fileID: 0}
   defeat: {fileID: 0}
+  raidHorn: {fileID: 8300000, guid: a599ce48711b6b24a8958aff3328bc5e, type: 3}
+  arrowImpact: {fileID: 8300000, guid: 922eb45a3b44575478fa5a6e31ef0e7e, type: 3}
+  chop: {fileID: 8300000, guid: 71e10156d1d4c424da323747fdcde7fd, type: 3}
+  fireball: {fileID: 8300000, guid: 7f5d2d81e76cce946af6960dc957539e, type: 3}
+  waveStart:
+  - {fileID: 8300000, guid: a599ce48711b6b24a8958aff3328bc5e, type: 3}
+  - {fileID: 8300000, guid: aab863ca536eb5745b45801a2303a088, type: 3}
   musicVolume: 0.6
   sfxVolume: 0.85

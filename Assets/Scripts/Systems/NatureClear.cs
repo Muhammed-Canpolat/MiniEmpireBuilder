@@ -89,7 +89,11 @@ public static class NatureClear
         if (job != null) Drop(job);
         BaseBuildingVisual.SpawnDust(at, 140);
         if (!string.IsNullOrEmpty(reward)) FloatingReward.Spawn(at + Vector3.up * 0.8f, reward);
-        AudioManager.Instance?.PlaySfx("coin");
+        // 10. oturum (D110): "coin" anahtarının sesi yoktu. Ağaç/kütük = odun kesme, kaya = maden; çalı için uygun ses yok (sessiz).
+        bool wood = key.StartsWith("tree", System.StringComparison.OrdinalIgnoreCase) || key.StartsWith("stump", System.StringComparison.OrdinalIgnoreCase);
+        bool rock = key.StartsWith("rock", System.StringComparison.OrdinalIgnoreCase);
+        if (wood) AudioManager.Instance?.PlaySfx("chop");
+        else if (rock) AudioManager.Instance?.PlaySfx("goldCollect");
     }
 
     private static void Drop(Job job)

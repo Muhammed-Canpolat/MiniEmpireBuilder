@@ -33,6 +33,12 @@ public sealed class AudioLibrary : ScriptableObject
     [Header("Ana Üs ambiyansı (döngülü)")]
     public AudioClip baseWindLoop;
     public AudioClip baseBirdLoop;
+    [Tooltip("Ana Üs ortam sesi (Inside Day). Müzik ayarına bağlı, müziğin altında çalar.")]
+    public MusicTrack baseAmbience;
+    [Tooltip("Ada ortam sesi (Beach). Akın sürerken %50'ye iner, kesilmez.")]
+    public MusicTrack islandAmbience;
+    [Tooltip("Yalnız ada tanıtımında (Sea Storm).")]
+    public MusicTrack stormAmbience;
 
     [Header("Efektler")]
     public AudioClip buttonClick;
@@ -46,6 +52,14 @@ public sealed class AudioLibrary : ScriptableObject
     public AudioClip defeat;
     [Tooltip("Ada baskını boru sesi (Faz D). Boşsa sessiz.")]
     public AudioClip raidHorn;
+    [Tooltip("Ok/mızrak hedefe isabet edince (Bow Impact Hit 1).")]
+    public AudioClip arrowImpact;
+    [Tooltip("Ağaç/kütük kesme (chop 2).")]
+    public AudioClip chop;
+    [Tooltip("Ateşli Ok yeteneği (Fireball 1).")]
+    public AudioClip fireball;
+    [Tooltip("Düşman dalgası başlangıcı; sırayla biri çalınır (Wave Attack 1/2).")]
+    public AudioClip[] waveStart;
 
     [Header("Genel ses seviyeleri")]
     [Range(0f, 1f)] public float musicVolume = 0.6f;

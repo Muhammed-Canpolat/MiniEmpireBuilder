@@ -126,6 +126,9 @@ public class ProjectileController : MonoBehaviour
         
         onHitCallback?.Invoke();
         
+        if (type == ProjectileType.Spear || type == ProjectileType.Arrow)
+            AudioManager.Instance?.PlaySfx("arrowImpact");   // 10. oturum (D110): Bow Impact Hit
+
         // Mermi tipine göre çarpma efekti
         if (BattleVfxManager.Instance != null)
         {

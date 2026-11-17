@@ -130,6 +130,7 @@ public sealed class IslandArrow : MonoBehaviour
     private void Impact()
     {
         target.Hit(damage, charged, origin);
+        AudioManager.Instance?.PlaySfx("arrowImpact");   // 10. oturum (D110)
         if (fire)
         {
             target.Ignite(damage);

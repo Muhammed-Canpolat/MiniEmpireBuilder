@@ -37,6 +37,7 @@ public sealed class IslandIntro : MonoBehaviour
         ReferenceUiVisuals.ConfigureCanvas(root.GetComponent<CanvasScaler>());
         var intro = root.AddComponent<IslandIntro>();
         Current = intro;
+        AudioManager.Instance?.SetStormAmbience(true);   // 10. oturum (D110): Sea Storm yalnız tanıtımda
         intro.finished = () =>
         {
             if (save != null) { save.introSeen = true; GameManager.Instance?.SaveGame(); }
@@ -129,5 +130,8 @@ public sealed class IslandIntro : MonoBehaviour
         done?.Invoke();
     }
 
-    private void OnDestroy() { if (Current == this) Current = null; }
+    private void OnDestroy()
+    {
+        if (Current == this) { Current = null; AudioManager.Instance?.SetStormAmbience(false); }
+    }
 }

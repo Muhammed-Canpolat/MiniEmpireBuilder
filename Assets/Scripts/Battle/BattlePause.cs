@@ -19,6 +19,8 @@ public static class BattlePause
     private static float resumeScale = 1f;
 
     public static bool IsPaused => reasons.Count > 0;
+    /// <summary>Uygulama arka planda/odaksızsa ses açılmaz (AudioManager.SetAppPaused/SetAppFocused).</summary>
+    private static bool AppInBackground => AudioManager.Instance != null && AudioManager.Instance.InBackground;
     public static bool Has(string reason) => reasons.Contains(reason);
     public static event System.Action Changed;
 
@@ -38,7 +40,7 @@ public static class BattlePause
         if (reasons.Count == 0)
         {
             Time.timeScale = resumeScale;
-            AudioListener.pause = false;
+            AudioListener.pause = AppInBackground;
         }
         Changed?.Invoke();
     }
@@ -49,7 +51,7 @@ public static class BattlePause
         if (reasons.Count == 0) return;
         reasons.Clear();
         Time.timeScale = resumeScale > 0f ? resumeScale : 1f;
-        AudioListener.pause = false;
+        AudioListener.pause = AppInBackground;
         Changed?.Invoke();
     }
 

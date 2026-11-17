@@ -770,6 +770,7 @@ public class BattleManager : MonoBehaviour
             NextWaveAt = 0f;
 
             Debug.Log($"[BattleManager] Dalga {w + 1}/{currentLevel.waves.Count} başlıyor!");
+            AudioManager.Instance?.PlaySfx("waveStart");   // 10. oturum (D110): Wave Attack 1/2
             OnWaveChanged?.Invoke(w + 1, currentLevel.waves.Count);
 
             // Dalgadaki tüm düşmanları spawn et

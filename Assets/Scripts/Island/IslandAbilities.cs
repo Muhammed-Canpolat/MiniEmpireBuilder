@@ -92,6 +92,7 @@ public sealed class IslandAbilities : MonoBehaviour
                 IslandFx.FloatText(archer.Position + Vector2.up * 1.3f, L.T("ATEŞLİ OK!", "FIRE ARROW!"), new Color(1f, 0.55f, 0.2f), 4.5f);
                 IslandFx.Play("fire_2", archer.Position + Vector2.up * 0.5f, 1.1f, 14f);
                 IslandAbilityArt.Sfx("arrowShoot");
+                IslandAbilityArt.Sfx("fireball");   // 10. oturum (D110): Fireball 1 = Ateşli Ok fırlatışı
                 break;
             case Kind.Volley:
                 IslandFx.FloatText(center + Vector2.up * 1f, L.T("OK YAĞMURU!", "VOLLEY!"), new Color(1f, 0.9f, 0.5f), 4.5f);
