@@ -46,7 +46,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaseGarrisonVisual
   anchors:
   - role: 2
-    cell: {x: 1.1, y: -0.2}
-  - role: 2
-    cell: {x: 2.8, y: -0.2}
+    cell: {x: 1.05, y: 0.6}
   arrowSprite: {fileID: 0}

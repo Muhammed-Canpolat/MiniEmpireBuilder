@@ -168,7 +168,7 @@ public class PlayerSaveData
             isUnlocked = true
         });
 
-        // Okçu Kulesi — kilitli
+        // Okçu Kışlası — kilitli
         data.buildings.Add(new BuildingSaveEntry
         {
             buildingType = BuildingType.ArcherTower,

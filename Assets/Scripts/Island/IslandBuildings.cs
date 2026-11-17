@@ -226,7 +226,7 @@ public sealed class IslandBuilding : MonoBehaviour
 }
 
 /// <summary>
-/// Gözcü Kulesi (§7.5): sefer Okçu Kulesi eğrisiyle (<c>Progression.TowerDamage/TowerUnits</c>) tekneleri, kıyıya çıkanları
+/// Gözcü Kulesi (§7.5): sefer Okçu Kışlası eğrisiyle (<c>Progression.TowerDamage/TowerUnits</c>) tekneleri, kıyıya çıkanları
 /// ve uçanları vurur. Menzil 6 (+1,5 yükseklik ≥1). Adacık kulesine yakın dövüşçü ulaşamaz (sudaki ada); menzililer vurabilir.
 /// </summary>
 public sealed class IslandTower : MonoBehaviour

@@ -56,8 +56,7 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
                     new Anchor(Role.RoofArcher, 1.6f, 3.25f),
                     new Anchor(Role.RoofArcher, 7.4f, 3.25f) };
             case BuildingType.ArcherTower:
-                return new[] { new Anchor(Role.PracticeArcher, 1.1f, -0.2f),
-                    new Anchor(Role.PracticeArcher, 2.8f, -0.2f) };
+                return new[] { new Anchor(Role.PracticeArcher, 1.05f, 0.6f) };   // bug 12: tek okçu, Archery avlusu
             case BuildingType.CannonTower:
                 return new[] { new Anchor(Role.CannonCrew, 1.5f, 1.9f) };
             case BuildingType.Monastery:

@@ -279,8 +279,8 @@ public sealed class VictoryReferenceView : MonoBehaviour
                     starReason.gameObject.SetActive(true);
                     string advice = !EarlyDefeat ? ""
                         : GameManager.Instance.GetMainBaseLevel() <= 1
-                        ? "\n<color=#F2D68A>" + L.T("Üsse dön: Ana Üs'ü yükselt (2. seviyede Okçu Kulesi açılır) ve kahramanını güçlendir.",
-                            "Head back to base: upgrade the Main Base (Archer Tower unlocks at Lv. 2) and level up your hero.") + "</color>"
+                        ? "\n<color=#F2D68A>" + L.T("Üsse dön: Ana Üs'ü yükselt (2. seviyede Okçu Kışlası açılır) ve kahramanını güçlendir.",
+                            "Head back to base: upgrade the Main Base (Archer Barracks unlocks at Lv. 2) and level up your hero.") + "</color>"
                         : "\n<color=#F2D68A>" + L.T("Üsse dön: kahramanını, kulelerini ve Ana Üs'ü yükselt, sonra tekrar dene.",
                             "Head back to base: level up your hero, towers and Main Base, then try again.") + "</color>";
                     starReason.text = (reason.Length > 0 ? $"<color=#E07A5F>{reason}</color>\n" : "") +

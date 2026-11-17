@@ -208,7 +208,7 @@ public class Session3Tests
         }
         int Badge() => (int)T("RadialDockMenu").GetMethod("BuildBadge").Invoke(null, null);
         Assert.AreEqual(0, Badge(), "inşa edilebilecek her şey kurulu → İNŞA ET rozeti yok (yükseltme binaya dokunarak yapılır)");
-        // Bir Okçu Kulesi kaldırılınca yeniden kurulabilir → rozet
+        // Bir Okçu Kışlası kaldırılınca yeniden kurulabilir → rozet
         var archer = placedList.Cast<object>().Last(p => (string)Field(p, "buildingType") == "ArcherTower");
         placedList.Remove(archer);
         Assert.AreEqual(1, Badge(), "eksik yapı + altın + boş inşaatçı → rozet");

@@ -20,7 +20,7 @@ public enum WeaponType
 public enum BuildingType
 {
     MainBase,       // Ana Üs
-    ArcherTower,    // Okçu Kulesi
+    ArcherTower,    // Okçu Kışlası
     CannonTower,    // Topçu Kulesi
     GoldMine,       // Altın Madeni
     Monastery,      // Manastır — dost birimleri iyileştirir

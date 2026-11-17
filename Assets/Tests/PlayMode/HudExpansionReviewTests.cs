@@ -204,7 +204,7 @@ public class HudExpansionReviewTests
             moveTarget = candidate;
             foundMoveTarget = true;
         }
-        Assert.IsTrue(foundMoveTarget, "A valid Archer Tower move cell is available");
+        Assert.IsTrue(foundMoveTarget, "A valid Archer Barracks move cell is available");
         var placement = Object.FindFirstObjectByType(Type("PlacementController"));
         placement.GetType().GetMethod("BeginMove").Invoke(placement, new[] { spawned });
         Capture("move-item-05.png");

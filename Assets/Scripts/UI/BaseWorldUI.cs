@@ -843,7 +843,7 @@ public class BaseWorldUI : MonoBehaviour
         switch (type)
         {
             case BuildingType.MainBase: return L.T("Ana Üs", "Main Base");
-            case BuildingType.ArcherTower: return L.T("Okçu Kulesi", "Archer Tower");
+            case BuildingType.ArcherTower: return L.T("Okçu Kışlası", "Archer Barracks");
             case BuildingType.CannonTower: return L.T("Topçu Kulesi", "Cannon Tower");
             case BuildingType.GoldMine: return L.T("Altın Madeni", "Gold Mine");
             case BuildingType.Monastery: return L.T("Manastır", "Monastery");

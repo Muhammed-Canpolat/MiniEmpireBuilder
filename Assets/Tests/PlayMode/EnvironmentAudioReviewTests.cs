@@ -78,7 +78,7 @@ public class EnvironmentAudioReviewTests
             Assert.NotNull(placed);
             if (entry[0] == "CannonTower")
             {
-                // 5. oturum (D62): (5,18) Okçu Kulesinin görünen tepesine biniyordu; en yakın geçerli yere taşınır
+                // 5. oturum (D62): (5,18) Okçu Kışlasının görünen tepesine biniyordu; en yakın geçerli yere taşınır
                 var spot = (Vector3)map.GetType().GetMethod("NearestFreeSpot").Invoke(map,
                     new object[] { new Vector2Int(3, 2), new Vector3(5f, 18f), placed });
                 Assert.IsTrue((bool)map.GetType().GetMethod("MoveObjectTo").Invoke(map,

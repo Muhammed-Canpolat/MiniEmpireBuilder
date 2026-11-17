@@ -228,7 +228,7 @@ public class Session5UiTests
         var map = T("BaseMapManager").GetProperty("Instance").GetValue(null);
         var objs = ((IEnumerable)Prop(map, "MapObjects")).Cast<object>().ToList();
         var tower = objs.FirstOrDefault(o => Field(o, "objectType").ToString() == "Building" && Field(o, "buildingType")?.ToString() == "ArcherTower");
-        Assert.NotNull(tower, "okçu kulesi");
+        Assert.NotNull(tower, "okçu kışlası");
         var cam = Camera.main;
         var col = ((GameObject)Field(tower, "gameObject")).GetComponent<Collider2D>();
         cam.transform.position = new Vector3(col.bounds.center.x, col.bounds.center.y, cam.transform.position.z);
