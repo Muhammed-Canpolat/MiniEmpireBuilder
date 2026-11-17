@@ -11,7 +11,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta` (bina sprite'la
 | # | Bölüm | Durum | Commit | Not |
 |---|---|---|---|---|
 | 1 | Üst bar | BİTTİ | 03d6bea | D106; Bilinear filtre; kalan: üst boşluk/kalkan taşması yok, yazı konturu yok |
-| 2 | Alt bar | BEKLİYOR | | |
+| 2 | Alt bar | BİTTİ | a4675ad | D107; radyal menü bayrakla kapalı (kod duruyor); kapalı barda alttaki şerit koyu kalıyor (kamera sabit kararı) |
 | 3 | Duvarlar | BEKLİYOR | | |
 | 4 | Droplist | BEKLİYOR | | |
 | 5 | Sesler | BEKLİYOR | | |
