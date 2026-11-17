@@ -10,7 +10,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta` (bina sprite'la
 
 | # | Bölüm | Durum | Commit | Not |
 |---|---|---|---|---|
-| 1 | Üst bar | BEKLİYOR | | |
+| 1 | Üst bar | BİTTİ | 03d6bea | D106; Bilinear filtre; kalan: üst boşluk/kalkan taşması yok, yazı konturu yok |
 | 2 | Alt bar | BEKLİYOR | | |
 | 3 | Duvarlar | BEKLİYOR | | |
 | 4 | Droplist | BEKLİYOR | | |
