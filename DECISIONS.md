@@ -1006,3 +1006,6 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 - 20 (kanıt): ada BattleScene'de çalıştığı için `AudioSettingsUI.Open` “savaş aktif değil” diye dönüyordu; ada oturumunda savaş kipi kapalı (düğme yeri aynı).
 - 21: Kıyı Kalesi yükseltilirken panelde süre gizliydi → gösterilir; dünya sayacı ana üssün `Progression.FormatDuration` biçimiyle.
 - Gerileme (kelimeler yapışıyor, D113/D118 ekran görüntüleri; kanıt): Alegreya Sans Dinamik fontlarında boşluk glifi yalnız ~0,15 em (14,4/90 pt; Cinzel 22,5/90) — 10–11 pt koyu SDF yazıda kelimeler kayboluyordu. `TmpFontBootstrap.EnsureWordSpace`: her `CreateDynamicFont` boşluk/NBSP/noktalama/rakamı önceden ekler ve boşluk ilerlemesini ≥0,26 em yapar. Testler: `TmpFontBootstrapTests.DynamicFonts_KeepWordSpacing`. Ayarlar paneli kapanışı (DOTween SetUpdate(true), SetActive(false)) gerçek hata değildi; görüntüdeki panel, testin kapanıştan 1 kare sonra çekmesinin artığıydı (test artık timeScale 0'da gerçek süre bekleyip panel/engelleyici kapalı doğruluyor).
+
+## D119 — Grup 7 ana üs
+- 13: BaseCameraController.HandleInput artık sıkıştırma/tekerlek zoom dallarını hiç çalıştırmıyor (duvar kapalı olsa da); HandlePinch kaldırıldı, ZoomBy test için duruyor; tek parmak kaydırma korunur.

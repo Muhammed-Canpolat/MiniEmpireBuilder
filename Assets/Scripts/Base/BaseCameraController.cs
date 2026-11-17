@@ -25,7 +25,6 @@ public sealed class BaseCameraController : MonoBehaviour
     private Camera cam;
     private bool panning;
     private Vector2 lastPanPosition;
-    private float lastPinchDistance;
 
     private void Awake()
     {
@@ -57,22 +56,9 @@ public sealed class BaseCameraController : MonoBehaviour
 
     private void HandleInput()
     {
-        if (FixedFraming) { panning = false; lastPinchDistance = 0f; return; }
-        if (TouchCount() >= 2)
-        {
-            panning = false;
-            HandlePinch();
-            return;
-        }
-        lastPinchDistance = 0f;
-
-        if (Mouse.current != null)
-        {
-            float scroll = Mouse.current.scroll.ReadValue().y;
-            Vector2 mouse = Mouse.current.position.ReadValue();
-            if (Mathf.Abs(scroll) > 0.01f && !IsOverUi(mouse))
-                ZoomBy(Mathf.Pow(0.9f, scroll / 120f), mouse);
-        }
+        if (FixedFraming) { panning = false; return; }
+        // Bug 13: sıkıştırma/tekerlek zoom girdisi hiçbir durumda kadrajı değiştirmez (ZoomBy yalnız kod/test için).
+        if (TouchCount() >= 2) { panning = false; return; }
 
         if (!ReadPointer(out Vector2 position, out bool pressed, out bool down, out _))
         {
@@ -95,18 +81,6 @@ public sealed class BaseCameraController : MonoBehaviour
             cam.transform.position = p;
         }
         lastPanPosition = position;
-    }
-
-    private void HandlePinch()
-    {
-        var touches = new List<Vector2>(2);
-        foreach (var touch in Touchscreen.current.touches)
-            if (touch.press.isPressed && touches.Count < 2) touches.Add(touch.position.ReadValue());
-        if (touches.Count < 2) return;
-        float distance = Vector2.Distance(touches[0], touches[1]);
-        if (lastPinchDistance > 1f && distance > 1f)
-            ZoomBy(lastPinchDistance / distance, (touches[0] + touches[1]) * 0.5f);
-        lastPinchDistance = distance;
     }
 
     /// <summary>Boyutu çarpanla değiştirir (&lt;1 yaklaştırır); ekran noktasının altındaki dünya noktası sabit kalır.</summary>
