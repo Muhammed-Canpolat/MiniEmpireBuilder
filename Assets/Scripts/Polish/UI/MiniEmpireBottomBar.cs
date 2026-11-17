@@ -125,8 +125,8 @@ public sealed class MiniEmpireBottomBar : MonoBehaviour
             if (i == 0) buildDotHost = rt;
             if (i == 3) islandDotHost = rt;
         }
-        if (buildDotHost != null) AddDot(buildDotHost, new Vector2(-9f, -7f));
-        if (islandDotHost != null) AddDot(islandDotHost, new Vector2(-9f, -7f));
+        if (buildDotHost != null) AddDot(buildDotHost, new Vector2(-10f, -10f));
+        if (islandDotHost != null) AddDot(islandDotHost, new Vector2(-10f, -10f));
 
         BuildTab(hud, c);
 
@@ -197,18 +197,18 @@ public sealed class MiniEmpireBottomBar : MonoBehaviour
         {
             labelRt.SetParent(plate, false);
             labelRt.anchorMin = Vector2.zero; labelRt.anchorMax = Vector2.one;
-            labelRt.offsetMin = new Vector2(1f, 0f); labelRt.offsetMax = new Vector2(-1f, 0f);
+            labelRt.offsetMin = new Vector2(6f, 0f); labelRt.offsetMax = new Vector2(-6f, 0f);
             var text = labelRt.GetComponent<TextMeshProUGUI>();
             if (text != null)
             {
                 text.text = label;
                 ReferenceUiVisuals.ApplyFont(text, 14f, Color.white, false, true);
                 text.enableAutoSizing = true;
-                text.fontSizeMin = 8f;
-                text.fontSizeMax = 14f;
-                text.characterSpacing = 0.3f;
+                text.fontSizeMin = 6f;
+                text.fontSizeMax = 13f;
+                text.characterSpacing = 0f;
                 text.textWrappingMode = TextWrappingModes.NoWrap;
-                text.overflowMode = TextOverflowModes.Ellipsis;
+                text.overflowMode = TextOverflowModes.Overflow;
                 text.alignment = TextAlignmentOptions.Center;
                 text.raycastTarget = false;
             }
@@ -242,7 +242,7 @@ public sealed class MiniEmpireBottomBar : MonoBehaviour
         tabImage.sprite = c.arrowDown;
         tabImage.preserveAspect = true;
         tabImage.raycastTarget = false;
-        AddDot(tab, new Vector2(-12f, -5f));
+        AddDot(tab, new Vector2(-14f, -8f));
         tabDot = tab.Find("Badge").gameObject;
         tabDot.SetActive(false);
         tab.SetAsLastSibling();

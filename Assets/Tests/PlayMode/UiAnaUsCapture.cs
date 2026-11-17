@@ -102,7 +102,7 @@ public class UiAnaUsCapture
         Assert.NotNull(hud);
         foreach (var name in new[] { "TopBarBG", "GoldPill", "GemPill", "BuilderPill", "LevelCrest", "ResourceTopBar/MeatPill", "ResourceTopBar/WoodPill" })
             Assert.NotNull(hud.Find(name), name);
-        Assert.AreEqual(gold.ToString(), TextOf(hud.Find("GoldPill/GoldText")), "altın canlı");
+        Assert.AreEqual(Call("NumberFormat", "Short", (long)gold, (long)(int)Field(T("FeatureConfig").GetProperty("Instance").GetValue(null), "topBarShortFrom")), TextOf(hud.Find("GoldPill/GoldText")), "altın canlı");
         Assert.AreEqual("8", TextOf(hud.Find("GemPill/GemText")), "elmas canlı");
         Assert.AreEqual(level.ToString(), TextOf(hud.Find("LevelCrest/Number")), "seviye kalkanda");
         Assert.AreEqual("43", TextOf(hud.Find("ResourceTopBar/MeatPill/Value")));
@@ -123,49 +123,8 @@ public class UiAnaUsCapture
         Shoot(w, h, outPath);
     }
 
-    private static void Shoot(int w, int h, string outPath)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(outPath));
-        var camera = Camera.main;
-        Assert.NotNull(camera);
-        var texture = new RenderTexture(w, h, 24);
-        var rect = camera.rect;
-        camera.rect = new Rect(0, 0, 1, 1);
-        camera.targetTexture = texture;
-        camera.aspect = (float)w / h;
-        var changed = new System.Collections.Generic.List<(Canvas canvas, RenderMode mode, Camera cam, int order, bool over)>();
-        foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
-        {
-            if (!canvas.isRootCanvas || canvas.renderMode != RenderMode.ScreenSpaceOverlay) continue;
-            changed.Add((canvas, canvas.renderMode, canvas.worldCamera, canvas.sortingOrder, canvas.overrideSorting));
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = camera;
-            canvas.planeDistance = 10f;
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = 2000 + canvas.sortingOrder;
-        }
-        Canvas.ForceUpdateCanvases();
-        camera.Render();
-        var previous = RenderTexture.active;
-        RenderTexture.active = texture;
-        var pixels = new Texture2D(w, h, TextureFormat.RGB24, false);
-        pixels.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-        pixels.Apply();
-        File.WriteAllBytes(outPath, pixels.EncodeToPNG());
-        Object.Destroy(pixels);
-        RenderTexture.active = previous;
-        camera.targetTexture = null;
-        camera.rect = rect;
-        camera.ResetAspect();
-        texture.Release();
-        Object.Destroy(texture);
-        foreach (var (canvas, mode, cam, order, over) in changed)
-        {
-            if (canvas == null) continue;
-            canvas.renderMode = mode; canvas.worldCamera = cam; canvas.sortingOrder = order; canvas.overrideSorting = over;
-        }
-        Debug.Log("UiAnaUsCapture wrote " + outPath);
-    }
+    /// <summary>Oyundaki kamerayla (duvar kadrajı + bar bandı) çeker; tüm oranlarda aynı yol.</summary>
+    private static void Shoot(int w, int h, string outPath) => ShootFramed(w, h, outPath);
 
     /// <summary>Alt bar (D107): bar açık ve kapalı görüntüsü + canlı denetimler. UI_CAPTURE_OUT = açık görüntü; kapalı olan "-kapali" ekiyle yazılır.</summary>
     [UnityTest]
@@ -390,9 +349,12 @@ public class UiAnaUsCapture
     public IEnumerator CaptureBaseDropMenu()
     {
         string dir = CaptureDir;
+        int cw = int.Parse(Env("UI_CAPTURE_W", "1080")), ch = int.Parse(Env("UI_CAPTURE_H", "1920"));
+        string name = Env("UI_CAPTURE_NAME", "");   // doluysa: <ad>-kapali.png / <ad>-droplist-acik.png
+        int goldAmount = int.Parse(Env("UI_CAPTURE_GOLD", "2581"));
         PlayerPrefs.SetInt("MEB_BaseBarOpen", 1);
-        if (Full) yield return LoadBase(7, 43, 227, 2581, 8, save => FillReferenceBase(save, 4));
-        else yield return LoadBase(7, 43, 227, 2581, 8);
+        if (Full) yield return LoadBase(7, 43, 227, goldAmount, 8, save => FillReferenceBase(save, 4));
+        else yield return LoadBase(7, 43, 227, goldAmount, 8);
         yield return new WaitForSecondsRealtime(1.0f);
         T("AwayReportUI").GetMethod("CloseIfOpen").Invoke(null, null);
         T("DailyRewardsUI").GetMethod("CloseIfOpen").Invoke(null, null);
@@ -405,16 +367,16 @@ public class UiAnaUsCapture
         var type = menu.GetType();
         type.GetMethod("Refresh").Invoke(menu, null);
         Assert.IsTrue((bool)type.GetProperty("ToggleBadgeShown").GetValue(menu), "günlük ödül hazır: ok düğmesinde rozet");
-        ShootFramed(1080, 1920, Path.Combine(dir, "04-droplist-kapali.png"));
+        ShootFramed(cw, ch, Path.Combine(dir, name == "" ? "04-droplist-kapali.png" : name + "-kapali.png"));
         type.GetMethod("Open").Invoke(menu, null);
         yield return new WaitForSecondsRealtime(0.5f);
         Assert.AreEqual(3, (int)type.GetProperty("RowCount").GetValue(menu));
-        ShootFramed(1080, 1920, Path.Combine(dir, "04-droplist-acik.png"));
+        ShootFramed(cw, ch, Path.Combine(dir, name == "" ? "04-droplist-acik.png" : name + "-droplist-acik.png"));
         type.GetMethod("Close").Invoke(menu, null);
         yield return new WaitForSecondsRealtime(0.4f);
         type.GetMethod("ShowComingSoon").Invoke(menu, null);
         yield return null;
-        ShootFramed(1080, 1920, Path.Combine(dir, "04-droplist-etkinlik.png"));
+        if (name == "") ShootFramed(cw, ch, Path.Combine(dir, "04-droplist-etkinlik.png"));
         type.GetMethod("CloseComingSoon").Invoke(menu, null);
         PlayerPrefs.DeleteKey("MEB_BaseBarOpen");
     }

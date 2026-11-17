@@ -944,3 +944,10 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 - **Bug 27 kök neden:** `DOFade` tween'leri ölçekli zamandaydı; savaş/ada/ayarlar `Time.timeScale=0` bırakıp sahneden çıkınca solma donuyor, `OnComplete(Stop)` çalışmıyor → eski parça kısık çalmaya devam ediyor, yenisi de sesi 0'da bekliyordu (üst üste/geriden çalma). Düzeltme: tüm ses tween'leri `SetUpdate(true)`; `OnSceneChanged` başında kullanılmayan müzik/ortam kaynağı gerçek zamanlı 0,6 sn solup durur, katmanlar kesilir. Regresyon: `AudioSfxPackTests.SceneExitFadeCompletesWhileTimeScaleIsZero` (SetUpdate kaldırılınca düşer).
 - **Import:** 7 WAV → ADPCM + mono (Wave Attack ×2 Compressed In Memory, diğerleri Decompress On Load + preload); 9 OGG → Streaming, Vorbis %60, preload kapalı, Load In Background. Döngü kopması için kod içinde ek solma YOK (Vorbis streaming döngüsü örnek-hassas); cihazda dinlenecek, klik varsa o klip Compressed In Memory'ye alınır.
 - **Testler:** `AudioSfxPackTests` (10): eşleme, import (.meta), hız/eşzamanlı sınırı, dalga klibi dönüşümü, olay→klip (NatureClear), Müzik/Efekt ayarı, Ana Üs↔Savaş↔Ana Üs, Ana Üs↔Ada↔Ana Üs, timeScale=0 çıkış, arka plan/odak.
+
+## D111 — Ana Üs UI son kontrol düzeltmeleri
+- Üst bar hap yazıları: et hapı genişletildi (ağırlık 1,1), taşma "..." yerine Overflow + min 5 pt; 9:21'de "43" artık görünür.
+- Rozetler (ok düğmesi, alt bar, sekme, droplist satırı) anchor'a göre içeri çekildi; satır etiketi "..." kesmez.
+- Kalkan "ANA ÜS" yazısı küçültüldü/daraltıldı; alt bar etiketlerine kenar boşluğu (6) ve max 13 pt.
+- UiAnaUsCapture: tüm çekimler oyundaki kameradan (kadrajlı); droplist çekimi UI_CAPTURE_W/H/NAME/GOLD env'li; altın assert'i NumberFormat.Short ile.
+- Yalnız görünüm/test; oyun mantığı, ekonomi, kayıt değişmedi.

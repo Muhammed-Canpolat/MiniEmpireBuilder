@@ -85,7 +85,7 @@ public static class MiniEmpireTopBarSkin
     }
 
     /// <summary>Hap genişlik payı: altın (4-5 hane) daha geniş, et dar (referans oranları).</summary>
-    private static float SlotWeight(string id) => id == "gold" ? 1.3f : id == "wood" ? 1.15f : id == "meat" ? 0.95f : id == "builder" ? 1.1f : 1f;
+    private static float SlotWeight(string id) => id == "gold" ? 1.3f : id == "wood" ? 1.15f : id == "meat" ? 1.1f : id == "builder" ? 1.1f : 1f;
 
     private static void BuildBanner(Transform hud, string name, Sprite sprite, float centerX)
     {
@@ -135,16 +135,16 @@ public static class MiniEmpireTopBarSkin
         {
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(27f, 0f);
-            textRect.offsetMax = new Vector2(-4f, 0f);
+            textRect.offsetMin = new Vector2(26f, 0f);
+            textRect.offsetMax = new Vector2(-3f, 0f);
             var tmp = textRect.GetComponent<TextMeshProUGUI>();
             if (tmp != null)
             {
                 // Büyük sayı taşmasın: tek satır + oto boyut (NumberFormat.Short zaten 10K+ kısaltır).
                 tmp.textWrappingMode = TextWrappingModes.NoWrap;
-                tmp.overflowMode = TextOverflowModes.Ellipsis;
+                tmp.overflowMode = TextOverflowModes.Overflow;
                 tmp.enableAutoSizing = true;
-                tmp.fontSizeMin = 8f;
+                tmp.fontSizeMin = 5f;
                 tmp.fontSizeMax = 16f;
                 tmp.alignment = TextAlignmentOptions.Left;
                 tmp.raycastTarget = false;

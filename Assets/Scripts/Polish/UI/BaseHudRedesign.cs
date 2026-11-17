@@ -397,11 +397,11 @@ public sealed class LevelCrest : MonoBehaviour
             number.fontSizeMin = 14f;   // 1-2 haneli seviye (1..15) kalkana sığar
             number.fontSizeMax = 26f;
             var label = ReferenceUiVisuals.Text(root, "Caption", L.T("ANA ÜS", "BASE"), 7, ReferenceUiVisuals.Light,
-                TextAlignmentOptions.Center, new Vector2(0.2f, 0.15f), new Vector2(0.8f, 0.34f),
+                TextAlignmentOptions.Center, new Vector2(0.28f, 0.2f), new Vector2(0.72f, 0.37f),
                 Vector2.zero, Vector2.zero, title: true);
             label.enableAutoSizing = true;
-            label.fontSizeMin = 4f;
-            label.fontSizeMax = 6.5f;
+            label.fontSizeMin = 3f;
+            label.fontSizeMax = 5.5f;
             label.textWrappingMode = TextWrappingModes.NoWrap;
             Refresh(true);
             return;

@@ -143,7 +143,7 @@ public sealed class BaseDropMenu : MonoBehaviour
         chevronImage.raycastTarget = false;
         SetAngle(ClosedAngle);
 
-        toggleBadge = MakeBadge(toggle, 16f, new Vector2(-1f, -1f), true);
+        toggleBadge = MakeBadge(toggle, 16f, new Vector2(-10f, -10f), true);
         toggleBadge.SetActive(false);
 
         RebuildRows();
@@ -203,14 +203,14 @@ public sealed class BaseDropMenu : MonoBehaviour
         }
         var label = ReferenceUiVisuals.Text(rt, "Label", item.Label, 13f, Color.white,
             icon != null ? TextAlignmentOptions.Left : TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(left, 1f), new Vector2(-5f, -1f), false, true);
+            Vector2.zero, Vector2.one, new Vector2(left, 1f), new Vector2(-8f, -1f), false, true);
         label.fontSizeMin = 9f;
         label.textWrappingMode = TextWrappingModes.NoWrap;
-        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.overflowMode = TextOverflowModes.Overflow;
         label.raycastTarget = false;
 
         var row = new Row { item = item, rt = rt };
-        row.badge = MakeBadge(rt, 14f, new Vector2(-3f, -3f), false);
+        row.badge = MakeBadge(rt, 12f, new Vector2(-7f, -4f), false);
         row.badge.SetActive(false);
         return row;
     }
