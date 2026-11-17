@@ -36,8 +36,8 @@ public sealed class BaseLevelBanner : MonoBehaviour
         rect.offsetMin = new Vector2(12f, 8f);
         rect.offsetMax = new Vector2(-12f, -8f);
         text = child.GetComponent<TextMeshProUGUI>();
+        ReferenceUiVisuals.ApplyFont(text, 27f, new Color(1f, 0.85f, 0.52f), bodyBold: true);
         text.alignment = TextAlignmentOptions.Center;
-        text.fontSize = 27f;
         text.color = new Color(1f, 0.85f, 0.52f);
         root.SetActive(false);
         if (GameManager.Instance != null)
@@ -71,9 +71,9 @@ public sealed class BaseLevelBanner : MonoBehaviour
         group.DOKill();
         banner.localScale = Vector3.one * 0.9f;
         group.alpha = 0f;
-        banner.DOScale(1f, 0.3f).SetEase(Ease.OutBack);
-        group.DOFade(1f, 0.2f).OnComplete(() =>
-            group.DOFade(0f, 0.35f).SetDelay(2.2f)
+        banner.DOScale(1f, 0.3f).SetEase(Ease.OutBack).SetUpdate(true);
+        group.DOFade(1f, 0.2f).SetUpdate(true).OnComplete(() =>
+            group.DOFade(0f, 0.35f).SetDelay(2.2f).SetUpdate(true)
                 .OnComplete(() => banner.gameObject.SetActive(false)));
     }
 }

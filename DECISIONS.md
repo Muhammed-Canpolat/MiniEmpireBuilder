@@ -958,3 +958,11 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
   ajan dosyası esas alındı: alt ajan commit ATMAZ, yönetici derleme/`git status` kontrolünden sonra grup commit'ini atar.
 - Model: `gameplay-engineer` Sonnet. Opus grupları (2, 3, 4, 9) için uygulama genel alt ajan + Opus ile yapılır. `explorer` Haiku (salt okuma, kök neden taraması); Opus gruplarında kök neden taraması da uygulayıcı Opus ajanına bırakılmaz, önce explorer çalışır.
 - Grup 9 (Depo): görev "ben onaylayınca uygula" diyor; yönetici talimatı "onay bekleme, planı kendin gözden geçir" → plan DECISIONS'a yazılıp ayrı commit'lenir, yönetici incelemesinden sonra uygulanır.
+
+## D113 — Grup 1 iOS yazılar (bug 2, 3, 5, 10, 24)
+- Bulgu: Font atanmadan oluşturulan TMP yazıları statik "LiberationSans SDF" varsayılanını kullanıyordu (fallback listesi boş, Türkçe/özel glif yok); ReferenceUiVisuals'in çalışma anında ürettiği Dinamik fontların ise shader'ı `Shader.Find("TextMeshPro/Mobile/Distance Field")` ile bulunuyor (iOS build'inde ayıklanma riski; varsayılan font malzemesi aynı shader'a bağlı olduğundan KANITLANMADI, H2 zayıf). Gerçek cihaz kanıtı yok; kök neden kısmen TAHMİN.
+- Çözüm tek noktada: `Polish/UI/TmpFontBootstrap.cs` (BeforeSceneLoad): varsayılan fonta Dinamik Türkçe (Alegreya, Â/â dahil) fallback eklenir; font atanmamış TMP yazıları TEXT_CHANGED olayında güvenli Dinamik fonta geçirilir; CreateDynamicFont shader yoksa varsayılan fontun shader'ına bağlar. ReferenceUiVisuals.CreateTurkishFont buna devredildi.
+- BaseLevelBanner (bug 10): font ApplyFont ile atanır, tween'ler SetUpdate(true) (timeScale bağımsız). ProjectSettings/GraphicsSettings/paket değişmedi.
+- Bug 3 yeri: GameManager.cs:934 (etiket) ve Kahraman sekmeleri; bug 24: Island/IslandHud.cs:717 (ReferenceUiVisuals.Text, başlık fontu Cinzel Dinamik, → glifi yok). Cihazda doğrulama gerekir.
+- Test: TmpFontBootstrapTests (PlayMode) geçti.
+- D113 ek: font değişiminde outline/face rengi korunur (Swap), ReferenceUiVisuals gövde fontu TmpFontBootstrap.BodyFont ile tek atlas; testte kontur korunumu denetlenir.

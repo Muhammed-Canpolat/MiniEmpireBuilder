@@ -120,8 +120,7 @@ public static class ReferenceUiVisuals
         }
         if (!title && bodyFont == null)
         {
-            var font = Resources.Load<Font>("Fonts/AlegreyaSans-Medium");
-            if (font != null) bodyFont = CreateTurkishFont(font);
+            bodyFont = TmpFontBootstrap.BodyFont; // tek atlas
         }
         if (bodyBold && bodyBoldFont == null)
         {
@@ -132,14 +131,7 @@ public static class ReferenceUiVisuals
         if (chosen != null) tmp.font = chosen;
     }
 
-    private static TMP_FontAsset CreateTurkishFont(Font source)
-    {
-        var asset = TMP_FontAsset.CreateFontAsset(source);
-        asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-        if (!asset.TryAddCharacters(TurkishCharacters, out string missing) && !string.IsNullOrEmpty(missing))
-            Debug.LogWarning($"[UI Font] {source.name} eksik Türkçe karakterler: {missing}");
-        return asset;
-    }
+    private static TMP_FontAsset CreateTurkishFont(Font source) => TmpFontBootstrap.CreateDynamicFont(source);
 
     public static Sprite ToastSprite()
     {
