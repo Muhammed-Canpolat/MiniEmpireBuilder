@@ -164,6 +164,8 @@ public class GameManager : MonoBehaviour
         BuildingData mine = Buildings[BuildingType.GoldMine];
         if (!mine.isUnlocked || mine.level <= 0)
             return 0;
+        // D121: maden depodayken kapasite 0 (tür seviyesi tamamlanmış bina yoksa korunur: RecomputeTypeLevel best==0).
+        if (!DepotService.IsPlaced(BuildingType.GoldMine)) return 0;
 
         return MineCapacityAt(mine.level);
     }
@@ -361,6 +363,17 @@ public class GameManager : MonoBehaviour
         data.ApplyLevelStats();
         var entry = PlayerData?.buildings?.Find(e => e.buildingType == type);
         if (entry != null) entry.level = data.level;
+    }
+
+    /// <summary>
+    /// D121: yerleşik bina listesi değişti (depoya alma / depodan kurma): tür seviyeleri tamamlanmış binalardan yeniden hesaplanır,
+    /// maden deposu göstergeleri yenilenir. Kaydetmez.
+    /// </summary>
+    public void RefreshPlacedBuildingState()
+    {
+        if (PlayerData == null || Buildings == null) return;
+        foreach (var type in new List<BuildingType>(Buildings.Keys)) RecomputeTypeLevel(type);
+        OnGoldMineStoredChanged?.Invoke(PlayerData.goldMineStoredGold, GetGoldMineStorageCapacity());
     }
 
     public PlacedBuildingData FindPlaced(string slotId) =>
@@ -1191,7 +1204,8 @@ public class GameManager : MonoBehaviour
     {
         float boost = includeBoost && MineBoostActive ? 2f : 1f;
         if (BattleCards.IsRoyal) boost *= 1f + GemEconomy.RoyalMineBonus; // Kraliyet: +%20 maden
-        if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked)
+        // D121: maden depodayken üretim yok (çevrimdışı birikim gps≤0 dalıyla durur, zaman damgası ilerler).
+        if (Buildings.ContainsKey(BuildingType.GoldMine) && Buildings[BuildingType.GoldMine].isUnlocked && DepotService.IsPlaced(BuildingType.GoldMine))
         {
             int level = PlayerData != null ? Mathf.Clamp(PlayerData.apprenticeLevel, 1, Progression.MaxLevel) : 1;
             // AŞAMA 4: üretim ve çırak bonusu etkin ekonomi profilinden (kayıttaki goldPerSecond alanına bağımlı değil).

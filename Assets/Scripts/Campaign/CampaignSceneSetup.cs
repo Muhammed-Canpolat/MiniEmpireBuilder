@@ -799,6 +799,14 @@ public class CampaignSceneSetup : MonoBehaviour
         BuildCardSection(detailPanel, 148f, 150f, level.kind == CampaignLevelKind.Boss,
             () => { if (detailOpen) RenderLevelDetail(); }, ShowToast);
 
+        // D121 (ORTA): savaş hazırlığında depodaki kule hatırlatılır (depodaki kule savaşta yoktur).
+        string depotHint = DepotService.StoredTowerHint();
+        if (depotHint != null)
+        {
+            var hintText = ReferenceUiVisuals.Text(detailPanel, "DepotHint", depotHint, 12, ReferenceUiVisuals.Red, TextAlignmentOptions.Center,
+                Vector2.zero, new Vector2(1, 0), new Vector2(16, 66), new Vector2(-16, 84), bodyBold: true);
+            hintText.raycastTarget = false;
+        }
         bool canPlay = LivesSystem.CanPlay;
         var battle = ReferenceUiVisuals.Button(detailPanel, "StartCampaignBattle",
             canPlay ? L.T("SAVAŞA BAŞLA", "START BATTLE") : L.T("CAN YOK · ", "NO LIVES · ") + LivesSystem.Format(LivesSystem.NextLifeIn), canPlay,

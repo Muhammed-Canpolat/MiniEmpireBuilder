@@ -734,7 +734,7 @@ public class Session6Tests
         PlayerPrefs.DeleteKey("MiniEmpireBuilder_SaveData_Backup");
         if (File.Exists(SaveFile)) File.Delete(SaveFile);
         var loaded = S("SaveSystem", "Load");
-        Assert.AreEqual(13, (int)F(loaded, "saveVersion"));
+        Assert.AreEqual((int)T("PlayerSaveData").GetField("CurrentVersion").GetValue(null), (int)F(loaded, "saveVersion"));   // D121: v14 (depo) göçü de zincirde
         Assert.IsFalse((bool)F(F(loaded, "island"), "introSeen"), "girmemiş kayıt: ilk giriş akışı gelir");
         Assert.AreEqual(0, ((IList)F(loaded, "iapLedger")).Count, "v12 IAP defteri boş");
     }
@@ -898,7 +898,7 @@ public class Session6Tests
         PlayerPrefs.DeleteKey("MiniEmpireBuilder_SaveData_Backup");
         if (File.Exists(SaveFile)) File.Delete(SaveFile);
         var loaded = S("SaveSystem", "Load");
-        Assert.AreEqual(13, (int)F(loaded, "saveVersion"));
+        Assert.AreEqual((int)T("PlayerSaveData").GetField("CurrentVersion").GetValue(null), (int)F(loaded, "saveVersion"));   // D121: v14 (depo) göçü de zincirde
         Assert.AreEqual(3456, (int)F(loaded, "gold")); Assert.AreEqual(77, (int)F(loaded, "gems"));
         Assert.AreEqual(9, (int)F(F(loaded, "hero"), "level")); Assert.AreEqual(7, (int)F(loaded, "apprenticeLevel"));
         Assert.AreEqual(900, (int)F(loaded, "goldMineStoredGold"), "madendeki altın korunur");

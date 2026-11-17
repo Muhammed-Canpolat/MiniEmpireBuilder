@@ -22,7 +22,17 @@ public class BuildMenuController : MonoBehaviour
     private readonly List<Button> _decorButtons = new List<Button>();
     private readonly List<GameObject> _structureCards = new List<GameObject>();
     private readonly List<GameObject> _decorCards = new List<GameObject>();
-    private readonly GameObject[] _tabUnderlines = new GameObject[3];
+    private readonly GameObject[] _tabUnderlines = new GameObject[4];
+    // D121 (bug 11): DEPO sekmesi — depodaki Ana Üs binaları/dekorları; dokununca ücretsiz yerleştirme.
+    public const int DepotTab = 3;
+    private readonly List<GameObject> _depotCards = new List<GameObject>();
+    private Transform _depotContent;
+    private TextMeshProUGUI _depotEmpty, _depotBadge;
+    private string _depotSignature;
+    private bool _depotDirty = true;   // depo değişince (DepotService.Changed) ya da sekme açılınca; her karede liste kurulmaz
+    /// <summary>Test: DEPO sekmesindeki kartlar (depo kimliği → düğme).</summary>
+    public readonly Dictionary<string, Button> DepotButtons = new Dictionary<string, Button>();
+    public int ActiveTab => _activeTab;
     private ShopTabView _shop;   // 6. oturum (2.4): DÜKKÂN sekmesi
     private int _activeTab;
     private GameObject _recommendedButton;
@@ -34,6 +44,15 @@ public class BuildMenuController : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        DepotService.Changed += MarkDepotDirty;
+    }
+
+    private void MarkDepotDirty() => _depotDirty = true;
+
+    private void OnDestroy()
+    {
+        DepotService.Changed -= MarkDepotDirty;
+        if (Instance == this) Instance = null;
     }
 
     public void Initialize(Transform canvasTransform)
@@ -96,10 +115,12 @@ public class BuildMenuController : MonoBehaviour
         // Gerçekte Ana Üs ve Altın Madeni ilk başta sahneye yerleşmeli, ancak menüden de yerleştirilebilir.
         // Maliyetleri BuildingData GetUpgradeCost üzerinden ilk seviye için hesaplayabiliriz. Veya sabit tutabiliriz.
 
-        // 6. oturum (2.4): üç sekme — Yapı, Dekor, Dükkân.
-        CreateTab(L.T("YAPI", "BUILD"), 0, 0.03f, 0.30f, "YAPI");
-        CreateTab(L.T("DEKOR", "DECOR"), 1, 0.32f, 0.59f, "DEKOR");
-        CreateTab(L.T("DÜKKÂN", "SHOP"), 2, 0.61f, 0.88f, "DUKKAN");
+        // 6. oturum (2.4): üç sekme — Yapı, Dekor, Dükkân. D121: 4. sekme Depo (sayı rozeti).
+        CreateTab(L.T("YAPI", "BUILD"), 0, 0.03f, 0.23f, "YAPI");
+        CreateTab(L.T("DEKOR", "DECOR"), 1, 0.24f, 0.44f, "DEKOR");
+        CreateTab(L.T("DÜKKÂN", "SHOP"), 2, 0.45f, 0.65f, "DUKKAN");
+        CreateTab(L.T("DEPO", "STORAGE"), DepotTab, 0.66f, 0.86f, "DEPO");
+        CreateDepotGrid();
         // 6 yapı: Kart Atölyesi (Ana Üs 5), Köylü Evi (3) ve Kışla (7) (Faz F); sütunlar dar, yazılar küçülür.
         const float cw = 0.158f, gap = 0.0048f;
         float X(int column) => 0.006f + column * (cw + gap);
@@ -188,6 +209,134 @@ public class BuildMenuController : MonoBehaviour
         _tabUnderlines[index] = underline;
     }
 
+    /// <summary>D121: DEPO sekmesi kaydırılabilir 4 sütunlu ızgara (dekor ızgarasıyla aynı) + boş depo yazısı + sekme rozeti.</summary>
+    private void CreateDepotGrid()
+    {
+        var scroll = new GameObject("DepotScroll", typeof(RectTransform), typeof(RectMask2D), typeof(ScrollRect));
+        scroll.transform.SetParent(_panelRoot.transform, false);
+        var scrollRect = scroll.GetComponent<RectTransform>();
+        scrollRect.anchorMin = new Vector2(0.02f, 0.11f);
+        scrollRect.anchorMax = new Vector2(0.98f, 0.735f);
+        scrollRect.offsetMin = scrollRect.offsetMax = Vector2.zero;
+        var content = new GameObject("Content", typeof(RectTransform), typeof(GridLayoutGroup),
+            typeof(ContentSizeFitter), typeof(DecorGridAutoCell));
+        content.transform.SetParent(scroll.transform, false);
+        var contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.offsetMin = contentRect.offsetMax = Vector2.zero;
+        var grid = content.GetComponent<GridLayoutGroup>();
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 4;
+        grid.spacing = new Vector2(6f, 6f);
+        grid.padding = new RectOffset(2, 2, 2, 8);
+        content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var view = scroll.GetComponent<ScrollRect>();
+        view.content = contentRect;
+        view.horizontal = false;
+        view.movementType = ScrollRect.MovementType.Clamped;
+        view.scrollSensitivity = 18f;
+        _depotContent = content.transform;
+        _depotCards.Add(scroll);
+        _depotEmpty = ReferenceUiVisuals.Text(_panelRoot.transform, "DepotEmpty",
+            L.T("Depo boş. Binaya ya da dekora dokun → DEPOYA.", "Storage is empty. Tap a building or decor → STORE."), 15,
+            ReferenceUiVisuals.Muted, TextAlignmentOptions.Center, new Vector2(0.05f, 0.25f), new Vector2(0.95f, 0.6f), Vector2.zero, Vector2.zero);
+        _depotEmpty.raycastTarget = false;
+        _depotCards.Add(_depotEmpty.gameObject);
+        var tab = _panelRoot.transform.Find("Tab_DEPO");
+        if (tab != null)
+        {
+            var badge = ReferenceUiVisuals.Image(tab, "Badge", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-22f, -10f), new Vector2(2f, 14f), ReferenceUiVisuals.Red);
+            badge.sprite = BaseMapManager.MakeCircleSprite(Color.white);
+            badge.raycastTarget = false;
+            _depotBadge = ReferenceUiVisuals.Text(badge.transform, "Count", "0", 12, Color.white, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, bodyBold: true);
+            _depotBadge.raycastTarget = false;
+            badge.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>D121: DEPO kartlarını depo listesinden yeniden kurar (yalnız liste değişince) ve rozet sayısını yazar.</summary>
+    private void RefreshDepot()
+    {
+        if (!_depotDirty) return;
+        _depotDirty = false;
+        var items = DepotService.Items(DepotService.RegionBase);
+        if (_depotBadge != null)
+        {
+            _depotBadge.transform.parent.gameObject.SetActive(items.Count > 0);
+            _depotBadge.text = items.Count.ToString();
+        }
+        if (_depotEmpty != null) _depotEmpty.gameObject.SetActive(_activeTab == DepotTab && items.Count == 0);
+        if (_depotContent == null) return;
+        var signature = new System.Text.StringBuilder();
+        foreach (var item in items) signature.Append(item.id).Append('|').Append(item.level).Append(';');
+        if (signature.ToString() == _depotSignature) return;
+        _depotSignature = signature.ToString();
+        for (int i = _depotContent.childCount - 1; i >= 0; i--)
+        {
+            var child = _depotContent.GetChild(i).gameObject;
+            child.SetActive(false);
+            Destroy(child);
+        }
+        DepotButtons.Clear();
+        foreach (var item in items) CreateDepotItem(item);
+    }
+
+    private void CreateDepotItem(DepotItem item)
+    {
+        bool decor = item.category == DepotService.CategoryDecor;
+        DecorData decorData = decor ? System.Array.Find(DecorPlacementController.All, d => d != null && d.id == item.type) : null;
+        BuildingType type = BuildingType.MainBase;
+        if (!decor && !System.Enum.TryParse(item.type, out type)) return;
+        var go = new GameObject("Depot_" + item.id, typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(_depotContent, false);
+        var image = go.GetComponent<Image>();
+        image.sprite = ReferenceUiVisuals.ToastSprite();
+        image.type = Image.Type.Sliced;
+        var button = go.GetComponent<Button>();
+        button.targetGraphic = image;
+        string id = item.id;
+        button.onClick.AddListener(() =>
+        {
+            var current = DepotService.Find(DepotService.RegionBase, id);
+            string why = DepotService.RestoreBlockedReason(current);
+            if (why != null) { BaseSceneSetup.Instance?.ShowHudToast(why); return; }
+            Hide();
+            if (current.category == DepotService.CategoryDecor) DecorPlacementController.Instance?.BeginFromDepot(current);
+            else PlacementController.Instance?.BeginFromDepot(current);
+        });
+        var well = ReferenceUiVisuals.Image(go.transform, "Well", new Vector2(0.08f, 0.40f),
+            new Vector2(0.92f, 0.94f), Vector2.zero, Vector2.zero, ReferenceUiVisuals.Hex(0x4A5A34));
+        well.sprite = ReferenceUiVisuals.SolidPillSprite();
+        well.type = Image.Type.Sliced;
+        var icon = ReferenceUiVisuals.Image(well.transform, "Icon", Vector2.zero, Vector2.one,
+            new Vector2(4f, 3f), new Vector2(-4f, -3f), Color.white);
+        icon.preserveAspect = true;
+        if (decor) icon.sprite = decorData != null ? decorData.Visual : null;
+        else
+        {
+            Sprite sprite = null;
+            if (GameManager.Instance?.Buildings != null && GameManager.Instance.Buildings.TryGetValue(type, out var bd))
+                sprite = bd.VisualForLevel(item.level)?.sprite;
+            if (sprite == null && SpriteManager.Instance != null) sprite = SpriteManager.Instance.GetBuildingSprite(type);
+            icon.sprite = sprite;
+        }
+        string name = decor ? (decorData != null ? L.Asset(decorData.displayName) : item.type) : BaseMapManager.GetBuildingDisplayName(type);
+        var label = ReferenceUiVisuals.Text(go.transform, "Label", name, 11, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
+            new Vector2(0f, 0.19f), new Vector2(1f, 0.40f), new Vector2(3f, 0f), new Vector2(-3f, 0f), bodyBold: true);
+        label.fontSizeMin = 8f;
+        string blocked = DepotService.RestoreBlockedReason(item);
+        ReferenceUiVisuals.Text(go.transform, "Level", decor ? L.T("ÜCRETSİZ", "FREE") : L.T($"Sev. {item.level} · ÜCRETSİZ", $"Lv. {item.level} · FREE"), 11,
+            blocked == null ? ReferenceUiVisuals.Gold : ReferenceUiVisuals.Muted, TextAlignmentOptions.Center, Vector2.zero,
+            new Vector2(1f, 0.20f), new Vector2(3f, 3f), new Vector2(-3f, 0f), bodyBold: true);
+        DepotButtons[id] = button;
+    }
+
+    /// <summary>D121: menüyü DEPO sekmesinde açar.</summary>
+    public void ShowDepot() { Show(); SelectTab(DepotTab); }
+
     /// <summary>6. oturum (2.4): menüyü DÜKKÂN sekmesinde açar (elmas/kaynak eksikliğinde de buraya yönlendirilebilir).</summary>
     public void ShowShop() { Show(); SelectTab(2); }
 
@@ -197,6 +346,8 @@ public class BuildMenuController : MonoBehaviour
         if (_recommendedButton != null) _recommendedButton.SetActive(index == 0);
         foreach (var item in _structureCards) item.SetActive(index == 0);
         foreach (var item in _decorCards) item.SetActive(index == 1);
+        foreach (var item in _depotCards) item.SetActive(index == DepotTab);
+        _depotDirty = true;   // boş-depo yazısı sekmeye bağlı; seviye tavanı (Ana Üs) değişmiş olabilir
         if (_shop != null) { _shop.gameObject.SetActive(index == 2); if (index == 2) _shop.Refresh(); }
         for (int i = 0; i < _tabUnderlines.Length; i++)
         {
@@ -216,8 +367,9 @@ public class BuildMenuController : MonoBehaviour
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.CardWorkshop, out var workshop) && !workshop.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.House, out var house) && !house.isUnlocked ||
                  GameManager.Instance.Buildings.TryGetValue(BuildingType.Barracks, out var barracks) && !barracks.isUnlocked);
-            hint.gameObject.SetActive(index != 2 && (index == 1 || hasLocked));
+            hint.gameObject.SetActive(index != 2 && (index == 1 || index == DepotTab || hasLocked));
             hint.text = index == 0 ? L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows.") :
+                index == DepotTab ? L.T("Depodakiler savaşa ve üretime katılmaz; geri kurmak ücretsiz.", "Stored items don't fight or produce; placing them back is free.") :
                 L.T("Dekora uzun bas: taşı veya sil (%50 iade).", "Long-press decor: move or remove (50% refund).");
         }
         RefreshButtons();
@@ -392,7 +544,7 @@ public class BuildMenuController : MonoBehaviour
                 }
 
                 // Max sayı kontrolü
-                int currentCount = BaseMapManager.Instance?.GetPlacedCount(type) ?? 0;
+                int currentCount = DepotService.OwnedCount(DepotService.RegionBase, type.ToString());   // D121: yerleşik + depo
                 int maxCount = BuildingData.GetMaxBuildCount(type, GameManager.Instance.GetMainBaseLevel());
                 
                 if (currentCount >= maxCount)
@@ -441,6 +593,7 @@ public class BuildMenuController : MonoBehaviour
     public void Show()
     {
         if (_isOpen) return;
+        _depotDirty = true;
         _isOpen = true;
         _panelRoot.transform.SetAsLastSibling(); // Menüyü en öne al (joystick ve diğer arayüzlerin üstüne)
         _panelController.Show();
@@ -472,6 +625,7 @@ public class BuildMenuController : MonoBehaviour
 
     private void RefreshButtons()
     {
+        RefreshDepot();
         bool builderAvailable = BuilderSystem.Instance != null && BuilderSystem.Instance.HasAvailableBuilder();
 
         foreach (var btn in _itemButtons)
@@ -487,12 +641,14 @@ public class BuildMenuController : MonoBehaviour
             var name = btn.transform.Find("Name")?.GetComponent<TextMeshProUGUI>();
             if (name != null) name.color = unlocked ? ReferenceUiVisuals.Light : ReferenceUiVisuals.Muted;
             var cost = btn.transform.Find("Cost")?.GetComponent<TextMeshProUGUI>();
-            int placed = BaseMapManager.Instance?.GetPlacedCount(type) ?? 0;
+            int placed = DepotService.PlacedCount(DepotService.RegionBase, type.ToString());
+            int stored = DepotService.StoredCount(DepotService.RegionBase, type.ToString());   // D121: depodakiler limite sayılır
             int limit = data != null && GameManager.Instance != null
                 ? data.MaxCountAtBaseLevel(GameManager.Instance.GetMainBaseLevel()) : 0;
             var count = btn.transform.Find("PlacedCount")?.GetComponent<TextMeshProUGUI>();
-            if (count != null) count.text = L.T($"Kurulu {placed}/{limit}", $"Built {placed}/{limit}");
-            btn.interactable = builderAvailable && unlocked && placed < limit;
+            if (count != null) count.text = stored > 0 ? L.T($"Kurulu {placed}/{limit} · Depo {stored}", $"Built {placed}/{limit} · Stored {stored}")
+                : L.T($"Kurulu {placed}/{limit}", $"Built {placed}/{limit}");
+            btn.interactable = builderAvailable && unlocked && placed + stored < limit;
             if (cost != null)
             {
                 cost.text = unlocked ? (type == BuildingType.ArcherTower ? L.T("50 Altın", "50 Gold")

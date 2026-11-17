@@ -175,7 +175,7 @@ public static class DarkFantasyHudPolish
         }
 
         // 6. oturum (2.4): üç sekme (Yapı, Dekor, Dükkân) eşit genişlikte.
-        string[] tabIds = { "Tab_YAPI", "Tab_DEKOR", "Tab_DUKKAN" };
+        string[] tabIds = { "Tab_YAPI", "Tab_DEKOR", "Tab_DUKKAN", "Tab_DEPO" };   // D121: 4. sekme Depo
         for (int i = 0; i < tabIds.Length; i++)
         {
             var tab = panel.Find(tabIds[i]) as RectTransform;
@@ -224,6 +224,7 @@ public static class DarkFantasyHudPolish
         // Dekor kartları kaydırılabilir ızgarada; alan sekmelerin altından ipucunun üstüne.
         SetAnchors(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
         SetAnchors(panel.Find("ShopScroll") as RectTransform, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.64f));
+        SetAnchors(panel.Find("DepotScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
         ReferenceUiVisuals.Text(panel, "BuildMenuHint", L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows."), 12,
             SoftGold, TextAlignmentOptions.Center, new Vector2(0, 0.005f),
             new Vector2(1, 0.085f), new Vector2(12, 0), new Vector2(-12, 0));

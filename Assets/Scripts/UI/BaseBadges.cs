@@ -16,7 +16,7 @@ public static class BaseBadges
         foreach (var type in BuildMenuController.MenuTypes)
         {
             if (!gm.Buildings.TryGetValue(type, out var data) || data == null || !data.isUnlocked) continue;
-            if (PlacedCount(type) >= data.MaxCountAtBaseLevel(baseLevel)) continue;
+            if (DepotService.OwnedCount(DepotService.RegionBase, type.ToString()) >= data.MaxCountAtBaseLevel(baseLevel)) continue;   // D121: yerleşik + depo
             if (gm.Gold >= BuildMenuController.MenuCost(type)) return true;
         }
         return false;

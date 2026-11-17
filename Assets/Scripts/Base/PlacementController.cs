@@ -38,10 +38,13 @@ public class PlacementController : MonoBehaviour
     private Button _confirmButton;
     private WorldConfirmButtons _confirmButtons;
     private readonly GhostPointerDrag _drag = new GhostPointerDrag();
+    private DepotItem _depotItem;   // D121: depodan kurulan bina (bedel/süre/inşaatçı yok; onayda DepotService.Restore)
 
     private const float GoldMineMaxWorldSize = 2.2f;
 
     public bool IsPlacing => _isPlacing;
+    /// <summary>D121: yerleştirme depodan mı (test/arayüz).</summary>
+    public bool PlacingFromDepot => _isPlacing && _depotItem != null;
 
     private void Awake()
     {
@@ -88,6 +91,19 @@ public class PlacementController : MonoBehaviour
         _footprint.transform.position = _lastValidWorldPos;
         BaseWorldUI.Instance?.ToggleBottomButtons(false);
         BaseCameraController.Instance?.EnsureVisible(center);
+    }
+
+    /// <summary>
+    /// D121: depodaki binayı ücretsiz kurmak için yerleştirme (yeni bina hayaleti ve yer kuralı; bedel 0, süre 0, inşaatçı şartı yok).
+    /// Onayda <see cref="DepotService.Restore"/>; kurulamazsa depo değişmez.
+    /// </summary>
+    public void BeginFromDepot(DepotItem item)
+    {
+        if (item == null || item.category != DepotService.CategoryBuilding
+            || !System.Enum.TryParse(item.type, out BuildingType type) || type == BuildingType.MainBase) return;
+        BeginPlacement(type, 0f, 0);
+        _depotItem = item;
+        UpdateConfirmButton();
     }
 
     /// <summary>Mevcut bir objeyi taşımak için yerleştirme başlatır</summary>
@@ -161,6 +177,7 @@ public class PlacementController : MonoBehaviour
         bool wasPlacing = _isPlacing;
         _isPlacing = false;
         _movingObject = null;
+        _depotItem = null;
         if (wasPlacing) BaseWorldUI.Instance?.ToggleBottomButtons(true);
     }
 
@@ -301,9 +318,11 @@ public class PlacementController : MonoBehaviour
         if (_confirmButtons == null) return;
         bool affordable = true;
         string reason = null;
-        if (_movingObject == null) affordable = CanAffordNewBuilding(out reason);
+        if (_movingObject == null && _depotItem == null) affordable = CanAffordNewBuilding(out reason);
         if (!_valid)
             _confirmButtons.SetState(false, L.T("Buraya sığmıyor", "Doesn't fit here"), null, true);
+        else if (_depotItem != null)
+            _confirmButtons.SetState(true, L.T("ÜCRETSİZ", "FREE"));
         else if (!affordable)
             _confirmButtons.SetState(false, reason, _movingObject == null && reason == L.T("Altın yetersiz", "Not enough gold")
                 ? CampaignSceneSetup.Art("ui_icon_coin") : null, true);
@@ -352,6 +371,20 @@ public class PlacementController : MonoBehaviour
                 if (Application.isMobilePlatform && AudioSettingsUI.VibrationEnabled) Handheld.Vibrate();
                 ShowUndo(moved, previous);
             }
+            return;
+        }
+
+        if (_depotItem != null)
+        {
+            // D121: depodan kurma — bedel, süre ve görev yok; seviye korunur. Başarısızsa (yer/tavan) depo değişmez, yerleştirme açık kalır.
+            if (!DepotService.Restore(BaseDepotAdapter.Instance, _depotItem.id, pos, out string why))
+            {
+                BaseSceneSetup.Instance?.ShowHudToast(why);
+                return;
+            }
+            AudioManager.Instance?.PlaySfx("buildingPlace");
+            BaseBuildingVisual.SpawnDust(pos + Vector3.down * 0.4f, 110);
+            FinishPlacement();
             return;
         }
 

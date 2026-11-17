@@ -488,6 +488,14 @@ public static class SaveSystem
             data.saveVersion = 13;
             changed = true;
         }
+        // v14 (D121, grup 9): Depo. Dönüşüm yok: eski kayıt = boş depo (JsonUtility eksik listeyi null bırakabilir). Sürüm artışı geri dönüş
+        // güvencesi içindir: eski sürüm bilinmeyen depo alanını ilk kayıtta düşürür ama v14 kaydı önce "v14.newer" olarak arşivlenir.
+        if (data.depot == null) data.depot = new List<DepotItem>();
+        if (data.saveVersion < 14)
+        {
+            data.saveVersion = 14;
+            changed = true;
+        }
         MigrateTimings(data);
         changed |= data.timingVersion != timingBefore;
         return changed;
@@ -505,6 +513,7 @@ public static class SaveSystem
         data.builderCount = Mathf.Clamp(data.builderCount, 1, Progression.MaxBuilders);
         data.gems = Mathf.Max(0, data.gems);
         data.builderTasks.RemoveAll(task => task == null || !task.IsActive);
+        if (data.depot == null) data.depot = new List<DepotItem>();   // D121: eksik alan (eski/yarım kayıt) → boş depo
     }
 
     /// <summary>

@@ -124,3 +124,8 @@ parçalarından **türetilmiş** (`Tools/campaign_art/battle_props.py`, D91). Ge
 | # | Varlık | Dosya | Ölçü | Not |
 |---|---|---|---|---|
 | 25 | **EKSİK ASSET:** kupa simgesi `icon_trophy` (referans `Docs/UIReference/ana-us-droplist-acik.png` Etkinlik satırı) | Assets/MiniEmpireUI/MiniEmpireUI/Sprites/Icons/icon_trophy.png | ≈80×80 px, MiniEmpireUI stili, şeffaf zemin, tek kare, Bilinear | Gelene kadar Etkinlik satırı İKONSUZ (yalnız etiket); yer tutucu/başka ikon kullanılmaz. Görev satırı mevcut parşömen `ui_scroll`; referanstaki çapraz kılıç yalnız Sefer'de. |
+
+## Grup 9 (18 Kasım 2026): Depo (D121, bug 11)
+| # | Varlık | Dosya | Ölçü | Not |
+|---|---|---|---|---|
+| 26 | Depo simgesi (DEPOYA düğmesi, DEPO sekmesi/satırı) | Assets/Resources/CampaignArt/ui_icon_depot.png | 68×68 (34×29 kare ×2, en-yakın-komşu) | KARŞILANDI (karar 7): yeni çizim yok, Cainos `TX Chest Animation Wooden 0` karesi `Tools/campaign_art/depot_icon.py` ile kopyalandı (Point filtre, sıkıştırmasız). İstenirse ileride HUD ailesinde (koyu kontur) 64×64 sandık simgesi çizilebilir; o zamana kadar bu kullanılır, dosya yoksa kod `ui_icon_hammer`'a düşer. |

@@ -289,7 +289,8 @@ public static class IslandEconomy
         if (IsFirstBuildFree(kind, save)) return (0, 0);
         // 6. oturum (3.2): türün ilk kurulumu yalnız altınla (Oduncu/Ağıl Odun-Et üretmeden kurulabilsin); sonrakiler + Odun/Et liste bedeli.
         save = save ?? Save;
-        bool first = save != null && CountOf(kind, save.placed) == 0;
+        // D121: depodaki bina da sahip olunan sayılır (depola → ucuz ilk kurulum açığı kapalı).
+        bool first = save != null && CountOf(kind, save.placed) + DepotService.StoredCount(DepotService.RegionIsland, kind.ToString()) == 0;
         if (first || !Config.islandRepeatNeedsResources) return kind == IslandLayout.BuildingKind.Archery ? ListPrice(kind) : (0, 0);
         return ListPrice(kind);
     }
@@ -833,6 +834,14 @@ public static class IslandEconomy
         GameManager.Instance?.SaveGame();
         return true;
     }
+
+    /// <summary>D121: binayı depoya alır (kurallar ve kayıt DepotService'te; tek SaveGame).</summary>
+    public static bool TryStore(string id, out string reason) =>
+        DepotService.Store(IslandDepotAdapter.Instance, id, DepotService.CategoryBuilding, out reason);
+
+    /// <summary>D121: depodaki binayı (sol-üst hücre) ücretsiz kurar; seviye/stok korunur. Kurulamazsa depo değişmez.</summary>
+    public static bool TryRestore(string depotId, int col, int row, out string reason) =>
+        DepotService.Restore(IslandDepotAdapter.Instance, depotId, new Vector2(col, row), out reason);
 
     public static string ZoneBlockedReason(int zone)
     {

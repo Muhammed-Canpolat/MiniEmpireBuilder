@@ -130,6 +130,9 @@ public class PlayerSaveData
     public IslandSaveData island = new IslandSaveData();
     // v8: Kart Atölyesi (Docs/design/card_workshop.md §8). Eski kayıtta null/boş gelir; yüklemede onarılır.
     public WorkshopSaveData workshop = new WorkshopSaveData();
+    // v14 (D121, grup 9): Depo. Araziden kaldırılmış Ana Üs/Ada binaları ve dekorlar (TEK liste; okuyan/yazan yalnız DepotService).
+    // Eski kayıtta alan yok → null gelir, göç/Normalize boş liste yapar. IslandSaveData'ya alan eklenmedi (task son alan kısıtı).
+    public List<DepotItem> depot = new List<DepotItem>();
 
     /// <summary>
     /// Varsayılan verilerle yeni oyuncu oluştur
@@ -215,13 +218,14 @@ public class PlayerSaveData
         data.terrainLastGrowTicks = 0;
         data.island = new IslandSaveData();
         data.workshop = new WorkshopSaveData();
+        data.depot = new List<DepotItem>();
         EnsureWorkshopEntry(data);
         EnsureBaseBondEntries(data);
 
         return data;
     }
 
-    public const int CurrentVersion = 13;
+    public const int CurrentVersion = 14;
 
     /// <summary>Kışla ve Köylü Evi türleri kayıtta yoksa ekler (v9; eski kayıt göçü ve yeni oyun): açılış seviyesindeyse açık, yoksa kilitli.</summary>
     public static void EnsureBaseBondEntries(PlayerSaveData data)
@@ -247,6 +251,24 @@ public class PlayerSaveData
         bool open = main != null && main.level >= Progression.Workshop.UnlockMainBaseLevel;
         data.buildings.Add(new BuildingSaveEntry { buildingType = BuildingType.CardWorkshop, level = open ? 1 : 0, isUnlocked = open });
     }
+}
+
+/// <summary>
+/// D121: depodaki bir nesne. region 0 Ana Üs · 1 Ada; category 0 bina · 1 dekor. type: BuildingType adı (Ana Üs binası),
+/// DecorData.id (dekor) ya da IslandLayout.BuildingKind adı (ada). id: araziye dönünce aynı kimlikle kurulur. stock/workers yalnız ada
+/// üreticileri (Oduncu/Ağıl) için; depodayken üretim yok. storedTicks: depoya alındığı an (UTC tick; bilgi/telemetri).
+/// </summary>
+[Serializable]
+public class DepotItem
+{
+    public string id;
+    public int region;
+    public int category;
+    public string type;
+    public int level = 1;
+    public float stock;
+    public int workers = -1;
+    public long storedTicks;
 }
 
 /// <summary>Atölye üretim işi: kart, başlangıç/bitiş (UTC tick) ve üretim başlarken kilitlenen hak sayısı.</summary>

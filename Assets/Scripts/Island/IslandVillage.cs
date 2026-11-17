@@ -649,6 +649,40 @@ public sealed class IslandVillage : MonoBehaviour
         IslandWalkGrid.Invalidate();
     }
 
+    /// <summary>D121: depoya alınan bina sahneden kalkar; işçi/koyun/yığın/doğa/yürüme ızgarası yenilenir. Kaydetmez.</summary>
+    public void OnStored(string id)
+    {
+        if (live.TryGetValue(id, out var old))
+        {
+            live.Remove(id);
+            if (old != null) { old.gameObject.SetActive(false); Destroy(old.gameObject); }
+        }
+        if (sites.TryGetValue(id, out var site))
+        {
+            sites.Remove(id);
+            if (site.go != null) Destroy(site.go);
+        }
+        RebuildSheep();
+        RebuildPawns();
+        RefreshPiles(true);
+        IslandNatureClear.Refresh(true);
+        IslandWalkGrid.Invalidate();
+    }
+
+    /// <summary>D121: depodan kurulan bina (aynı kimlik, seviye ve stokla) sahneye gelir. Kaydetmez (OnMoved'dan farkı).</summary>
+    public void OnRestored(IslandPlacedBuilding entry)
+    {
+        if (entry == null) return;
+        if (live.TryGetValue(entry.id, out var old) && old != null) { live.Remove(entry.id); Destroy(old.gameObject); }
+        SpawnEntry(entry);
+        IslandFx.Play("dust_1", SpotFor(entry).FeetWorld + Vector2.up * 0.3f, 1.6f, 14f);
+        RebuildSheep();
+        RebuildPawns();
+        RefreshPiles(true);
+        IslandNatureClear.Refresh(true);
+        IslandWalkGrid.Invalidate();
+    }
+
     /// <summary>Taşınırken kaynak binayı yarı saydam gösterir.</summary>
     public void SetMoveGhostSource(string id, bool moving)
     {

@@ -1512,6 +1512,17 @@ public class BaseMapManager : MonoBehaviour
     public void SaveAll()
     {
         if (GameManager.Instance?.PlayerData == null) return;
+        WriteToPlayerData();
+        GameManager.Instance.SaveGame();
+    }
+
+    /// <summary>
+    /// D121: sahnedeki binaları/ağaç-kayaları kayıt nesnesine yazar, DİSKE KAYDETMEZ. Depo işlemleri (DepotService) tek SaveGame ile
+    /// kaydeder: sahneden düşürme + depo listesi aynı kayıtta gider (yarım kalan durum diske yazılmaz).
+    /// </summary>
+    public void WriteToPlayerData()
+    {
+        if (GameManager.Instance?.PlayerData == null) return;
 
         var list = new List<PlacedBuildingData>();
         foreach (var obj in _mapObjects)
@@ -1555,7 +1566,41 @@ public class BaseMapManager : MonoBehaviour
             }
             GameManager.Instance.PlayerData.terrainResources = resources;
         }
-        GameManager.Instance.SaveGame();
+    }
+
+    // ==================== DEPO (D121) ====================
+
+    /// <summary>
+    /// D121: binayı sahneden kaldırır (depoya alınırken). Haritadan çıkar, yok eder; doluluk ızgarası, yollar ve kahraman yürünebilirliği
+    /// yenilenir. Kayda yazmaz (çağıran <see cref="WriteToPlayerData"/> + tek SaveGame). Ana Üs kaldırılamaz.
+    /// </summary>
+    public bool DespawnBuilding(string slotId)
+    {
+        var obj = GetMapObjectBySlot(slotId);
+        if (obj == null || obj.buildingType == BuildingType.MainBase) return false;
+        _mapObjects.Remove(obj);
+        if (obj.gameObject != null)
+        {
+            obj.gameObject.transform.DOKill();
+            obj.gameObject.SetActive(false);   // Destroy kare sonunda: doluluk/dokunuş bu karede de görmesin
+            Destroy(obj.gameObject);
+        }
+        BaseOccupancyGrid.MarkDirty();
+        BaseGroundPaths.Instance?.Refresh();
+        HeroMovementController.Instance?.RefreshWalkable();
+        return true;
+    }
+
+    /// <summary>
+    /// D121: depodaki binayı aynı kimlik ve seviyeyle kurar (bedel/süre/inşaatçı yok). Yer kuralı yeni binayla aynı
+    /// (<see cref="SpawnBuildingInternal"/>, kayıtlı-konum yumuşaklığı yok). Kurulamazsa null (depo değişmez). Kayda yazmaz.
+    /// </summary>
+    public PlacedMapObject SpawnRestored(BuildingType type, Vector3 pos, string id, int level)
+    {
+        if (type == BuildingType.MainBase) return null;
+        var obj = SpawnBuildingInternal(type, pos, id, false, Mathf.Max(1, level));
+        if (obj != null) HeroMovementController.Instance?.RefreshWalkable();
+        return obj;
     }
 
     /// <summary>PlayerData.placedBuildings'den kayıtlı binaları sahneye yükle</summary>

@@ -12,9 +12,11 @@ public sealed class IslandPlacementHost : IPlacementHost
 {
     public IslandLayout.BuildingKind Kind { get; private set; }
     public string MovingId { get; private set; }
+    /// <summary>D121: depodan kurulan binanın depo kimliği (bedel 0, Usta yok, limit yeniden sayılmaz); yeni/taşımada null.</summary>
+    public string DepotId { get; private set; }
     public Vector2Int StartCell { get; set; }
     public Vector2Int Footprint => IslandGrid.Size(Kind);
-    public (int wood, int meat) Cost => MovingId != null ? (0, 0) : IslandEconomy.BuildCost(Kind);   // AŞAMA 2: ilk yapım bedava
+    public (int wood, int meat) Cost => MovingId != null || DepotId != null ? (0, 0) : IslandEconomy.BuildCost(Kind);   // AŞAMA 2: ilk yapım bedava
     public Sprite GhostSprite
     {
         get
@@ -23,7 +25,7 @@ public sealed class IslandPlacementHost : IPlacementHost
             return catalog != null ? catalog.Single(IslandVillage.SpriteName(Kind)) : null;
         }
     }
-    public int ShortfallGems => MovingId != null ? 0 : IslandEconomy.ShortfallGems(Cost.wood, Cost.meat);
+    public int ShortfallGems => MovingId != null || DepotId != null ? 0 : IslandEconomy.ShortfallGems(Cost.wood, Cost.meat);
 
     public static IslandPlacementHost ForNew(IslandLayout.BuildingKind kind) => new IslandPlacementHost { Kind = kind };
 
@@ -37,10 +39,17 @@ public sealed class IslandPlacementHost : IPlacementHost
         };
     }
 
+    /// <summary>D121: depodaki binayı ücretsiz kurma (ForMove kalıbı; onayda <see cref="IslandEconomy.TryRestore"/>).</summary>
+    public static IslandPlacementHost ForDepot(string depotId)
+    {
+        var item = DepotService.Find(DepotService.RegionIsland, depotId);
+        return new IslandPlacementHost { Kind = item != null ? IslandGrid.ParseKind(item.type) : IslandLayout.BuildingKind.House, DepotId = depotId };
+    }
+
     public bool CanPlace(int col, int row, out string reason)
     {
         var save = IslandSession.Save;
-        var result = IslandGrid.Check(Kind, col, row, save != null ? save.placed : null, save != null ? save.zoneMask : 1, MovingId, IslandEconomy.Keep);
+        var result = IslandGrid.Check(Kind, col, row, save != null ? save.placed : null, save != null ? save.zoneMask : 1, MovingId ?? DepotId, IslandEconomy.Keep);
         reason = IslandGrid.ReasonText(result);
         return result == IslandGrid.Reason.None;
     }
@@ -50,6 +59,7 @@ public sealed class IslandPlacementHost : IPlacementHost
         reason = null;
         if (IslandEconomy.InDefense) { reason = L.T("Savaşta yerleştirilemez", "Cannot place during defense"); return false; }
         if (MovingId != null) return true;
+        if (DepotId != null) return DepotService.CanRestore(DepotService.Find(DepotService.RegionIsland, DepotId), out reason);
         if (IslandEconomy.BuilderBusy) { reason = L.T("Ada Ustası meşgul", "Island Builder is busy"); return false; }
         if (IslandEconomy.CanSpend(Cost.wood, Cost.meat)) return true;
         var gm = GameManager.Instance;
@@ -77,6 +87,11 @@ public sealed class IslandPlacementHost : IPlacementHost
                 if (IslandEconomy.TryMove(id, oldCol, oldRow, out string why)) IslandVillage.Instance?.OnMoved(IslandEconomy.Find(id));
                 else IslandVillage.Instance?.Toast?.Invoke(why);
             });
+            return true;
+        }
+        if (DepotId != null)
+        {
+            if (!IslandEconomy.TryRestore(DepotId, col, row, out reason)) { village.Toast?.Invoke(reason); return false; }
             return true;
         }
         if (ShortfallGems > 0)
@@ -338,6 +353,7 @@ public sealed class IslandPlacementController : MonoBehaviour
         if (!affordable) { confirmButtons.SetState(false, affordReason, null, true); return; }
         var cost = host.Cost;
         if (host.MovingId != null) confirmButtons.SetState(true, null);
+        else if (host is IslandPlacementHost depotHost && depotHost.DepotId != null) confirmButtons.SetState(true, L.T("ÜCRETSİZ", "FREE"));
         else if (host.ShortfallGems > 0)
             confirmButtons.SetState(true, L.T($"Eksik: {host.ShortfallGems} elmas", $"Top up: {host.ShortfallGems} gems"), GemIcon.Sprite);
         else

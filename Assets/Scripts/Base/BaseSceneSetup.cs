@@ -1435,10 +1435,41 @@ public class BaseSceneSetup : MonoBehaviour
                 id = "move", icon = CampaignSceneSetup.Art("ui_icon_move"), label = L.T("TAŞI", "MOVE"),
                 action = () => PlacementController.Instance?.BeginMove(mapObj)
             });
+        // D121 (bug 11): 3. düğme DEPOYA (Ana Üs kalesi ve ilk rehber bitmeden yok; inşa/yükseltme sürerken gri + sebep).
+        var depot = DepotMenuItem(DepotService.RegionBase, DepotService.CategoryBuilding, type.ToString(), mapObj.id, BaseDepotAdapter.Instance,
+            type == BuildingType.GoldMine ? L.T("Depoya kaldırılsın mı? Depodayken altın üretmez.", "Move to storage? It won't produce gold while stored.") : null,
+            ShowHudToast);
+        if (depot != null) items.Add(depot);
         var go = mapObj.gameObject;
         var sr = go.GetComponent<SpriteRenderer>();
         return WorldActionMenu.Show(safe, () => BuildingBounds(go), Camera.main, items, "BuildingActions", mapObj, sr);
     }
+
+    /// <summary>
+    /// D121: ortak DEPOYA menü düğmesi (Ana Üs binası/dekoru ve Ada binası aynı tanımı kullanır). Hariç türde null. Onay sorulur; reddedilen
+    /// durumda düğme gri, dokununca sebep <paramref name="toast"/> ile tek satır gösterilir.
+    /// </summary>
+    public static WorldActionMenu.Item DepotMenuItem(int region, int category, string type, string id, IDepotRegion adapter, string question,
+        System.Action<string> toast)
+    {
+        if (!DepotService.ShowButton(region, category, type)) return null;
+        string blocked = DepotService.BusyReason(region, category, id);
+        return new WorldActionMenu.Item
+        {
+            id = "depot", icon = DepotIcon, label = L.T("DEPOYA", "STORE"),
+            confirm = blocked == null, question = question ?? L.T("Depoya kaldırılsın mı?", "Move to storage?"),
+            blockedReason = blocked, onBlocked = reason => toast?.Invoke(reason),
+            action = () =>
+            {
+                if (DepotService.Store(adapter, id, category, out string why))
+                    toast?.Invoke(L.T("Depoya kaldırıldı · İnşa Et > DEPO", "Stored · Build > STORAGE"));
+                else toast?.Invoke(why);
+            }
+        };
+    }
+
+    /// <summary>D121: depo simgesi (Cainos tahta sandık karesi, Tools/campaign_art/depot_icon.py); yoksa çekiç.</summary>
+    public static Sprite DepotIcon => CampaignSceneSetup.Art("ui_icon_depot") ?? CampaignSceneSetup.Art("ui_icon_hammer");
 
     /// <summary>Binanın ekranda görünen dünya sınırı (kök görsel; yoksa çarpıştırıcı).</summary>
     private static Bounds BuildingBounds(GameObject go)

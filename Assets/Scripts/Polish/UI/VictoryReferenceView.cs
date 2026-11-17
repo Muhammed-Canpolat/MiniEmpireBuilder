@@ -283,6 +283,9 @@ public sealed class VictoryReferenceView : MonoBehaviour
                             "Head back to base: upgrade the Main Base (Archer Barracks unlocks at Lv. 2) and level up your hero.") + "</color>"
                         : "\n<color=#F2D68A>" + L.T("Üsse dön: kahramanını, kulelerini ve Ana Üs'ü yükselt, sonra tekrar dene.",
                             "Head back to base: level up your hero, towers and Main Base, then try again.") + "</color>";
+                    // D121 (ORTA): yenilgi açıklanabilir kalsın — depoda kule varsa söylenir.
+                    string depot = DepotService.StoredTowerHint();
+                    if (depot != null) advice += "\n<color=#F2D68A>" + depot + "</color>";
                     starReason.text = (reason.Length > 0 ? $"<color=#E07A5F>{reason}</color>\n" : "") +
                         $"<color=#C9B48A>{lives}</color>" + advice;
                 }

@@ -13,6 +13,8 @@ public sealed class IslandBuildUi
 {
     public Action<IslandLayout.BuildingKind> PlaceRequested;
     public Action<string> MoveRequested;
+    /// <summary>D121: DEPO bölümünde bir öğe seçildi (depo kimliği) → ücretsiz yerleştirme.</summary>
+    public Action<string> DepotRequested;
     public Action AkinRequested;
     public Action<string> Toast;
 
@@ -38,6 +40,14 @@ public sealed class IslandBuildUi
     private readonly List<MenuCard> cards = new List<MenuCard>();
     private TextMeshProUGUI zoneTitle, zoneInfo, zoneState;
     private Button zoneButton;
+    // D121: DEPO satırı (depoda ada binası varsa listenin başında); satırlar yeniden dizilir.
+    private readonly List<RectTransform> menuRows = new List<RectTransform>();
+    private RectTransform depotRow, depotItems;
+    private TextMeshProUGUI depotTitle;
+    private string depotSignature;
+    /// <summary>Test: DEPO satırındaki öğe düğmeleri (depo kimliği → düğme).</summary>
+    public readonly Dictionary<string, Button> DepotButtons = new Dictionary<string, Button>();
+    public bool DepotRowVisible => depotRow != null && depotRow.gameObject.activeSelf;
 
     // Kadro (AŞAMA 2 §2)
     private TextMeshProUGUI staffTotals, staffList;
@@ -136,6 +146,7 @@ public sealed class IslandBuildUi
             float top = 1f - i / (float)rows, bottom = 1f - (i + 1) / (float)rows;
             var card = new MenuCard { kind = MenuKinds[i] };
             var rect = ReferenceUiVisuals.Rect(list, "Card" + i, new Vector2(0, bottom), new Vector2(1, top), new Vector2(0, 3), new Vector2(0, -3));
+            menuRows.Add(rect);
             card.paper = NineSlice(rect, "Paper", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, "ui_paper_special", Color.white, 4f);
             card.paper.raycastTarget = true;
             card.button = card.paper.gameObject.AddComponent<Button>();
@@ -183,6 +194,7 @@ public sealed class IslandBuildUi
             int i = MenuKinds.Length;
             float top = 1f - i / (float)rows, bottom = 1f - (i + 1) / (float)rows;
             var rect = ReferenceUiVisuals.Rect(list, "ZoneCard", new Vector2(0, bottom), new Vector2(1, top), new Vector2(0, 3), new Vector2(0, -3));
+            menuRows.Add(rect);
             var paper = NineSlice(rect, "Paper", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, "ui_paper_special", new Color(0.85f, 0.95f, 1f), 4f);
             paper.raycastTarget = true;
             zoneButton = paper.gameObject.AddComponent<Button>();
@@ -196,6 +208,84 @@ public sealed class IslandBuildUi
                 new Vector2(0, 0), new Vector2(0.8f, 0.52f), new Vector2(14, 6), new Vector2(0, 0), false, true);
             zoneState = ReferenceUiVisuals.Text(rect, "State", "", 12, new Color(1f, 0.85f, 0.4f), TextAlignmentOptions.Right,
                 new Vector2(0.78f, 0), new Vector2(1, 1), new Vector2(0, 4), new Vector2(-10, -4), true);
+        }
+        // D121: DEPO satırı — başlık + depodaki ada binaları (simge + seviye); dokununca ücretsiz yerleştirme.
+        {
+            depotRow = ReferenceUiVisuals.Rect(list, "DepotCard", new Vector2(0, 0.9f), new Vector2(1, 1), new Vector2(0, 3), new Vector2(0, -3));
+            NineSlice(depotRow, "Paper", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, "ui_paper_special", new Color(1f, 0.92f, 0.78f), 4f);
+            var icon = ReferenceUiVisuals.Image(depotRow, "Icon", new Vector2(0, 0), new Vector2(0, 1), new Vector2(10, 8), new Vector2(46, -8), Color.white);
+            icon.sprite = BaseSceneSetup.DepotIcon;
+            icon.preserveAspect = true;
+            depotTitle = ReferenceUiVisuals.Text(depotRow, "Title", L.T("DEPO", "STORAGE"), 15, new Color(1f, 0.95f, 0.78f), TextAlignmentOptions.Left,
+                new Vector2(0, 0), new Vector2(0, 1), new Vector2(50, 0), new Vector2(150, 0), true);
+            depotItems = ReferenceUiVisuals.Rect(depotRow, "Items", Vector2.zero, Vector2.one, new Vector2(150, 4), new Vector2(-10, -4));
+            var layout = depotItems.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+            depotRow.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>D121: DEPO satırını depodaki ada binalarıyla doldurur ve satırları yeniden dizer (depo boşsa satır gizli).</summary>
+    private void RefreshDepotRow()
+    {
+        if (depotRow == null) return;
+        var items = DepotService.Items(DepotService.RegionIsland);
+        bool show = items.Count > 0;
+        depotRow.gameObject.SetActive(show);
+        int rows = menuRows.Count + (show ? 1 : 0);
+        int index = 0;
+        void Place(RectTransform rect)
+        {
+            float top = 1f - index / (float)rows, bottom = 1f - (index + 1) / (float)rows;
+            rect.anchorMin = new Vector2(0, bottom); rect.anchorMax = new Vector2(1, top);
+            index++;
+        }
+        if (show) Place(depotRow);
+        foreach (var row in menuRows) Place(row);
+        if (!show) { DepotButtons.Clear(); depotSignature = null; return; }
+        depotTitle.text = L.T($"DEPO ({items.Count})", $"STORAGE ({items.Count})");
+        var signature = new System.Text.StringBuilder();
+        foreach (var item in items) signature.Append(item.id).Append('|').Append(item.level).Append('|').Append(DepotService.RestoreBlockedReason(item)).Append(';');
+        if (signature.ToString() == depotSignature && DepotButtons.Count == items.Count) return;
+        depotSignature = signature.ToString();
+        for (int i = depotItems.childCount - 1; i >= 0; i--)
+        {
+            var child = depotItems.GetChild(i).gameObject;
+            child.SetActive(false);
+            UnityEngine.Object.Destroy(child);
+        }
+        DepotButtons.Clear();
+        foreach (var item in items)
+        {
+            var kind = IslandGrid.ParseKind(item.type);
+            var slot = NineSlice(depotItems, "Depot_" + item.id, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, "ui_paper", Color.white, 3f);
+            slot.raycastTarget = true;
+            var fit = slot.gameObject.AddComponent<LayoutElement>();
+            fit.preferredWidth = 66f; fit.minWidth = 50f;
+            var button = slot.gameObject.AddComponent<Button>();
+            button.targetGraphic = slot;
+            string id = item.id;
+            string blocked = DepotService.RestoreBlockedReason(item);
+            button.onClick.AddListener(() =>
+            {
+                string why = DepotService.RestoreBlockedReason(DepotService.Find(DepotService.RegionIsland, id));
+                if (why != null) { Toast?.Invoke(why); return; }
+                Close();
+                DepotRequested?.Invoke(id);
+            });
+            var pic = ReferenceUiVisuals.Image(slot.transform, "Icon", new Vector2(0, 0.42f), new Vector2(1, 1), new Vector2(4, 0), new Vector2(-4, -4), Color.white);
+            pic.sprite = Ui(IslandVillage.SpriteName(kind));
+            pic.preserveAspect = true;
+            pic.raycastTarget = false;
+            if (blocked != null) pic.color = new Color(0.6f, 0.6f, 0.6f, 0.8f);
+            var level = ReferenceUiVisuals.Text(slot.transform, "Level", L.T($"Sv {item.level}", $"Lv {item.level}"), 11, Ink, TextAlignmentOptions.Center,
+                new Vector2(0, 0), new Vector2(1, 0.42f), new Vector2(4, 5), new Vector2(-4, 0), true);
+            level.raycastTarget = false;
+            DepotButtons[id] = button;
         }
     }
 
@@ -240,7 +330,7 @@ public sealed class IslandBuildUi
             return L.T($"Kışla Kıyı Kalesi {Progression.Island.BarracksKeep}'te açılır", $"Barracks unlock at Keep {Progression.Island.BarracksKeep}");
         if (kind == IslandLayout.BuildingKind.Monastery && IslandEconomy.Keep < Progression.Island.MonasteryKeep)
             return L.T($"Manastır Kıyı Kalesi {Progression.Island.MonasteryKeep}'te açılır", $"Monastery unlocks at Keep {Progression.Island.MonasteryKeep}");
-        int have = IslandEconomy.CountOf(kind), max = Progression.Island.MaxCount(kind, IslandEconomy.Keep);
+        int have = DepotService.OwnedCount(DepotService.RegionIsland, kind.ToString()), max = Progression.Island.MaxCount(kind, IslandEconomy.Keep);   // D121: yerleşik + depo
         if (have >= max) return L.T($"Adet doldu ({have}/{max})", $"Limit reached ({have}/{max})");
         if (IslandEconomy.InDefense) return L.T("Savaşta inşa yapılamaz", "Cannot build during defense");
         if (IslandEconomy.BuilderBusy) return L.T("Ada Ustası meşgul", "Island Builder is busy");
@@ -269,11 +359,12 @@ public sealed class IslandBuildUi
 
     private void RefreshMenu()
     {
+        RefreshDepotRow();
         var save = IslandSession.Save;
         foreach (var card in cards)
         {
             var cost = IslandEconomy.BuildCost(card.kind);
-            int have = IslandEconomy.CountOf(card.kind), max = Progression.Island.MaxCount(card.kind, IslandEconomy.Keep);
+            int have = DepotService.OwnedCount(DepotService.RegionIsland, card.kind.ToString()), max = Progression.Island.MaxCount(card.kind, IslandEconomy.Keep);   // D121
             bool buildable = IslandEconomy.Buildable(card.kind);
             // AŞAMA 3 §3G: adedi 0 olan tür (ör. Manastır KK5) kilit nedenini gösterir; "İLK YAPIM BEDAVA" yalnız şimdi kurulabilirse.
             bool lockedByKeep = max <= 0;

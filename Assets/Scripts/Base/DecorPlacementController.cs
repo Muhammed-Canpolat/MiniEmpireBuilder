@@ -13,6 +13,7 @@ public sealed class DecorPlacementController : MonoBehaviour
     private readonly List<DecorInstance> placed = new List<DecorInstance>();
     private DecorData selected;
     private DecorInstance moving;
+    private string depotItemId;   // D121: depodan kurulan dekorun depo kimliği (bedel yok, görev raporu yok)
     private GameObject ghost;
     private SpriteRenderer ghostRenderer;
     private readonly List<SpriteRenderer> cells = new List<SpriteRenderer>();
@@ -43,6 +44,8 @@ public sealed class DecorPlacementController : MonoBehaviour
     public const int LayoutVersion = 1;
     public IReadOnlyList<DecorInstance> Placed => placed;
     public bool IsPlacing => selected != null;
+    /// <summary>D121: yerleştirme depodan mı (test/arayüz).</summary>
+    public bool PlacingFromDepot => selected != null && depotItemId != null;
 
     public void AddRecommendedClusters()
     {
@@ -213,6 +216,17 @@ public sealed class DecorPlacementController : MonoBehaviour
         CreateConfirmBar();
     }
 
+    /// <summary>D121: depodaki dekoru ücretsiz yerleştirme (bedel 0; onayda DepotService.Restore).</summary>
+    public void BeginFromDepot(DepotItem item)
+    {
+        if (item == null || item.category != DepotService.CategoryDecor) return;
+        var data = Array.Find(All, d => d != null && d.id == item.type);
+        if (data == null) return;
+        BeginPlacement(data);
+        depotItemId = item.id;
+        RefreshConfirmState();
+    }
+
     public void BeginMove(DecorInstance item)
     {
         if (item == null) return;
@@ -237,6 +251,7 @@ public sealed class DecorPlacementController : MonoBehaviour
         moving = null;
         moveArmed = false;
         selected = null;
+        depotItemId = null;
         if (ghost != null) Destroy(ghost);
         if (moveGrid != null) Destroy(moveGrid);
         moveGrid = null;
@@ -255,7 +270,7 @@ public sealed class DecorPlacementController : MonoBehaviour
                 selected.footprint.x + 2f, selected.footprint.y + 2f).Contains(world), out Vector3 pointer))
             currentCell = CellUnderPointer(pointer, selected.footprint);
         valid = CanPlace(selected, currentCell, moving) &&
-            (moving != null || GameManager.Instance?.Gold >= selected.cost);
+            (moving != null || depotItemId != null || GameManager.Instance?.Gold >= selected.cost);
         var center = new Vector3(currentCell.x + selected.footprint.x * 0.5f,
             currentCell.y + selected.footprint.y * 0.5f, -1f);
         ghost.transform.position = center;
@@ -299,6 +314,18 @@ public sealed class DecorPlacementController : MonoBehaviour
             Save();
             Cancel();
             ShowUndo(moved, previous);
+            return;
+        }
+        else if (depotItemId != null)
+        {
+            // D121: depodan kurma — bedel yok, PlaceDecor görevi sayılmaz (dekor görev farmı kapalı). Kayıt DepotService'te (tek SaveGame).
+            if (!DepotService.Restore(BaseDepotAdapter.Instance, depotItemId, new Vector2(currentCell.x, currentCell.y), out string why))
+            {
+                BaseSceneSetup.Instance?.ShowHudToast(why);
+                return;
+            }
+            HeroMovementController.Instance?.RefreshWalkable();
+            Cancel();
             return;
         }
         else
@@ -358,6 +385,10 @@ public sealed class DecorPlacementController : MonoBehaviour
                 confirm = true, question = L.T("Silinsin mi?", "Remove it?"), action = () => Delete(item)
             }
         };
+        // D121 (bug 11): TAŞI / DEPOYA / SİL — dekor depodan ücretsiz geri kurulur.
+        var depot = BaseSceneSetup.DepotMenuItem(DepotService.RegionBase, DepotService.CategoryDecor, item.Data.id, item.InstanceId,
+            BaseDepotAdapter.Instance, null, message => BaseSceneSetup.Instance?.ShowHudToast(message));
+        if (depot != null) items.Insert(1, depot);
         var sr = item.GetComponent<SpriteRenderer>();
         var menu = WorldActionMenu.Show(parent, () => sr != null ? BaseVisualBounds.VisibleBounds(sr) : new Bounds(item.transform.position, Vector3.one), Camera.main, items,   // D115 (madde 18): görünür sınır
             "DecorActions", item, sr);
@@ -411,6 +442,14 @@ public sealed class DecorPlacementController : MonoBehaviour
 
     private void Save()
     {
+        if (GameManager.Instance?.PlayerData == null) return;
+        WriteToPlayerData();
+        GameManager.Instance.SaveGame();
+    }
+
+    /// <summary>D121: dekor listesini kayıt nesnesine yazar, diske kaydetmez (depo işlemi tek SaveGame yapar).</summary>
+    public void WriteToPlayerData()
+    {
         var player = GameManager.Instance?.PlayerData;
         if (player == null) return;
         player.placedDecor = new List<PlacedDecorSave>();
@@ -420,7 +459,31 @@ public sealed class DecorPlacementController : MonoBehaviour
                 instanceId = item.InstanceId, decorId = item.Data.id,
                 x = item.Cell.x, y = item.Cell.y
             });
-        GameManager.Instance.SaveGame();
+    }
+
+    /// <summary>D121: dekoru sahneden kaldırır (depoya alınırken). Kayda yazmaz.</summary>
+    public bool DespawnDecor(string instanceId)
+    {
+        var item = placed.Find(d => d != null && d.InstanceId == instanceId);
+        if (item == null) return false;
+        if (item == moving) Cancel();
+        placed.Remove(item);
+        BaseOccupancyGrid.MarkDirty();
+        item.gameObject.SetActive(false);
+        Destroy(item.gameObject);
+        HideActions();
+        return true;
+    }
+
+    /// <summary>D121: depodaki dekoru aynı kimlikle kurar (katı yer kuralı: <see cref="CanPlace"/>). Kurulamazsa false. Kayda yazmaz.</summary>
+    public bool SpawnRestored(string decorId, Vector2Int cell, string instanceId)
+    {
+        var data = Array.Find(All, d => d != null && d.id == decorId);
+        if (data == null || !CanPlace(data, cell)) return false;
+        if (placed.Exists(d => d != null && d.InstanceId == instanceId)) return false;
+        var item = Spawn(data, cell, instanceId);
+        BaseBuildingVisual.SpawnDust(item.transform.position, 130);
+        return true;
     }
 
     private static Sprite Square => square != null ? square :
@@ -509,10 +572,11 @@ public sealed class DecorPlacementController : MonoBehaviour
     {
         if (confirmButtons == null || selected == null) return;
         bool fits = CanPlace(selected, currentCell, moving);
-        bool gold = moving != null || (GameManager.Instance != null && GameManager.Instance.Gold >= selected.cost);
+        bool gold = moving != null || depotItemId != null || (GameManager.Instance != null && GameManager.Instance.Gold >= selected.cost);
         var coin = CampaignSceneSetup.Art("ui_icon_coin");
         if (!fits) confirmButtons.SetState(false, L.T("Buraya sığmıyor", "Doesn't fit here"), null, true);
         else if (!gold) confirmButtons.SetState(false, L.T("Altın yetersiz", "Not enough gold"), coin, true);
+        else if (depotItemId != null) confirmButtons.SetState(true, L.T("ÜCRETSİZ", "FREE"));
         else if (moving == null) confirmButtons.SetState(true, NumberFormat.Short(selected.cost, 100000), coin);
         else confirmButtons.SetState(true, null);
     }

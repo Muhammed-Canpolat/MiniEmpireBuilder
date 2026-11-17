@@ -230,7 +230,9 @@ public static class IslandGrid
                 var otherKind = ParseKind(other.kind);
                 if (Overlaps(rect, Rect(otherKind, other.col, other.row))) return Reason.Overlap;
             }
-        if (movingId == null && sameKind >= Progression.Island.MaxCount(kind, keepLevel)) return Reason.Limit;
+        // D121: depodakiler limite sayılır (depola → yeni kur ile sınırsız bina olmaz). Depodan kurulum movingId (= depo kimliği) ile gelir: sayılmaz.
+        if (movingId == null && sameKind + DepotService.StoredCount(DepotService.RegionIsland, kind.ToString()) >= Progression.Island.MaxCount(kind, keepLevel))
+            return Reason.Limit;
         var center = CenterCell(kind, col, row);
         if (kind == IslandLayout.BuildingKind.Lumber && TreesNear(center, zoneMask) < 1) return Reason.NeedTrees;
         if (kind == IslandLayout.BuildingKind.Pasture && (height > 1 || MeadowNear(center) < 1)) return height > 1 ? Reason.Height : Reason.NeedMeadow;

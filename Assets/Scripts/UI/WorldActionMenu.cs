@@ -29,6 +29,9 @@ public sealed class WorldActionMenu : MonoBehaviour
         public bool confirm;
         /// <summary>Onay satırının sorusu (boşsa "Emin misin?").</summary>
         public string question;
+        /// <summary>D121: doluysa düğme gri; dokunuş eylemi yapmaz, <see cref="onBlocked"/> ile bu tek satır sebebi gösterir (menü açık kalır).</summary>
+        public string blockedReason;
+        public Action<string> onBlocked;
     }
 
     public const float ButtonSize = 48f;
@@ -139,7 +142,8 @@ public sealed class WorldActionMenu : MonoBehaviour
             var it = list[i];
             float cx = startX + i * (ColumnWidth + ColumnGap) + ColumnWidth * 0.5f;
             var item = it;
-            Round(it.id, cx, buttonY, it.icon, () => OnPressed(item));
+            var round = Round(it.id, cx, buttonY, it.icon, () => OnPressed(item));
+            if (!string.IsNullOrEmpty(it.blockedReason)) Dim(round);
             if (!string.IsNullOrEmpty(it.label))
                 PlacePill(Pill(it.id + "_Label", it.label, 11f, null, null, null, LabelHeight, ColumnWidth - 2f), new Vector2(cx, labelY));
             if (!string.IsNullOrEmpty(it.costText))
@@ -241,9 +245,26 @@ public sealed class WorldActionMenu : MonoBehaviour
         return button;
     }
 
+    /// <summary>D121: engelli düğme gri görünür (dokunulabilir kalır: sebep toast'la söylenir).</summary>
+    private static void Dim(Button button)
+    {
+        foreach (var image in button.GetComponentsInChildren<Image>(true))
+        {
+            if (image.name == "Shadow") continue;
+            var c = image.color;
+            float g = (c.r + c.g + c.b) / 3f;
+            image.color = new Color(g * 0.75f, g * 0.75f, g * 0.75f, c.a * (image.name == "Icon" ? 0.55f : 1f));
+        }
+    }
+
     private void OnPressed(Item item)
     {
         if (closed) return;
+        if (!string.IsNullOrEmpty(item.blockedReason))
+        {
+            item.onBlocked?.Invoke(item.blockedReason);
+            return;
+        }
         if (!item.confirm)
         {
             Close();

@@ -45,7 +45,48 @@ public static class SaveInvariants
                 changed = true;
             }
         }
+        changed |= RepairDepot(data);
         return changed;
+    }
+
+    /// <summary>
+    /// D121 (ek koşul b): yerleşik + depo kimlik tekliği. Store/Restore sırasında uygulama kapanırsa aynı nesne iki listede kalabilir:
+    /// YERLEŞİK kopya kazanır, depo kopyası silinir (seviye/konum yerleşikte). Depoda aynı kimlik iki kez → ilki kalır. Bozuk öğe
+    /// (kimlik/tür yok) silinir, seviye 1..MaxLevel'a çekilir. Depoyu yalnız DepotService okur; bu onarım onun kayıt kuralıdır.
+    /// </summary>
+    public static bool RepairDepot(PlayerSaveData data)
+    {
+        if (data == null) return false;
+        if (data.depot == null) { data.depot = new List<DepotItem>(); return true; }
+        var placed = PlacedIds(data);
+        var seen = new HashSet<string>();
+        int before = data.depot.Count;
+        bool changed = false;
+        data.depot.RemoveAll(item => item == null || string.IsNullOrEmpty(item.id) || string.IsNullOrEmpty(item.type)
+            || placed.Contains(DepotKey(item.region, item.category, item.id)) || !seen.Add(DepotKey(item.region, item.category, item.id)));
+        changed |= data.depot.Count != before;
+        foreach (var item in data.depot)
+        {
+            int level = Mathf.Clamp(item.level, 1, Progression.MaxLevel);
+            if (level != item.level) { item.level = level; changed = true; }
+            if (item.stock < 0f) { item.stock = 0f; changed = true; }
+        }
+        return changed;
+    }
+
+    private static string DepotKey(int region, int category, string id) => region + ":" + category + ":" + id;
+
+    /// <summary>Yerleşik nesnelerin kimlikleri (depo anahtarı biçiminde): Ana Üs binaları, dekorlar, ada binaları.</summary>
+    private static HashSet<string> PlacedIds(PlayerSaveData data)
+    {
+        var ids = new HashSet<string>();
+        if (data.placedBuildings != null)
+            foreach (var p in data.placedBuildings) if (p != null && !string.IsNullOrEmpty(p.slotId)) ids.Add(DepotKey(0, 0, p.slotId));
+        if (data.placedDecor != null)
+            foreach (var d in data.placedDecor) if (d != null && !string.IsNullOrEmpty(d.instanceId)) ids.Add(DepotKey(0, 1, d.instanceId));
+        if (data.island?.placed != null)
+            foreach (var b in data.island.placed) if (b != null && !string.IsNullOrEmpty(b.id)) ids.Add(DepotKey(1, 0, b.id));
+        return ids;
     }
 
     /// <summary>Kayıttaki Ana Üs seviyesi (tür girdisi; yoksa 1).</summary>
@@ -91,6 +132,21 @@ public static class SaveInvariants
                     problems.Add("aynı bina kimliği iki kez: " + placed.slotId);
                 if (placed.level < 1 || placed.level > Progression.MaxLevel)
                     problems.Add($"bina seviyesi sınır dışı: {placed.slotId} {placed.level}");
+            }
+        }
+
+        // --- Depo (D121): yerleşik + depo kimlik tekliği, seviye sınırı ---
+        if (data.depot != null)
+        {
+            var placedIds = PlacedIds(data);
+            var seenDepot = new HashSet<string>();
+            foreach (var item in data.depot)
+            {
+                if (item == null) { problems.Add("boş depo öğesi"); continue; }
+                string key = DepotKey(item.region, item.category, item.id);
+                if (placedIds.Contains(key)) problems.Add("aynı nesne hem yerleşik hem depoda: " + item.id);
+                if (!seenDepot.Add(key)) problems.Add("depoda aynı kimlik iki kez: " + item.id);
+                if (item.level < 1 || item.level > Progression.MaxLevel) problems.Add($"depo seviyesi sınır dışı: {item.id} {item.level}");
             }
         }
 

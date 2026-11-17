@@ -554,6 +554,7 @@ public sealed class IslandHud : MonoBehaviour
         buildUi.Toast = Toast;
         buildUi.PlaceRequested = kind => StartPlacement(IslandPlacementHost.ForNew(kind));
         buildUi.MoveRequested = id => StartPlacement(IslandPlacementHost.ForMove(id));
+        buildUi.DepotRequested = id => StartPlacement(IslandPlacementHost.ForDepot(id));   // D121
         buildUi.AkinRequested = () => { prepOpen = true; Refresh(); };
         placement = setup.gameObject.GetComponent<IslandPlacementController>();
         if (placement == null) placement = setup.gameObject.AddComponent<IslandPlacementController>();   // Unity sahte-null: ?? kullanılmaz
@@ -561,7 +562,7 @@ public sealed class IslandHud : MonoBehaviour
         if (village != null)
         {
             village.Toast = Toast;
-            village.BuildingTapped = id => { buildUi.ShowBuilding(id); FocusBuilding(id); };
+            village.BuildingTapped = id => ShowBuildingActions(id);   // D121 (karar 2): Ana Üs'le aynı eylem menüsü (YÜKSELT / TAŞI / DEPOYA)
             village.CastleTapped = () => { buildUi.ShowCastle(); setup.CameraController.FocusUpper(IslandLayout.CastleCenter); };
             village.ZoneTapped = zone => { buildUi.ShowZone(zone); setup.CameraController.FocusUpper(setup.ZoneCenter(zone)); };
             // 6. oturum (4.2): ağaç/çalı/kaya → öğenin üstünde küçük eylem menüsü + süreli temizleme (Ana Üs ile aynı sistem).
@@ -585,6 +586,46 @@ public sealed class IslandHud : MonoBehaviour
                     () => IslandNatureClear.TryClear(item.kind, item.cell, out _), reward);
             };
         }
+    }
+
+    /// <summary>
+    /// D121 (karar 2): ada binasına dokunuş Ana Üs'teki gibi binanın üstünde eylem menüsü açar: YÜKSELT (mevcut bina paneli), TAŞI,
+    /// DEPOYA (Okçuluk Alanı/Kıyı Kalesi ve inşa öğreticisi bitmeden yok; inşaat, hasar/onarım, savunmada gri + sebep). İnşaat alanı
+    /// (seviye 0) eskisi gibi doğrudan paneli açar (bitir/hızlandır oradadır).
+    /// </summary>
+    public WorldActionMenu ShowBuildingActions(string id)
+    {
+        var entry = IslandEconomy.Find(id);
+        var village = IslandVillage.Instance;
+        var live = village != null ? village.Live(id) : null;
+        if (entry == null || entry.level < 1 || live == null)
+        {
+            buildUi.ShowBuilding(id);
+            FocusBuilding(id);
+            return null;
+        }
+        buildUi.Close();
+        var items = new System.Collections.Generic.List<WorldActionMenu.Item>
+        {
+            new WorldActionMenu.Item
+            {
+                id = "info", icon = CampaignSceneSetup.Art("ui_icon_hammer"), label = L.T("YÜKSELT", "UPGRADE"),
+                action = () => { buildUi.ShowBuilding(id); FocusBuilding(id); }
+            },
+            new WorldActionMenu.Item
+            {
+                id = "move", icon = CampaignSceneSetup.Art("ui_icon_move"), label = L.T("TAŞI", "MOVE"),
+                blockedReason = IslandEconomy.InDefense ? L.T("Savaşta taşınamaz", "Cannot move during defense") : null,
+                onBlocked = Toast,
+                action = () => StartPlacement(IslandPlacementHost.ForMove(id))
+            },
+        };
+        var depot = BaseSceneSetup.DepotMenuItem(DepotService.RegionIsland, DepotService.CategoryBuilding, entry.kind, id,
+            IslandDepotAdapter.Instance, null, message => { Toast(message); Refresh(); });
+        if (depot != null) items.Add(depot);
+        var sr = live.GetComponent<SpriteRenderer>();
+        var cam = IslandSceneSetup.Instance != null ? IslandSceneSetup.Instance.WorldCamera : Camera.main;
+        return WorldActionMenu.Show(safe, () => live != null ? live.Bounds : new Bounds(), cam, items, "IslandBuildingActions", live, sr);
     }
 
     /// <summary>Küçük KALDIR menüsü; seçilince iş sıraya girer, Usta boşalınca yürüyüp keser (süre config'ten), bitince bedel/ödül işlenir.</summary>
