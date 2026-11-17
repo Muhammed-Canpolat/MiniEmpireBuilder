@@ -399,7 +399,8 @@ public sealed class WorldViewportBars : MonoBehaviour
         upper = Mathf.Clamp(upper, lower + 1f, Screen.height);
         camera.pixelRect = new Rect(0f, lower, Screen.width, upper - lower);
         camera.aspect = camera.pixelRect.width / Mathf.Max(1f, camera.pixelRect.height);
-        if (worldWidth > 0f)
+        // D108: Ana Üs duvarları kuruluysa duvar + orman kadrajı; yoksa eski 22 birim genişlik kadrajı.
+        if (worldWidth > 0f && !BaseCastleWalls.ApplyFraming(camera))
         {
             float widthSize = worldWidth / (2f * camera.aspect);
             camera.orthographicSize = Mathf.Max(widthSize, BaseWorldLayout.Height * 0.5f);

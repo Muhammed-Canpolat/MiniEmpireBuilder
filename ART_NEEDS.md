@@ -114,3 +114,8 @@ parçalarından **türetilmiş** (`Tools/campaign_art/battle_props.py`, D91). Ge
 | 21 | Lav gölü (6 kare kabarcık animasyonu), ejder kafatası | …/Props/lava_pool.png | 160×96 (×6) | Bölge 6; şu an parıltı/kabarcık kodla |
 | 22 | Karlı çam, buzlu kaya ×2, kar yığını | …/Props/ice_rock.png (+ yeni) | 192×256 / 128×96 | Bölge 4 (şu an güz ağacı beyaz tonlu) |
 | 23 | Sis bulutu dokusu (yumuşak, döşenebilir) | — (kodla üretiliyor) | 256×128 | Bölge 2 |
+
+## 10. oturum (17 Kasım 2026): Ana Üs PixelCastle duvarları (D108)
+| # | Varlık | Dosya | Ölçü | Not |
+|---|---|---|---|---|
+| 24 | **EKSİK ASSET:** mavi konik çatılı yuvarlak köşe kulesi (referans `Docs/UIReference/ana-us-referans.png` dört köşe) | Assets/PixelCastle/PixelCastle/Sprites/tower_round_blue_roof.png | ≈200×250 px, 84 PPU, alt-orta pivot, tek kare | Şimdilik altta `tower_small_closed` boyasız, üstte `corner_outer_left/right`; renk/tint ile uydurma YOK. Gelince `BaseCastleWalls` köşe parçası değişir. |

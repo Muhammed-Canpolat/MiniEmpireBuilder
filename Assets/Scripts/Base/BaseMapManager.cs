@@ -285,6 +285,16 @@ public class BaseMapManager : MonoBehaviour
         Sprite pillar = BaseCustomArt.Get("fence_stone_pillar") ?? LoadFullFenceSprite("fence_wood_corner");
         Sprite lantern = BaseCustomArt.Get("fence_lantern");
 
+        // D108: PixelCastle duvarları (yalnız görsel; çit çizgisinden türetilir). Eski kiriş/direk görseli bayrakla atlanır,
+        // aşağıdaki FenceBlocker çarpışması HER İKİ durumda aynen kurulur.
+        bool castle = BaseCastleWalls.Enabled;
+        if (castle)
+        {
+            BaseCastleWalls.Build(_buildableFenceRoot.transform, BaseCastleWalls.FenceRect);
+            beams = null;
+            pillar = null;
+        }
+
         // Kirişler (yatay kenarlar düz, dikey kenarlar 90° dönük döşeme).
         if (beams != null)
         {

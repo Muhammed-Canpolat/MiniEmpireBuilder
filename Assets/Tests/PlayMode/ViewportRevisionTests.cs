@@ -294,8 +294,19 @@ public class ViewportRevisionTests
         StringAssert.StartsWith("House3", GameObject.Find("MineHouse")
             .GetComponent<SpriteRenderer>().sprite.name);
         Assert.NotNull(GameObject.Find("MinePawn"));
-        Assert.Greater(Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
-            .Count(item => item.name == "FenceLantern"), 0);
+        // D108: PixelCastle duvarları açıkken eski çit (direk + fener) gizlenir, yerine duvar halkası kurulur.
+        var castleWalls = GameObject.Find("CastleWalls");
+        bool castleOn = (bool)Type("FeatureConfig").GetField("pixelCastleWalls")
+            .GetValue(Type("FeatureConfig").GetProperty("Instance").GetValue(null));
+        if (castleOn && castleWalls != null)
+        {
+            Assert.Greater(castleWalls.transform.childCount, 20, "duvar halkası");
+            Assert.AreEqual(0, Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
+                .Count(item => item.name == "FenceLantern"), "eski çit fenerleri duvarla gizli");
+        }
+        else
+            Assert.Greater(Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
+                .Count(item => item.name == "FenceLantern"), 0);
         Assert.NotNull(GameObject.Find("DockRivet_0_0"));
         Capture("ux-base-level5-clean.png");
         Capture("reference-base-level5.png");

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -57,7 +58,7 @@ public class UiAnaUsCapture
         PlayerPrefs.Save();
     }
 
-    private static IEnumerator LoadBase(int mainBase, int meat, int wood, int gold, int gems)
+    private static IEnumerator LoadBase(int mainBase, int meat, int wood, int gold, int gems, Action<object> edit = null)
     {
         var managerType = T("GameManager");
         var gm = managerType.GetProperty("Instance").GetValue(null) as Component;
@@ -71,6 +72,7 @@ public class UiAnaUsCapture
         Set(save, "firstBaseGuideDone", true);
         var island = Field(save, "island");
         Set(island, "meat", meat); Set(island, "wood", wood);
+        edit?.Invoke(save);
         managerType.GetProperty("PlayerData").GetSetMethod(true).Invoke(gm, new[] { save });
         managerType.GetMethod("RebuildBuildingData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(gm, null);
         SceneManager.LoadScene("BaseScene");
@@ -201,6 +203,183 @@ public class UiAnaUsCapture
         Shoot(w, h, closed);
         setOpen.Invoke(bar, new object[] { true, false, false });
         PlayerPrefs.DeleteKey("MEB_BaseBarOpen");
+    }
+
+    // ==================== D108: PixelCastle duvarları + kadraj ====================
+
+    /// <summary>Dolu kayıt (UI_CAPTURE_FULL=1, varsayılan): Ana Üs 7, açılmış arazi, referanstaki dizilime yakın binalar + dekor.</summary>
+    private static void FillReferenceBase(object save, int landTier)
+    {
+        Set(save, "landOpened", landTier);
+        Set(Field(save, "island"), "announced", true);   // "Ufukta bir ada!" afişi görüntüyü kapatmasın
+        var placed = (System.Collections.IList)Field(save, "placedBuildings");
+        var present = placed.Cast<object>().Select(e => (string)Field(e, "slotId")).ToList();
+        foreach (var (slot, type, level) in new[] {
+                     ("main", "MainBase", 7), ("mine_1", "GoldMine", 5), ("archer_1", "ArcherTower", 4), ("barracks_1", "Barracks", 3),
+                     ("barracks_2", "Barracks", 1), ("house_1", "House", 3), ("house_2", "House", 2),
+                     ("workshop_1", "CardWorkshop", 2), ("cannon_3", "CannonTower", 2) })
+        {
+            if (present.Contains(slot)) continue;
+            var entry = Activator.CreateInstance(T("PlacedBuildingData"));
+            Set(entry, "slotId", slot); Set(entry, "buildingType", type); Set(entry, "level", level);
+            placed.Add(entry);
+        }
+        foreach (var entry in (System.Collections.IEnumerable)Field(save, "buildings"))
+        {
+            string type = Field(entry, "buildingType").ToString();
+            if (type == "MainBase" || type == "GoldMine") continue;
+            Set(entry, "isUnlocked", true);
+            Set(entry, "level", 1);
+        }
+        var decor = (System.Collections.IList)Field(save, "placedDecor");
+        int n = 0;
+        foreach (var (id, x, y) in new[] { ("bush", 3, 33), ("bush2", 17, 33), ("bush3", 19, 6), ("bush", 2, 4) })
+        {
+            var record = Activator.CreateInstance(T("PlacedDecorSave"));
+            Set(record, "instanceId", "capture_" + n++); Set(record, "decorId", id); Set(record, "x", x); Set(record, "y", y);
+            decor.Add(record);
+        }
+    }
+
+    private static bool Full => Env("UI_CAPTURE_FULL", "1") == "1";
+    private static string CaptureDir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", Env("UI_CAPTURE_DIR", "Docs/playtest/ui-ana-us")));
+
+    /// <summary>
+    /// D108: duvarlar + kadraj. Çıktılar (UI_CAPTURE_DIR, varsayılan Docs/playtest/ui-ana-us): 03-duvar-9x16/9x19.5/9x21/4x3.png,
+    /// 03-duvar-tasima.png (bina taşıma anı). Denetim: duvar kökünde collider yok, kamera zoom/kaydırma etkisiz, kadraj duvarı kapsar.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator CaptureBaseWalls()
+    {
+        string dir = CaptureDir;
+        PlayerPrefs.SetInt("MEB_BaseBarOpen", 1);
+        if (Full) yield return LoadBase(7, 43, 227, 2581, 8, save => FillReferenceBase(save, 4));
+        else yield return LoadBase(7, 43, 227, 2581, 8);
+        yield return new WaitForSecondsRealtime(1.0f);
+        T("AwayReportUI").GetMethod("CloseIfOpen").Invoke(null, null);
+        var walls = GameObject.Find("CastleWalls");
+        Assert.NotNull(walls, "PixelCastle duvarları kuruldu");
+        Assert.AreEqual(0, walls.GetComponentsInChildren<Collider2D>(true).Length, "duvarda collider yok");
+        Assert.IsNull(walls.GetComponentInChildren<Rigidbody2D>(true), "duvarda Rigidbody yok");
+        var cam = Camera.main;
+        float ortho = cam.orthographicSize; Vector3 pos = cam.transform.position;
+        var controller = cam.GetComponent(T("BaseCameraController"));
+        controller.GetType().GetMethod("ZoomBy").Invoke(controller, new object[] { 0.5f, new Vector2(100f, 100f) });
+        controller.GetType().GetMethod("EdgeScroll").Invoke(controller, new object[] { new Vector2(1f, 1f) });
+        controller.GetType().GetMethod("EnsureVisible").Invoke(controller, new object[] { new Vector2(2f, 3f) });
+        Assert.AreEqual(ortho, cam.orthographicSize, 1e-4f, "Ana Üs'te zoom yok");
+        Assert.AreEqual(pos, cam.transform.position, "kenar kaydırma/odak kamerayı oynatmaz");
+        var current = T("BaseCastleWalls").GetProperty("Current").GetValue(null);
+        var frame = (Rect)current.GetType().GetProperty("FrameBounds").GetValue(current);
+        Vector3 lo = cam.WorldToViewportPoint(new Vector3(frame.xMin + 1.1f, frame.yMin + 0.3f));
+        Vector3 hi = cam.WorldToViewportPoint(new Vector3(frame.xMax - 1.1f, frame.yMax - 1.2f));
+        Assert.IsTrue(lo.x >= -0.001f && lo.y >= -0.001f && hi.x <= 1.001f && hi.y <= 1.001f, $"duvarlar görüş alanında {lo} {hi}");
+
+        foreach (var (name, w, h) in new[] { ("9x16", 1080, 1920), ("9x19.5", 1080, 2340), ("9x21", 1080, 2520), ("4x3", 1536, 2048) })
+            ShootFramed(w, h, Path.Combine(dir, "03-duvar-" + name + ".png"));
+
+        // Bina taşıma anı (bug 1: yeşil ekran yok, kamera kaymaz).
+        var map = T("BaseMapManager").GetProperty("Instance").GetValue(null);
+        var mine = ((System.Collections.IEnumerable)map.GetType().GetProperty("MapObjects").GetValue(map)).Cast<object>()
+            .First(o => Field(o, "buildingType")?.ToString() == "GoldMine");
+        var placement = T("PlacementController").GetProperty("Instance").GetValue(null);
+        placement.GetType().GetMethod("BeginMove").Invoke(placement, new[] { mine });
+        yield return null;
+        controller.GetType().GetMethod("EdgeScroll").Invoke(controller, new object[] { new Vector2(2f, 2f) });
+        yield return null;
+        Assert.AreEqual(ortho, cam.orthographicSize, 1e-4f, "taşımada zoom değişmez");
+        Assert.AreEqual(pos, cam.transform.position, "taşımada kamera kaymaz");
+        ShootFramed(1080, 1920, Path.Combine(dir, "03-duvar-tasima.png"));
+        placement.GetType().GetMethod("CancelPlacement").Invoke(placement, null);
+        yield return null;
+        PlayerPrefs.DeleteKey("MEB_BaseBarOpen");
+    }
+
+    /// <summary>D108: en küçük (0) ve en büyük (4) arazi genişlemesinde duvar aynı çit çizgisine oturur (dinamik kurulum kanıtı).</summary>
+    [UnityTest]
+    public IEnumerator CaptureBaseWallsLandTiers()
+    {
+        string dir = CaptureDir;
+        foreach (var (tier, mb, file) in new[] { (0, 1, "03-duvar-arazi-en-kucuk.png"), (4, 13, "03-duvar-arazi-en-buyuk.png") })
+        {
+            yield return LoadBase(mb, 43, 227, 2581, 8, save => { Set(save, "landOpened", tier); Set(Field(save, "island"), "announced", true); });
+            Assert.NotNull(GameObject.Find("CastleWalls"), "duvar " + tier);
+            ShootFramed(1080, 1920, Path.Combine(dir, file));
+        }
+    }
+
+    /// <summary>
+    /// Oyundaki dünya kadrajının aynısı: kadraj, üst ve alt bar arasındaki alanın en-boyuna göre <c>BaseCastleWalls.ApplyFraming</c>
+    /// ile hesaplanır (WorldViewportBars gibi); tek kamera tam ekran çizer, ölçek/merkez o alana denk gelecek şekilde kaydırılır
+    /// (barların arkasında koyu dolgu yerine dünyanın devamı görünür; aradaki alan oyundakiyle birebir).
+    /// </summary>
+    private static void ShootFramed(int w, int h, string outPath)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outPath));
+        var camera = Camera.main;
+        Assert.NotNull(camera);
+        var texture = new RenderTexture(w, h, 24);
+        Rect oldRect = camera.rect; float oldSize = camera.orthographicSize; Vector3 oldPos = camera.transform.position;
+        camera.targetTexture = texture;
+        camera.rect = new Rect(0, 0, 1, 1);
+        camera.aspect = (float)w / h;
+        var changed = new System.Collections.Generic.List<(Canvas canvas, RenderMode mode, Camera cam, int order, bool over)>();
+        foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+        {
+            if (!canvas.isRootCanvas || canvas.renderMode != RenderMode.ScreenSpaceOverlay) continue;
+            changed.Add((canvas, canvas.renderMode, canvas.worldCamera, canvas.sortingOrder, canvas.overrideSorting));
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = 10f;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 2000 + canvas.sortingOrder;
+        }
+        Canvas.ForceUpdateCanvases();
+        float upper = h, lower = 0f;
+        var hud = GameObject.Find("BaseCanvas")?.transform.Find("SafeArea/HudRoot");
+        var corners = new Vector3[4];
+        var top = hud != null ? hud.Find("TopBarBG") as RectTransform : null;
+        var bottom = hud != null ? hud.Find("BottomDock") as RectTransform : null;
+        if (top != null) { top.GetWorldCorners(corners); upper = camera.WorldToScreenPoint(corners[0]).y; }
+        if (bottom != null) { bottom.GetWorldCorners(corners); lower = camera.WorldToScreenPoint(corners[2]).y; }
+        float band = Mathf.Max(1f, upper - lower);
+        camera.aspect = w / band;
+        if (!(bool)T("BaseCastleWalls").GetMethod("ApplyFraming").Invoke(null, new object[] { camera }))
+        {
+            camera.orthographicSize = Mathf.Max(22f / (2f * camera.aspect), 19f);
+            camera.transform.position = new Vector3(11f, 19f, camera.transform.position.z);
+        }
+        float shotSize = camera.orthographicSize;
+        Vector3 center = camera.transform.position;
+        float perPixel = 2f * shotSize / band;
+        camera.aspect = (float)w / h;
+        camera.orthographicSize = shotSize * h / band;
+        camera.transform.position = new Vector3(center.x, center.y - ((lower + upper) * 0.5f - h * 0.5f) * perPixel, center.z);
+        Canvas.ForceUpdateCanvases();
+        camera.Render();
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        var pixels = new Texture2D(w, h, TextureFormat.RGB24, false);
+        pixels.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        pixels.Apply();
+        File.WriteAllBytes(outPath, pixels.EncodeToPNG());
+        Object.Destroy(pixels);
+        RenderTexture.active = previous;
+        camera.targetTexture = null;
+        camera.rect = oldRect;
+        foreach (var (canvas, mode, cam, order, over) in changed)
+        {
+            if (canvas == null) continue;
+            canvas.renderMode = mode; canvas.worldCamera = cam; canvas.sortingOrder = order; canvas.overrideSorting = over;
+        }
+        texture.Release();
+        Object.Destroy(texture);
+        camera.ResetAspect();
+        camera.orthographicSize = oldSize; camera.transform.position = oldPos;
+        Canvas.ForceUpdateCanvases();
+        var bars = Object.FindFirstObjectByType(T("WorldViewportBars"));
+        if (bars != null) bars.GetType().GetMethod("UpdateLayout").Invoke(bars, null);
+        Debug.Log($"UiAnaUsCapture wrote {outPath} (world y {lower:0}-{upper:0} px, ortho {shotSize:0.00})");
     }
 
     private static readonly string[] PackTextures =

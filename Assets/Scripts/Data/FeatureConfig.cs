@@ -106,6 +106,9 @@ public sealed class FeatureConfig : ScriptableObject
     public bool miniEmpireTopBar = true;
     /// <summary>Ana Üs alt barı MiniEmpireUI paketiyle (D107; yalnız görünüm). Kapalıysa radyal menü (radialDockMenu) / eski dock.</summary>
     public bool miniEmpireBottomBar = true;
+    /// <summary>Ana Üs arazisi PixelCastle duvar/kule/kapıyla çevrili ve kadraj sabit, zoom yok (D108; yalnız görünüm).
+    /// Kapalıysa eski ahşap çit + taş direk ve eski kamera (sıkıştırma/tekerlek zoom). Çarpışma her iki durumda aynı.</summary>
+    public bool pixelCastleWalls = true;
     /// <summary>Ada adı: ilk açılışta sorulur, üst çubuktan değiştirilir (3. değişiklikten itibaren elmasla).</summary>
     public bool islandNaming = true;
     /// <summary>Ana Üs radyal alt menüsü (AŞAMA 3 §3F; henüz uygulanmadı).</summary>

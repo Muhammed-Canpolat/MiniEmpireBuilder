@@ -1,12 +1,18 @@
 using System.IO;
 using UnityEditor;
+using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.U2D;
 
 /// <summary>Resources/MiniEmpireUiCatalog.asset'i paket sprite'larından üretir. Batchmode: -executeMethod MiniEmpireUiCatalogBuilder.Build</summary>
 public static class MiniEmpireUiCatalogBuilder
 {
     private const string Root = "Assets/MiniEmpireUI/MiniEmpireUI/Sprites/";
     private const string OutPath = "Assets/Resources/MiniEmpireUiCatalog.asset";
+    private const string CastleRoot = "Assets/PixelCastle/PixelCastle/Sprites/";
+    private const string CastleAtlasPath = "Assets/PixelCastle/PixelCastleWalls.spriteatlasv2";
+    private static readonly string[] CastleSprites =
+        { "wall_crenellated", "wall_vertical", "corner_outer_left", "corner_outer_right", "tower_small_closed", "gatehouse_doors" };
 
     [MenuItem("Tools/MiniEmpire UI/Build Catalog")]
     public static void Build()
@@ -35,10 +41,53 @@ public static class MiniEmpireUiCatalogBuilder
         catalog.iconExpedition = Load("Icons/icon_expedition.png");
         catalog.iconHero = Load("Icons/icon_hero.png");
         catalog.iconIsland = Load("Icons/icon_island.png");
+        // D108: Ana Üs duvarları (PixelCastle; Resources dışı → katalogdan).
+        catalog.wallCrenellated = LoadCastle("wall_crenellated");
+        catalog.wallVertical = LoadCastle("wall_vertical");
+        catalog.cornerOuterLeft = LoadCastle("corner_outer_left");
+        catalog.cornerOuterRight = LoadCastle("corner_outer_right");
+        catalog.towerSmallClosed = LoadCastle("tower_small_closed");
+        catalog.gatehouseDoors = LoadCastle("gatehouse_doors");
+        BuildCastleAtlas();
         if (created) { Directory.CreateDirectory(Path.GetDirectoryName(OutPath)); AssetDatabase.CreateAsset(catalog, OutPath); }
         else EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
         Debug.Log("MiniEmpire UI catalog built: " + OutPath);
+    }
+
+    private static Sprite LoadCastle(string name)
+    {
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CastleRoot + name + ".png");
+        if (sprite == null) Debug.LogWarning("PixelCastle sprite missing: " + name);
+        return sprite;
+    }
+
+    /// <summary>D108: yalnız kullanılan 6 duvar sprite'ı tek atlasta (Point, sıkıştırmasız, mipmap yok, döndürme/tight kapalı).</summary>
+    private static void BuildCastleAtlas()
+    {
+        var atlas = new SpriteAtlasAsset();
+        var textures = new Object[CastleSprites.Length];
+        for (int i = 0; i < CastleSprites.Length; i++)
+            textures[i] = AssetDatabase.LoadAssetAtPath<Texture2D>(CastleRoot + CastleSprites[i] + ".png");
+        atlas.Add(textures);
+        SpriteAtlasAsset.Save(atlas, CastleAtlasPath);
+        AssetDatabase.ImportAsset(CastleAtlasPath, ImportAssetOptions.ForceUpdate);
+        var importer = (SpriteAtlasImporter)AssetImporter.GetAtPath(CastleAtlasPath);
+        importer.packingSettings = new SpriteAtlasPackingSettings
+        {
+            blockOffset = 1, padding = 4, enableRotation = false, enableTightPacking = false, enableAlphaDilation = false
+        };
+        importer.textureSettings = new SpriteAtlasTextureSettings
+        {
+            readable = false, generateMipMaps = false, sRGB = true, filterMode = FilterMode.Point, anisoLevel = 0
+        };
+        var platform = importer.GetPlatformSettings("DefaultTexturePlatform");
+        platform.maxTextureSize = 2048;
+        platform.textureCompression = TextureImporterCompression.Uncompressed;
+        platform.format = TextureImporterFormat.Automatic;
+        importer.SetPlatformSettings(platform);
+        importer.SaveAndReimport();
+        Debug.Log("PixelCastle walls atlas built: " + CastleAtlasPath);
     }
 
     private static Sprite Load(string rel)

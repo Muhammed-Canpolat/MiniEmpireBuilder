@@ -589,6 +589,10 @@ public class BaseSceneSetup : MonoBehaviour
         var root = new GameObject("ExteriorScenery");
         root.transform.SetParent(parent, false);
         var random = new System.Random(40172);
+        // D108: PixelCastle duvarları çitin dışına taşar → dış dekor duvarın dış sınırına itilir (RNG sırası aynı),
+        // sırası zeminin/duvarın arkasına iner (duvarı örtmesin; dış dekor zemin karolarının dışında kalır).
+        bool castle = BaseCastleWalls.Enabled;
+        Rect outer = castle ? BaseCastleWalls.PlannedOuter : default;
         for (int side = 0; side < 4; side++)
         {
             int count = side < 2 ? 10 : 5;
@@ -616,15 +620,18 @@ public class BaseSceneSetup : MonoBehaviour
                     (targetHeight / Mathf.Max(0.01f, sprite.bounds.size.y));
                 // Keep the full sprite bounds outside the fence; edge trees may crop at the screen.
                 Vector3 position = go.transform.position;
+                float leftEdge = castle ? outer.xMin - 0.05f : 0.0f, rightEdge = castle ? outer.xMax + 0.05f : 22.0f;
+                float bottomEdge = castle ? outer.yMin - 0.05f : 1.0f, topEdge = castle ? outer.yMax + 0.05f : 37.0f;
                 if (side == 0) position.x = Mathf.Min(position.x,
-                    0.0f - renderer.bounds.extents.x);
+                    leftEdge - renderer.bounds.extents.x);
                 else if (side == 1) position.x = Mathf.Max(position.x,
-                    22.0f + renderer.bounds.extents.x);
+                    rightEdge + renderer.bounds.extents.x);
                 else if (side == 2) position.y = Mathf.Min(position.y,
-                    1.0f - renderer.bounds.extents.y);
+                    bottomEdge - renderer.bounds.extents.y);
                 else position.y = Mathf.Max(position.y,
-                    37.0f + renderer.bounds.extents.y);
+                    topEdge + renderer.bounds.extents.y);
                 go.transform.position = position;
+                if (castle) renderer.sortingOrder = OutsideOrder(position.y);
             }
         }
     }
@@ -641,6 +648,7 @@ public class BaseSceneSetup : MonoBehaviour
         var root = new GameObject("ForestMargin");
         root.transform.SetParent(parent, false);
         var random = new System.Random(90211);
+        bool castle = BaseCastleWalls.Enabled;
         for (int side = 0; side < 2; side++)
         for (int i = 0; i < 46; i++)
         {
@@ -657,9 +665,46 @@ public class BaseSceneSetup : MonoBehaviour
             // Uzaktakiler hafif koyu: derinlik hissi, oyun alanına dikkat.
             float shade = Mathf.Lerp(0.92f, 0.62f, Mathf.Clamp01((depth - 1.6f) / 10f));
             renderer.color = new Color(shade, shade * 1.02f, shade * 0.95f);
-            renderer.sortingOrder = 6 - Mathf.RoundToInt(y * 0.1f);
+            renderer.sortingOrder = castle ? OutsideOrder(y) : 6 - Mathf.RoundToInt(y * 0.1f);
             float height = isBush ? 0.9f : 2.2f + (float)random.NextDouble() * 0.9f;
             go.transform.localScale = Vector3.one * (height / Mathf.Max(0.01f, renderer.sprite.bounds.size.y));
+        }
+        if (castle) CreateForestBelts(root.transform, tree, bush);
+    }
+
+    /// <summary>D108: duvarın dışındaki dekorun sırası: arka plan karosunun (−30) üstünde, zemin (−20) ve duvarların arkasında.</summary>
+    private static int OutsideOrder(float y) => Mathf.Clamp(-25 - Mathf.RoundToInt(y * 0.1f), -29, -21);
+
+    /// <summary>
+    /// D108: duvarın üstünde ve altında orman kuşağı (referanstaki çevre). Ayrı sabit tohum → sol/sağ kenarın dizilimi değişmez.
+    /// Ağaçlar duvarın dış sınırına girmez; oynanışa dahil değildir (çarpışma yok).
+    /// </summary>
+    private static void CreateForestBelts(Transform root, Sprite tree, Sprite bush)
+    {
+        Rect outer = BaseCastleWalls.PlannedOuter;
+        var random = new System.Random(52817);
+        for (int side = 0; side < 2; side++)
+        for (int i = 0; i < 44; i++)
+        {
+            bool top = side == 0;
+            float depth = 0.2f + (float)(random.NextDouble() * random.NextDouble()) * 9f;
+            float x = -12f + (float)random.NextDouble() * (BaseWorldLayout.Width + 24f);
+            bool isBush = bush != null && random.NextDouble() < 0.3;
+            float height = isBush ? 0.9f : 2.0f + (float)random.NextDouble() * 0.9f;
+            float shade = Mathf.Lerp(0.92f, 0.62f, Mathf.Clamp01(depth / 8f));
+            var go = new GameObject((top ? "MarginTop_" : "MarginBottom_") + i);
+            go.transform.SetParent(root, false);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = isBush ? bush : tree;
+            renderer.color = new Color(shade, shade * 1.02f, shade * 0.95f);
+            go.transform.localScale = Vector3.one * (height / Mathf.Max(0.01f, renderer.sprite.bounds.size.y));
+            // Sprite sınırı duvarın dış sınırının tamamen dışında kalır (pivot ne olursa olsun).
+            go.transform.position = new Vector3(x, 0f, 0f);
+            Bounds b = renderer.bounds;
+            float y = top ? outer.yMax + 0.1f + depth + (0f - b.min.y)
+                : outer.yMin - 0.1f - depth - (b.max.y - 0f);
+            go.transform.position = new Vector3(x, y, 0f);
+            renderer.sortingOrder = OutsideOrder(y);
         }
     }
 
@@ -1005,6 +1050,7 @@ public class BaseSceneSetup : MonoBehaviour
         camera.transform.position = new Vector3(11f, 19f, -10f);
         var bars = FindFirstObjectByType<WorldViewportBars>();
         if (bars != null) bars.UpdateLayout();
+        else BaseCastleWalls.ApplyFraming(camera);   // D108: duvar + orman kadrajı (bar yoksa tam ekran)
     }
 
     /// <summary>

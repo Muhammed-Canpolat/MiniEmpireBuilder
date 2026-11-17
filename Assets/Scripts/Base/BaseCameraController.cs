@@ -40,9 +40,13 @@ public sealed class BaseCameraController : MonoBehaviour
         GhostDragActive = false;
     }
 
-    /// <summary>Tüm harita genişliği (ya da yüksekliği) sığan en uzak ortografik boyut.</summary>
+    /// <summary>Tüm harita genişliği (ya da yüksekliği) sığan en uzak ortografik boyut. D108 duvarları varken: duvar + orman kadrajı.</summary>
     public float FullSize => cam == null ? 0f
+        : BaseCastleWalls.TryGetFrame(out Rect frame) ? BaseCastleWalls.FitOrtho(frame, cam.aspect)
         : Mathf.Max(BaseWorldLayout.Width * 0.5f / Mathf.Max(0.01f, cam.aspect), BaseWorldLayout.Height * 0.5f);
+
+    /// <summary>D108 / bug 13: Ana Üs kadrajı sabit (duvarlar kurulu); sıkıştırma/tekerlek zoom ve kaydırma yok.</summary>
+    public static bool FixedFraming => BaseCastleWalls.TryGetFrame(out _);
 
     private void Update()
     {
@@ -53,6 +57,7 @@ public sealed class BaseCameraController : MonoBehaviour
 
     private void HandleInput()
     {
+        if (FixedFraming) { panning = false; lastPinchDistance = 0f; return; }
         if (TouchCount() >= 2)
         {
             panning = false;
@@ -153,6 +158,7 @@ public sealed class BaseCameraController : MonoBehaviour
     public void ClampView()
     {
         if (cam == null) return;
+        if (BaseCastleWalls.ApplyFraming(cam)) return;   // D108: sabit kadraj (EdgeScroll/EnsureVisible/ZoomBy etkisiz)
         float full = FullSize;
         if (full <= 0f) return;
         float size = Mathf.Clamp(cam.orthographicSize, full * MinZoomFraction, full);
