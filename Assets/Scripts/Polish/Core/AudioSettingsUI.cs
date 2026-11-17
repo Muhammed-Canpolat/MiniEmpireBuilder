@@ -99,12 +99,30 @@ public sealed class AudioSettingsUI : MonoBehaviour
             hit.anchoredPosition = new Vector2(-8f, 0f);
             hit.sizeDelta = new Vector2(42f, 42f);
         }
+        bool miniGear = baseScene && MiniEmpireUiCatalog.TopBarReady;
+        if (miniGear)
+        {
+            // D106: Ana Üs'te paket dişlisi (btn_settings, tek parça), üst barın sağ ucunda; anchor + ref. birim.
+            var gearImage = gear.GetComponent<Image>();
+            gearImage.sprite = MiniEmpireUiCatalog.Instance.btnSettings;
+            gearImage.type = Image.Type.Simple;
+            gearImage.preserveAspect = true;
+            gearImage.color = Color.white;
+            var gearRect = (RectTransform)gear.transform;
+            gearRect.anchorMin = gearRect.anchorMax = new Vector2(1f, 1f);
+            gearRect.pivot = new Vector2(1f, 1f);
+            gearRect.sizeDelta = new Vector2(MiniEmpireTopBarSkin.GearSize, MiniEmpireTopBarSkin.GearSize);
+            gearRect.anchoredPosition = new Vector2(-10f, -(MiniEmpireTopBarSkin.BarHeight - MiniEmpireTopBarSkin.GearSize) * 0.5f);
+        }
         var gearLabel = gear.GetComponentInChildren<TextMeshProUGUI>();
         if (gearLabel != null) gearLabel.text = string.Empty;
-        var icon = ReferenceUiVisuals.Image(gear.transform, "SettingsGearIcon",
-            new Vector2(0.22f, 0.22f), new Vector2(0.78f, 0.78f),
-            Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
-        icon.sprite = CreateGearSprite();
+if (!miniGear)
+        {
+                var icon = ReferenceUiVisuals.Image(gear.transform, "SettingsGearIcon",
+                    new Vector2(0.22f, 0.22f), new Vector2(0.78f, 0.78f),
+                    Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
+                icon.sprite = CreateGearSprite();
+        }
         gear.onClick.AddListener(Open);
 
         BuildPanel(safe);

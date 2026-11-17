@@ -102,6 +102,8 @@ public sealed class FeatureConfig : ScriptableObject
     [Header("AŞAMA 3 · arayüz")]
     /// <summary>Ana Üs ve Ada aynı ResourceTopBar bileşenini (Altın · Elmas · Et · Odun) kullanır.</summary>
     public bool sharedTopBar = true;
+    /// <summary>Ana Üs üst barı MiniEmpireUI paketiyle (D106; yalnız görünüm). Kapalıysa eski koyu hap bar.</summary>
+    public bool miniEmpireTopBar = true;
     /// <summary>Ada adı: ilk açılışta sorulur, üst çubuktan değiştirilir (3. değişiklikten itibaren elmasla).</summary>
     public bool islandNaming = true;
     /// <summary>Ana Üs radyal alt menüsü (AŞAMA 3 §3F; henüz uygulanmadı).</summary>

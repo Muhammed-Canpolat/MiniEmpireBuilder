@@ -137,6 +137,8 @@ public static class BaseHudRedesign
             var item = hud.Find(name);
             if (item != null) item.gameObject.SetActive(false);
         }
+
+        MiniEmpireTopBarSkin.Apply(hud);   // D106: yalnız Ana Üs; katalog/bayrak yoksa eski görünüm kalır
     }
 
     // ==================== ALT BAR ====================
@@ -368,9 +370,34 @@ public sealed class LevelCrest : MonoBehaviour
     private Image body;
     private TextMeshProUGUI number;
     private int shownLevel = -1;
+    private bool tinted = true;
 
     public void Build(RectTransform root)
     {
+        var mini = MiniEmpireUiCatalog.TopBarReady ? MiniEmpireUiCatalog.Instance : null;
+        if (mini != null)
+        {
+            // D106: referanstaki sabit kırmızı kalkan (TierColor boyaması yok); yalnız seviye numarası dinamik.
+            tinted = false;
+            body = ReferenceUiVisuals.Image(root, "Body", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, Color.white);
+            body.sprite = mini.levelShield;
+            body.preserveAspect = true;
+            number = ReferenceUiVisuals.Text(root, "Number", "1", 26, Color.white,
+                TextAlignmentOptions.Center, new Vector2(0.1f, 0.38f), new Vector2(0.9f, 0.92f),
+                Vector2.zero, Vector2.zero, title: true);
+            number.textWrappingMode = TextWrappingModes.NoWrap;
+            number.fontSizeMin = 14f;   // 1-2 haneli seviye (1..15) kalkana sığar
+            number.fontSizeMax = 26f;
+            var label = ReferenceUiVisuals.Text(root, "Caption", L.T("ANA ÜS", "BASE"), 7, ReferenceUiVisuals.Light,
+                TextAlignmentOptions.Center, new Vector2(0.2f, 0.15f), new Vector2(0.8f, 0.34f),
+                Vector2.zero, Vector2.zero, title: true);
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 4f;
+            label.fontSizeMax = 6.5f;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            Refresh(true);
+            return;
+        }
         var rim = ReferenceUiVisuals.Image(root, "Rim", Vector2.zero, Vector2.one,
             Vector2.zero, Vector2.zero, ReferenceUiVisuals.Gold);
         rim.sprite = ShieldSprite();
@@ -413,7 +440,7 @@ public sealed class LevelCrest : MonoBehaviour
         if (level == shownLevel) return;
         shownLevel = level;
         number.text = level.ToString();
-        body.color = BaseHudRedesign.TierColor(level);
+        if (tinted) body.color = BaseHudRedesign.TierColor(level);
         if (silent) return;
         transform.DOKill();
         transform.localScale = Vector3.one;

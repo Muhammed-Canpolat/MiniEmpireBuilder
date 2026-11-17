@@ -24,7 +24,7 @@ public class ResourceHUD : MonoBehaviour
 
         if (amountText != null)
         {
-            amountText.text = value.ToString();
+            amountText.text = NumberFormat.Short(value, FeatureConfig.Instance.topBarShortFrom);   // buyuk altin tasmasin (D106)
             if (delta > 0)
             {
                 amountText.color = increaseColor;
