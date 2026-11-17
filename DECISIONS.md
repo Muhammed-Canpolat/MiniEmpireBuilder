@@ -951,3 +951,10 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 - Kalkan "ANA ÜS" yazısı küçültüldü/daraltıldı; alt bar etiketlerine kenar boşluğu (6) ve max 13 pt.
 - UiAnaUsCapture: tüm çekimler oyundaki kameradan (kadrajlı); droplist çekimi UI_CAPTURE_W/H/NAME/GOLD env'li; altın assert'i NumberFormat.Short ile.
 - Yalnız görünüm/test; oyun mantığı, ekonomi, kayıt değişmedi.
+
+## D112 — 11. oturum (hata grupları 1–9) yönetim kararları
+- Dal: `gece-gelistirme` main'in atasıydı (UI işi main'deydi) → `gece-gelistirme` main'e (`5a46d49`) ileri sarıldı, çalışma orada.
+- Çelişki: `gameplay-engineer.md` "Never commit" diyor, görev "alt ajan grup bitince commit" diyor. CLAUDE.md'de alt ajan kuralı yok →
+  ajan dosyası esas alındı: alt ajan commit ATMAZ, yönetici derleme/`git status` kontrolünden sonra grup commit'ini atar.
+- Model: `gameplay-engineer` Sonnet. Opus grupları (2, 3, 4, 9) için uygulama genel alt ajan + Opus ile yapılır. `explorer` Haiku (salt okuma, kök neden taraması); Opus gruplarında kök neden taraması da uygulayıcı Opus ajanına bırakılmaz, önce explorer çalışır.
+- Grup 9 (Depo): görev "ben onaylayınca uygula" diyor; yönetici talimatı "onay bekleme, planı kendin gözden geçir" → plan DECISIONS'a yazılıp ayrı commit'lenir, yönetici incelemesinden sonra uygulanır.

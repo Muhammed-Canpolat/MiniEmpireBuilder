@@ -1,3 +1,22 @@
+# GECE_DURUM — 11. oturum: Hata grupları 1–9 (17 Kasım 2026)
+
+AKTİF GÖREV: Docs/Bugs/PROMPTLAR.md grupları 1→9 (ayrıntı Docs/Bugs/BUGLAR.md). DAL: `gece-gelistirme` (başlangıç `5a46d49`). Kararlar D112+.
+Yönetim: ana oturum yönetici; kök neden explorer, uygulama gameplay-engineer (Opus gruplarında genel ajan/Opus), plan game-designer, görsel art-director, doğrulama qa-playtester (2,3,4,9), güvenlik security-reviewer (9 sonrası).
+Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta`, `ground_mine_rocks.png.meta`, `IslandTerrain.prefab`, izlenmeyen paketler, `UIReviewScreenshots/CurrentReview/*`, `PRIVACY.md`, `NotificationsSettings.asset`.
+
+| Grup | Maddeler | Durum | Commit | Not |
+|---|---|---|---|---|
+| 1 A iOS yazılar | 2, 3, 5, 10, 24 | BEKLİYOR | | |
+| 2 B+I çökme/müzik | 4, 6, 15, 27 | BEKLİYOR | | |
+| 3 D konum kalıcılığı | 18, 19, 29, 31, 33 | BEKLİYOR | | |
+| 4 E savaş akışı | 25, 28, 30 | BEKLİYOR | | |
+| 5 F ekonomi | 16, 22 | BEKLİYOR | | |
+| 6 C+H çizim/ada UI | 1, 23, 17, 20, 21 | BEKLİYOR | | |
+| 7 G ana üs | 7, 8, 9, 12, 13, 14, 34 | BEKLİYOR | | |
+| 8 J tanıtım/e-posta | 26, 32 | BEKLİYOR | | |
+| 9 K Depo | 11 | BEKLİYOR | | |
+
+---
 # GECE_DURUM — 10. oturum: Ana Üs yeni UI tasarımı (17 Kasım 2026)
 
 AKTİF GÖREV: Docs/UI/UI_DEGISIKLIK.md (referans: Docs/UIReference/ana-us-referans.png, ana-us-droplist-acik.png)

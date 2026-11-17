@@ -28,3 +28,10 @@ Detaylı mimari, kararlar ve tuzaklar: **`Docs/AI_README.md`** (önce onu oku). 
 - **Dikkat:** tam test koşusu `UIReviewScreenshots/CurrentReview/*.png` üzerine yazar; commit'ten önce
   `git checkout -- UIReviewScreenshots` ile geri al (yeni görüntüleri istersen ayrı commit'le).
 - Bot/telemetri çıktısı: `PlaytestOutput/` (git dışı); seçilmiş görüntüler `Docs/playtest/`.
+
+## Hata düzeltme oturumu kuralları (Docs/Bugs/PROMPTLAR.md BAŞLIK)
+- Çalışma dalı `gece-gelistirme`. Onay bekleme; kararları `DECISIONS.md`'ye yaz.
+- Her işten sonra: derle → test → (gerekirse) ekran görüntüsü → commit → `GECE_DURUM.md` güncelle.
+- 2 denemede çözülmeyen işi geri al, `ENGELLENDİ` yaz, sonrakine geç.
+- Mevcut oyuncu kayıtları bozulmasın. iOS, Android ve tablette çalışmalı; tek cihaza özel yama yok.
+- Hata ayrıntıları `Docs/Bugs/BUGLAR.md`, görseller `Docs/Bugs/bug-NN.png`. Yeni ana üs UI'sı (`Docs/UI/UI_DEGISIKLIK.md`) bozulmaz.
