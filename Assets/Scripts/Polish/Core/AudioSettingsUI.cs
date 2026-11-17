@@ -346,7 +346,7 @@ if (!miniGear)
             if (battleScene) return;
             L.Set(L.English ? GameLanguage.Turkish : GameLanguage.English);
             Time.timeScale = 1f;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            SceneTransition.LoadDirect(SceneManager.GetActiveScene().name);
         });
         refreshers.Add(() => languageLabel.text = (L.English ? "LANGUAGE  ENGLISH" : "DİL  TÜRKÇE") +
             (battleScene ? L.T("  (savaşta kapalı)", "  (locked in battle)") : ""));

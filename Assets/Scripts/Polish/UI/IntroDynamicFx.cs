@@ -46,7 +46,7 @@ public class IntroDynamicFx : MonoBehaviour
         if (!skipTriggered && elapsed < SkipTouchWindow && IsPrimaryPressed())
         {
             skipTriggered = true;
-            SceneManager.LoadScene(nextSceneName);
+            SceneTransition.LoadDirect(nextSceneName);
         }
     }
 
@@ -55,7 +55,7 @@ public class IntroDynamicFx : MonoBehaviour
     /// </summary>
     public void ContinueToNextScene()
     {
-        SceneManager.LoadScene(nextSceneName);
+        SceneTransition.LoadDirect(nextSceneName);
     }
 
     private void PlayIntro()

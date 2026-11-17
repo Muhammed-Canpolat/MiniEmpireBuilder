@@ -121,7 +121,7 @@ public sealed class DevMenu : MonoBehaviour
                 if (entry.reload && BattleManager.Instance == null)
                 {
                     Close();
-                    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                    SceneTransition.LoadDirect(SceneManager.GetActiveScene().name);
                 }
             });
         }

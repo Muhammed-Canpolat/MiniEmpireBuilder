@@ -116,6 +116,19 @@ public static class SceneTransition
         Guard("DOTween.KillAll", () => DG.Tweening.DOTween.KillAll());
     }
 
+    /// <summary>
+    /// Kararmasız doğrudan yükleme (ana menü intro, dil/geliştirici yeniden yüklemesi): kilit + PrepareForLoad + try/catch.
+    /// GameManager gerekmez. Kilit sahne yüklenince OnSceneLoaded ile kalkar; başarısızsa hemen kalkar. Başlatıldıysa true.
+    /// </summary>
+    public static bool LoadDirect(string sceneName)
+    {
+        if (!TryBegin(sceneName)) return false;
+        PrepareForLoad(sceneName);
+        bool ok = Guard("LoadScene " + sceneName, () => SceneManager.LoadScene(sceneName));
+        if (!ok) End(sceneName, false);
+        return ok;
+    }
+
     /// <summary>Adımı çalıştırır; istisnayı "[SceneLoad]" ile günlüğe yazar ve yutar. Başarılıysa true.</summary>
     public static bool Guard(string step, Action action)
     {
