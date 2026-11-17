@@ -277,7 +277,7 @@ public sealed class IslandArcher : MonoBehaviour
         bool full = Charging && Charge01 >= 1f;
         Charging = false;
         Charge01 = 0f;
-        if (!IsAlive || Running) return;
+        if (!IsAlive || Running || Wandering) return;
         if (full) { Shoot(true, false); return; }
         IslandStats.Taps++;
         if (Time.time >= nextShot) Shoot(false, false);
@@ -295,6 +295,7 @@ public sealed class IslandArcher : MonoBehaviour
     {
         if (!IsAlive || post < 0 || post >= IslandLayout.Posts.Length) return false;
         if (!IslandLayout.PostUnlocked(post, KeepLevel)) return false;
+        if (Wandering) EndWander(CurrentPost);   // D115: gezinmeden atış düzenine dön (yol hesabı atış yerinden başlar)
         if (Running) { pendingPost = post == CurrentPost ? -1 : post; return true; }
         if (post == CurrentPost) return false;
         BeginRun(post);
@@ -332,6 +333,7 @@ public sealed class IslandArcher : MonoBehaviour
             return;
         }
         if (Running) { UpdateRun(); return; }
+        if (Wandering) { UpdateWander(); return; }
 
         ValidateLock();
         if (holding)
@@ -490,12 +492,108 @@ public sealed class IslandArcher : MonoBehaviour
         IsAlive = true;
         Hp = MaxHp;
         CurrentPost = 0;
-        transform.position = IslandLayout.Posts[0].World;
+        // D115: akın dışında (gezinme düzeni) Okçuluk Alanı'nda, akında eskisi gibi P1'de doğar.
+        transform.position = Wandering ? (Vector3)WanderHome : (Vector3)IslandLayout.Posts[0].World;
         sr.enabled = true;
         sr.color = Color.white;
-        rangeRing.gameObject.SetActive(true);
+        rangeRing.gameObject.SetActive(!Wandering);
         if (healthBar != null) { healthBar.gameObject.SetActive(true); healthBar.SetMax(MaxHp); }
         PostChanged?.Invoke(0);
+    }
+
+    // ==================== BOŞTA GEZİNME (D115, madde 19/29) ====================
+    // Akın dışında (sahneye giriş, akın sonrası) okçu kaptan kıyı kalesinin yanındaki P1'de dikilmez: Okçuluk Alanı'nın kapısı
+    // çevresinde yürür/durur (yürüme = koşu kareleri yavaş, durma = bekleme kareleri). Akın başlayınca eskisi gibi P1'e geçer; savaş
+    // davranışı (atış yerleri, hedefleme sırası, ölüm/doğuş) değişmez.
+
+    public bool Wandering { get; private set; }
+    public Vector2 WanderHome { get; private set; }
+    /// <summary>Okçuluk Alanı kapısının güncel yeri (bina taşınırsa okçu oraya geçer); yoksa null.</summary>
+    public Func<Vector2?> HomeProvider;
+    public const float WanderSpeed = 1.1f, WanderRadius = 2.2f;
+    private readonly List<Vector2> wanderSpots = new List<Vector2>();
+    private Vector2? wanderTarget;
+    private float wanderWaitUntil;
+
+    public void BeginWander(Vector2 home)
+    {
+        Wandering = true;
+        WanderHome = home;
+        Running = false; path = null; pendingPost = -1;
+        holding = false; Charging = false; Charge01 = 0f; queuedTaps = 0;
+        Locked = null;
+        transform.position = new Vector3(home.x, home.y, transform.position.z);
+        if (anim != null) anim.ForceRunning = null;   // yürürken koşu kareleri, dururken bekleme kareleri
+        if (rangeRing != null) rangeRing.gameObject.SetActive(false);
+        if (lockMarker != null) lockMarker.gameObject.SetActive(false);
+        BuildWanderSpots(home);
+        wanderTarget = null;
+        wanderWaitUntil = Time.time + UnityEngine.Random.Range(0.6f, 1.6f);
+    }
+
+    /// <summary>Gezinmeden atış düzenine: <paramref name="post"/> atış yerine geçer (akın başı; eskiden okçu zaten P1'de beklerdi).</summary>
+    public void EndWander(int post = 0)
+    {
+        if (!Wandering) return;
+        Wandering = false;
+        wanderTarget = null;
+        CurrentPost = Mathf.Clamp(post, 0, IslandLayout.Posts.Length - 1);
+        transform.position = IslandLayout.Posts[CurrentPost].World;
+        if (anim != null) anim.ForceRunning = false;
+        if (rangeRing != null) rangeRing.gameObject.SetActive(IsAlive);
+    }
+
+    /// <summary>Kapı çevresinde, kapıyla aynı yükseklikte ve kapıdan düz çizgiyle yürünebilen noktalar (yar/su/bina içine girmez).</summary>
+    private void BuildWanderSpots(Vector2 home)
+    {
+        wanderSpots.Clear();
+        var grid = IslandWalkGrid.Shared;
+        Vector2Int homeCell = grid.CellOf(home);
+        int homeHeight = IslandLayout.HeightAt(homeCell.x, homeCell.y);
+        int r = Mathf.CeilToInt(WanderRadius);
+        for (int dy = -r; dy <= r; dy++)
+        for (int dx = -r; dx <= r; dx++)
+        {
+            var cell = homeCell + new Vector2Int(dx, dy);
+            Vector2 spot = grid.Center(cell);
+            float d = Vector2.Distance(spot, home);
+            if (d < 0.6f || d > WanderRadius || !grid.Walkable(cell) || IslandLayout.HeightAt(cell.x, cell.y) != homeHeight) continue;
+            if (StraightWalkable(home, spot, homeHeight)) wanderSpots.Add(spot);
+        }
+    }
+
+    private static bool StraightWalkable(Vector2 a, Vector2 b, int height)
+    {
+        var grid = IslandWalkGrid.Shared;
+        int steps = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(a, b) / 0.2f));
+        for (int i = 1; i <= steps; i++)
+        {
+            var cell = grid.CellOf(Vector2.Lerp(a, b, i / (float)steps));
+            if (!grid.Walkable(cell) || IslandLayout.HeightAt(cell.x, cell.y) != height) return false;
+        }
+        return true;
+    }
+
+    private void UpdateWander()
+    {
+        if (wanderTarget == null)
+        {
+            if (Time.time < wanderWaitUntil) return;
+            // Bina taşındıysa yeni kapıya geçilir.
+            var home = HomeProvider?.Invoke();
+            if (home.HasValue && Vector2.Distance(home.Value, WanderHome) > 0.5f) { BeginWander(home.Value); return; }
+            // Her yürüyüş kapı ↔ nokta arasıdır (yalnız bu doğrular denetlendi): uzaktaysa kapıya döner, kapıdaysa rastgele noktaya.
+            bool atHome = Vector2.Distance(transform.position, WanderHome) < 0.1f;
+            if (!atHome) wanderTarget = WanderHome;
+            else if (wanderSpots.Count > 0) wanderTarget = wanderSpots[UnityEngine.Random.Range(0, wanderSpots.Count)];
+            else { wanderWaitUntil = Time.time + 3f; return; }
+        }
+        Vector2 position = transform.position;
+        Vector2 next = Vector2.MoveTowards(position, wanderTarget.Value, WanderSpeed * Time.deltaTime);
+        transform.position = new Vector3(next.x, next.y, transform.position.z);
+        if (Vector2.Distance(next, wanderTarget.Value) > 0.02f) return;
+        wanderTarget = null;
+        wanderWaitUntil = Time.time + UnityEngine.Random.Range(1.4f, 3.6f);
     }
 
     /// <summary>Kareden kareye toplanmış hızlandırma testleri için: ok hemen vurur.</summary>

@@ -93,7 +93,8 @@ public sealed class DecorPlacementController : MonoBehaviour
             if (data == null) continue;
             var cell = new Vector2Int(record.x, record.y);
             // Dekor alanları büyüdü (1×1 → 2×2): eski kayıtta komşusuyla çakışan en yakın boş yere geçer.
-            if (!CanPlace(data, cell))
+            // D115: kayıtlı hücre otoritedir; yalnız gerçek mantıksal çakışma taşır (bkz. SavedCellValid).
+            if (!SavedCellValid(data, cell))
             {
                 changed = true;
                 if (!TryFindNearestFree(data, cell, 6, out cell))
@@ -143,6 +144,19 @@ public sealed class DecorPlacementController : MonoBehaviour
     }
 
     /// <summary>
+    /// D115 (madde 31): yüklemede kayıtlı dekor hücresi otoritedir. Yalnız GERÇEK mantıksal çakışma (yapı ayak izi, kamp, doğa engeli,
+    /// önce yerleşmiş dekor, açık arazi dışı) taşır; yapıların görsel bloğu (animasyon karesi, seviye sprite'ı, ölçek tween'i) her girişte
+    /// farklı ölçülebildiği için burada sayılmaz (binaların yükleme onarımıyla aynı yumuşak kural, D62). Yeni yerleştirme/taşıma katı
+    /// kuralı (<see cref="CanPlace"/>) kullanmaya devam eder.
+    /// </summary>
+    public bool SavedCellValid(DecorData data, Vector2Int cell, DecorInstance except = null)
+    {
+        if (data == null || BaseMapManager.Instance == null) return false;
+        return BaseOccupancyGrid.FootprintFree(new RectInt(cell.x, cell.y, data.footprint.x, data.footprint.y),
+            null, except, false, true, null);
+    }
+
+    /// <summary>
     /// Yükleme sonrası onarım: dekor, bina/kulübe/kamp ya da önce yerleşmiş dekorla çakışıyorsa
     /// en yakın boş yere taşınır; sığmazsa bedeli iade edilip kaldırılır. Değişen dekor sayısını döndürür.
     /// </summary>
@@ -151,14 +165,17 @@ public sealed class DecorPlacementController : MonoBehaviour
         if (selected != null) return 0;
         var all = new List<DecorInstance>(placed);
         placed.Clear();
+        // D115 (madde 31): doluluk bu karede tüm dekorlarla kurulmuş olabilir; liste boşaltıldı, yeniden kurulsun. Eskiden kurulmuyordu ve
+        // dekor KENDİSİYLE çakışıyor sayılıp (except yoktu) her girişte ilk dekor (ardından zincirleme diğerleri) bir hücre kayıyordu.
+        BaseOccupancyGrid.MarkDirty();
         int changed = 0;
         int refund = 0;
         foreach (var item in all)
         {
             if (item == null) continue;
-            if (CanPlace(item.Data, item.Cell)) { placed.Add(item); continue; }
+            if (SavedCellValid(item.Data, item.Cell, item)) { placed.Add(item); BaseOccupancyGrid.MarkDirty(); continue; }
             changed++;
-            if (TryFindNearestFree(item.Data, item.Cell, 8, out var cell))
+            if (TryFindNearestFree(item.Data, item.Cell, 8, out var cell, item))
             {
                 item.SetCell(cell);
                 BaseOccupancyGrid.MarkDirty();
@@ -342,7 +359,7 @@ public sealed class DecorPlacementController : MonoBehaviour
             }
         };
         var sr = item.GetComponent<SpriteRenderer>();
-        var menu = WorldActionMenu.Show(parent, () => sr != null ? sr.bounds : new Bounds(item.transform.position, Vector3.one), Camera.main, items,
+        var menu = WorldActionMenu.Show(parent, () => sr != null ? BaseVisualBounds.VisibleBounds(sr) : new Bounds(item.transform.position, Vector3.one), Camera.main, items,   // D115 (madde 18): görünür sınır
             "DecorActions", item, sr);
         actionPanel = menu != null ? menu.gameObject : null;
     }

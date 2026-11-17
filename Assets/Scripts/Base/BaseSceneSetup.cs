@@ -1198,8 +1198,27 @@ public class BaseSceneSetup : MonoBehaviour
     /// <summary>Dokunulan noktadaki küçük hedef (dekor, kilitsiz arazideki ağaç/çalı/kaya/kütük, harita ağacı/kayası); birden çoksa merkezi en yakın.</summary>
     private bool TrySmallTargetTap(Vector2 point)
     {
-        Collider2D best = null;
-        float bestDistance = float.MaxValue;
+        Collider2D best = SmallTargetAt(point);
+        if (best == null) return false;
+        var decor = best.GetComponentInParent<DecorInstance>();
+        if (decor != null) { DecorPlacementController.Instance?.ShowActions(decor); return true; }
+        var nature = best.GetComponent<NatureObstacle>();
+        if (nature != null) { ShowNaturePrompt(nature); return true; }
+        ShowRemovePrompt(BaseMapManager.Instance.GetMapObject(best.gameObject));
+        return true;
+    }
+
+    /// <summary>
+    /// D115 (madde 18): dokunulan küçük hedef. Dekor çarpıştırıcısı tüm sprite karesidir (saydam pay dahil); eskiden noktayı içeren
+    /// çarpıştırıcılardan MERKEZİ en yakın olan seçiliyordu ve dokunulan dekor yerine komşusu (ya da arazi ağacı) seçilip menü onun
+    /// üstünde açılıyordu. Şimdi önce noktayı GÖRÜNÜR sınırı içinde tutanlar aday olur; birden çoksa ekranda en öndeki (çizim sırası),
+    /// eşitse görünür merkezi en yakın. Görünür sınırda aday yoksa eski kural (merkezi en yakın çarpıştırıcı) geçerlidir.
+    /// </summary>
+    internal Collider2D SmallTargetAt(Vector2 point)
+    {
+        Collider2D best = null, fallback = null;
+        float bestDistance = float.MaxValue, fallbackDistance = float.MaxValue;
+        int bestLayer = int.MinValue, bestOrder = int.MinValue;
         foreach (var c in Physics2D.OverlapPointAll(point))
         {
             bool small = c.GetComponentInParent<DecorInstance>() != null || c.GetComponent<NatureObstacle>() != null;
@@ -1209,16 +1228,23 @@ public class BaseSceneSetup : MonoBehaviour
                 small = obj != null && (obj.objectType == MapObjectType.Tree || obj.objectType == MapObjectType.Rock);
             }
             if (!small) continue;
-            float d = ((Vector2)c.bounds.center - point).sqrMagnitude;
-            if (d < bestDistance) { bestDistance = d; best = c; }
+            float fd = ((Vector2)c.bounds.center - point).sqrMagnitude;
+            if (fd < fallbackDistance) { fallbackDistance = fd; fallback = c; }
+            var sr = c.GetComponentInParent<SpriteRenderer>();   // önce kendisi, yoksa üst nesne
+            Bounds visible = sr != null ? BaseVisualBounds.VisibleBounds(sr) : c.bounds;
+            visible.Expand(new Vector3(0.12f, 0.12f, 0f));
+            // Doğa/arazi engellerinin çarpıştırıcısı zaten görselden küçük: o çarpıştırıcıya düşen dokunuş görünür sayılır.
+            bool inside = c.GetComponentInParent<DecorInstance>() == null
+                || visible.Contains(new Vector3(point.x, point.y, visible.center.z));
+            if (!inside) continue;
+            int layer = sr != null ? SortingLayer.GetLayerValueFromID(sr.sortingLayerID) : 0;
+            int order = sr != null ? sr.sortingOrder : 0;
+            float d = ((Vector2)visible.center - point).sqrMagnitude;
+            bool front = layer > bestLayer || layer == bestLayer && (order > bestOrder || order == bestOrder && d < bestDistance);
+            if (!front) continue;
+            best = c; bestLayer = layer; bestOrder = order; bestDistance = d;
         }
-        if (best == null) return false;
-        var decor = best.GetComponentInParent<DecorInstance>();
-        if (decor != null) { DecorPlacementController.Instance?.ShowActions(decor); return true; }
-        var nature = best.GetComponent<NatureObstacle>();
-        if (nature != null) { ShowNaturePrompt(nature); return true; }
-        ShowRemovePrompt(BaseMapManager.Instance.GetMapObject(best.gameObject));
-        return true;
+        return best != null ? best : fallback;
     }
 
     private bool IsHeroTap(Vector3 worldPos)
@@ -1475,7 +1501,7 @@ public class BaseSceneSetup : MonoBehaviour
             },
         };
         var safe = _mainCanvas != null ? _mainCanvas.transform.Find("SafeArea") : null;
-        WorldActionMenu.Show(safe, () => subject != null ? subject.bounds : new Bounds(obj.gameObject.transform.position, Vector3.one),
+        WorldActionMenu.Show(safe, () => subject != null ? BaseVisualBounds.VisibleBounds(subject) : new Bounds(obj.gameObject.transform.position, Vector3.one),   // D115
             Camera.main, items, "RemoveActions", obj, subject);
     }
 
@@ -1504,7 +1530,8 @@ public class BaseSceneSetup : MonoBehaviour
         };
         var safe = _mainCanvas != null ? _mainCanvas.transform.Find("SafeArea") : null;
         var sr = nature.GetComponent<SpriteRenderer>();
-        WorldActionMenu.Show(safe, () => sr != null ? sr.bounds : new Bounds(nature.transform.position, Vector3.one), Camera.main, items, "NatureActions", nature, sr);
+        WorldActionMenu.Show(safe, () => sr != null ? BaseVisualBounds.VisibleBounds(sr) : new Bounds(nature.transform.position, Vector3.one),
+            Camera.main, items, "NatureActions", nature, sr);   // D115
     }
 
     /// <summary>

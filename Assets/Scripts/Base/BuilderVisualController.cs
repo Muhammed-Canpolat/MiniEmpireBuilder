@@ -78,7 +78,9 @@ public class BuilderVisualController : MonoBehaviour
         Vector3 home = BaseWorldLayout.Get("builder").center;
         if (index == 0 || BaseMapManager.Instance == null) return home;
         Vector3 near = units.Count > 0 && units[0].hut != null ? units[0].hut.transform.position : home;
-        return BaseMapManager.Instance.NearestFreeSpot(BuilderHut.FootprintSize, near);
+        // D115 (madde 33): kulübenin görseli + 1 hücre pay (tüm kulübeler aynı sprite/ölçek: ilkininki örnek alınır).
+        Rect? visual = units.Count > 0 && units[0].hut != null ? BaseOccupancyGrid.RestVisualRelative(units[0].hut.gameObject) : (Rect?)null;
+        return BaseMapManager.Instance.SuggestBuilderHutSpot(near, visual);
     }
 
     private void SpawnUnit(int index, bool celebrate)

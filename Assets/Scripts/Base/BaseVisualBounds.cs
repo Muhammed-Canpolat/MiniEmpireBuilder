@@ -61,6 +61,18 @@ public static class BaseVisualBounds
         return any ? Rect.MinMaxRect(xMin, yMin, xMax, yMax) : Rect.zero;
     }
 
+    /// <summary>
+    /// D115 (madde 18): renderer'ın GÖRÜNÜR sınırı (sıkı sprite ağı; saydam kenarlar hariç). sr.bounds tüm sprite dikdörtgenidir; Tiny Swords
+    /// ağaç/çalı karelerinde üstte geniş saydam pay olduğundan eylem menüsü nesnenin çok üstünde, komşu dekorun üzerinde açılıyordu.
+    /// </summary>
+    public static Bounds VisibleBounds(SpriteRenderer sr)
+    {
+        if (sr == null) return new Bounds();
+        Rect r = RendererRect(sr);
+        if (r.width <= 0f || r.height <= 0f) return sr.bounds;
+        return new Bounds(new Vector3(r.center.x, r.center.y, sr.bounds.center.z), new Vector3(r.width, r.height, 0f));
+    }
+
     /// <summary>Tek renderer'ın sıkı dikdörtgeni (ad süzgeci yok: yerleştirme hayaleti için).</summary>
     public static Rect RendererRect(SpriteRenderer sr)
     {

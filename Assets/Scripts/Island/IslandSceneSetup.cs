@@ -103,6 +103,9 @@ public sealed class IslandSceneSetup : MonoBehaviour
         IslandAbilities.Attach(Archer);
         // 6. oturum (3.2): Okçu Kaptan ancak Okçuluk Alanı tamamlanınca adada (öğreticiyle kurulur, binadan çıkıp yürür).
         if (!IslandEconomy.HasArcheryReady(IslandSession.Save)) Archer.gameObject.SetActive(false);
+        // D115 (madde 19/29): akın dışında okçu kaptan Okçuluk Alanı'nın kapısında belirir ve orada gezinir (Okçuluk Alanı yoksa eski düzen).
+        Archer.HomeProvider = () => TryArcheryDoor(out var door) ? door : (Vector2?)null;
+        if (Archer.gameObject.activeSelf && TryArcheryDoor(out var archerHome)) Archer.BeginWander(archerHome);
         BuildPostMarkers();
 
         Raid = gameObject.AddComponent<IslandRaidManager>();
@@ -123,21 +126,31 @@ public sealed class IslandSceneSetup : MonoBehaviour
     public void RevealArcher()
     {
         if (Archer == null || Archer.gameObject.activeSelf) return;
-        var save = IslandSession.Save;
-        Vector2 door = Archer.transform.position;
-        if (save?.placed != null)
-            foreach (var b in save.placed)
-                if (b != null && b.level >= 1 && b.kind == nameof(IslandLayout.BuildingKind.Archery))
-                {
-                    var spot = new IslandLayout.BuildingSpot { kind = IslandLayout.BuildingKind.Archery, col = b.col, row = b.row,
-                        w = IslandLayout.Building(IslandLayout.BuildingKind.Archery).w, h = IslandLayout.Building(IslandLayout.BuildingKind.Archery).h };
-                    door = IslandLayout.World(spot.DoorCell);
-                    break;
-                }
+        bool found = TryArcheryDoor(out Vector2 door);
+        if (!found) door = Archer.transform.position;
         Archer.transform.position = new Vector3(door.x, door.y, Archer.transform.position.z);
         Archer.gameObject.SetActive(true);
-        Archer.MoveToPost(0);
+        // D115: eskiden MoveToPost(0) çağrılıyordu ama okçu zaten P1 sayıldığından koşmuyor, kapıda kalıyordu; şimdi kapı çevresinde gezinir.
+        if (found && !InDefense) Archer.BeginWander(door);
+        else Archer.MoveToPost(0);
         BattleVfxManager.Instance?.SpawnSpark(door);
+    }
+
+    /// <summary>D115: kurulu (seviye ≥ 1) Okçuluk Alanı'nın kapı önü (dünya); yoksa false.</summary>
+    public static bool TryArcheryDoor(out Vector2 door)
+    {
+        door = default;
+        var save = IslandSession.Save;
+        if (save?.placed == null) return false;
+        foreach (var b in save.placed)
+            if (b != null && b.level >= 1 && b.kind == nameof(IslandLayout.BuildingKind.Archery))
+            {
+                var def = IslandLayout.Building(IslandLayout.BuildingKind.Archery);
+                var spot = new IslandLayout.BuildingSpot { kind = IslandLayout.BuildingKind.Archery, col = b.col, row = b.row, w = def.w, h = def.h };
+                door = IslandLayout.World(spot.DoorCell);
+                return true;
+            }
+        return false;
     }
 
     private GameObject Spawn(string resourcePath)
@@ -209,6 +222,12 @@ public sealed class IslandSceneSetup : MonoBehaviour
     {
         if (InDefense == defense) return;
         InDefense = defense;
+        // D115 (madde 19/29): akın başında okçu eskisi gibi P1'e geçer; akın bitince Okçuluk Alanı'na döner ve gezinir.
+        if (Archer != null && Archer.gameObject.activeSelf)
+        {
+            if (defense) Archer.EndWander(0);
+            else if (TryArcheryDoor(out var home)) Archer.BeginWander(home);
+        }
         if (pawnsRoot != null) pawnsRoot.gameObject.SetActive(!defense);   // piyonlar en yakın yapıya koşup saklanır
         ShowHealthBars(defense);
         foreach (var cloud in edgeClouds) if (cloud != null) cloud.SetAlphaMultiplier(defense ? Progression.Island.EdgeCloudBattleAlpha : 1f);

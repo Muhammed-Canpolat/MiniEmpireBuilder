@@ -823,13 +823,13 @@ public class BaseMapManager : MonoBehaviour
     public PlacedMapObject SpawnTree(Vector3 pos, string id = null, float size = 0f)
     {
         id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
-        if (size <= 0f) size = UnityEngine.Random.Range(1.5f, 2.1f);
+        if (size <= 0f) size = Mathf.Lerp(1.5f, 2.1f, StableUnit(id, 3));   // D115: kayıtta boyut yoksa da kararlı
 
         GameObject go = new GameObject($"Tree_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0.3f);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = GetRandomTreeSprite() ?? SpriteManager.Instance?.Tree ?? MakeCircleSprite(new Color(0.15f, 0.5f, 0.15f));
+        sr.sprite = GetRandomTreeSprite(id) ?? SpriteManager.Instance?.Tree ?? MakeCircleSprite(new Color(0.15f, 0.5f, 0.15f));
         sr.sortingOrder = 3;
         float treeScale = size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
         go.transform.localScale = new Vector3(treeScale, treeScale, 1f);
@@ -840,7 +840,7 @@ public class BaseMapManager : MonoBehaviour
             var animator = go.AddComponent<Animator>();
             animator.runtimeAnimatorController = treeControllers[0];
             animator.cullingMode = AnimatorCullingMode.CullCompletely;
-            animator.Play("Tree 1_Idle", 0, UnityEngine.Random.value);
+            animator.Play("Tree 1_Idle", 0, StableUnit(id, 1));   // D115: kimlikten türetilir (her girişte aynı)
         }
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
@@ -872,7 +872,7 @@ public class BaseMapManager : MonoBehaviour
     public PlacedMapObject SpawnRock(Vector3 pos, string id = null, float size = 0f)
     {
         id ??= Guid.NewGuid().ToString("N").Substring(0, 8);
-        if (size <= 0f) size = UnityEngine.Random.Range(0.9f, 1.35f);
+        if (size <= 0f) size = Mathf.Lerp(0.9f, 1.35f, StableUnit(id, 3));   // D115
 
         GameObject go = new GameObject($"Rock_{id}");
         go.transform.position = new Vector3(pos.x, pos.y, 0.4f);
@@ -908,7 +908,21 @@ public class BaseMapManager : MonoBehaviour
         return obj;
     }
 
-    private Sprite GetRandomTreeSprite()
+    /// <summary>
+    /// D115 (madde 31): kimlikten türetilen kararlı [0,1) değer. Ağaç/kaya görsel seçimi tohumsuz Random yerine bundan yapılır; kayıtlı
+    /// nesne her girişte aynı sprite/kareyle çıkar (string.GetHashCode süreçler arası kararlı değildir, elle FNV-1a).
+    /// </summary>
+    public static float StableUnit(string id, int salt = 0)
+    {
+        unchecked
+        {
+            uint h = 2166136261u ^ (uint)salt * 16777619u;
+            foreach (char c in id ?? "") { h ^= c; h *= 16777619u; }
+            return (h & 0xFFFFFF) / (float)0x1000000;
+        }
+    }
+
+    private Sprite GetRandomTreeSprite(string id)
     {
         var fullTree = Array.Find(DecorPlacementController.All,
             item => item.id == "tree")?.sprite;
@@ -931,7 +945,7 @@ public class BaseMapManager : MonoBehaviour
         if (available.Count == 0)
             return null;
 
-        return available[UnityEngine.Random.Range(0, available.Count)];
+        return available[Mathf.Min(available.Count - 1, (int)(StableUnit(id, 2) * available.Count))];
     }
 
     // ==================== KALDIRMA ====================
@@ -1118,6 +1132,10 @@ public class BaseMapManager : MonoBehaviour
 
     /// <summary>Verilen boyutta, <paramref name="near"/>'a en yakın boş yer (yoksa near).</summary>
     public Vector3 NearestFreeSpot(Vector2Int size, Vector3 near, PlacedMapObject moving = null)
+        => NearestFreeSpotWithVisual(size, near, moving, null);
+
+    /// <summary>Aynı arama; <paramref name="visual"/> verilirse adayın görsel engel alanı da denetlenir (D115).</summary>
+    public Vector3 NearestFreeSpotWithVisual(Vector2Int size, Vector3 near, PlacedMapObject moving, Rect? visual)
     {
         Vector3 best = near;
         float bestDistance = float.MaxValue;
@@ -1127,11 +1145,33 @@ public class BaseMapManager : MonoBehaviour
         {
             var candidate = new Vector3(x + size.x * 0.5f, y + size.y * 0.5f, near.z);
             float distance = (candidate - near).sqrMagnitude;
-            if (distance >= bestDistance || !CanPlaceFootprintAt(size, candidate, moving)) continue;
+            if (distance >= bestDistance || !CanPlaceFootprintAt(size, candidate, moving, visual)) continue;
             best = candidate;
             bestDistance = distance;
         }
         return best;
+    }
+
+    /// <summary>
+    /// D115 (madde 33): yeni (kaydı olmayan) inşaatçı kulübesinin yeri. Eskiden yalnız 2×2 ayak izi denetleniyordu; kulübenin taşan
+    /// görseli ve komşu kulübenin engel alanı sayılmadığından ikinci kulübe birincinin dibine kuruluyordu. Önce görsel + çevresinde 1 hücre
+    /// boşluk payıyla, olmazsa yalnız görselle, o da olmazsa eski kuralla aranır. Kayıtlı konumu olan kulübeye dokunulmaz.
+    /// </summary>
+    public Vector3 SuggestBuilderHutSpot(Vector3 near, Rect? hutVisual, PlacedMapObject moving = null)
+    {
+        Vector2Int size = BuilderHut.FootprintSize;
+        if (hutVisual.HasValue && hutVisual.Value.width > 0f)
+        {
+            Rect v = hutVisual.Value;
+            var ring = new Rect(-size.x * 0.5f - 1f, -size.y * 0.5f - 1f, size.x + 2f, size.y + 2f);
+            var padded = Rect.MinMaxRect(Mathf.Min(v.xMin - 1f, ring.xMin), Mathf.Min(v.yMin - 1f, ring.yMin),
+                Mathf.Max(v.xMax + 1f, ring.xMax), Mathf.Max(v.yMax + 1f, ring.yMax));
+            Vector3 spot = NearestFreeSpotWithVisual(size, near, moving, padded);
+            if (CanPlaceFootprintAt((Vector2)size, spot, moving, padded)) return spot;
+            spot = NearestFreeSpotWithVisual(size, near, moving, v);
+            if (CanPlaceFootprintAt((Vector2)size, spot, moving, v)) return spot;
+        }
+        return NearestFreeSpot(size, near, moving);
     }
 
     public bool CanPlaceFootprintAt(Vector2 size, Vector2 center, PlacedMapObject moving = null, Rect? visual = null)
@@ -1560,7 +1600,7 @@ public class BaseMapManager : MonoBehaviour
             var placed = GetMapObject(hut.gameObject);
             Vector3 home = BaseWorldLayout.Get("builder").center;
             Vector3 spot = hut.Index == 0 && CanPlaceFootprintAt(BuilderHut.FootprintSize, home, placed)
-                ? home : NearestFreeSpot(BuilderHut.FootprintSize, home, placed);
+                ? home : SuggestBuilderHutSpot(home, BaseOccupancyGrid.RestVisualRelative(hut.gameObject), placed);   // D115
             hut.transform.position = new Vector3(spot.x, spot.y, hut.transform.position.z);
             hut.OnMoved();
         }
