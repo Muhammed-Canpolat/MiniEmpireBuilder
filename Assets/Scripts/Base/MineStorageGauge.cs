@@ -62,6 +62,7 @@ public sealed class MineStorageGauge : MonoBehaviour
             GameManager.Instance.OnGoldMineStoredChanged += Refresh;
             Refresh(GameManager.Instance.GoldMineStored, GameManager.Instance.GetGoldMineStorageCapacity());
         }
+        lastMineScale = mine != null ? mine.lossyScale : Vector3.one;
         Place();
     }
 
@@ -83,6 +84,7 @@ public sealed class MineStorageGauge : MonoBehaviour
     }
 
     private float nextPlace;
+    private Vector3 lastMineScale;
 
     /// <summary>Madenin görünen tepesinin hemen üstü (çırak ve bu gösterge hariç).</summary>
     private void Place()
@@ -108,6 +110,9 @@ public sealed class MineStorageGauge : MonoBehaviour
             pill.color = Color.Lerp(new Color32(0x14, 0x11, 0x0D, 0xE0), new Color32(0x5A, 0x14, 0x0E, 0xE6),
                 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f));
         else if (pill != null) pill.color = new Color32(0x14, 0x11, 0x0D, 0xE0);
-        if (Time.unscaledTime >= nextPlace) { nextPlace = Time.unscaledTime + 1f; Place(); }
+        // Bug 7: bina ölçek tween'iyle büyürken (0'dan) her karede yeniden yerleştir; durunca 1 sn aralık.
+        Vector3 s = mine != null ? mine.lossyScale : Vector3.one;
+        if (s != lastMineScale) { lastMineScale = s; nextPlace = Time.unscaledTime + 1f; Place(); }
+        else if (Time.unscaledTime >= nextPlace) { nextPlace = Time.unscaledTime + 1f; Place(); }
     }
 }
