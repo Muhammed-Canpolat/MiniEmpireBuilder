@@ -15,7 +15,14 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta` (bina sprite'la
 | 3 | Duvarlar | BİTTİ | 7e557fa | D108; zoom kaldırıldı, sabit kadraj; kalan: kapı referanstan iri/koyu, köşede mavi çatılı kule yok (EKSİK ASSET) |
 | 4 | Droplist | BİTTİ | e341d6d | D109; eski sol üst düğmeler bayrakla kalktı; Etkinlik ikonsuz (kupa EKSİK ASSET, ART_NEEDS #25); ok rozeti sağ kenarda kesik → 6. bölümde |
 | 5 | Sesler | BİTTİ | 7641c50 | D110; bug 27 kök neden: ölçekli zamanlı solma (timeScale=0) → gerçek zamanlı; Torch/River/Night/Storm bağlanmadı (oyunda karşılığı yok) |
-| 6 | Son kontrol | BEKLİYOR | | |
+| 6 | Son kontrol | BİTTİ | 10802c0 | D111; §7 kabul: 5 oran (9:16, 9:19.5, 9:21, 4:3, 16:10) görüntü Docs/playtest/ui-ana-us/06-*; 53/53 hedefli test; Safe Area kodla doğrulandı (cihaz çentiği denenmedi) |
+
+DURUM: TAMAMLANDI — 6/6 bölüm BİTTİ, ENGELLENEN yok. Dal birleştirilmedi (kullanıcı test edip birleştirecek), push yok.
+Bayraklar (FeatureConfig): miniEmpireTopBar, miniEmpireBottomBar, pixelCastleWalls, miniEmpireDropMenu — kapatılırsa eski görünüm döner.
+Diğer sahneler: Ada / Sefer / Savaş barları ESKİ tasarımda kaldı (dokunulmadı). SIRADAKİ İŞ: Ada üssünü yeni tasarıma uyarlamak.
+Açık kozmetik: kapı referanstan iri/koyu; köşede mavi çatılı kule yok; Görev parşömen ikonu soluk; droplist satır "!" rozeti "Günlük" yazısına hafif değiyor;
+yazı konturu yok; alt bar kapalıyken alttaki şerit koyu dolgu kalıyor (kamera sabit kararı).
+Cihazda denenmeli: Safe Area (çentik/ev çubuğu), arka planda ses kesilmesi, Wave Attack sesinin uygunluğu, OGG döngülerinde klik.
 
 EKSİK ASSET:
 - MiniEmpireUI'da takvim/parşömen/kupa YOK → Günlük/Görev için projedeki mevcut ui_icon_calendar/ui_scroll; kupa projede de yok → Etkinlik ikonsuz (ART_NEEDS #25).
