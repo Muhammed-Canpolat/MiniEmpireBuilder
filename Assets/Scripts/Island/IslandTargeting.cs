@@ -61,7 +61,7 @@ public static class IslandTargeting
             case Role.Flyer:
             {
                 var archer = IslandArcher.Instance;
-                if (archer != null && archer.IsAlive)
+                if (archer != null && archer.Targetable)
                     return new Result { target = archer.transform, point = archer.Position, radius = 0.3f };
                 return none;   // kaleye düz çizgi (v1 varsayılanı)
             }
@@ -79,7 +79,7 @@ public static class IslandTargeting
                     if (d < bestDistance) { bestDistance = d; best = Of(building); }
                 }
                 var archer = IslandArcher.Instance;
-                if (archer != null && archer.IsAlive)
+                if (archer != null && archer.Targetable)
                 {
                     float d = Vector2.Distance(position, archer.Position);
                     if (d < bestDistance) best = new Result { target = archer.transform, point = archer.Position, radius = 0.3f };

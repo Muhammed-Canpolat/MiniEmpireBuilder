@@ -405,6 +405,15 @@ public static class Progression
         public const float HeroBombOffset = 1.5f;
     }
 
+    // ---- D116: düşman kilitlenme önleyici (watchdog); ada ve sefer savaşı ortak ----
+    public static class EnemyWatchdog
+    {
+        /// <summary>Hedefine (vuruş menzili dışındayken) bu kadar sn'de en az <see cref="MinProgress"/> u yaklaşamayan ya da hedefsiz düşman takılı sayılır.</summary>
+        public const float StuckSeconds = 6f, MinProgress = 0.5f;
+        /// <summary>Takılı düşman bu kadar sn yedek hedefe (Ana Üs/Kale) engel tanımadan yürür, sonra normal hedeflemeye döner.</summary>
+        public const float FallbackSeconds = 12f;
+    }
+
     // ---- Martı Adası (Docs/design/island_base.md §8): ada sayıları yalnız burada ----
     public static class Island
     {
@@ -720,7 +729,12 @@ public static class Progression
         public static int MaxAkin(int keepLevel) => 3 * Mathf.Max(1, keepLevel);
 
         // Atış yerleri (§2): açılış Kıyı Kalesi seviyesi (P1, P2, P3, P4, P5)
-        public static readonly int[] PostUnlock = { 1, 4, 1, 2, 5 };
+        // D116 (madde 28): P4 KK2 → KK1. Akın 1 öğreticisi (ikinci tekne B kumsalından) oyuncuya P4'e dokunmasını söylüyordu ama P4 kilitliydi.
+        // Atış yerinin açılışı YALNIZ bu dizidir (bölge bulutu/zoneMask etkilemez; bkz. IslandLayout.PostUnlocked).
+        public static readonly int[] PostUnlock = { 1, 4, 1, 1, 5 };
+        /// <summary>D116: dalga sonu güvenlik ağı. Tekneler bitip uçan sürüsü doğduktan sonra canlı düşman kalırken bu kadar sn hiçbir
+        /// ilerleme (düşman canı/sayısı, kale canı) olmazsa kalanlar kaleye zorlanır; iki katında hâlâ yoksa dalga kapatılır.</summary>
+        public const float WaveStallSeconds = 30f;
         public static int BeachesOpen(int n)
         {
             int open = 0;

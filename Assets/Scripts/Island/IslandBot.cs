@@ -89,7 +89,7 @@ public sealed class IslandBot : MonoBehaviour
         float bestScore = here > 0f ? here + 1.5f : 0f;   // menzilde hedef varsa yer değiştirme eşiği; yoksa hedefi olan en iyi yere git
         for (int i = 0; i < IslandLayout.Posts.Length; i++)
         {
-            if (i == Archer.CurrentPost || !IslandLayout.PostUnlocked(i, KeepLevel)) continue;
+            if (i == Archer.CurrentPost || !Archer.PostOpen(i)) continue;   // D116: okçuyla aynı (canlı) kural
             float score = Score(i, targets);
             if (score > bestScore) { bestScore = score; best = i; }
         }

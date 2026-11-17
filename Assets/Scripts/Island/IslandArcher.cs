@@ -168,6 +168,8 @@ public sealed class IslandArcher : MonoBehaviour
     public float MaxHp { get; private set; }
     public float Hp { get; private set; }
     public bool IsAlive { get; private set; } = true;
+    /// <summary>D116: düşman hedefi olabilir mi (canlı VE sahnede etkin; Okçuluk Alanı yokken okçu gizlidir, yarasa ona kilitlenmez).</summary>
+    public bool Targetable => IsAlive && isActiveAndEnabled;
     public bool Running { get; private set; }
     public int CurrentPost { get; private set; }
     public bool AutoFire { get; set; }
@@ -179,7 +181,17 @@ public sealed class IslandArcher : MonoBehaviour
     public float Range => IslandLayout.Posts[CurrentPost].Range;
     /// <summary>Ateş bekleme dolumu 0..1 (1 = az önce ateşlendi): ATEŞ düğmesi üstündeki dolum.</summary>
     public float CooldownFraction => Mathf.Clamp01((nextShot - Time.time) / Progression.Island.FireCooldown);
-    public int KeepLevel { get; private set; } = 1;
+    /// <summary>
+    /// D116 (madde 25/28): Kıyı Kalesi seviyesi CANLI okunur. Eskiden Create anındaki değer saklanıyordu; oyuncu ada sahnesinde kaleyi
+    /// yükseltince işaretler (canlı seviye) "ulaşılabilir" gösterirken MoveToPost (eski seviye) sessizce reddediyordu → yeni açılan
+    /// atış yerine ancak sahne yeniden yüklenince (sonraki akın) gidilebiliyordu.
+    /// </summary>
+    public int KeepLevel => KeepProvider != null ? Mathf.Max(1, KeepProvider()) : initialKeep;
+    /// <summary>Canlı Kıyı Kalesi seviyesi kaynağı (sahne: <see cref="IslandSession.KeepLevel"/>); null ise Create değeri (testler).</summary>
+    public Func<int> KeepProvider;
+    private int initialKeep = 1;
+    /// <summary>Atış yeri açık mı: TEK kural <see cref="IslandLayout.PostUnlocked"/> (bulut/bölge maskesi etkilemez).</summary>
+    public bool PostOpen(int post) => IslandLayout.PostUnlocked(post, KeepLevel);
 
     public event Action<int> PostChanged;
     public event Action<bool> Shot;          // (charged)
@@ -213,7 +225,7 @@ public sealed class IslandArcher : MonoBehaviour
     {
         Instance = this;
         Level = Mathf.Max(1, level);
-        KeepLevel = Mathf.Max(1, keepLevel);
+        initialKeep = Mathf.Max(1, keepLevel);
         MaxHp = Progression.Island.ArcherHp(Level);
         Hp = MaxHp;
         CurrentPost = Mathf.Clamp(startPost, 0, IslandLayout.Posts.Length - 1);
@@ -294,7 +306,7 @@ public sealed class IslandArcher : MonoBehaviour
     public bool MoveToPost(int post)
     {
         if (!IsAlive || post < 0 || post >= IslandLayout.Posts.Length) return false;
-        if (!IslandLayout.PostUnlocked(post, KeepLevel)) return false;
+        if (!PostOpen(post)) return false;
         if (Wandering) EndWander(CurrentPost);   // D115: gezinmeden atış düzenine dön (yol hesabı atış yerinden başlar)
         if (Running) { pendingPost = post == CurrentPost ? -1 : post; return true; }
         if (post == CurrentPost) return false;

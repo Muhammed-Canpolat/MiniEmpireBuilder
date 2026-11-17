@@ -153,7 +153,7 @@ public sealed class IslandRaidManager : MonoBehaviour
                 BattleVfxManager.Instance.ShowNoticeBanner(L.T($"YENİ DÜŞMAN: {EnemyTypeInfo.DisplayName(fresh)}", $"NEW ENEMY: {EnemyTypeInfo.DisplayName(fresh)}"));
             yield return SpawnWave(wave);
             // Dalga bitene kadar: tekneler batar/boşalır, inen düşmanlar ölür.
-            while (Phase == State.Running && !WaveCleared()) yield return null;
+            yield return WaitWaveCleared();
             if (Phase != State.Running) yield break;
             if (wave < TotalWaves)
             {
@@ -268,6 +268,68 @@ public sealed class IslandRaidManager : MonoBehaviour
     private void OnPostChanged(int post)
     {
         if (tutorialRun && TutorialStep == 2 && post == 3) SetTutorial(3);
+    }
+
+    /// <summary>D116: dalga güvenlik ağının kaç kez devreye girdiği (1. kademe: kaleye zorla; 2. kademe: dalgayı kapat). Test/telemetri.</summary>
+    public int StallInterventions { get; private set; }
+
+    /// <summary>
+    /// D116: dalga bitene kadar bekler; son güvenlik ağı. Tekneler bitip uçan sürüsü doğduktan sonra <see cref="Progression.Island.WaveStallSeconds"/>
+    /// boyunca hiçbir ilerleme (düşman sayısı/canı/konumu, kale canı) yoksa kalan düşmanlar kaleye zorlanır (<see cref="EnemyController.ForceFallback"/>);
+    /// iki katında hâlâ yoksa kalanlar düşürülür → hiçbir akın "bitmeyen dalga"da kalmaz.
+    /// </summary>
+    private IEnumerator WaitWaveCleared()
+    {
+        float stall = 0f, nextSample = 0f;
+        Vector4 last = new Vector4(float.NaN, 0f, 0f, 0f);
+        bool forced = false;
+        while (Phase == State.Running && !WaveCleared())
+        {
+            bool spawning = pendingFlyers > 0;
+            foreach (var boat in RaidBoat.All) if (boat != null && boat.Alive) { spawning = true; break; }
+            if (spawning) { stall = 0f; forced = false; }
+            else if (Time.time >= nextSample)
+            {
+                nextSample = Time.time + 1f;
+                var now = ActivitySample();
+                bool active = float.IsNaN(last.x) || Mathf.Abs(now.x - last.x) > 0.01f || Mathf.Abs(now.y - last.y) > 0.01f
+                    || Mathf.Abs(now.z - last.z) > 0.01f || Mathf.Abs(now.w - last.w) > 0.2f;
+                last = now;
+                if (active) { stall = 0f; forced = false; }
+            }
+            if (!spawning) stall += Time.deltaTime;
+            if (!forced && stall >= Progression.Island.WaveStallSeconds)
+            {
+                forced = true;
+                StallInterventions++;
+                Debug.LogWarning($"[Island] Dalga {Wave} ilerlemiyor: kalan düşmanlar kaleye yönlendirildi (D116).");
+                foreach (var enemy in IslandEnemy.All) if (enemy != null && enemy.Alive) enemy.Controller.ForceFallback();
+            }
+            else if (stall >= 2f * Progression.Island.WaveStallSeconds)
+            {
+                StallInterventions++;
+                Debug.LogWarning($"[Island] Dalga {Wave} hâlâ ilerlemiyor: kalan düşmanlar düşürüldü (D116).");
+                foreach (var enemy in new List<IslandEnemy>(IslandEnemy.All))
+                    if (enemy != null && enemy.Alive) enemy.Controller.TakeDamage(1e9f, DamageSource.Env);
+                stall = 0f; forced = false;
+            }
+            yield return null;
+        }
+    }
+
+    /// <summary>İlerleme imzası: (düşman sayısı, toplam düşman canı, kale + okçu canı, düşman konumları toplamı).</summary>
+    private Vector4 ActivitySample()
+    {
+        float count = 0f, hp = 0f, moved = 0f;
+        foreach (var enemy in IslandEnemy.All)
+        {
+            if (enemy == null || !enemy.Alive) continue;
+            count++;
+            hp += enemy.Controller.CurrentHealth;
+            moved += Mathf.Abs(enemy.Position.x) + Mathf.Abs(enemy.Position.y);
+        }
+        float defenders = (castle != null ? castle.CurrentHealth : 0f) + (archer != null ? archer.Hp : 0f);
+        return new Vector4(count, hp, defenders, moved);
     }
 
     private bool WaveCleared()

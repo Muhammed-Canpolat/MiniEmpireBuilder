@@ -99,6 +99,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
         int archerLevel = IslandSession.ArcherLevel();
         BuildVillage(keep);
         Archer = IslandArcher.Create(archerLevel, keep, 0);
+        Archer.KeepProvider = IslandSession.KeepLevel;   // D116: sahnede yapılan Kıyı Kalesi yükseltmesi atış yerlerini hemen açar
         Archer.AutoFire = IslandSession.AutoFireUnlocked(keep) && (IslandSession.Save?.autoFire ?? false);
         IslandAbilities.Attach(Archer);
         // 6. oturum (3.2): Okçu Kaptan ancak Okçuluk Alanı tamamlanınca adada (öğreticiyle kurulur, binadan çıkıp yürür).
@@ -373,13 +374,13 @@ public sealed class IslandSceneSetup : MonoBehaviour
     private void UpdatePostMarkers()
     {
         if (Archer == null) return;
-        int keep = IslandSession.KeepLevel();
+        int keep = Archer.KeepLevel;   // D116: işaret, dokunuş ve okçu aynı canlı seviyeyi okur
         int runTo = Archer.TargetPost;
         for (int i = 0; i < postMarkers.Count; i++)
         {
             var m = postMarkers[i];
             if (m == null || m.ring == null) continue;
-            bool unlocked = IslandLayout.PostUnlocked(i, keep);
+            bool unlocked = Archer.PostOpen(i);
             bool current = !Archer.Running && Archer.CurrentPost == i;
             bool target = runTo == i;
             bool visible = InDefense;
@@ -428,7 +429,7 @@ public sealed class IslandSceneSetup : MonoBehaviour
         int nearest = -1; float best = float.MaxValue;
         for (int i = 0; i < IslandLayout.Posts.Length; i++)
         {
-            if (i == Archer.CurrentPost || !IslandLayout.PostUnlocked(i, keep)) continue;
+            if (i == Archer.CurrentPost || !Archer.PostOpen(i)) continue;
             float d = Vector2.Distance(Archer.Position, IslandLayout.Posts[i].World);
             if (d < best) { best = d; nearest = i; }
         }
@@ -484,13 +485,8 @@ public sealed class IslandSceneSetup : MonoBehaviour
             float d = Vector2.Distance(world, target.Position);
             if (d < bestDistance) { bestDistance = d; best = target; }
         }
-        if (best != null)
-        {
-            if (Vector2.Distance(Archer.Position, best.Position) <= Archer.Range) Archer.LockTarget(best);
-            else Hud?.Toast(L.T("Hedef menzil dışında.", "Target out of range."));
-            return;
-        }
-        int keep = IslandSession.KeepLevel();
+        bool targetInRange = best != null && Vector2.Distance(Archer.Position, best.Position) <= Archer.Range;
+        if (targetInRange) { Archer.LockTarget(best); return; }
         int nearest = -1;
         float nearestDistance = 1.1f;
         for (int i = 0; i < IslandLayout.Posts.Length; i++)
@@ -498,14 +494,18 @@ public sealed class IslandSceneSetup : MonoBehaviour
             float d = Vector2.Distance(world, IslandLayout.Posts[i].World);
             if (d < nearestDistance) { nearestDistance = d; nearest = i; }
         }
+        // D116 (madde 25): menzil dışındaki düşman atış yerinin üstündeyse dokunuş "hedef menzil dışında" deyip yutulmaz; atış yerine gidilir.
+        // Bulut (bölge maskesi) atış yerini etkilemez: tek kural Archer.PostOpen (Kıyı Kalesi seviyesi).
         if (nearest >= 0)
         {
-            if (!IslandLayout.PostUnlocked(nearest, keep))
-                Hud?.Toast(L.T($"{IslandLayout.Posts[nearest].Name}: Kıyı Kalesi {Progression.Island.PostUnlock[nearest]}'te açılır.",
-                    $"{IslandLayout.Posts[nearest].Name}: unlocks at Keep {Progression.Island.PostUnlock[nearest]}."));
-            else Archer.MoveToPost(nearest);
+            if (!Archer.PostOpen(nearest))
+                Hud?.Toast(L.T($"{IslandLayout.Posts[nearest].Name} kilitli: Kıyı Kalesi Sv.{Progression.Island.PostUnlock[nearest]} gerekir (şu an Sv.{Archer.KeepLevel}).",
+                    $"{IslandLayout.Posts[nearest].Name} is locked: needs Keep Lv.{Progression.Island.PostUnlock[nearest]} (now Lv.{Archer.KeepLevel})."));
+            else if (!Archer.MoveToPost(nearest) && nearest != Archer.CurrentPost)
+                Hud?.Toast(L.T("Okçu şu an koşamıyor.", "The archer can't run right now."));
             return;
         }
+        if (best != null) { Hud?.Toast(L.T("Hedef menzil dışında.", "Target out of range.")); return; }
         Archer.LockTarget(null);
     }
 }

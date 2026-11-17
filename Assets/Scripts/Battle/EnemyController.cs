@@ -518,6 +518,70 @@ public class EnemyController : MonoBehaviour
         if (MovementLocked) return;
         MoveToTarget();
         TryAttack();
+        TickWatchdog();
+    }
+
+    // ==================== KİLİTLENME ÖNLEYİCİ (D116) ====================
+    // Ortak güvenlik ağı (ada + sefer): vuruş menzili dışındayken Progression.EnemyWatchdog.StuckSeconds boyunca hedefine
+    // MinProgress kadar yaklaşamayan (ya da sefer yolunda ilerleyemeyen) veya hedefsiz düşman FallbackSeconds boyunca yedek
+    // hedefe (Ana Üs/Kale) yönelir. Ada: kaleye rota/düz çizgiyle (engel tanımaz); sefer yolu: D96'nın bırakma kuralıyla aynı
+    // biçimde yan hedef bırakılır ve ileriden yola dönülür (yolu izleyen düşmana dokunulmaz → D96 davranışı değişmez).
+
+    private float watchStart = -1f, watchDistance, watchLaneS, lastWatchTick = -1f, fallbackUntil = -1f;
+    /// <summary>Watchdog bu düşmanı kaç kez yedek hedefe yönlendirdi (test/telemetri).</summary>
+    public int WatchdogTrips { get; private set; }
+    /// <summary>Tüm düşmanlarda toplam watchdog tetiklemesi (savaş başına sıfırlanmaz; test/telemetri).</summary>
+    public static int TotalWatchdogTrips { get; private set; }
+    /// <summary>Yedek hedefe zorlanmış durumda mı.</summary>
+    public bool InFallback => Time.time < fallbackUntil;
+
+    private Vector2 FallbackPoint
+    {
+        get
+        {
+            if (mainBaseTransform == null) return transform.position;
+            var structure = mainBaseTransform.GetComponent<BattleStructure>();
+            return structure != null ? structure.BasePoint : (Vector2)mainBaseTransform.position;
+        }
+    }
+
+    /// <summary>Düşmanı hemen yedek hedefe yönlendirir (watchdog ya da dalga güvenlik ağı çağırır).</summary>
+    public void ForceFallback()
+    {
+        if (isDead || mainBaseTransform == null) return;
+        fallbackUntil = Time.time + Progression.EnemyWatchdog.FallbackSeconds;
+        WatchdogTrips++;
+        TotalWatchdogTrips++;
+        SetTarget(mainBaseTransform, FallbackPoint, route != null ? IslandLayout.CastleRadius : BaseRadius);
+        nextRetarget = Time.time + RetargetInterval;
+        if (lane != null)
+        {
+            relockAfter = Time.time + Progression.EnemyWatchdog.FallbackSeconds;
+            if (laneState == LaneState.Lock || laneState == LaneState.Fight) SetLaneState(LaneState.Rejoin);
+        }
+        watchStart = -1f;
+    }
+
+    private void TickWatchdog()
+    {
+        float now = Time.time;
+        bool continuous = now - lastWatchTick <= 0.5f;   // sersemleme/kilit/kök gibi duraklamalar pencereyi yeniden başlatır
+        lastWatchTick = now;
+        bool paused = IsSaboteur || SpeedMultiplier <= 0.01f || InFallback;
+        bool engaged = currentTarget != null && DistanceToTarget <= attackRange;
+        // Sefer yolunda Ana Üs'e giden (yolu izleyen) düşman: D96 kalabalık/ayrışma düzenine karışılmaz.
+        // Ada: kaleye giden düşman rotada/düz çizgide engel tanımadan yürür (takılamaz); rota kaleden uzaklaşan kesimlerde yanlış alarm vermesin.
+        bool laneToBase = (lane != null || route != null) && currentTarget == mainBaseTransform;
+        if (!continuous || paused || engaged || laneToBase || now - lastAttackTime < 1.5f) { watchStart = -1f; return; }
+        float distance = currentTarget != null ? DistanceToTarget : float.MaxValue;
+        if (watchStart < 0f || (currentTarget != null && watchDistance - distance >= Progression.EnemyWatchdog.MinProgress)
+            || (lane != null && laneS - watchLaneS >= Progression.EnemyWatchdog.MinProgress))
+        {
+            watchStart = now; watchDistance = distance; watchLaneS = lane != null ? laneS : 0f;
+            return;
+        }
+        if (now - watchStart < Progression.EnemyWatchdog.StuckSeconds) return;
+        ForceFallback();
     }
 
     // ---- Bombacı: en yakın kuleye koşar, fitil yanar, patlar ----
@@ -643,7 +707,7 @@ public class EnemyController : MonoBehaviour
         if (route != null)
         {
             var islandArcher = currentTarget.GetComponent<IslandArcher>();
-            if (islandArcher != null) return islandArcher.IsAlive;
+            if (islandArcher != null) return islandArcher.Targetable;
         }
         var structure = currentTarget.GetComponent<BattleStructure>();
         if (structure != null) return !structure.IsDestroyed;
@@ -665,6 +729,12 @@ public class EnemyController : MonoBehaviour
         }
         nextRetarget = Time.time + RetargetInterval * UnityEngine.Random.Range(0.8f, 1.2f);
         Vector2 position = transform.position;
+        // D116 watchdog: takılı düşman yedek hedefe (Ana Üs/Kale) kilitli kalır (sefer yolunda D96 bırakma kuralıyla aynı: Ana Üs'e dön).
+        if (InFallback && mainBaseTransform != null)
+        {
+            SetTarget(mainBaseTransform, FallbackPoint, route != null ? IslandLayout.CastleRadius : BaseRadius);
+            return;
+        }
         if (route != null) { FindIslandTarget(position); return; }
         if (IsSaboteur)
         {
@@ -822,7 +892,7 @@ public class EnemyController : MonoBehaviour
         if (lane != null) { LaneTick(moveSpeed * SpeedMultiplier * Time.deltaTime); return; }
         if (DistanceToTarget <= attackRange) return;
         Vector3 aim = targetPoint;
-        if (route != null && currentTarget == mainBaseTransform)
+        if (route != null && currentTarget == mainBaseTransform && !InFallback)
         {
             while (routeIndex < route.Length && Vector2.Distance(transform.position, route[routeIndex]) < 0.25f) routeIndex++;
             if (routeIndex < route.Length) aim = route[routeIndex];
@@ -832,7 +902,11 @@ public class EnemyController : MonoBehaviour
         direction.Normalize();
         float step = moveSpeed * SpeedMultiplier * Time.deltaTime;
         bool onLane = route != null && currentTarget == mainBaseTransform;
-        if (IsFlying || onLane)
+        // D116 (madde 30): ada uçanları (Yarasa/Hayalet/Ejder; Variant Flying değil) okçuya da düz uçar. Eskiden okçu hedefliyken
+        // yer ızgarasıyla yürüyordu: güney kenarından (harita dışı) doğan sürü en yakın "yürünebilir" hücre olan GB/GD adacıklarına
+        // iniyor, oradan anakaraya yol bulamayıp sonsuza dek bekliyordu → dalga bitmiyordu. Watchdog yedeği de düz çizgidir.
+        bool islandFlyer = route != null && IslandTargeting.RoleOf(enemyType) == IslandTargeting.Role.Flyer;
+        if (IsFlying || onLane || islandFlyer || InFallback)
             transform.position += direction * step;
         else
         {
