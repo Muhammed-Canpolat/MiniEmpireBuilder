@@ -58,7 +58,7 @@ public class UiAnaUsCapture
         PlayerPrefs.Save();
     }
 
-    private static IEnumerator LoadBase(int mainBase, int meat, int wood, int gold, int gems, Action<object> edit = null)
+    internal static IEnumerator LoadBase(int mainBase, int meat, int wood, int gold, int gems, Action<object> edit = null)
     {
         var managerType = T("GameManager");
         var gm = managerType.GetProperty("Instance").GetValue(null) as Component;
@@ -167,7 +167,7 @@ public class UiAnaUsCapture
     // ==================== D108: PixelCastle duvarları + kadraj ====================
 
     /// <summary>Dolu kayıt (UI_CAPTURE_FULL=1, varsayılan): Ana Üs 7, açılmış arazi, referanstaki dizilime yakın binalar + dekor.</summary>
-    private static void FillReferenceBase(object save, int landTier)
+    internal static void FillReferenceBase(object save, int landTier)
     {
         Set(save, "landOpened", landTier);
         Set(Field(save, "island"), "announced", true);   // "Ufukta bir ada!" afişi görüntüyü kapatmasın
@@ -272,7 +272,7 @@ public class UiAnaUsCapture
     /// ile hesaplanır (WorldViewportBars gibi); tek kamera tam ekran çizer, ölçek/merkez o alana denk gelecek şekilde kaydırılır
     /// (barların arkasında koyu dolgu yerine dünyanın devamı görünür; aradaki alan oyundakiyle birebir).
     /// </summary>
-    private static void ShootFramed(int w, int h, string outPath)
+    internal static void ShootFramed(int w, int h, string outPath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outPath));
         var camera = Camera.main;

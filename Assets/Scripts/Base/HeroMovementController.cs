@@ -58,10 +58,12 @@ public class HeroMovementController : MonoBehaviour
         if (warrior != null)
         {
             controller = warrior;
-            transform.localScale = new Vector3(transform.localScale.x * HeroLook.WarriorScale,
-                transform.localScale.y * HeroLook.WarriorScale, 1f);
+            // Bug 34: ölçek HeroLook'taki ekran oranından (kamera ortho'suna göre); kadraj oturunca yeniden uygulanır.
+            fitWarrior = true;
             var circle = GetComponent<CircleCollider2D>();
-            if (circle != null) circle.radius /= HeroLook.WarriorScale;
+            colliderWorldRadius = circle != null ? circle.radius * transform.localScale.x : 0f;
+            FitWarriorScale();
+            StartCoroutine(RefitWarrior());
         }
         if (controller != null)
         {
@@ -78,6 +80,27 @@ public class HeroMovementController : MonoBehaviour
         for (int i = 0; i < idleFrames.Length; i++) idleFrames[i] = HeroPortraitSprite.Get(idleFrames[i]);
         for (int i = 0; i < runFrames.Length; i++) runFrames[i] = HeroPortraitSprite.Get(runFrames[i]);
         waitUntil = Time.time + Random.Range(1f, 3f);
+    }
+
+    private bool fitWarrior;
+    private float colliderWorldRadius;
+    private float fittedOrtho;
+
+    private void FitWarriorScale()
+    {
+        var cam = Camera.main;
+        if (!fitWarrior || cam == null) return;
+        fittedOrtho = cam.orthographicSize;
+        float scale = HeroLook.WarriorScaleFor(fittedOrtho);
+        transform.localScale = new Vector3(scale, scale, 1f);
+        var circle = GetComponent<CircleCollider2D>();
+        if (circle != null && colliderWorldRadius > 0f) circle.radius = colliderWorldRadius / scale;
+    }
+
+    private System.Collections.IEnumerator RefitWarrior()
+    {
+        for (int frame = 0; frame < 6; frame++) yield return null;
+        FitWarriorScale();   // kamera kadrajı (duvar/çubuk) oturduktan sonra
     }
 
     private void Update()

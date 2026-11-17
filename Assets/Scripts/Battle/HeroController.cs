@@ -111,10 +111,14 @@ public class HeroController : MonoBehaviour
         {
             // Warrior kareleri 64 px/birim: eski 100 px/birim kareleriyle aynı boyda görünsün,
             // çarpışma kutusu da dünyada aynı boyda kalsın. Savaşta görünüm %30 büyük.
-            float scale = HeroLook.WarriorScale * HeroLook.BattleScale;
-            transform.localScale = new Vector3(transform.localScale.x * scale, transform.localScale.y * scale, 1f);
+            // Bug 34: ana üsle aynı ekran oranı (HeroLook.ScreenHeightFraction); sefer kamerası ortho'suna göre.
+            var cam = Camera.main;
+            float ortho = BattleSceneSetup.CameraSizeFor(cam != null ? cam.aspect : 0.5625f);
+            float target = HeroLook.WarriorScaleFor(ortho);
+            float factor = target / Mathf.Max(0.0001f, transform.localScale.x);
+            transform.localScale = new Vector3(target, target, 1f);
             var box = GetComponent<BoxCollider2D>();
-            if (box != null) box.size /= scale;
+            if (box != null) box.size /= factor;
         }
         if (ctrl == null && SpriteManager.Instance != null)
             ctrl = SpriteManager.Instance.GetHeroAnimatorController(weaponType);

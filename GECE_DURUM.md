@@ -12,7 +12,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta`, `ground_mine_r
 | 4 E savaş akışı | 25, 28, 30 | BİTTİ | (bu commit) | D116; okçu kale seviyesini canlı okur, P4 açılışı 1; tek PostUnlocked kuralı; ada uçanları düz uçar; EnemyController watchdog + dalga güvenlik ağı (30/60 sn) ; QA: kod temiz, testleri kopyada koşamadı (izin); açık: 60 sn düşürmede ödül sayacı doğrulanmadı; sefer düşmanı 6 sn ilerleyemezse 12 sn Ana Üs’e yönelir (tasarım değişikliği) |
 | 5 F ekonomi | 16, 22 | BİTTİ | (bu commit) | D117; Progression.Island.StartWood/StartMeat=0 (yalnız yeni ada); ortak GemActions.OfferIslandTopUp + GemConfirm (yükselt, kale, keşif, yerleştirme); 22/22 test |
 | 6 C+H çizim/ada UI | 1, 23, 17, 20, 21 | BİTTİ (1 cihazda DOĞRULANMADI) | (bu commit) | D118; hayalet ölçeği ayak izine sınırlı + güvenli sprite materyali; koyun yürünebilir/aynı yükseklik; FancyInfoPanel bantları ayrıldı; ada Ayarlar paneli açılır; kale yükseltme süresi görünür |
-| 7 G ana üs | 7, 8, 9, 12, 13, 14, 34 | BEKLİYOR | | |
+| 7 G ana üs | 7, 8, 9, 12, 13, 14, 34 | BİTTİ | 064d9d0..(bu commit) | D119; madde başı ayrı commit: 13 zoom koşulsuz kapalı, 7 gösterge tween ölçeği, 9 mor ev, 12 Okçu Kışlası + tek okçu, 8 nöbetçi yok + okçu 2,4 u, 14 DecorScale tek kaynak, 34 HeroLook.ScreenHeightFraction |
 | 8 J tanıtım/e-posta | 26, 32 | BEKLİYOR | | |
 | 9 K Depo | 11 | BEKLİYOR | | |
 

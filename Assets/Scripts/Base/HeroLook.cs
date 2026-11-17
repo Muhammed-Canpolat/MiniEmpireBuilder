@@ -20,6 +20,20 @@ public static class HeroLook
     /// <summary>Savaşta kahraman kalabalıkta seçilsin diye bir tık büyük çizilir (çarpışma kutusu aynı kalır).</summary>
     public const float BattleScale = 1.3f;
 
+    /// <summary>Tiny Swords Warrior animasyon karesinin dünya yüksekliği (192 px / 64 px-birim), ölçek 1'de.</summary>
+    public const float WarriorFrameHeight = 3f;
+
+    /// <summary>
+    /// Bug 34: kahramanın ekran oranı — Warrior karesinin (<see cref="WarriorFrameHeight"/>) kameranın görünür yüksekliğine (2 × ortho) oranı.
+    /// Ana Üs ve sefer savaşı aynı oranı kullanır (kamera ortho farkı ölçeğe yansır). Değer ana üstekinden ölçüldü
+    /// (eski ana üs: 2,5 u portre genişliği × 0,64 ölçek = 1,928 kök ölçek; kare 5,78 u, kadraj ortho 21,07 → 0,1372).
+    /// </summary>
+    public const float ScreenHeightFraction = 0.1372f;
+
+    /// <summary>Verilen kamera ortografik boyutunda kahramanın (Warrior) kök ölçeği.</summary>
+    public static float WarriorScaleFor(float orthographicSize)
+        => ScreenHeightFraction * 2f * Mathf.Max(0.01f, orthographicSize) / WarriorFrameHeight;
+
     private static readonly Dictionary<int, RuntimeAnimatorController> cache =
         new Dictionary<int, RuntimeAnimatorController>();
 
