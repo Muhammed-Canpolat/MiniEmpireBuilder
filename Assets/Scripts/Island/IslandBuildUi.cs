@@ -919,26 +919,32 @@ public sealed class IslandBuildUi
                 var entry = IslandEconomy.Find(targetId);
                 if (entry == null) return;
                 var cost = IslandEconomy.UpgradeCost(entry);
-                bool useGems = !IslandEconomy.CanSpend(cost.wood, cost.meat);
-                if (!IslandEconomy.TryStartUpgrade(entry.id, useGems, out reason)) { Toast?.Invoke(reason); return; }
-                IslandVillage.Instance?.RebuildPawns();
-                RefreshPanel();
+                string id = entry.id;
+                GemActions.OfferIslandTopUp(cost.wood, cost.meat, L.T("Bu yükseltme", "This upgrade"), useGems =>
+                {
+                    if (!IslandEconomy.TryStartUpgrade(id, useGems, out string why)) { Toast?.Invoke(why); return false; }
+                    return true;
+                }, () => { IslandVillage.Instance?.RebuildPawns(); RefreshPanel(); });
                 break;
             }
             case PrimaryAction.KeepUpgrade:
             {
                 var c = IslandEconomy.KeepUpgradeCost(IslandEconomy.Keep + 1);
-                bool useGems = !IslandEconomy.CanSpend(c.wood, c.meat);
-                if (!IslandEconomy.TryStartKeepUpgrade(useGems, out reason)) { Toast?.Invoke(reason); return; }
-                IslandVillage.Instance?.RebuildPawns();
-                RefreshPanel();
+                GemActions.OfferIslandTopUp(c.wood, c.meat, L.T("Bu yükseltme", "This upgrade"), useGems =>
+                {
+                    if (!IslandEconomy.TryStartKeepUpgrade(useGems, out string why)) { Toast?.Invoke(why); return false; }
+                    return true;
+                }, () => { IslandVillage.Instance?.RebuildPawns(); RefreshPanel(); });
                 break;
             }
             case PrimaryAction.Explore:
             {
-                bool useGems = !IslandEconomy.CanSpend(Progression.Island.ZoneWood[targetZone], Progression.Island.ZoneMeat[targetZone]);
-                if (!IslandEconomy.TryStartZone(targetZone, useGems, out reason)) { Toast?.Invoke(reason); return; }
-                RefreshPanel();
+                int zone = targetZone;
+                GemActions.OfferIslandTopUp(Progression.Island.ZoneWood[zone], Progression.Island.ZoneMeat[zone], L.T("Bu keşif", "This exploration"), useGems =>
+                {
+                    if (!IslandEconomy.TryStartZone(zone, useGems, out string why)) { Toast?.Invoke(why); return false; }
+                    return true;
+                }, RefreshPanel);
                 break;
             }
             case PrimaryAction.Akin:

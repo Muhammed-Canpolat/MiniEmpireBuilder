@@ -151,7 +151,8 @@ public class IslandFreshStartTests
         Assert.AreEqual(0, Placed(island).Count, "yalnız kale (placed boş)");
         Assert.IsTrue((bool)Field(island, "villageSeeded"));
         Assert.IsTrue((bool)Field(island, "freshStart"));
-        Assert.AreEqual(CfgInt("islandStartWood"), (int)Field(island, "wood"), "başlangıç Odun");
+        Assert.AreEqual(0, (int)Field(island, "wood"), "başlangıç Odun (BUGLAR 16)");
+        Assert.AreEqual(0, (int)Field(island, "meat"), "başlangıç Et (BUGLAR 16)");
         foreach (var kind in new[] { "House", "Lumber", "Pasture", "Tower", "Archery", "Barracks", "Monastery" })
             Assert.AreEqual((0, 0), Cost(kind, island), $"{kind} ilk yapım bedava");
         Assert.IsTrue((bool)Call("IslandEconomy", "Buildable", Kind("Archery")), "Okçuluk menüden kurulur");

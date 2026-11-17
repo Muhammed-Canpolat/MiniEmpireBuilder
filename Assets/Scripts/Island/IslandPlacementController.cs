@@ -79,7 +79,21 @@ public sealed class IslandPlacementHost : IPlacementHost
             });
             return true;
         }
-        var entry = IslandEconomy.TryStartBuild(Kind, col, row, ShortfallGems > 0, out reason);
+        if (ShortfallGems > 0)
+        {
+            // BUGLAR 22: eksik Odun/Et elmasla tamamlanacaksa onay sorulur; elmas yalnız onaydan sonra düşer, yerleştirme modu açık kalır.
+            var kind = Kind;
+            GemActions.OfferIslandTopUp(Cost.wood, Cost.meat, L.T("Bu bina", "This building"), useGems =>
+            {
+                var started = IslandEconomy.TryStartBuild(kind, col, row, useGems, out string why);
+                if (started == null) { village.Toast?.Invoke(why); return false; }
+                village.OnBuildStarted(started);
+                IslandPlacementController.Instance?.Cancel();
+                return true;
+            });
+            return false;
+        }
+        var entry = IslandEconomy.TryStartBuild(Kind, col, row, false, out reason);
         if (entry == null) { village.Toast?.Invoke(reason); return false; }
         village.OnBuildStarted(entry);
         return true;

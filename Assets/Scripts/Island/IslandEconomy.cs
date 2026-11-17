@@ -205,8 +205,8 @@ public static class IslandEconomy
         save.placed.Clear();
         save.villageSeeded = true;
         save.freshStart = true;
-        save.wood = Mathf.Max(save.wood, Config.islandStartWood);
-        save.meat = Mathf.Max(save.meat, Config.islandStartMeat);
+        save.wood = Mathf.Max(save.wood, Progression.Island.StartWood);
+        save.meat = Mathf.Max(save.meat, Progression.Island.StartMeat);
         save.freeBuildMask |= KindBit(IslandLayout.BuildingKind.Castle);
     }
 

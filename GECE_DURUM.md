@@ -10,7 +10,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta`, `ground_mine_r
 | 2 B+I çökme/müzik | 4, 6, 15, 27 | BİTTİ (4, 15 DOĞRULANMADI) | (bu commit) | D114; ortak SceneTransition (kilit, gerçek zamanlı kararma, async, try/catch [SceneLoad]); 27 kök neden testle kanıtlı (KillAll); 6 takılma kanıtlı |
 | 3 D konum kalıcılığı | 18, 19, 29, 31, 33 | BİTTİ (18 cihazda bakılmadı) | (bu commit) | D115; kayıtlı dekor hücresi otorite, arazi sprite kimlikten; kulübe görsel+1 boşluk; okçu Okçuluk Alanı çevresinde gezinir; Kaldır dokunulan görünür hedefe |
 | 4 E savaş akışı | 25, 28, 30 | BİTTİ | (bu commit) | D116; okçu kale seviyesini canlı okur, P4 açılışı 1; tek PostUnlocked kuralı; ada uçanları düz uçar; EnemyController watchdog + dalga güvenlik ağı (30/60 sn) ; QA: kod temiz, testleri kopyada koşamadı (izin); açık: 60 sn düşürmede ödül sayacı doğrulanmadı; sefer düşmanı 6 sn ilerleyemezse 12 sn Ana Üs’e yönelir (tasarım değişikliği) |
-| 5 F ekonomi | 16, 22 | BEKLİYOR | | |
+| 5 F ekonomi | 16, 22 | BİTTİ | (bu commit) | D117; Progression.Island.StartWood/StartMeat=0 (yalnız yeni ada); ortak GemActions.OfferIslandTopUp + GemConfirm (yükselt, kale, keşif, yerleştirme); 22/22 test |
 | 6 C+H çizim/ada UI | 1, 23, 17, 20, 21 | BEKLİYOR | | |
 | 7 G ana üs | 7, 8, 9, 12, 13, 14, 34 | BEKLİYOR | | |
 | 8 J tanıtım/e-posta | 26, 32 | BEKLİYOR | | |

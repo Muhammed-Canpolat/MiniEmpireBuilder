@@ -994,3 +994,7 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 - **Watchdog (ortak, `EnemyController`):** vuruş menzili dışında `Progression.EnemyWatchdog.StuckSeconds` (6 sn) boyunca hedefe `MinProgress` (0,5 u) yaklaşamayan ya da hedefsiz düşman `FallbackSeconds` (12 sn) yedek hedefe (Kale/Ana Üs) döner: ada → düz çizgi; sefer yolu → yan hedef bırakılır, D96 "ileriden yola dön" ile aynı. Yolu izleyen (Ana Üs'e giden) sefer düşmanına ve rotayla kaleye yürüyen ada düşmanına dokunulmaz → D96 davranışı değişmez.
 - **Dalga güvenlik ağı (`IslandRaidManager.WaitWaveCleared`):** tekneler/sürü bittikten sonra `WaveStallSeconds` (30 sn) hiç ilerleme (düşman sayısı/canı/konumu, kale+okçu canı) yoksa kalanlar `ForceFallback`; 60 sn'de hâlâ yoksa kalanlar düşürülür (uyarı günlüğü). Sefer savaşında düşman başı watchdog yeterli görüldü (BattleManager'a dokunulmadı).
 - Test: `Session12BattleFlowTests` (4 test). Kayıt şeması değişmedi.
+
+## D117 — Grup 5 ekonomi (bug 16, 22)
+- 16: Yeni ada başlangıç Odun/Et `Progression.Island.StartWood/StartMeat = 0` (FeatureConfig.islandStartWood/Meat kaldırıldı); yalnız `EnsureStarted` (yeni ada). İlk Okçuluk bedava (IsFirstBuildFree), diğer türlerin ilk kurulumu yalnız altın → öğretici 0 kaynakla tamamlanır.
+- 22: Ada Odun/Et eksik-kaynak yolu tek: `GemActions.OfferIslandTopUp` (GemEconomy fiyatı + GemConfirm). Yükselt, Kale yükselt, Bölge keşfi (IslandBuildUi.OnPrimary) ve yeni bina yerleştirme (IslandPlacementHost.Confirm) buna bağlandı; elmas yalnız onaydan sonra düşer. Kart Atölyesi Et akışı zaten onaylıydı.

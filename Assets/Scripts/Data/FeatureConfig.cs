@@ -38,9 +38,6 @@ public sealed class FeatureConfig : ScriptableObject
     [Header("Ada yapısı: boş başlangıç + ilk yapım bedava (AŞAMA 2 §1)")]
     /// <summary>Yeni ada yalnız kaleyle başlar; her türün ilk yapımı bedava; Okçuluk Alanı menüden kurulur.</summary>
     public bool islandStartFresh = true;
-    /// <summary>Yeni adanın başlangıç Odun/Et stoku (eski v6 başlangıcıyla büyük olanı alınır).</summary>
-    public int islandStartWood = 60;
-    public int islandStartMeat = 0;
     /// <summary>Okçuluk Alanı kurulum bedeli (ilk yapım bedava; adet 1).</summary>
     public int archeryPlaceWood = 80;
     public int archeryPlaceMeat = 0;

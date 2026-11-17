@@ -110,6 +110,22 @@ public static class GemActions
             });
     }
 
+    /// <summary>
+    /// Ada (Odun/Et) için ORTAK eksik-kaynak yolu (BUGLAR 22): kaynak yetiyorsa <paramref name="start"/>(false) doğrudan çalışır;
+    /// eksikse elmas bedeli (GemEconomy) onay penceresinde gösterilir ve elmas YALNIZ onaydan sonra düşer (start(true)).
+    /// </summary>
+    public static void OfferIslandTopUp(int wood, int meat, string what, Func<bool, bool> start, Action after = null)
+    {
+        if (IslandEconomy.CanSpend(wood, meat)) { if (start(false)) after?.Invoke(); return; }
+        int missingWood = Mathf.Max(0, wood - IslandEconomy.Wood), missingMeat = Mathf.Max(0, meat - IslandEconomy.Meat);
+        int cost = IslandEconomy.ShortfallGems(wood, meat);
+        string tr = missingWood > 0 && missingMeat > 0 ? $"{missingWood} Odun, {missingMeat} Et" : missingWood > 0 ? $"{missingWood} Odun" : $"{missingMeat} Et";
+        string en = missingWood > 0 && missingMeat > 0 ? $"{missingWood} Wood, {missingMeat} Meat" : missingWood > 0 ? $"{missingWood} Wood" : $"{missingMeat} Meat";
+        GemConfirm.Show(L.T("KAYNAK EKSİK", "NOT ENOUGH RESOURCES"),
+            L.T($"{what} için {tr} eksik.\nElmasla tamamlayıp hemen başlatalım mı?", $"{what} needs {en} more.\nTop up with gems and start now?"),
+            cost, L.T("TAMAMLA", "TOP UP"), () => { if (start(true)) after?.Invoke(); });
+    }
+
     /// <summary>Altın yetmeyen bir işi elmasla tamamlayıp başlatma teklifi.</summary>
     public static void OfferGoldTopUp(int neededGold, string what, Func<bool> start, Action after = null)
     {

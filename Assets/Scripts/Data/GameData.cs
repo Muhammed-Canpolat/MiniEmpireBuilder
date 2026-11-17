@@ -418,6 +418,8 @@ public static class Progression
     public static class Island
     {
         public const int UnlockMainBaseLevel = 5;
+        /// <summary>Yeni adanın başlangıç Odun/Et stoku (BUGLAR 16: 0; ilk Okçuluk bedava, ilk yapımlar yalnız altın). Yalnız yeni adalar.</summary>
+        public const int StartWood = 0, StartMeat = 0;
         /// <summary>Oto-ateş: Kıyı Kalesi seviyesi bu değere ulaşınca açılır (DevSettings açıkken test için hep açık).</summary>
         public const int AutoFireUnlockKeepLevel = 5;
         public const float AutoFireRateMult = 0.75f;          // elle en hızlı atışın 0,75'i
