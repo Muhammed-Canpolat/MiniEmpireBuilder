@@ -50,10 +50,7 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
         switch (buildingType)
         {
             case BuildingType.MainBase:
-                return new[] { new Anchor(Role.DoorGuard, 3.5f, -0.7f),
-                    new Anchor(Role.DoorGuard, 5.5f, -0.7f),
-                    new Anchor(Role.DoorGuard, 4.5f, -0.9f),
-                    new Anchor(Role.RoofArcher, 1.6f, 3.25f),
+                return new[] { new Anchor(Role.RoofArcher, 1.6f, 3.25f),   // bug 8: kapı muhafızları kaldırıldı
                     new Anchor(Role.RoofArcher, 7.4f, 3.25f) };
             case BuildingType.ArcherTower:
                 return new[] { new Anchor(Role.PracticeArcher, 1.05f, 0.6f) };   // bug 12: tek okçu, Archery avlusu
@@ -82,7 +79,7 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
         for (int i = 0; i < anchors.Length; i++)
         {
             Anchor point = anchors[i];
-            if (type == BuildingType.MainBase && point.role == Role.DoorGuard && i == 2 && level < 3)
+            if (type == BuildingType.MainBase && point.role == Role.DoorGuard)   // bug 8: eski kayıtlı çapalar da yok sayılır
                 continue;
             var prefab = catalog?.garrisonPrefab;
             var actor = prefab != null ? Instantiate(prefab, transform) : new GameObject("GarrisonActor");
@@ -103,19 +100,22 @@ public sealed class BaseGarrisonVisual : MonoBehaviour
             Play(animator, point.role == Role.Monk ? "Monk_Idle" :
                 point.role == Role.DoorGuard || point.role == Role.CannonCrew
                     ? "Warrior_Idle" : "Archer_Idle", level);
-            StartCoroutine(FitVisibleHeight(renderer, parentScale));
+            StartCoroutine(FitVisibleHeight(renderer, parentScale, point.role == Role.RoofArcher ? RoofArcherHeight : 1.9f));
             actors.Add(animator);
             actorRoles.Add(point.role);
         }
     }
 
-    private static IEnumerator FitVisibleHeight(SpriteRenderer renderer, float parentScale)
+    /// <summary>Bug 8: çatı okçusu görünür boyu (birim); diğer roller 1,9.</summary>
+    private const float RoofArcherHeight = 2.4f;
+
+    private static IEnumerator FitVisibleHeight(SpriteRenderer renderer, float parentScale, float visibleHeight)
     {
         for (int frame = 0; frame < 8 && renderer != null && renderer.sprite == null; frame++)
             yield return null;
         if (renderer == null || renderer.sprite == null) yield break;
         float height = Mathf.Max(0.01f, renderer.sprite.bounds.size.y);
-        renderer.transform.localScale = Vector3.one * (1.9f / (height * parentScale));
+        renderer.transform.localScale = Vector3.one * (visibleHeight / (height * parentScale));
     }
 
     private static RuntimeAnimatorController Controller(Role role, BaseVisualCatalog catalog, int level)
