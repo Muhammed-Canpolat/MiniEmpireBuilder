@@ -131,6 +131,9 @@ public static class ReferenceUiVisuals
         if (chosen != null) tmp.font = chosen;
     }
 
+    internal static TMP_FontAsset CreateTitleFontForTest() { if (titleFont == null) titleFont = CreateTurkishFont(Resources.Load<Font>("Fonts/Cinzel-ExtraBold")); return titleFont; }
+    internal static TMP_FontAsset CreateBoldFontForTest() { if (bodyBoldFont == null) bodyBoldFont = CreateTurkishFont(Resources.Load<Font>("Fonts/AlegreyaSans-Bold")); return bodyBoldFont; }
+
     private static TMP_FontAsset CreateTurkishFont(Font source) => TmpFontBootstrap.CreateDynamicFont(source);
 
     public static Sprite ToastSprite()

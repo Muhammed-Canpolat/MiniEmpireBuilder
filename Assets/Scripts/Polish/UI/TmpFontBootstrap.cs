@@ -60,9 +60,28 @@ public static class TmpFontBootstrap
         if (asset.material != null && def != null && def.material != null &&
             (asset.material.shader == null || asset.material.shader.name.StartsWith("Hidden/")))
             asset.material.shader = def.material.shader;
+        EnsureWordSpace(asset);
         if (!asset.TryAddCharacters(ExtraCharacters, out string missing) && !string.IsNullOrEmpty(missing))
             Debug.LogWarning($"[UI Font] {source.name} eksik karakterler: {missing}");
         return asset;
+    }
+
+    /// <summary>
+    /// Alegreya Sans'ın boşluk glifi yalnız ~0,15 em; küçük/koyu (SDF) yazıda kelimeler yapışıyordu ("yakındakiağaçları").
+    /// Boşluk ve NBSP glifi atlasa eklenir ve ilerleme genişliği en az <see cref="MinSpaceEm"/> em yapılır (tüm Dinamik fontlarda).
+    /// </summary>
+    public const float MinSpaceEm = 0.26f;
+    private static void EnsureWordSpace(TMP_FontAsset asset)
+    {
+        asset.TryAddCharacters("  .,;:!?'\"()+-/%0123456789", out _);
+        float min = asset.faceInfo.pointSize * MinSpaceEm;
+        foreach (uint code in new uint[] { 32, 160 })
+        {
+            if (!asset.characterLookupTable.TryGetValue(code, out var ch) || ch.glyph == null) continue;
+            var m = ch.glyph.metrics;
+            if (m.horizontalAdvance >= min) continue;
+            ch.glyph.metrics = new UnityEngine.TextCore.GlyphMetrics(m.width, m.height, m.horizontalBearingX, m.horizontalBearingY, min);
+        }
     }
 
     /// <summary>Test/tanı için: dinamik font Türkçe + "Dalga" glifleri ekleyebiliyor mu, fallback zinciri kurulu mu, atanmamış yazı değişiyor mu.</summary>
@@ -86,5 +105,33 @@ public static class TmpFontBootstrap
         Object.DestroyImmediate(go);
         if (!swapped) { report = "atanmamis yazi varsayilan fontta kaldi"; return false; }
         return true;
+    }
+
+    /// <summary>Regresyon (kelime aralıkları kayboldu): her Dinamik fontta boşluk glifi var ve "a b" metni "ab"den belirgin geniş.</summary>
+    public static bool SpaceCheck(out string report)
+    {
+        report = "";
+        var fonts = new[] { BodyFont, ReferenceUiVisuals.CreateTitleFontForTest(), ReferenceUiVisuals.CreateBoldFontForTest() };
+        var go = new GameObject("tmpSpaceCheck", typeof(RectTransform), typeof(TextMeshProUGUI));
+        try
+        {
+            var tmp = go.GetComponent<TextMeshProUGUI>();
+            tmp.fontSize = 20; tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            foreach (var f in fonts)
+            {
+                if (f == null) { report = "font yok"; return false; }
+                tmp.font = f;
+                tmp.text = "ab"; float ab = tmp.GetPreferredValues("ab").x;
+                float spaced = tmp.GetPreferredValues("a b").x;
+                float sentence = tmp.GetPreferredValues("yakındaki ağaçları +250 altın").x;
+                float joined = tmp.GetPreferredValues("yakındakiağaçları+250altın").x;
+                bool has = f.characterLookupTable.TryGetValue(32, out var ch) && ch.glyph != null;
+                float adv = has ? ch.glyph.metrics.horizontalAdvance : -1f;
+                if (!has || adv < f.faceInfo.pointSize * MinSpaceEm - 0.01f || spaced < ab + 20f * (MinSpaceEm - 0.01f) || sentence < joined + 20f * 3f * (MinSpaceEm - 0.01f))
+                { report = $"{f.name}: boşluk glifi={has} adv={adv} ab={ab} a_b={spaced} cümle={sentence} bitişik={joined}"; return false; }
+            }
+            return true;
+        }
+        finally { Object.DestroyImmediate(go); }
     }
 }

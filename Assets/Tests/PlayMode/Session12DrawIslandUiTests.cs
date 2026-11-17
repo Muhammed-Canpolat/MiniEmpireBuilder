@@ -92,8 +92,17 @@ public class Session12DrawIslandUiTests
             settings.GetType().GetMethod("Open").Invoke(settings, null);
             yield return null;
             Assert.IsTrue((bool)T("AudioSettingsUI").GetProperty("IsSettingsOpen").GetValue(null), "ada üssünde ayarlar açılır");
+            // Kapanış gerçek zamanlı biter (timeScale 0 olsa bile): panel ve engelleyici kapanır, dokunuşu engellemez.
+            float scaleWas = Time.timeScale;
+            Time.timeScale = 0f;
             T("AudioSettingsUI").GetMethod("CloseIfOpen").Invoke(null, null);
-            yield return null;
+            yield return new WaitForSecondsRealtime(0.5f);
+            Time.timeScale = scaleWas;
+            Assert.IsFalse((bool)T("AudioSettingsUI").GetProperty("IsSettingsOpen").GetValue(null));
+            var panelGo = (GameObject)settings.GetType().GetField("panel", Any).GetValue(settings);
+            var blockerGo = (GameObject)settings.GetType().GetField("blocker", Any).GetValue(settings);
+            Assert.IsFalse(panelGo.activeInHierarchy, "ayarlar kapanınca panel görünmez");
+            Assert.IsTrue(blockerGo == null || !blockerGo.activeInHierarchy, "ayarlar kapanınca dokunuş engellenmez");
 
             // 21: kale yükseltilirken kalan süre etiketi görünür
             long clock = new DateTime(2026, 11, 18, 9, 0, 0, DateTimeKind.Utc).Ticks;
