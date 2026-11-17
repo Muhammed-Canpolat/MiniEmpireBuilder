@@ -62,7 +62,7 @@ public class ProjectileController : MonoBehaviour
         tr.time = 0.15f;
         tr.startWidth = 0.05f;
         tr.endWidth = 0f;
-        tr.material = new Material(Shader.Find("Sprites/Default"));
+        tr.material = AreaHighlight.SafeSpriteMaterial();
         tr.startColor = new Color(1f, 1f, 1f, 0.5f);
         tr.endColor = new Color(1f, 1f, 1f, 0f);
 

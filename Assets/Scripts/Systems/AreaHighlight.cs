@@ -25,9 +25,23 @@ public sealed class AreaHighlight : MonoBehaviour
         return h;
     }
 
+    /// <summary>Shader.Find build'de (iOS/URP, strip) null dönebilir; sırayla güvenli yedekler dener.</summary>
+    public static Material SafeSpriteMaterial()
+    {
+        Shader sh = Shader.Find("Sprites/Default")
+            ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+            ?? Shader.Find("Unlit/Color");
+        if (sh != null) return new Material(sh);
+        var tmp = new GameObject("MatProbe") { hideFlags = HideFlags.HideAndDontSave };
+        var sr = tmp.AddComponent<SpriteRenderer>();
+        var m = sr.sharedMaterial != null ? new Material(sr.sharedMaterial) : null;
+        if (Application.isPlaying) UnityEngine.Object.Destroy(tmp); else UnityEngine.Object.DestroyImmediate(tmp);
+        return m;
+    }
+
     private void Build(IReadOnlyCollection<Vector2Int> cells, Func<Vector2Int, Rect> cellRect, int order)
     {
-        if (lineMaterial == null) lineMaterial = new Material(Shader.Find("Sprites/Default"));
+        if (lineMaterial == null) lineMaterial = SafeSpriteMaterial();
         if (square == null)
         {
             var tex = Texture2D.whiteTexture;

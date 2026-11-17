@@ -422,6 +422,30 @@ public class PlacementController : MonoBehaviour
         }
 
         _ghostRenderer.color = new Color(0.2f, 1f, 0.2f, 0.6f);
+
+        // Bug 1: yanlış/dev bir sprite (ör. maden alt görseli) hayaleti ekranı kaplatmasın.
+        Vector3 fitted = _ghostObj.transform.localScale;
+        if (!FitGhostScale(_ghostRenderer.sprite.bounds.size, fitted, CurrentFootprint(), out fitted))
+        {
+            // Aşırı büyük: yalnız ayak izi karesi göster (yeşil tint kareye uygulanır).
+            _ghostRenderer.sprite = BaseMapManager.MakeSquareSprite(Color.white);
+            fitted = new Vector3(CurrentFootprint().x, CurrentFootprint().y, 1f);
+        }
+        _ghostObj.transform.localScale = fitted;
+    }
+
+    /// <summary>Hayalet dünya boyutu ayak izinin en çok 1.5 katı olur. 4 katını aşarsa false (yalnız ayak izi karesi).</summary>
+    internal static bool FitGhostScale(Vector2 spriteSize, Vector3 scale, Vector2Int footprint, out Vector3 fitted)
+    {
+        fitted = scale;
+        float fw = Mathf.Max(1, footprint.x), fh = Mathf.Max(1, footprint.y);
+        float w = Mathf.Abs(spriteSize.x * scale.x), h = Mathf.Abs(spriteSize.y * scale.y);
+        if (w <= 0.0001f || h <= 0.0001f) return false;
+        float ratio = Mathf.Max(w / (fw * 1.5f), h / (fh * 1.5f));
+        if (ratio <= 1f) return true;
+        if (ratio > 4f / 1.5f) return false;
+        fitted = new Vector3(scale.x / ratio, scale.y / ratio, scale.z);
+        return true;
     }
 
     /// <summary>Açılmış arazide ızgara çizgileri + ghost'un kapladığı alan (yeşil/kırmızı).</summary>

@@ -154,7 +154,7 @@ public sealed class IslandBuildUi
             card.role.sprite = RoleIcon(card.kind);
             card.role.preserveAspect = true;
             card.info = ReferenceUiVisuals.Text(rect, "Info", "", 11, light, TextAlignmentOptions.Left,
-                new Vector2(0, 0), new Vector2(0.64f, 0.56f), new Vector2(118, 12), new Vector2(0, 0), false, true);   // AŞAMA 3 §3G: 2. satır kartın alt kenarlığına taşmaz
+                new Vector2(0, 0), new Vector2(0.60f, 0.56f), new Vector2(118, 12), new Vector2(0, 0), false, true);   // 17: bilgi, maliyet sütunundan (0.62) önce biter   // AŞAMA 3 §3G: 2. satır kartın alt kenarlığına taşmaz
             card.info.textWrappingMode = TextWrappingModes.Normal;
             card.info.overflowMode = TextOverflowModes.Truncate;
             card.info.fontSizeMin = 7f;
@@ -799,7 +799,9 @@ public sealed class IslandBuildUi
         tertiaryAction = TertiaryAction.None;
         if (keep >= Progression.MaxLevel || upgrading)
         {
-            SetCost(0, 0, null, false);
+            // Bug 21: yükseltme sürerken kalan süre görünsün (ana üsteki inşaat göstergesiyle aynı biçim).
+            if (upgrading) SetCost(0, 0, Progression.FormatDuration(IslandEconomy.TaskSecondsLeft), true);
+            else SetCost(0, 0, null, false);
             primaryAction = PrimaryAction.Akin;
             SetButtons(L.T("AKIN PANOSU", "RAID BOARD"), true, null, false, null, false);
         }

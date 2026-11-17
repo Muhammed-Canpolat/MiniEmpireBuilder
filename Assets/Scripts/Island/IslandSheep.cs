@@ -13,6 +13,7 @@ public sealed class IslandSheep : MonoBehaviour
     private Mode mode = Mode.Graze;
     private float modeEnd, clipStart;
     private Vector2 target;
+    private int height;
     private const float WalkSpeed = 0.45f;
 
     public Vector2 Feet => transform.position;
@@ -31,10 +32,34 @@ public sealed class IslandSheep : MonoBehaviour
         sheep.sr = renderer;
         sheep.grass = grassFrames; sheep.idle = idleFrames; sheep.move = moveFrames;
         sheep.meadow = meadowWorld;
+        sheep.height = HeightOf(feet);
         var sort = go.AddComponent<IslandYSort>();
         sort.bias = 0;
         sheep.Pick(Mode.Graze);
         return sheep;
+    }
+
+    /// <summary>Hücre yürünebilir mi ve verilen katta mı (Ağıl ile aynı yükseklik).</summary>
+    public static bool SpotOk(Vector2 world, int height)
+    {
+        var cell = IslandWalkGrid.Shared.CellOf(world);
+        return IslandWalkGrid.Shared.Walkable(cell) && IslandLayout.HeightAt(cell.x, cell.y) == height;
+    }
+
+    public static int HeightOf(Vector2 world)
+    {
+        var cell = IslandWalkGrid.Shared.CellOf(world);
+        return IslandLayout.HeightAt(cell.x, cell.y);
+    }
+
+    private bool PathOk(Vector2 from, Vector2 to)
+    {
+        if (!GridPathfinder.LineClear(IslandWalkGrid.Shared, from, to)) return false;
+        float length = Vector2.Distance(from, to);
+        int steps = Mathf.CeilToInt(length / 0.4f);
+        for (int i = 1; i <= steps; i++)
+            if (!SpotOk(Vector2.Lerp(from, to, i / (float)steps), height)) return false;
+        return true;
     }
 
     private void OnEnable() => All.Add(this);
@@ -49,9 +74,13 @@ public sealed class IslandSheep : MonoBehaviour
             case Mode.Graze: modeEnd = Time.time + Random.Range(2.5f, 6f); break;
             case Mode.Idle: modeEnd = Time.time + Random.Range(1f, 2.5f); break;
             default:
-                target = new Vector2(Random.Range(meadow.xMin, meadow.xMax), Random.Range(meadow.yMin, meadow.yMax));
-                // 4. oturum (1.1): koyun bina/su/ağaç içine yürümez; hedefe düz yol kapalıysa yerinde kalır.
-                if (!GridPathfinder.LineClear(IslandWalkGrid.Shared, transform.position, target)) target = transform.position;
+                // 4. oturum (1.1) + bug 23: koyun bina/su/ağaç içine yürümez, kat değiştirmez; uygun hedef bulunamazsa yerinde kalır.
+                target = transform.position;
+                for (int attempt = 0; attempt < 6; attempt++)
+                {
+                    var candidate = new Vector2(Random.Range(meadow.xMin, meadow.xMax), Random.Range(meadow.yMin, meadow.yMax));
+                    if (PathOk(transform.position, candidate)) { target = candidate; break; }
+                }
                 modeEnd = Time.time + 8f;
                 break;
         }

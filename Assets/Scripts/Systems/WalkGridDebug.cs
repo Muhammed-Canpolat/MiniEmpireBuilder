@@ -82,7 +82,7 @@ public sealed class WalkGridDebug : MonoBehaviour
     private void DrawPaths()
     {
         var paths = GridPathfinder.RecentPaths;
-        if (lineMaterial == null) lineMaterial = new Material(Shader.Find("Sprites/Default"));
+        if (lineMaterial == null) lineMaterial = AreaHighlight.SafeSpriteMaterial();
         while (lines.Count < paths.Count)
         {
             var lr = new GameObject("Path").AddComponent<LineRenderer>();

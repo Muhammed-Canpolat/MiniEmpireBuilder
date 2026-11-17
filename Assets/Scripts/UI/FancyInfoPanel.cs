@@ -73,41 +73,57 @@ public static class FancyInfoPanel
         v.level = ReferenceUiVisuals.Text(t, "Level", "", 15, new Color(0.55f, 0.32f, 0.06f), TextAlignmentOptions.Left,
             new Vector2(0, 1), new Vector2(1, 1), new Vector2(138, -66), new Vector2(-48, -44), true);
         v.body = ReferenceUiVisuals.Text(t, "Body", "", 19, Ink, TextAlignmentOptions.TopLeft,
-            new Vector2(0, 0.38f), new Vector2(1, 1), new Vector2(138, 0), new Vector2(-18, -48), false, true);
+            new Vector2(0, 0.38f), new Vector2(1, 1), new Vector2(138, 34), new Vector2(-18, -48), false, true);   // 17: alt sınır maliyet satırının (+26) üstünde
         v.body.textWrappingMode = TextWrappingModes.Normal;
         v.body.enableAutoSizing = true;
-        v.body.fontSizeMin = 12f;
+        v.body.fontSizeMin = 11f;
+        v.body.overflowMode = TextOverflowModes.Ellipsis;
 
         // Maliyet satırı: A (adada Odun, Ana Üs'te Altın) / B (adada Et) / süre
         v.costIconA = ReferenceUiVisuals.Image(t, "WoodIcon", new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(18, -6), new Vector2(50, 26), Color.white);
         v.costIconA.preserveAspect = true;
         v.costA = ReferenceUiVisuals.Text(t, "Wood", "", 16, Ink, TextAlignmentOptions.Left,
             new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(52, -4), new Vector2(120, 24), false, true);
+        FitOneLine(v.costA);
         v.costIconB = ReferenceUiVisuals.Image(t, "MeatIcon", new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(124, -6), new Vector2(156, 26), Color.white);
         v.costIconB.preserveAspect = true;
         v.costB = ReferenceUiVisuals.Text(t, "Meat", "", 16, Ink, TextAlignmentOptions.Left,
             new Vector2(0, 0.38f), new Vector2(0, 0.38f), new Vector2(158, -4), new Vector2(226, 24), false, true);
+        FitOneLine(v.costB);
         v.time = ReferenceUiVisuals.Text(t, "Time", "", 15, Ink, TextAlignmentOptions.Right,
-            new Vector2(0.5f, 0.38f), new Vector2(1, 0.38f), new Vector2(0, -4), new Vector2(-18, 24), false, true);
-        v.timeIcon = ReferenceUiVisuals.Image(t, "TimeIcon", new Vector2(1, 0.38f), new Vector2(1, 0.38f), new Vector2(-120, -4), new Vector2(-100, 18), Color.white);
+            new Vector2(1, 0.38f), new Vector2(1, 0.38f), new Vector2(-132, -4), new Vector2(-18, 24), false, true);
+        FitOneLine(v.time);
+        v.timeIcon = ReferenceUiVisuals.Image(t, "TimeIcon", new Vector2(1, 0.38f), new Vector2(1, 0.38f), new Vector2(-158, -4), new Vector2(-136, 18), Color.white);
         v.timeIcon.sprite = CampaignSceneSetup.Art("ui_icon_clock");
         v.timeIcon.preserveAspect = true;
         v.timeIcon.raycastTarget = false;
         v.timeIcon.gameObject.SetActive(false);   // Ana Üs açar (adada süre yalnız metin)
         v.note = ReferenceUiVisuals.Text(t, "Note", "", 12, new Color(0.55f, 0.2f, 0.1f), TextAlignmentOptions.Center,
-            new Vector2(0, 0.24f), new Vector2(1, 0.38f), new Vector2(18, 0), new Vector2(-18, -2), false, true);
+            new Vector2(0, 0.24f), new Vector2(1, 0.31f), new Vector2(18, 0), new Vector2(-18, 0), false, true);
+        v.note.enableAutoSizing = true; v.note.fontSizeMin = 9f; v.note.fontSizeMax = 12f;
 
         // İşçi satırı (adada üretici binalar)
         v.workers = ReferenceUiVisuals.Text(t, "Workers", "", 14, Ink, TextAlignmentOptions.Left,
-            new Vector2(0, 0.24f), new Vector2(0.5f, 0.38f), new Vector2(18, 0), new Vector2(0, -2), false, true);
-        v.workerMinus = ReferenceUiVisuals.Button(t, "WorkerMinus", "-", false, new Vector2(0.5f, 0.24f), new Vector2(0.5f, 0.24f), new Vector2(0, 0), new Vector2(40, 34), 16);
-        v.workerPlus = ReferenceUiVisuals.Button(t, "WorkerPlus", "+", false, new Vector2(0.5f, 0.24f), new Vector2(0.5f, 0.24f), new Vector2(46, 0), new Vector2(86, 34), 16);
+            new Vector2(0, 0.31f), new Vector2(0.5f, 0.38f), new Vector2(18, 0), new Vector2(0, -6), false, true);
+        FitOneLine(v.workers);
+        v.workerMinus = ReferenceUiVisuals.Button(t, "WorkerMinus", "-", false, new Vector2(0.5f, 0.31f), new Vector2(0.5f, 0.31f), new Vector2(0, 0), new Vector2(40, 34), 16);
+        v.workerPlus = ReferenceUiVisuals.Button(t, "WorkerPlus", "+", false, new Vector2(0.5f, 0.31f), new Vector2(0.5f, 0.31f), new Vector2(46, 0), new Vector2(86, 34), 16);
         v.workerMinus.gameObject.SetActive(false); v.workerPlus.gameObject.SetActive(false);
 
         v.primary = TsButton(t, "Primary", "", false, new Vector2(0.04f, 0), new Vector2(0.52f, 0), new Vector2(0, 12), new Vector2(0, 62), 16, out v.primaryLabel);
         v.secondary = TsButton(t, "Secondary", "", false, new Vector2(0.54f, 0), new Vector2(0.96f, 0), new Vector2(0, 12), new Vector2(0, 62), 16, out v.secondaryLabel);
         v.tertiary = TsButton(t, "Tertiary", "", true, new Vector2(0.04f, 0), new Vector2(0.96f, 0), new Vector2(0, 68), new Vector2(0, 112), 15, out v.tertiaryLabel);
         return v;
+    }
+
+    /// <summary>Tek satır: sığmazsa küçülür, en kötüde "…" ile biter (üst üste binmez).</summary>
+    private static void FitOneLine(TextMeshProUGUI text)
+    {
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 9f;
+        text.fontSizeMax = text.fontSize;
+        text.overflowMode = TextOverflowModes.Ellipsis;
     }
 
     /// <summary>Maliyet satırı: A ve B kaynak (simge + miktar; yetmiyorsa kırmızı), süre. Miktar 0 ise o kaynak gizlenir.</summary>

@@ -82,15 +82,17 @@ public sealed class AudioSettingsUI : MonoBehaviour
         safeRect = safe;
 
         bool baseScene = SceneManager.GetActiveScene().name == "BaseScene";
-        battleScene = SceneManager.GetActiveScene().name == "BattleScene";
+        bool battleLayout = SceneManager.GetActiveScene().name == "BattleScene";
+        // Bug 20: ada üssü de BattleScene'de çalışır ama BattleManager yoktur; ayarlar savaş kipi değil, normal menü olarak açılır.
+        battleScene = battleLayout && !IslandSession.Active;
         var gear = ReferenceUiVisuals.Button(safe, "AudioSettingsButton", "", false,
-            new Vector2(0.89f, baseScene ? 0.935f : battleScene ? 0.93f : 0.93f),
-            new Vector2(0.98f, baseScene ? 0.978f : battleScene ? 0.973f : 0.975f),
+            new Vector2(0.89f, baseScene ? 0.935f : battleLayout ? 0.93f : 0.93f),
+            new Vector2(0.98f, baseScene ? 0.978f : battleLayout ? 0.973f : 0.975f),
             Vector2.zero, Vector2.zero, 22);
         gear.GetComponent<Image>().sprite = BaseMapManager.MakeCircleSprite(Color.white);
         gear.GetComponent<Image>().type = Image.Type.Simple;
         gear.GetComponent<Image>().color = ReferenceUiVisuals.Panel;
-        if (battleScene)
+        if (battleLayout)
         {
             var hit = (RectTransform)gear.transform;
             // Üst bar 0.90–1.0; düşman/altın çipleri bunun %49–%91'inde → merkez ≈ 0.97.

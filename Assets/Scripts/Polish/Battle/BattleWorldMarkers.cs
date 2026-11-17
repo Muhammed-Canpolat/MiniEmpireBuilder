@@ -14,7 +14,7 @@ public static class BattleWorldMarkers
         float parentScale = Mathf.Abs(parent.lossyScale.x);
         root.transform.localScale = Vector3.one * (parentScale > 0.001f ? 1f / parentScale : 1f);
         if (lineMaterial == null)
-            lineMaterial = new Material(Shader.Find("Sprites/Default"));
+            lineMaterial = AreaHighlight.SafeSpriteMaterial();
         for (int i = 0; i < dashes; i++)
         {
             var dash = new GameObject("Dash");

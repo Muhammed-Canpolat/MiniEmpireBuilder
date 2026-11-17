@@ -283,9 +283,18 @@ public sealed class IslandVillage : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 // Ağıl çevresinde bir halka üzerinde (binanın üstüne değil): açı eşit aralıklı, uzaklık yarıçapın %55–90'ı
-                float angle = (i + UnityEngine.Random.value * 0.6f) / Mathf.Max(1, count) * Mathf.PI * 2f;
-                float dist = radius * UnityEngine.Random.Range(0.55f, 0.9f);
-                var feet = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * dist;
+                // Bug 23: doğuş noktası yürünebilir ve Ağıl ile aynı katta olmalı (duvar/uçurum içine doğmaz).
+                int pastureHeight = IslandSheep.HeightOf(center);
+                Vector2 feet = center;
+                bool found = false;
+                for (int attempt = 0; attempt < 12 && !found; attempt++)
+                {
+                    float angle = (i + UnityEngine.Random.value * 0.6f) / Mathf.Max(1, count) * Mathf.PI * 2f + attempt * 0.9f;
+                    float dist = radius * UnityEngine.Random.Range(0.55f, 0.9f);
+                    var probe = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * dist;
+                    if (IslandSheep.SpotOk(probe, pastureHeight)) { feet = probe; found = true; }
+                }
+                if (!found) continue;
                 IslandSheep.Create(sheepRoot, rect, feet, catalog.Frames("sheep_grass"), catalog.Frames("sheep_idle"),
                     catalog.Frames("sheep_move"), 20f);
             }
@@ -301,6 +310,10 @@ public sealed class IslandVillage : MonoBehaviour
         for (int i = 0; i < IslandLayout.SheepCount && catalog != null; i++)
         {
             var feet = new Vector2(UnityEngine.Random.Range(rect.xMin, rect.xMax), UnityEngine.Random.Range(rect.yMin, rect.yMax));
+            int meadowHeight = IslandSheep.HeightOf(rect.center);
+            for (int attempt = 0; attempt < 12 && !IslandSheep.SpotOk(feet, meadowHeight); attempt++)   // bug 23: yürünebilir, aynı kat
+                feet = new Vector2(UnityEngine.Random.Range(rect.xMin, rect.xMax), UnityEngine.Random.Range(rect.yMin, rect.yMax));
+            if (!IslandSheep.SpotOk(feet, meadowHeight)) continue;
             IslandSheep.Create(sheepRoot != null ? sheepRoot : villageRoot, rect, feet, catalog.Frames("sheep_grass"), catalog.Frames("sheep_idle"),
                 catalog.Frames("sheep_move"), 20f);
         }
@@ -710,7 +723,7 @@ public sealed class IslandVillage : MonoBehaviour
         if (!marker.root.activeSelf) marker.root.SetActive(true);
         marker.root.transform.position = new Vector3(top.x, top.y, 0f);
         int left = Mathf.CeilToInt((float)IslandEconomy.TaskSecondsLeft);
-        marker.text.text = left >= 3600 ? $"{left / 3600}:{left % 3600 / 60:00}:{left % 60:00}" : $"{left / 60}:{left % 60:00}";
+        marker.text.text = Progression.FormatDuration(left);   // bug 21: ana üsteki BuilderTaskMarker ile aynı biçim
         if (builderPawn != null && !builderPawn.gameObject.activeSelf) builderPawn.gameObject.SetActive(true);
         if (builderPawn != null && (force || marker.key != key)) builderPawn.SetSite(siteFeet);
         marker.key = key;

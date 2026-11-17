@@ -998,3 +998,10 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 ## D117 — Grup 5 ekonomi (bug 16, 22)
 - 16: Yeni ada başlangıç Odun/Et `Progression.Island.StartWood/StartMeat = 0` (FeatureConfig.islandStartWood/Meat kaldırıldı); yalnız `EnsureStarted` (yeni ada). İlk Okçuluk bedava (IsFirstBuildFree), diğer türlerin ilk kurulumu yalnız altın → öğretici 0 kaynakla tamamlanır.
 - 22: Ada Odun/Et eksik-kaynak yolu tek: `GemActions.OfferIslandTopUp` (GemEconomy fiyatı + GemConfirm). Yükselt, Kale yükselt, Bölge keşfi (IslandBuildUi.OnPrimary) ve yeni bina yerleştirme (IslandPlacementHost.Confirm) buna bağlandı; elmas yalnız onaydan sonra düşer. Kart Atölyesi Et akışı zaten onaylıydı.
+
+## D118 — Grup 6 çizim ve ada UI (bug 1, 23, 17, 20, 21)
+- 1 (tahmin, cihazda doğrulanmadı): hayalet maden gibi kökü saydam yapılarda yanlış/dev alt görseli kopyalayabiliyordu. `PlacementController.FitGhostScale`: hayalet dünya boyutu ayak izinin ≤1,5 katı; >4 katıysa yalnız ayak izi karesi (yeşil tint). `AreaHighlight.SafeSpriteMaterial` (Shader.Find null ise URP/2D ve SpriteRenderer yedeği) AreaHighlight, BattleWorldMarkers, WalkGridDebug, ProjectileController'da kullanıldı.
+- 23: koyun doğuşu ve hedefi `IslandWalkGrid` yürünebilir + Ağıl ile aynı yükseklik (`IslandSheep.SpotOk/HeightOf`); hedef yolu 0,4 birimde örneklenir. Ağıl taşınınca `RebuildSheep` zaten çağrılıyordu.
+- 17 (kanıt): `FancyInfoPanel` gövde alt sınırı maliyet satırıyla (+26 px) çakışıyordu → gövde +34 px yukarıda; süre ikonu/metni ayrıldı; not ve işçi satırı ayrı bantlara; tek satırlık alanlara küçülme+“…”. Ada inşa kartında bilgi sağ sınırı 0,60 (maliyet sütunu 0,62).
+- 20 (kanıt): ada BattleScene'de çalıştığı için `AudioSettingsUI.Open` “savaş aktif değil” diye dönüyordu; ada oturumunda savaş kipi kapalı (düğme yeri aynı).
+- 21: Kıyı Kalesi yükseltilirken panelde süre gizliydi → gösterilir; dünya sayacı ana üssün `Progression.FormatDuration` biçimiyle.
