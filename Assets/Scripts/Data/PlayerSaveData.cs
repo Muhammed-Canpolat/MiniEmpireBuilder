@@ -298,6 +298,7 @@ public class IslandSaveData
     public int highestAkin;         // kazanılan en yüksek Akın
     public int lastAkin = 1;        // son seçilen Akın
     public int tutorialStep;        // 0 başlamadı · 1 ATEŞ · 2 atış yeri · 3 ödül · 4 bitti
+    public int raidIntroSeen;       // D120: akın tanıtımı bit maskesi (1 ATEŞ, 2 dolu atış, 4 atış yeri, 8 HARİTA, 16 TAKİP, 32/64/128 yetenek); eksik alan → 0
     public bool autoFire;           // oto-ateş tercihi
     public long nextRaidTicks;      // Faz 3: sonraki baskın (UTC tick)
     public string lastReport = "";  // Faz 3: "Sen yokken" tek satırı

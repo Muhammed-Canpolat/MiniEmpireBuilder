@@ -13,7 +13,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta`, `ground_mine_r
 | 5 F ekonomi | 16, 22 | BİTTİ | (bu commit) | D117; Progression.Island.StartWood/StartMeat=0 (yalnız yeni ada); ortak GemActions.OfferIslandTopUp + GemConfirm (yükselt, kale, keşif, yerleştirme); 22/22 test |
 | 6 C+H çizim/ada UI | 1, 23, 17, 20, 21 | BİTTİ (1 cihazda DOĞRULANMADI) | (bu commit) | D118; hayalet ölçeği ayak izine sınırlı + güvenli sprite materyali; koyun yürünebilir/aynı yükseklik; FancyInfoPanel bantları ayrıldı; ada Ayarlar paneli açılır; kale yükseltme süresi görünür |
 | 7 G ana üs | 7, 8, 9, 12, 13, 14, 34 | BİTTİ | 064d9d0..(bu commit) | D119; madde başı ayrı commit: 13 zoom koşulsuz kapalı, 7 gösterge tween ölçeği, 9 mor ev, 12 Okçu Kışlası + tek okçu, 8 nöbetçi yok + okçu 2,4 u, 14 DecorScale tek kaynak, 34 HeroLook.ScreenHeightFraction |
-| 8 J tanıtım/e-posta | 26, 32 | BEKLİYOR | | |
+| 8 J tanıtım/e-posta | 26, 32 | BİTTİ | (bu commit) | D120; RaidIntro 6 adım (ATEŞ, güçlü atış, atış yeri, HARİTA, TAKİP, yetenekler), raidIntroSeen bit maskesi, ATLA, oyun donmaz; SupportEmail miniempirebuilder@gmail.com; 24/24 test |
 | 9 K Depo | 11 | BEKLİYOR | | |
 
 ---

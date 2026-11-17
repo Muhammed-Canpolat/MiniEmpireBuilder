@@ -40,6 +40,8 @@ public sealed class IslandHud : MonoBehaviour
     private TextMeshProUGUI titleText, meatText, woodText, goldText, castleText, hintText, autoLabel, homeLabel, bannerText, mapLabel;
     private Image castleFill, hintBg, chargeRing, fireFace, cooldownFill, bannerBg;
     private Button mapButton;
+    private Button introSkip;
+    private RectTransform introArrow;
     private readonly System.Collections.Generic.List<Image> edgeArrows = new System.Collections.Generic.List<Image>();
     private GameObject fireRoot, resultPanel, autoRoot, dock, castleBar, staffButton;
     private IslandRaidBoard board;
@@ -794,12 +796,14 @@ public sealed class IslandHud : MonoBehaviour
         if (kind == IslandAbilities.Kind.Volley)
         {
             // Yağmur: ilk basış nişan halkasını açar, ikinci basış ateşler
+            if (abilities.Unlocked(kind)) raid.Intro.OnAbilityUsed((int)kind);
             if (abilities.Aiming) abilities.ConfirmAim();
             else if (!abilities.BeginAim()) { if (abilities.Unlocked(kind)) return; ToastLocked(kind); }
             else Toast(L.T("Haritaya dokunup yeri seç, sonra YAĞMUR'a tekrar bas", "Tap the map to pick the spot, then press RAIN again"), 3f);
             return;
         }
         if (!abilities.Unlocked(kind)) { ToastLocked(kind); return; }
+        raid.Intro.OnAbilityUsed((int)kind);
         if (kind == IslandAbilities.Kind.FireArrow) { abilities.Use(kind); return; }
         // Ağ: şu anki hedefe atılır; hedef yoksa bekleme harcanmaz
         if (!abilities.Use(kind) && abilities.CanReady(kind)) Toast(L.T("Menzilde hedef yok.", "No target in range."));
@@ -903,12 +907,132 @@ public sealed class IslandHud : MonoBehaviour
 
     private void BuildHint()
     {
-        hintBg = ReferenceUiVisuals.Image(safe, "HintBg", new Vector2(0.05f, 1), new Vector2(0.95f, 1),
-            new Vector2(0, -122), new Vector2(0, -84), new Color(0.08f, 0.06f, 0.04f, 0.82f));
+        // D120: üstte güvenli alanda hap; tablette en çok 640 ref px, ortalı, en çok 2 satır. Yalnız ATLA dokunuş alır.
+        hintBg = ReferenceUiVisuals.Image(safe, "HintBg", new Vector2(0.5f, 1), new Vector2(0.5f, 1),
+            new Vector2(-320, -142), new Vector2(320, -84), new Color(0.08f, 0.06f, 0.04f, 0.82f));
         hintBg.sprite = ReferenceUiVisuals.PillSprite();
         hintBg.type = Image.Type.Sliced;
+        hintBg.raycastTarget = false;
         hintText = ReferenceUiVisuals.Text(hintBg.transform, "Hint", "", 15, Gold, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(10, 0), new Vector2(-10, 0), false, true);
+            Vector2.zero, Vector2.one, new Vector2(18, 4), new Vector2(-84, -4), false, true);
+        hintText.textWrappingMode = TextWrappingModes.Normal;
+        hintText.raycastTarget = false;
+        var skipImg = ReferenceUiVisuals.Image(hintBg.transform, "IntroSkip", new Vector2(1, 0.5f), new Vector2(1, 0.5f),
+            new Vector2(-78, -14), new Vector2(-10, 14), new Color(0.3f, 0.22f, 0.12f, 0.95f));
+        skipImg.sprite = ReferenceUiVisuals.PillSprite();
+        skipImg.type = Image.Type.Sliced;
+        introSkip = skipImg.gameObject.AddComponent<Button>();
+        introSkip.targetGraphic = skipImg;
+        ReferenceUiVisuals.Text(skipImg.transform, "Label", L.T("ATLA", "SKIP"), 13, Color.white, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true).raycastTarget = false;
+        introSkip.onClick.AddListener(() => raid.Intro.Skip());
+        introArrow = TutorialPointer.CreateArrow(safe);
+        introArrow.sizeDelta = new Vector2(60f, 60f);   // akın sırasında dikkat çekmesi için büyük
+        introArrow.gameObject.SetActive(false);
+    }
+
+    /// <summary>D120: tanıtım okunun hedefi (kök yerel konumu, ok hedefin üstüne konur). Hedef yoksa false.</summary>
+    private bool IntroArrowTarget(out Vector2 local, out bool pointsUp)
+    {
+        local = Vector2.zero; pointsUp = false;
+        var rootCanvas = safe.GetComponentInParent<Canvas>().rootCanvas;
+        Camera uiCam = rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : rootCanvas.worldCamera;
+        int step = raid.Intro.Current;
+        RectTransform target = null;
+        if (step == RaidIntro.Fire || step == RaidIntro.Charge) target = fireFace != null ? fireFace.rectTransform : null;
+        else if (step == RaidIntro.Map || step == RaidIntro.Follow) target = mapButton != null ? (RectTransform)mapButton.transform : null;
+        else if (raid.Intro.AbilityIndex >= 0) target = abilityFace[raid.Intro.AbilityIndex] != null ? abilityFace[raid.Intro.AbilityIndex].rectTransform : null;
+        Rect box;   // hedefin kök yerel dikdörtgeni
+        if (target != null)
+        {
+            if (!LocalBox(target, uiCam, out box)) return false;
+        }
+        else if (step == RaidIntro.Post && archer != null && setup.WorldCamera != null)
+        {
+            int nearest = -1; float best = float.MaxValue;
+            for (int i = 0; i < IslandLayout.Posts.Length; i++)
+            {
+                if (i == archer.CurrentPost || !archer.PostOpen(i)) continue;
+                float d = Vector2.Distance(archer.Position, IslandLayout.Posts[i].World);
+                if (d < best) { best = d; nearest = i; }
+            }
+            if (nearest < 0) return false;
+            var sp = setup.WorldCamera.WorldToScreenPoint((Vector3)(IslandLayout.Posts[nearest].World));
+            if (sp.z < 0f) return false;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(safe, sp, uiCam, out var pt)) return false;
+            var r0 = safe.rect;
+            pt.x = Mathf.Clamp(pt.x, r0.xMin + 30f, r0.xMax - 30f);   // ekran dışındaysa kenara kenetlen
+            pt.y = Mathf.Clamp(pt.y, r0.yMin + 60f, r0.yMax - 190f);
+            box = new Rect(pt.x - 20f, pt.y - 20f, 40f, 40f);
+        }
+        else return false;
+
+        // Ok hedefin merkezine bakar, başka düğmelere binmez: üst yarıdaki hedefte altta (180°), aksi halde üstte; yer yoksa diğer taraf, en son hedefin içinde.
+        const float size = 60f, gap = 4f;
+        float half = size * 0.5f;
+        var r = safe.rect;
+        bool upperHalf = box.center.y > 0f;
+        Vector2 above = new Vector2(box.center.x, box.yMax + half + gap);
+        Vector2 below = new Vector2(box.center.x, box.yMin - half - gap);
+        Vector2 inside = new Vector2(box.center.x, box.yMax - half);
+        var candidates = upperHalf ? new[] { (below, true), (above, false), (inside, false) } : new[] { (above, false), (below, true), (inside, false) };
+        var others = new System.Collections.Generic.List<Rect>();
+        void AddOther(RectTransform rt)
+        {
+            if (rt == null || rt == target || !rt.gameObject.activeInHierarchy) return;
+            if (LocalBox(rt, uiCam, out var o)) others.Add(o);
+        }
+        AddOther(fireFace != null ? fireFace.rectTransform : null);
+        AddOther(autoButton != null ? (RectTransform)autoButton.transform : null);
+        AddOther(mapButton != null ? (RectTransform)mapButton.transform : null);
+        for (int i = 0; i < 3; i++) AddOther(abilityFace[i] != null ? abilityFace[i].rectTransform : null);
+        for (int c = 0; c < candidates.Length; c++)
+        {
+            var (pos, up) = candidates[c];
+            var arrowBox = new Rect(pos.x - half, pos.y - half, size, size);
+            bool inside2 = arrowBox.xMin >= r.xMin && arrowBox.xMax <= r.xMax && arrowBox.yMin >= r.yMin && arrowBox.yMax <= r.yMax - 140f;
+            bool clear = true;
+            foreach (var o in others) if (arrowBox.Overlaps(o)) { clear = false; break; }
+            if ((inside2 && clear) || c == candidates.Length - 1) { local = pos; pointsUp = up; break; }
+        }
+        local.x = Mathf.Clamp(local.x, r.xMin + half, r.xMax - half);
+        local.y = Mathf.Clamp(local.y, r.yMin + half, r.yMax - 140f - half);
+        return true;
+    }
+
+    private bool LocalBox(RectTransform rt, Camera uiCam, out Rect box)
+    {
+        box = default;
+        var corners = new Vector3[4];
+        rt.GetWorldCorners(corners);
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(safe, RectTransformUtility.WorldToScreenPoint(uiCam, corners[0]), uiCam, out var lo)) return false;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(safe, RectTransformUtility.WorldToScreenPoint(uiCam, corners[2]), uiCam, out var hi)) return false;
+        box = Rect.MinMaxRect(Mathf.Min(lo.x, hi.x), Mathf.Min(lo.y, hi.y), Mathf.Max(lo.x, hi.x), Mathf.Max(lo.y, hi.y));
+        return true;
+    }
+
+    private void UpdateIntro()
+    {
+        string hint = raid.TutorialHint();
+        bool show = !string.IsNullOrEmpty(hint) && archer != null && archer.IsAlive;
+        hintBg.gameObject.SetActive(show);
+        hintText.text = show ? hint : "";
+        if (show)
+        {
+            float w = Mathf.Min(640f, safe.rect.width * 0.94f);   // telefonda ekran genişliğine sığar, tablette 640'ta kalır
+            hintBg.rectTransform.offsetMin = new Vector2(-w * 0.5f, -142f);
+            hintBg.rectTransform.offsetMax = new Vector2(w * 0.5f, -84f);
+        }
+        Vector2 local = Vector2.zero;
+        bool up = false;
+        bool arrow = show && IntroArrowTarget(out local, out up);
+        introArrow.gameObject.SetActive(arrow);
+        if (arrow)
+        {
+            introArrow.anchorMin = introArrow.anchorMax = safe.pivot;
+            introArrow.anchoredPosition = local + new Vector2(0f, TutorialPointer.Bob() * (up ? 0.5f : -0.5f));   // hafif sallanma, hedefe doğru
+            TutorialPointer.Rotate(introArrow, up);
+        }
     }
 
     private void BuildResult()
@@ -1229,16 +1353,14 @@ public sealed class IslandHud : MonoBehaviour
             homeLabel.text = Time.unscaledTime < homeConfirmUntil ? L.T("EMİN MİSİN?", "SURE?") : L.T("ANA ÜS", "BASE");
 
         // Öğretici ipucu
-        string hint = raid.TutorialHint();
-        hintBg.gameObject.SetActive(!string.IsNullOrEmpty(hint));
-        hintText.text = hint;
+        UpdateIntro();
 
         // ATEŞ: dolum halkası + yanıp sönen vurgu (öğretici adım 1)
         if (archer != null)
         {
             chargeRing.fillAmount = archer.Charging ? archer.Charge01 : 0f;
             cooldownFill.fillAmount = archer.IsAlive ? archer.CooldownFraction : 1f;
-            bool pulse = raid.TutorialStep == 1 && raid.Phase == IslandRaidManager.State.Running;
+            bool pulse = (raid.Intro.Current == RaidIntro.Fire || raid.Intro.Current == RaidIntro.Charge) && raid.Phase == IslandRaidManager.State.Running;
             fireFace.color = pulse ? Color.Lerp(Color.white, new Color(1f, 0.75f, 0.4f), 0.5f + 0.5f * Mathf.Sin(Time.time * 6f)) : Color.white;
             if (!archer.IsAlive)
             {

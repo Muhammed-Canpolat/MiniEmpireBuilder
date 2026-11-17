@@ -14,8 +14,20 @@ public sealed class AudioSettingsUI : MonoBehaviour
 {
     // TODO: gerçek gizlilik politikası adresi yayın öncesi buraya yazılacak.
     public const string PrivacyPolicyUrl = "https://example.com/privacy";
-    // TODO: gerçek destek e-posta adresi yayın öncesi buraya yazılacak.
-    public const string SupportEmail = "support@example.com";
+    /// <summary>Destek e-postası: tek kaynak (D120).</summary>
+    public const string SupportEmail = "miniempirebuilder@gmail.com";
+
+    /// <summary>
+    /// mailto bağlantısı (iOS ve Android): adres düz, konu ve gövde RFC 6068'e göre yüzde-kodlanır (boşluk %20; "+" kullanılmaz).
+    /// </summary>
+    public static string BuildMailtoUrl(string subject, string body)
+    {
+        var url = "mailto:" + SupportEmail;
+        char sep = '?';
+        if (!string.IsNullOrEmpty(subject)) { url += sep + "subject=" + Uri.EscapeDataString(subject); sep = '&'; }
+        if (!string.IsNullOrEmpty(body)) url += sep + "body=" + Uri.EscapeDataString(body);
+        return url;
+    }
     private const string VibrationKey = "MEB_Vibration";
 
     /// <summary>Titreşim ayarı (PlayerPrefs MEB_Vibration, varsayılan açık).</summary>
@@ -366,7 +378,9 @@ if (!miniGear)
         // DESTEK / İLETİŞİM
         Section(content, "ui_icon_gear", L.T("DESTEK / İLETİŞİM", "SUPPORT / CONTACT"));
         var support = WideButton(content, "SupportButton", L.T("E-POSTA GÖNDER", "SEND E-MAIL"), false, out _);
-        support.onClick.AddListener(() => Application.OpenURL("mailto:" + SupportEmail));
+        support.onClick.AddListener(() => Application.OpenURL(BuildMailtoUrl(
+            "Mini Empire Builder " + Application.version,
+            L.T("Merhaba,\n\n", "Hello,\n\n") + "(" + Application.platform + " - " + SystemInfo.deviceModel + ")")));
 
         if (battleScene)
         {

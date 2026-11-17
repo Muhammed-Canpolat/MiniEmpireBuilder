@@ -65,17 +65,7 @@ public sealed class IslandBuildTutorial : MonoBehaviour
         text = ReferenceUiVisuals.Text(textBox, "Text", "", 15, FancyInfoPanel.Ink, TextAlignmentOptions.Center,
             Vector2.zero, Vector2.one, new Vector2(18, 10), new Vector2(-18, -10), false, true);
         text.textWrappingMode = TextWrappingModes.Normal;
-        var arrowImg = ReferenceUiVisuals.Image(root, "Arrow", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-22, -22), new Vector2(22, 22), Color.white);
-        arrowImg.sprite = CampaignSceneSetup.Art("ui_arrow_down") ?? CampaignSceneSetup.Art("ui_icon_arrow");
-        if (arrowImg.sprite == null)
-        {
-            // Yedek: altın "▼"
-            arrowImg.color = new Color(0, 0, 0, 0);
-            ReferenceUiVisuals.Text(arrowImg.transform, "Glyph", "▼", 40, ReferenceUiVisuals.Gold, TextAlignmentOptions.Center,
-                Vector2.zero, Vector2.one, new Vector2(-10, -10), new Vector2(10, 10), true);
-        }
-        arrowImg.raycastTarget = false;
-        arrow = arrowImg.rectTransform;
+        arrow = TutorialPointer.CreateArrow(root);
         action = FancyInfoPanel.TsButton(root, "TutorialAction", "", false, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
             new Vector2(-90, -30), new Vector2(90, 30), 18, out actionLabel);
         action.onClick.AddListener(OnAction);
@@ -151,7 +141,7 @@ public sealed class IslandBuildTutorial : MonoBehaviour
         action.gameObject.SetActive(actionText != null);
         if (actionText != null) actionLabel.text = actionText;
         arrow.gameObject.SetActive(holeOn || dimAll);
-        float bob = Mathf.Sin(Time.unscaledTime * 6f) * 8f;
+        float bob = TutorialPointer.Bob();
         textBox.anchorMin = new Vector2(0.06f, passThrough ? 0.80f : 0.62f);
         textBox.anchorMax = new Vector2(0.94f, passThrough ? 0.80f : 0.62f);
         if (dimAll)

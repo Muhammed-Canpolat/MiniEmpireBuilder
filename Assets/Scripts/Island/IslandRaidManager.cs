@@ -47,6 +47,8 @@ public sealed class IslandRaidManager : MonoBehaviour
     private bool bossSpawned;
     private bool tutorialRun;
     private int pendingFlyers;
+    /// <summary>D120: ada akın tanıtımı (HARİTA/TAKİP, atış yeri, ATEŞ, dolu atış, yetenekler). Bir kez gösterilir, kayda yazılır.</summary>
+    public readonly RaidIntro Intro = new RaidIntro();
     private readonly HashSet<int> ratThieves = new HashSet<int>();
 
     public void Bind(BattleStructure castleStructure, IslandArcher islandArcher)
@@ -54,7 +56,8 @@ public sealed class IslandRaidManager : MonoBehaviour
         castle = castleStructure;
         archer = islandArcher;
         if (castle != null) castle.Destroyed += OnCastleDestroyed;
-        if (archer != null) archer.PostChanged += OnPostChanged;
+        if (archer != null) { archer.PostChanged += OnPostChanged; archer.Shot += OnArcherShot; }
+        Intro.Persist = () => GameManager.Instance?.SaveGame();
     }
 
     private void OnDestroy()
@@ -62,12 +65,40 @@ public sealed class IslandRaidManager : MonoBehaviour
         IslandRaidScheduler.LiveFightActive = false;
         IslandEnemy.StatScale = 1f;
         if (castle != null) castle.Destroyed -= OnCastleDestroyed;
-        if (archer != null) archer.PostChanged -= OnPostChanged;
+        if (archer != null) { archer.PostChanged -= OnPostChanged; archer.Shot -= OnArcherShot; }
     }
 
     private void Update()
     {
         if (Phase == State.Running) Elapsed += Time.deltaTime;
+        TickIntro(Time.deltaTime);
+    }
+
+    private void BeginIntro()
+    {
+        Intro.Begin(IslandSession.Save, PlayerPrefs.GetInt(IslandSceneSetup.PostHintKey, 0) == 1);
+    }
+
+    private void OnArcherShot(bool charged) { if (archer == null || !archer.LastShotAuto) Intro.OnShot(charged); }
+
+    /// <summary>Tanıtım bağlamını kurup adımı ilerletir (Update çağırır; testler dt vererek de çağırır).</summary>
+    public void TickIntro(float dt)
+    {
+        var c = new RaidIntro.Context { Running = Phase == State.Running, ArcherAlive = archer == null || archer.IsAlive };
+        if (c.Running)
+        {
+            c.BoatSeen = spawnedBoats > 0;
+            c.PostStage = spawnedBoats >= 2 || Wave >= 2;
+            var cam = IslandSceneSetup.Instance != null ? IslandSceneSetup.Instance.CameraController : null;
+            c.FullFrame = cam != null && cam.FullFrame;
+            if (archer != null)
+                foreach (var e in IslandEnemy.All)
+                    if (e != null && e.Alive && Vector2.Distance(e.Position, archer.Position) <= archer.Range) { c.TargetInRange = true; break; }
+            var ab = IslandAbilities.Instance;
+            if (ab != null)
+                for (int i = 0; i < 3; i++) if (ab.Unlocked((IslandAbilities.Kind)i)) c.UnlockedAbilities |= 1 << i;
+        }
+        Intro.Tick(dt, c);
     }
 
     // ==================== AKIN BAŞLAT ====================
@@ -92,6 +123,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         IslandStats.Reset();
         tutorialRun = Akin == 1 && IslandSession.Save != null && IslandSession.Save.tutorialStep < 3;
         if (tutorialRun && IslandSession.Save.tutorialStep == 0) SetTutorial(1);
+        BeginIntro();
         if (IslandSession.Save != null) IslandSession.Save.lastAkin = Akin;
         Phase = State.Running;
         StateChanged?.Invoke(Phase);
@@ -123,6 +155,7 @@ public sealed class IslandRaidManager : MonoBehaviour
         ratThieves.Clear();
         TutorialFinishedThisRun = false;
         tutorialRun = false;
+        BeginIntro();
         IslandStats.Reset();
         IslandRaidScheduler.LiveFightActive = true;
         Phase = State.Running;
@@ -267,7 +300,8 @@ public sealed class IslandRaidManager : MonoBehaviour
 
     private void OnPostChanged(int post)
     {
-        if (tutorialRun && TutorialStep == 2 && post == 3) SetTutorial(3);
+        if (tutorialRun && TutorialStep == 2) SetTutorial(3);   // D120: herhangi atış yerine geçiş
+        Intro.OnPostChanged();
     }
 
     /// <summary>D116: dalga güvenlik ağının kaç kez devreye girdiği (1. kademe: kaleye zorla; 2. kademe: dalgayı kapat). Test/telemetri.</summary>
@@ -351,16 +385,7 @@ public sealed class IslandRaidManager : MonoBehaviour
     }
 
     /// <summary>Öğretici ipucu metni (HUD gösterir). Boş: ipucu yok.</summary>
-    public string TutorialHint()
-    {
-        if (!tutorialRun || Phase != State.Running) return "";
-        switch (TutorialStep)
-        {
-            case 1: return L.T("Tekne geliyor! ATEŞ'e dokun.", "A boat is coming! Tap FIRE.");
-            case 2: return L.T("Doğu kumsalını görmek için atış yerine dokun.", "Tap a firing post to watch the east beach.");
-            default: return "";
-        }
-    }
+    public string TutorialHint() => Phase == State.Running ? Intro.Message : "";
 
     // ==================== SONUÇ ====================
 

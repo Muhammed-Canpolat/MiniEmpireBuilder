@@ -446,8 +446,12 @@ public sealed class IslandArcher : MonoBehaviour
             // Hedefe dön (sprite sağa bakar).
             sr.flipX = target.Position.x < Position.x;
         }
+        LastShotAuto = auto;
         Shot?.Invoke(charged);
     }
+
+    /// <summary>Son atış oto-ateşten mi (D120: oto-atış tanıtım adımını kapatmaz).</summary>
+    public bool LastShotAuto { get; private set; }
 
     // ==================== HASAR / ÖLÜM ====================
 
