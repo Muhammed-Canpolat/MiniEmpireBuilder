@@ -12,14 +12,14 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta` (bina sprite'la
 |---|---|---|---|---|
 | 1 | Üst bar | BİTTİ | 03d6bea | D106; Bilinear filtre; kalan: üst boşluk/kalkan taşması yok, yazı konturu yok |
 | 2 | Alt bar | BİTTİ | a4675ad | D107; radyal menü bayrakla kapalı (kod duruyor); kapalı barda alttaki şerit koyu kalıyor (kamera sabit kararı) |
-| 3 | Duvarlar | BEKLİYOR | | |
+| 3 | Duvarlar | BİTTİ | 7e557fa | D108; zoom kaldırıldı, sabit kadraj; kalan: kapı referanstan iri/koyu, köşede mavi çatılı kule yok (EKSİK ASSET) |
 | 4 | Droplist | BEKLİYOR | | |
 | 5 | Sesler | BEKLİYOR | | |
 | 6 | Son kontrol | BEKLİYOR | | |
 
 EKSİK ASSET:
 - MiniEmpireUI'da takvim (Günlük), parşömen (Görev), kupa (Etkinlik) ikonu YOK.
-- PixelCastle'da bayrak YOK (referanstaki mavi bayraklar).
+- PixelCastle'da bayrak YOK → MiniEmpireUI banner_left kullanıldı. Mavi çatılı yuvarlak köşe kulesi YOK (ART_NEEDS #24) → boyasız tower_small_closed.
 
 ---
 # GECE_DURUM — 9. oturum: Fable teknik denetim ve profesyonelleştirme (15 Kasım 2026)
