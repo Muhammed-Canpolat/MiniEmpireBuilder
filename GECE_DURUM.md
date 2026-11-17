@@ -1,3 +1,27 @@
+# GECE_DURUM — 10. oturum: Ana Üs yeni UI tasarımı (17 Kasım 2026)
+
+AKTİF GÖREV: Docs/UI/UI_DEGISIKLIK.md (referans: Docs/UIReference/ana-us-referans.png, ana-us-droplist-acik.png)
+DAL: `ui-ana-us` (main `532c9bb` üstünden; birleştirme kullanıcıda). Not: görevde "gece-gelistirme" yazıyordu, çalışma dalı main idi.
+Başlangıç: `a9adca4` (MiniEmpireUI, PixelCastle, SFX_Pack paketleri + UI belgeleri bu dalda commit'lendi). Kararlar: DECISIONS.md D106+.
+Yönetim: ana oturum yönetici; plan art-director, uygulama gameplay-engineer, son kontrol qa-playtester.
+Docs/Bugs/BUGLAR.md: yarım iş yok (henüz başlanmamış liste); bu görevde yalnız ilgili maddeler (13 zoom, 27 müzik geçişi) dikkate alınır.
+Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta` (bina sprite'ları), `ground_mine_rocks.png.meta`, `IslandTerrain.prefab`,
+`Dragon Warrior Files/`, diğer izlenmeyen paketler, `UIReviewScreenshots/CurrentReview/*`.
+
+| # | Bölüm | Durum | Commit | Not |
+|---|---|---|---|---|
+| 1 | Üst bar | BEKLİYOR | | |
+| 2 | Alt bar | BEKLİYOR | | |
+| 3 | Duvarlar | BEKLİYOR | | |
+| 4 | Droplist | BEKLİYOR | | |
+| 5 | Sesler | BEKLİYOR | | |
+| 6 | Son kontrol | BEKLİYOR | | |
+
+EKSİK ASSET:
+- MiniEmpireUI'da takvim (Günlük), parşömen (Görev), kupa (Etkinlik) ikonu YOK.
+- PixelCastle'da bayrak YOK (referanstaki mavi bayraklar).
+
+---
 # GECE_DURUM — 9. oturum: Fable teknik denetim ve profesyonelleştirme (15 Kasım 2026)
 
 AKTİF GÖREV: Fable Teknik Denetim
