@@ -23,3 +23,13 @@ MonoBehaviour:
   iconMeat: {fileID: 21300000, guid: c234d24573e3e9840b07f747658ae354, type: 3}
   iconGem: {fileID: 21300000, guid: 9eb520ef339db994da29fd32e3e09b41, type: 3}
   iconBuilder: {fileID: 21300000, guid: dbe2760c33e505347bdee7dc1f6802db, type: 3}
+  bottombarBg: {fileID: 21300000, guid: 504267f29b432d94eb92db459db13709, type: 3}
+  menuFrame: {fileID: 21300000, guid: 2ccd0323cd8fe824a9db1754b24f0a58, type: 3}
+  labelPlate: {fileID: 21300000, guid: f5199512c7675f140b1aeec7b6dd4b4e, type: 3}
+  separatorBanner: {fileID: 21300000, guid: 05f848e3ae4576740b5b50a946d3c489, type: 3}
+  arrowDown: {fileID: 21300000, guid: 4711929f0f47e934cba1962772782830, type: 3}
+  arrowUp: {fileID: 21300000, guid: 682e0bee093ab8f40b8312e3901d1143, type: 3}
+  iconBuild: {fileID: 21300000, guid: ef62e4d4ef44b0c4a8eda6d9d56dea73, type: 3}
+  iconExpedition: {fileID: 21300000, guid: 477f7c9804ef8cc45bad1f76ff6cd320, type: 3}
+  iconHero: {fileID: 21300000, guid: 1e767c50514cdb046ad98d0f36502068, type: 3}
+  iconIsland: {fileID: 21300000, guid: f7fe7fe1fa8484c438bcdd17c1e3b228, type: 3}

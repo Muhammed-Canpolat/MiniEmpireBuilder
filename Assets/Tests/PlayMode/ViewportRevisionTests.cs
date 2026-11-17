@@ -22,6 +22,7 @@ public class ViewportRevisionTests
     [SetUp]
     public void ForceDebugOverlay()
     {
+        LegacyDockFlag.Off();   // D107: bu testler radyal menüyü sınar; yeni alt bar MiniEmpireBottomBarTests'te
         var dev = Type("DevSettings");
         devEnabledWas = (bool)dev.GetProperty("Enabled").GetValue(null);
         dev.GetProperty("Enabled").SetValue(null, true);
@@ -32,6 +33,7 @@ public class ViewportRevisionTests
     [TearDown]
     public void RestoreDebugOverlay()
     {
+        LegacyDockFlag.Restore();
         var dev = Type("DevSettings");
         dev.GetProperty("Enabled").SetValue(null, true);
         dev.GetProperty("DebugOverlay").SetValue(null, devOverlayWas);

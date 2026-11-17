@@ -335,6 +335,8 @@ public class BaseWorldUI : MonoBehaviour
 
     public void ToggleBottomButtons(bool show)
     {
+        // D107: yeni alt bar (yalnız görünüm) modal panellerde topluca gizlenir; bugünkü radyal-dışı dal IslandBtn'i gizlemiyordu.
+        if (MiniEmpireBottomBar.Current != null) { MiniEmpireBottomBar.Current.SetDockVisible(show); return; }
         // Radyal menü: düğmeleri menü kendi açık/kapalı durumuna göre yönetir.
         if (RadialDockMenu.Current != null) { RadialDockMenu.Current.SetDockVisible(show); return; }
         if (battleButton != null) battleButton.gameObject.SetActive(show);

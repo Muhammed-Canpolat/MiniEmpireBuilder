@@ -561,7 +561,7 @@ public sealed class RadialDockMenu : MonoBehaviour
     public static int BuildBadge() => BaseBadges.CanBuildNew() ? 1 : 0;
 
     /// <summary>Ada baskını uyarı/canlı evresindeyse rozet.</summary>
-    private static int IslandBadge()
+    internal static int IslandBadge()
     {
         if (!IslandSession.Unlocked()) return 0;
         var save = IslandSession.Save;

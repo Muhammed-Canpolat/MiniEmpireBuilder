@@ -26,6 +26,7 @@ public class Session5Tests
     [SetUp]
     public void KeepRealSave()
     {
+        LegacyDockFlag.Off();   // D107: bu testler radyal menüyü sınar; yeni alt bar MiniEmpireBottomBarTests'te
         savedKey = PlayerPrefs.HasKey(Key) ? PlayerPrefs.GetString(Key) : null;
         savedBackup = PlayerPrefs.HasKey(BackupKey) ? PlayerPrefs.GetString(BackupKey) : null;
         savedFile = File.Exists(SaveFile) ? File.ReadAllText(SaveFile) : null;
@@ -35,6 +36,7 @@ public class Session5Tests
     [TearDown]
     public void RestoreRealSave()
     {
+        LegacyDockFlag.Restore();
         void Put(string key, string value) { if (value != null) PlayerPrefs.SetString(key, value); else PlayerPrefs.DeleteKey(key); }
         Put(Key, savedKey);
         Put(BackupKey, savedBackup);

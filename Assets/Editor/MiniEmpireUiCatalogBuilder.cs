@@ -25,6 +25,16 @@ public static class MiniEmpireUiCatalogBuilder
         catalog.iconMeat = Load("Icons/icon_meat.png");
         catalog.iconGem = Load("Icons/icon_gem.png");
         catalog.iconBuilder = Load("Icons/icon_builder.png");
+        catalog.bottombarBg = Load("BottomBar/bottombar_bg.png");
+        catalog.menuFrame = Load("BottomBar/menu_button_frame_noplate.png");
+        catalog.labelPlate = Load("BottomBar/menu_label_plate.png");
+        catalog.separatorBanner = Load("BottomBar/separator_banner.png");
+        catalog.arrowDown = Load("BottomBar/btn_arrow_down.png");
+        catalog.arrowUp = Load("BottomBar/btn_arrow_up.png");
+        catalog.iconBuild = Load("Icons/icon_build.png");
+        catalog.iconExpedition = Load("Icons/icon_expedition.png");
+        catalog.iconHero = Load("Icons/icon_hero.png");
+        catalog.iconIsland = Load("Icons/icon_island.png");
         if (created) { Directory.CreateDirectory(Path.GetDirectoryName(OutPath)); AssetDatabase.CreateAsset(catalog, OutPath); }
         else EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();

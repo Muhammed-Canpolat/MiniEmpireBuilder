@@ -145,6 +145,13 @@ public static class BaseHudRedesign
 
     private static void StyleDock(Transform hud)
     {
+        // D107: MiniEmpireUI alt barı (yalnız görünüm). Bayrak/katalog yoksa aşağıdaki radyal menü / eski dock kalır (kod silinmedi).
+        if (MiniEmpireUiCatalog.BottomBarReady)
+        {
+            EnsureHeroButton(hud);
+            IslandBaseButton.Attach(hud);
+            if (MiniEmpireBottomBar.Apply(hud) != null) return;
+        }
         SkinDock(hud.Find("BottomDock") as RectTransform);
         if (FeatureConfig.Instance.radialDockMenu)
         {

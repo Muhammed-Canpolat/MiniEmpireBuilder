@@ -118,6 +118,11 @@ public class UiAnaUsCapture
         }
         yield return null;
 
+        Shoot(w, h, outPath);
+    }
+
+    private static void Shoot(int w, int h, string outPath)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(outPath));
         var camera = Camera.main;
         Assert.NotNull(camera);
@@ -160,10 +165,50 @@ public class UiAnaUsCapture
         Debug.Log("UiAnaUsCapture wrote " + outPath);
     }
 
+    /// <summary>Alt bar (D107): bar açık ve kapalı görüntüsü + canlı denetimler. UI_CAPTURE_OUT = açık görüntü; kapalı olan "-kapali" ekiyle yazılır.</summary>
+    [UnityTest]
+    public IEnumerator CaptureBaseBottomBar()
+    {
+        int w = int.Parse(Env("UI_CAPTURE_W", "1080")), h = int.Parse(Env("UI_CAPTURE_H", "1920"));
+        string outPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", Env("UI_CAPTURE_OUT", "Docs/playtest/ui-ana-us/02-altbar.png")));
+        PlayerPrefs.SetInt("MEB_BaseBarOpen", 1);
+        yield return LoadBase(7, 43, 227, 2581, 8);
+        var hud = Hud;
+        foreach (var name in new[] { "BottomDock", "BuildBtn", "BattleBtn", "HeroBtn", "IslandBtn", "BarArrowTab" })
+            Assert.NotNull(hud.Find(name), name);
+        Assert.IsNull(hud.Find("RadialMainBtn"), "yeni barda radyal menü kurulmaz");
+        var bar = (Component)hud.Find("BottomDock").GetComponent("MiniEmpireBottomBar");
+        Assert.NotNull(bar, "alt bar bileşeni");
+        var dock = (RectTransform)hud.Find("BottomDock");
+        float dockTop = dock.TransformPoint(new Vector3(0f, dock.rect.yMax, 0f)).y;
+        var cam = Camera.main;
+        float ortho = cam.orthographicSize, camY = cam.transform.position.y;
+        Rect pixel = cam.pixelRect;
+        yield return null;
+        Shoot(w, h, outPath);
+
+        var setOpen = bar.GetType().GetMethod("SetOpen");
+        setOpen.Invoke(bar, new object[] { false, false, false });
+        yield return null; yield return null; yield return null;
+        Assert.AreEqual(ortho, cam.orthographicSize, 0.0001f, "kamera zoom bar kapanınca değişmez");
+        Assert.AreEqual(camY, cam.transform.position.y, 0.0001f, "kamera konumu değişmez");
+        Assert.AreEqual(pixel, cam.pixelRect, "görüş alanı değişmez");
+        Assert.AreEqual(dockTop, dock.TransformPoint(new Vector3(0f, dock.rect.yMax, 0f)).y, 0.01f, "BottomDock sabit");
+        foreach (var name in new[] { "BuildBtn", "BattleBtn", "HeroBtn", "IslandBtn" })
+            Assert.IsFalse(hud.Find(name).GetComponent<CanvasGroup>().blocksRaycasts, name + " kapalıyken dokunuş yutmaz");
+        Assert.IsTrue(hud.Find("BarArrowTab").GetComponent<CanvasGroup>().blocksRaycasts, "ok sekmesi dokunulabilir");
+        string closed = Path.Combine(Path.GetDirectoryName(outPath), Path.GetFileNameWithoutExtension(outPath) + "-kapali.png");
+        Shoot(w, h, closed);
+        setOpen.Invoke(bar, new object[] { true, false, false });
+        PlayerPrefs.DeleteKey("MEB_BaseBarOpen");
+    }
+
     private static readonly string[] PackTextures =
     {
         "topbar_bg", "res_pill_bg", "level_shield_empty", "banner_left", "banner_right", "btn_settings",
-        "icon_gold", "icon_wood", "icon_meat", "icon_gem", "icon_builder"
+        "icon_gold", "icon_wood", "icon_meat", "icon_gem", "icon_builder",
+        "bottombar_bg", "menu_button_frame_noplate", "menu_label_plate", "separator_banner", "btn_arrow_down", "btn_arrow_up",
+        "icon_build", "icon_expedition", "icon_hero", "icon_island"
     };
 
     private static bool AssetPathIsMiniEmpire(Sprite sprite) => Array.IndexOf(PackTextures, sprite.texture.name) >= 0;

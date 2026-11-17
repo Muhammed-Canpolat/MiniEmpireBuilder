@@ -140,6 +140,7 @@ public sealed class FirstBaseGuide : MonoBehaviour
         hintRect.localScale = Vector3.one * 0.6f;
         hintRect.DOScale(1f, 0.3f).SetEase(Ease.OutBack);
         RadialDockMenu.Current?.SetOpen(true, true, false);   // menü kapalıysa SEFER görünsün
+        MiniEmpireBottomBar.Current?.SetOpen(true, true, false);   // D107: yeni bar kapalıysa SEFER görünsün (tercih bozulmaz)
         var button = BaseWorldUI.Instance?.BattleButton;
         if (button != null)
             buttonPulse = button.transform.DOScale(1.06f, 0.5f).SetEase(Ease.InOutSine)

@@ -27,6 +27,7 @@ public class RadialMenuTests
     [SetUp]
     public void KeepRealState()
     {
+        LegacyDockFlag.Off();   // D107: bu testler radyal menüyü sınar; yeni alt bar MiniEmpireBottomBarTests'te
         savedKey = PlayerPrefs.HasKey(Key) ? PlayerPrefs.GetString(Key) : null;
         savedBackup = PlayerPrefs.HasKey(BackupKey) ? PlayerPrefs.GetString(BackupKey) : null;
         savedFile = File.Exists(SaveFile) ? File.ReadAllText(SaveFile) : null;
@@ -37,6 +38,7 @@ public class RadialMenuTests
     [TearDown]
     public void RestoreRealState()
     {
+        LegacyDockFlag.Restore();
         void Put(string key, string value) { if (value != null) PlayerPrefs.SetString(key, value); else PlayerPrefs.DeleteKey(key); }
         Put(Key, savedKey);
         Put(BackupKey, savedBackup);
