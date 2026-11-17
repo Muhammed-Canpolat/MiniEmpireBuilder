@@ -7,7 +7,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta`, `ground_mine_r
 | Grup | Maddeler | Durum | Commit | Not |
 |---|---|---|---|---|
 | 1 A iOS yazılar | 2, 3, 5, 10, 24 | BİTTİ (cihazda DOĞRULANMADI) | (bu commit) | D113; ortak TmpFontBootstrap: Dinamik Türkçe fallback + font atanmamış TMP geçişi + kontur koruma; banner tween unscaled; kök neden tahmin |
-| 2 B+I çökme/müzik | 4, 6, 15, 27 | BEKLİYOR | | |
+| 2 B+I çökme/müzik | 4, 6, 15, 27 | BİTTİ (4, 15 DOĞRULANMADI) | (bu commit) | D114; ortak SceneTransition (kilit, gerçek zamanlı kararma, async, try/catch [SceneLoad]); 27 kök neden testle kanıtlı (KillAll); 6 takılma kanıtlı |
 | 3 D konum kalıcılığı | 18, 19, 29, 31, 33 | BEKLİYOR | | |
 | 4 E savaş akışı | 25, 28, 30 | BEKLİYOR | | |
 | 5 F ekonomi | 16, 22 | BEKLİYOR | | |

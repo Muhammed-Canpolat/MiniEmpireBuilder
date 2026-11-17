@@ -45,10 +45,16 @@ public sealed class GameNotifications : MonoBehaviour
     {
         RegisterChannel();
         CancelAll();
-        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (scene, _) =>
-        {
-            if (scene.name == "BaseScene") RequestPermissionOnce(false);
-        };
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDestroy() => UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        // D114: izin isteği hatası sceneLoaded zincirini düşürmesin
+        if (scene.name == "BaseScene") SceneTransition.Guard("GameNotifications izin", () => RequestPermissionOnce(false));
     }
 
     private void OnApplicationPause(bool paused)

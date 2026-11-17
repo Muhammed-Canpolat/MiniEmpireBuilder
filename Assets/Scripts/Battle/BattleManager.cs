@@ -1222,7 +1222,8 @@ public class BattleManager : MonoBehaviour
 
         Debug.Log($"[BattleManager] SAVAŞ KAZANILDI! Savas ici kalan altin: {totalGoldEarned}, Odul: {GetVictoryBonus()}, Toplam: {totalPayout}");
 
-        OnBattleEnded?.Invoke(true);
+        // D114: sonuç ekranındaki bir hata kaydı/ödülü engellemesin (oyun düşmesin, "[SceneLoad]" günlüğü).
+        SceneTransition.Guard("OnBattleEnded(zafer)", () => OnBattleEnded?.Invoke(true));
 
         // GameManager'a bildir
         if (GameManager.Instance != null)
@@ -1241,7 +1242,7 @@ public class BattleManager : MonoBehaviour
 
         Debug.Log("[BattleManager] SAVAŞ KAYBEDİLDİ!");
 
-        OnBattleEnded?.Invoke(false);
+        SceneTransition.Guard("OnBattleEnded(yenilgi)", () => OnBattleEnded?.Invoke(false));
 
         // Tüm düşmanları durdur
         StopAllCoroutines();
@@ -1255,11 +1256,24 @@ public class BattleManager : MonoBehaviour
     public bool Forfeit()
     {
         if (!battleActive) return false;
+        // D114 (bug 6): "devam" teklifi açıkken pes edilirse teklif penceresi kapanır, zaman ölçeği/modal bayrağı geri gelir
+        // (sonuç ekranı ve dönüş geçişi timeScale=0'da takılmasın).
+        if (awaitingContinue)
+        {
+            awaitingContinue = false;
+            AudioSettingsUI.BattleModalOpen = false;
+            SceneTransition.Guard("GemConfirm.Close", () => GemConfirm.Close(false));
+        }
+        BattlePause.ResetAll();
+        if (Time.timeScale <= 0f) Time.timeScale = 1f;
         BattleLost();
-        foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
-            if (enemy != null) Destroy(enemy.gameObject);
-        foreach (var projectile in FindObjectsByType<ProjectileController>(FindObjectsSortMode.None))
-            if (projectile != null) Destroy(projectile.gameObject);
+        SceneTransition.Guard("pes et: düşman temizliği", () =>
+        {
+            foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+                if (enemy != null) Destroy(enemy.gameObject);
+            foreach (var projectile in FindObjectsByType<ProjectileController>(FindObjectsSortMode.None))
+                if (projectile != null) Destroy(projectile.gameObject);
+        });
         return true;
     }
 

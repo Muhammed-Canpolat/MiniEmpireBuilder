@@ -18,7 +18,10 @@ public sealed class BattleCosmeticObserver : MonoBehaviour
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
-    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) =>
+        SceneTransition.Guard("BattleCosmeticObserver " + scene.name, () => InstallFor(scene));   // D114
+
+    private static void InstallFor(Scene scene)
     {
         if (scene.name == "BattleScene" && !IslandSession.Active)
         {

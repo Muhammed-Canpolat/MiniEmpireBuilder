@@ -977,6 +977,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public bool TryStartCampaignBattle()
     {
+        if (TransitionBusy("BattleScene")) return true;   // D114: çift dokunuş — ikinci istek can/kart harcamadan yutulur
         if (!LivesSystem.CanPlay) return false;
         BattleCards.BeginBattle();
         StartBattle();
@@ -985,6 +986,7 @@ public class GameManager : MonoBehaviour
 
     public void StartBattle()
     {
+        if (TransitionBusy("BattleScene")) return;
         IslandSession.Clear(); // sefer savaşı ada modunda yüklenmesin
         IsInBattle = true;
         StartCoroutine(FadeAndLoadScene("BattleScene"));
@@ -1038,6 +1040,7 @@ public class GameManager : MonoBehaviour
     public bool LoadIsland()
     {
         if (PlayerData == null || !IslandSession.Unlocked(GetMainBaseLevel())) return false;
+        if (TransitionBusy("BattleScene")) return true;
         IsInBattle = false;
         BattleSession.Clear();
         IslandSession.Begin();
@@ -1047,6 +1050,7 @@ public class GameManager : MonoBehaviour
 
     public void LoadBaseWorld()
     {
+        if (TransitionBusy("BaseScene")) return;
         IsInBattle = false;
         BattleSession.Clear();
         IslandSession.Clear();
@@ -1056,6 +1060,7 @@ public class GameManager : MonoBehaviour
 
     public void LoadCampaignMap()
     {
+        if (TransitionBusy("CampaignScene")) return;
         IsInBattle = false;
         BattleSession.Clear();
         IslandSession.Clear();
@@ -1064,59 +1069,112 @@ public class GameManager : MonoBehaviour
 
     public void ReturnToCampaign()
     {
+        if (TransitionBusy("CampaignScene")) return;
         IsInBattle = false;
         StartCoroutine(FadeAndLoadScene("CampaignScene"));
     }
 
     public void LoadMainMenu()
     {
+        if (TransitionBusy("MainMenuScene")) return;
         StartCoroutine(FadeAndLoadScene("MainMenuScene"));
         Debug.Log("[GameManager] Ana menüye geçiliyor...");
     }
 
     public void LoadHeroSelect()
     {
+        if (TransitionBusy("HeroSelectScene")) return;
         StartCoroutine(FadeAndLoadScene("HeroSelectScene"));
         Debug.Log("[GameManager] Kahraman seçimine geçiliyor...");
     }
 
+    /// <summary>D114: bir sahne yüklemesi sürerken gelen yeni geçiş isteği oturum durumunu (ada/sefer) değiştirmeden bırakılır.</summary>
+    private static bool TransitionBusy(string sceneName)
+    {
+        if (!SceneTransition.Busy) return false;
+        Debug.LogWarning($"{SceneTransition.LogTag} '{sceneName}' isteği yok sayıldı: '{SceneTransition.BusyScene}' yüklemesi sürüyor.");
+        return true;
+    }
+
     /// <summary>
-    /// Sahne geçişi sırasında fade-out efekti uygular
+    /// Kararmalı sahne geçişi (D114, bug 4/6/15/27). Sağlamlaştırma:
+    /// - Tek yükleme: <see cref="SceneTransition.TryBegin"/> sürmekte olan bir geçiş (bulut dahil) varken isteği bırakır.
+    /// - Kararma GERÇEK zamanlı (eskiden Time.deltaTime: timeScale=0 iken, ör. "devam" teklifi/duraklatma sonrası, sonsuza dek bekliyordu).
+    /// - Örtü dokunuşları yutar (GraphicRaycaster): kararma sırasında ikinci bir düğme basılamaz.
+    /// - Async yükleme; sahne hazır olunca (progress 0,9) eski sahne yıkılmadan hemen önce <see cref="SceneTransition.PrepareForLoad"/>
+    ///   (duraklatma/timeScale/ses sıfırlama, müzik solmalarını sabitleme, DOTween.KillAll), sonra etkinleştirme.
+    /// - Her adım try/catch + "[SceneLoad]" günlüğü; async başlatılamazsa senkron yüklemeye düşer, o da olmazsa örtü kalkar (oyun sürer).
     /// </summary>
     private IEnumerator FadeAndLoadScene(string sceneName)
     {
-        // Fade-out canvas oluştur
-        GameObject fadeObj = new GameObject("SceneFade");
-        Canvas fadeCanvas = fadeObj.AddComponent<Canvas>();
-        fadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        fadeCanvas.sortingOrder = 9999;
+        if (!SceneTransition.TryBegin(sceneName)) yield break;
 
-        GameObject panel = new GameObject("FadePanel");
-        panel.transform.SetParent(fadeObj.transform, false);
-        RectTransform rt = panel.AddComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-
-        UnityEngine.UI.Image img = panel.AddComponent<UnityEngine.UI.Image>();
-        img.color = new Color(0, 0, 0, 0);
-        img.raycastTarget = true; // Fade sırasında tıklamayı engelle
-
-        // Fade to black
-        float t = 0;
-        while (t < 0.4f)
+        UnityEngine.UI.Image img = null;
+        GameObject fadeObj = null;
+        SceneTransition.Guard("kararma örtüsü", () =>
         {
-            t += Time.deltaTime;
-            // Kararma sürerken başka bir geçiş sahneyi değiştirdiyse (örtü yok edildi) bu geçiş iptal: çifte yükleme olmasın.
-            if (img == null) yield break;
-            img.color = new Color(0, 0, 0, Mathf.Clamp01(t / 0.4f));
+            fadeObj = new GameObject("SceneFade");
+            Canvas fadeCanvas = fadeObj.AddComponent<Canvas>();
+            fadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            fadeCanvas.sortingOrder = 9999;
+            fadeObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();   // örtü dokunuşu yutar (çifte "savaşa başla" yok)
+
+            GameObject panel = new GameObject("FadePanel");
+            panel.transform.SetParent(fadeObj.transform, false);
+            RectTransform rt = panel.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            img = panel.AddComponent<UnityEngine.UI.Image>();
+            img.color = new Color(0, 0, 0, 0);
+            img.raycastTarget = true;
+        });
+        bool hadOverlay = img != null;
+
+        // Kararma (gerçek zaman; kare atlaması 0,05 sn ile sınırlı)
+        const float fadeSeconds = 0.4f;
+        float t = 0f;
+        while (t < fadeSeconds)
+        {
+            t += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+            // Kararma sürerken başka bir yol sahneyi değiştirdiyse (örtü yok edildi) bu geçiş iptal: çifte yükleme olmasın.
+            if (hadOverlay && img == null) { SceneTransition.End(sceneName, false); yield break; }
+            if (img != null) img.color = new Color(0, 0, 0, Mathf.Clamp01(t / fadeSeconds));
             yield return null;
         }
+        if (img != null) img.color = Color.black;
 
-        // Sahneyi yükle
-        DG.Tweening.DOTween.KillAll();
-        SceneManager.LoadScene(sceneName);
+        AsyncOperation op = null;
+        SceneTransition.Guard("LoadSceneAsync " + sceneName, () =>
+        {
+            op = SceneManager.LoadSceneAsync(sceneName);
+            if (op != null) op.allowSceneActivation = false;
+        });
+
+        if (op == null)
+        {
+            // Yedek: senkron yükleme (async başlatılamadı).
+            SceneTransition.PrepareForLoad(sceneName);
+            bool ok = SceneTransition.Guard("LoadScene " + sceneName, () => SceneManager.LoadScene(sceneName));
+            if (!ok)
+            {
+                if (fadeObj != null) Destroy(fadeObj);   // yüklenemedi: örtü kalkar, oyun bu sahnede sürer
+                SceneTransition.End(sceneName, false);
+                yield break;
+            }
+            yield return null;
+            SceneTransition.End(sceneName, true);
+            yield break;
+        }
+
+        float started = Time.unscaledTime;
+        while (op.progress < 0.9f && Time.unscaledTime - started < 15f) yield return null;
+        SceneTransition.PrepareForLoad(sceneName);
+        op.allowSceneActivation = true;
+        while (!op.isDone && Time.unscaledTime - started < 30f) yield return null;
+        SceneTransition.End(sceneName, op.isDone);
     }
 
     // ==================== YARDIMCI ====================

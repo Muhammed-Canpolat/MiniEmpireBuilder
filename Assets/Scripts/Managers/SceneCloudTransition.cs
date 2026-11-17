@@ -27,6 +27,8 @@ public sealed class SceneCloudTransition : MonoBehaviour
     public static bool BeginIfEnabled(string sceneName)
     {
         if (!FeatureConfig.Instance.cloudTransition || Active != null) return false;
+        // D114: tek yükleme kilidi. Başka bir yükleme sürüyorsa bulut açılmaz; çağıranın yedek kararması da aynı kilitte durur.
+        if (!SceneTransition.TryBegin(sceneName)) return true;
         var go = new GameObject("SceneCloudTransition");
         DontDestroyOnLoad(go);
         Active = go.AddComponent<SceneCloudTransition>();
@@ -79,24 +81,41 @@ public sealed class SceneCloudTransition : MonoBehaviour
     private IEnumerator Run(string sceneName)
     {
         var config = FeatureConfig.Instance;
-        BuildOverlay();
+        if (!SceneTransition.Guard("bulut örtüsü", BuildOverlay)) pieces = pieces ?? new Piece[0];
         float cover = Mathf.Max(0.05f, config.cloudCoverSeconds);
         yield return Animate(cover, k =>
         {
             Place(k);
-            backdrop.color = new Color(Backdrop.r, Backdrop.g, Backdrop.b, Mathf.Clamp01((k - 0.35f) / 0.5f));
+            if (backdrop != null) backdrop.color = new Color(Backdrop.r, Backdrop.g, Backdrop.b, Mathf.Clamp01((k - 0.35f) / 0.5f));
         });
         Place(1f);
-        backdrop.color = Backdrop;
+        if (backdrop != null) backdrop.color = Backdrop;
 
-        var op = SceneManager.LoadSceneAsync(sceneName);
-        if (op == null) { Finish(); yield break; }
-        op.allowSceneActivation = false;
+        // D114: try/catch + "[SceneLoad]" günlüğü; async başlatılamazsa senkron yüklemeye düşer, o da olmazsa bulutlar açılır (oyun sürer).
+        AsyncOperation op = null;
+        SceneTransition.Guard("LoadSceneAsync " + sceneName, () =>
+        {
+            op = SceneManager.LoadSceneAsync(sceneName);
+            if (op != null) op.allowSceneActivation = false;
+        });
         float started = Time.unscaledTime;
-        while (op.progress < 0.9f && Time.unscaledTime - started < config.cloudMaxWaitSeconds) yield return null;
-        DG.Tweening.DOTween.KillAll();   // eski sahnenin tween'leri yok edilen nesnelere dokunmasın
-        op.allowSceneActivation = true;
-        while (!op.isDone && Time.unscaledTime - started < config.cloudMaxWaitSeconds) yield return null;
+        if (op == null)
+        {
+            SceneTransition.PrepareForLoad(sceneName);
+            bool ok = SceneTransition.Guard("LoadScene " + sceneName, () => SceneManager.LoadScene(sceneName));
+            SceneTransition.End(sceneName, ok);
+            if (!ok) { Finish(); yield break; }
+            yield return null;
+        }
+        else
+        {
+            while (op.progress < 0.9f && Time.unscaledTime - started < config.cloudMaxWaitSeconds) yield return null;
+            // Eski sahne yıkılmadan hemen önce: duraklatma/timeScale/ses sıfırlanır, müzik solmaları sabitlenir, DOTween temizlenir.
+            SceneTransition.PrepareForLoad(sceneName);
+            op.allowSceneActivation = true;
+            while (!op.isDone && Time.unscaledTime - started < config.cloudMaxWaitSeconds) yield return null;
+            SceneTransition.End(sceneName, op.isDone);
+        }
         for (int i = 0; i < Mathf.Max(1, config.cloudPostLoadFrames); i++) yield return null;
         // Ada kurulumu (Start + bir kare bekleme) bitene dek bekle
         while (IslandSession.Active && sceneName == "BattleScene"
@@ -132,6 +151,7 @@ public sealed class SceneCloudTransition : MonoBehaviour
     /// <summary>k=0: bulutlar ekran dışında; k=1: yerlerinde (ekranı kapatır).</summary>
     private void Place(float k)
     {
+        if (pieces == null) return;
         foreach (var piece in pieces)
             if (piece.rect != null) piece.rect.anchoredPosition = Vector2.LerpUnclamped(piece.away, piece.home, k);
     }

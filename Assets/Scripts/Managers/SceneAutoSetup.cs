@@ -14,13 +14,15 @@ public static class SceneAutoSetup
         // İlk yüklemede çalışır
         SetupCurrentScene();
 
-        // Sahne değişikliklerinde de çalışsın
+        // Sahne değişikliklerinde de çalışsın (alan yeniden yüklemesi kapalıyken çift abonelik olmasın)
+        SceneManager.sceneLoaded -= OnSceneLoadedEvent;
         SceneManager.sceneLoaded += OnSceneLoadedEvent;
     }
 
     private static void OnSceneLoadedEvent(Scene scene, LoadSceneMode mode)
     {
-        SetupCurrentScene();
+        // D114: sceneLoaded çoklu yayınında bir dinleyicinin istisnası sonrakileri çağırtmaz; burada yakalanır ve günlüğe yazılır.
+        SceneTransition.Guard("SceneAutoSetup " + scene.name, SetupCurrentScene);
     }
 
     private static void SetupCurrentScene()

@@ -127,16 +127,105 @@ public sealed class AudioManager : MonoBehaviour
 
     private void OnSceneChanged(Scene oldScene, Scene newScene)
     {
-        UpdateListener();
-        wiredButtons.Clear();
-        SettleStaleSources();
-        switch (newScene.name)
+        // D114: bu olayda bir hata sahnenin müziğini değiştirmeden bırakmasın (eski parça çalmaya devam ederdi) ve
+        // activeSceneChanged'e bağlı diğer dinleyicileri düşürmesin.
+        try
         {
-            case "BaseScene": PlayBaseBgm(); break;
-            case "BattleScene": PlaySceneBattleOrIsland(); break;
-            case "MainMenuScene": PlayIntroBgm(); break;
-            default: PlayWorldBgm(); break;
+            UpdateListener();
+            wiredButtons.Clear();
+            SettleStaleSources();
+            switch (newScene.name)
+            {
+                case "BaseScene": PlayBaseBgm(); break;
+                case "BattleScene": PlaySceneBattleOrIsland(); break;
+                case "MainMenuScene": PlayIntroBgm(); break;
+                default: PlayWorldBgm(); break;
+            }
         }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"{SceneTransition.LogTag} AudioManager sahne müziği ({newScene.name}) hata verdi: {e}");
+            SceneTransition.Guard("müzik yedek durdurma", () => { StopIdle(musicA, musicB, isMusicAActive); StopIdle(ambA, ambB, isAmbAActive); StopLayers(); });
+        }
+    }
+
+    /// <summary>
+    /// D114 (bug 27): sahne yüklemesinden HEMEN önce (DOTween.KillAll'dan önce) çağrılır. KillAll yarıda kalan çapraz geçişi
+    /// öldürünce eski parça kısık sesle sonsuza dek çalıyordu (OnComplete(Stop) hiç gelmez). Burada solmalar sabitlenir:
+    /// solan (etkin olmayan) müzik/ortam kaynağı kesin DURUR, etkin kaynak hedef sesine oturur; katmanlar durur.
+    /// Yeni sahnenin müziği OnSceneChanged'de başlar.
+    /// </summary>
+    public void PrepareSceneChange()
+    {
+        StopIdle(musicA, musicB, isMusicAActive);
+        StopIdle(ambA, ambB, isAmbAActive);
+        SnapActive(ActiveMusic, currentTrack, currentTrack != null ? TrackVolume(currentTrack) : 0f);
+        SnapActive(ActiveAmbience, currentAmbience, currentAmbience != null ? AmbienceVolume(currentAmbience) : 0f);
+        if (layerSource != null) { layerSource.DOKill(); if (layerBase <= 0f) layerSource.Stop(); }
+        PreparedSceneChanges++;
+    }
+
+    /// <summary>Test/telemetri: sahne öncesi hazırlık ve güvenlik ağının durdurduğu sahipsiz kaynak sayısı.</summary>
+    public int PreparedSceneChanges { get; private set; }
+    public int OrphanStops { get; private set; }
+    /// <summary>Etkin olmayan müzik kaynağında çalan (solmayan) bir parça var mı (test).</summary>
+    public bool IdleMusicAudible
+    {
+        get
+        {
+            var idle = isMusicAActive ? musicB : musicA;
+            return idle != null && idle.isPlaying && idle.volume > 0.0001f;
+        }
+    }
+    public float MusicVolumeNow => ActiveMusic != null ? ActiveMusic.volume : 0f;
+
+    private static void StopIdle(AudioSource a, AudioSource b, bool aActive)
+    {
+        var idle = aActive ? b : a;
+        if (idle == null) return;
+        idle.DOKill();
+        idle.Stop();
+        idle.volume = 0f;
+    }
+
+    private void SnapActive(AudioSource source, MusicTrack track, float target)
+    {
+        if (source == null) return;
+        source.DOKill();
+        if (track == null || source.clip != track.clip) { source.Stop(); source.volume = 0f; return; }
+        if (MusicEnabled && source.isPlaying) source.volume = target;
+    }
+
+    private float nextInvariantCheck;
+
+    /// <summary>
+    /// D114 (bug 27) güvenlik ağı, 0,5 sn'de bir (gerçek zaman): solma tween'i olmadan çalan etkin-olmayan müzik/ortam kaynağı
+    /// durdurulur; etkin kaynak hedef klipten farklıysa durur, hedef klipse ve solma yoksa sesi hedefe oturur (kısık takılı kalmaz).
+    /// Böylece hangi yoldan gelinirse gelinsin aynı anda tek müzik çalar.
+    /// </summary>
+    private void EnforceSingleMusic()
+    {
+        if (Time.unscaledTime < nextInvariantCheck) return;
+        nextInvariantCheck = Time.unscaledTime + 0.5f;
+        StopOrphan(isMusicAActive ? musicB : musicA);
+        StopOrphan(isAmbAActive ? ambB : ambA);
+        FixActive(ActiveMusic, currentTrack, currentTrack != null ? TrackVolume(currentTrack) : 0f);
+        FixActive(ActiveAmbience, currentAmbience, currentAmbience != null ? AmbienceVolume(currentAmbience) : 0f);
+    }
+
+    private void StopOrphan(AudioSource source)
+    {
+        if (source == null || !source.isPlaying || DOTween.IsTweening(source)) return;
+        source.Stop();
+        source.volume = 0f;
+        OrphanStops++;
+    }
+
+    private void FixActive(AudioSource source, MusicTrack track, float target)
+    {
+        if (source == null || !source.isPlaying || DOTween.IsTweening(source)) return;
+        if (track == null || source.clip != track.clip) { StopOrphan(source); return; }
+        if (MusicEnabled && Mathf.Abs(source.volume - target) > 0.01f) source.volume = target;
     }
 
     /// <summary>
@@ -341,6 +430,7 @@ public sealed class AudioManager : MonoBehaviour
 
     private void Update()
     {
+        EnforceSingleMusic();
         // Çalma listesi: parça bitince sıradakine geç (döngü kapalıyken kaynak durur).
         if (playlist == null || playlist.Length < 2 || !MusicEnabled || currentTrack == null) return;
         var active = ActiveMusic;

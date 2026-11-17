@@ -34,8 +34,15 @@ public sealed class OccupancyDebugView : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
     {
-        SceneManager.sceneLoaded += (_, __) => Sync();
+        // D114: adlı yöntem (çift abonelik yok) + hata yakalama
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
         Sync();
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        SceneTransition.Guard("OccupancyDebugView.Sync", Sync);
     }
 
     /// <summary>Ayar açıksa ve Ana Üs sahnesindeysek görünümü kurar; değilse kaldırır.</summary>

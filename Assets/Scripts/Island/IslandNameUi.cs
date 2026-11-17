@@ -65,8 +65,21 @@ public sealed class IslandNameUi : MonoBehaviour
     public static void Close()
     {
         if (open == null) return;
-        var go = open.gameObject;
+        var ui = open;
+        var go = ui.gameObject;
         open = null;
+        // D114 (bug 15, DOĞRULANMADI): mobil klavye açıkken (iOS "Bitti"/onSubmit ya da TAMAM) alan yok edilmeden önce
+        // klavye bağlantısı kapatılır; pencere aynı karede gizlenir, nesne sonra yok edilir.
+        SceneTransition.Guard("IslandNameUi klavye", () =>
+        {
+            if (ui.field != null)
+            {
+                ui.field.onSubmit.RemoveAllListeners();
+                ui.field.onValueChanged.RemoveAllListeners();
+                if (ui.field.isFocused) ui.field.DeactivateInputField();
+            }
+        });
+        go.SetActive(false);
         Destroy(go);
     }
 
@@ -205,6 +218,7 @@ public sealed class IslandNameUi : MonoBehaviour
     /// <summary>TAMAM: doğrula → bedel (elmas) → yaz + kaydet.</summary>
     public bool TryApply()
     {
+        if (open != this || field == null) return false;   // D114: onSubmit + TAMAM aynı karede: ikinci çağrı yok sayılır
         if (!IslandNameRules.Validate(field.text, out string clean, out string error)) { errorText.text = error; return false; }
         int cost = mode == Mode.First ? 0 : IslandNameRules.NextCost(save);
         var gm = GameManager.Instance;
