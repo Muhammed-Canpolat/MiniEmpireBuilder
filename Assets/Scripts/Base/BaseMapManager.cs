@@ -831,7 +831,12 @@ public class BaseMapManager : MonoBehaviour
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = GetRandomTreeSprite(id) ?? SpriteManager.Instance?.Tree ?? MakeCircleSprite(new Color(0.15f, 0.5f, 0.15f));
         sr.sortingOrder = 3;
-        float treeScale = size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        // Bug 14: tek ölçek kaynağı DecorScale (+ kimlikten kararlı ±%8); kayıtlı boyut artık görseli belirlemez.
+        var treeData = DecorScale.Find("tree");
+        float treeScale = treeData != null
+            ? DecorScale.For(treeData, sr.sprite) * DecorScale.Variety(StableUnit(id, 3))
+            : size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        size = treeScale * sr.sprite.bounds.size.y;
         go.transform.localScale = new Vector3(treeScale, treeScale, 1f);
         // Rüzgârda sallanma (Tiny Swords Tree 1); her ağaç farklı karede başlar.
         var treeControllers = BaseVisualCatalog.Instance?.treeControllers;
@@ -878,9 +883,13 @@ public class BaseMapManager : MonoBehaviour
         go.transform.position = new Vector3(pos.x, pos.y, 0.4f);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = SpriteManager.Instance?.Rock ?? MakeCircleSprite(new Color(0.52f, 0.48f, 0.42f));
+        var rockData = DecorScale.Find("rock");
+        sr.sprite = rockData?.Visual ?? SpriteManager.Instance?.Rock ?? MakeCircleSprite(new Color(0.52f, 0.48f, 0.42f));
         sr.sortingOrder = 4;
-        float rockScale = size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        float rockScale = rockData != null
+            ? DecorScale.For(rockData, sr.sprite) * DecorScale.Variety(StableUnit(id, 3))   // bug 14
+            : size / Mathf.Max(0.01f, sr.sprite.bounds.size.y);
+        size = rockScale * sr.sprite.bounds.size.y;
         go.transform.localScale = new Vector3(rockScale, rockScale, 1f);
 
         BoxCollider2D col = go.AddComponent<BoxCollider2D>();
@@ -1678,11 +1687,14 @@ public class BaseMapManager : MonoBehaviour
     private int CountObjects(MapObjectType type)
         => _mapObjects.Count(o => o.objectType == type && !o.isBeingRemoved);
 
-    public bool CanSpawnResourceAt(Vector2 position)
+    /// <summary>Bug 14: büyük ağaçların (≈2,8 u) üst üste binmemesi için ağaç doğuş boşluğu.</summary>
+    public const float TreeClearRadius = 1.9f;
+
+    public bool CanSpawnResourceAt(Vector2 position, float clearRadius = 0.8f)
     {
         var cell = new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
         if (!BaseWorldLayout.Buildable.Contains(cell)) return false;
-        foreach (var hit in Physics2D.OverlapCircleAll(position, 0.8f))
+        foreach (var hit in Physics2D.OverlapCircleAll(position, clearRadius))
         {
             // Building sprite colliders can extend far beyond their footprint.
             // The precise footprint check below handles them instead.
@@ -1711,7 +1723,7 @@ public class BaseMapManager : MonoBehaviour
             float rx = UnityEngine.Random.Range(2.7f, width - 2.7f);
             float ry = UnityEngine.Random.Range(2.7f, height - 2.7f);
             Vector3 pos = new Vector3(rx, ry, 0f);
-            if (!CanSpawnResourceAt(pos)) continue;
+            if (!CanSpawnResourceAt(pos, type == MapObjectType.Tree ? TreeClearRadius : 0.8f)) continue;
 
             if (type == MapObjectType.Tree)
                 SpawnTree(pos);

@@ -42,6 +42,26 @@ public static class DecorScale
         return data.LegacyScale(visual);
     }
 
+    /// <summary>Bug 14: kimlikten türetilen kararlı çeşitlilik çarpanı, 1 ± <see cref="VarietyFraction"/> (unit: 0..1).</summary>
+    public const float VarietyFraction = 0.08f;
+    public static float Variety(float unit) => 1f + (Mathf.Clamp01(unit) * 2f - 1f) * VarietyFraction;
+
+    private static Dictionary<string, DecorData> byId;
+
+    /// <summary>Kimliğe göre dekor verisi (Resources/Decor, önbellekli); yoksa null.</summary>
+    public static DecorData Find(string id)
+    {
+        if (byId == null)
+        {
+            var map = new Dictionary<string, DecorData>();
+            foreach (var d in Resources.LoadAll<DecorData>("Decor"))
+                if (d != null && !string.IsNullOrEmpty(d.id) && !map.ContainsKey(d.id)) map.Add(d.id, d);
+            if (map.Count == 0) return null;   // henüz yüklenemedi: önbelleğe alma
+            byId = map;
+        }
+        return id != null && byId.TryGetValue(id, out var data) ? data : null;
+    }
+
     /// <summary>Tablodaki kimlikler (test).</summary>
     public static IEnumerable<string> Ids => FrameWidth.Keys;
 }

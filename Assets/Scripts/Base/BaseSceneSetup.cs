@@ -720,7 +720,7 @@ public class BaseSceneSetup : MonoBehaviour
             float maxY = quadrant < 2 ? height * 0.5f : height - 2.7f;
             Vector3 position = new Vector3(Random.Range(minX, maxX),
                 Random.Range(minY, maxY), 0f);
-            if (!BaseMapManager.Instance.CanSpawnResourceAt(position)) continue;
+            if (!BaseMapManager.Instance.CanSpawnResourceAt(position, trees ? BaseMapManager.TreeClearRadius : 0.8f)) continue;
             if (trees) BaseMapManager.Instance.SpawnTree(position);
             else BaseMapManager.Instance.SpawnRock(position);
             created++;
@@ -741,6 +741,7 @@ public class BaseSceneSetup : MonoBehaviour
         var clean = BaseWorldLayout.CleanForTier(LandExpansion.OpenedTier);
         var random = new System.Random(76143);
         var centers = new System.Collections.Generic.List<Vector2>();
+        var lockedTrees = new System.Collections.Generic.List<Vector2>();
         for (int i = 0; i < 18; i++)
             centers.Add(new Vector2(random.Next(BaseWorldLayout.Buildable.xMin, BaseWorldLayout.Buildable.xMax), random.Next(2, 36)));
         foreach (Vector2Int cell in EnumerateInteriorCells())
@@ -766,9 +767,23 @@ public class BaseSceneSetup : MonoBehaviour
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.sortingOrder = 5;
-            float size = (0.65f + (float)random.NextDouble() * 0.65f)
-                / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            // Bug 14: tek ölçek kaynağı DecorScale (±%8, aynı rastgele çekim: dizilim ve kayıtlı kimlikler değişmez).
+            string decorId = kind == NatureKind.Tree ? "tree" : kind == NatureKind.Bush ? "bush"
+                : kind == NatureKind.Rock ? "rock" : "stump";
+            var decorData = DecorScale.Find(decorId);
+            float variety = DecorScale.Variety((float)random.NextDouble());
+            float size = decorData != null ? DecorScale.For(decorData, sprite) * variety
+                : 1f / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
             go.transform.localScale = Vector3.one * size;
+            // Büyük ağaçlar üst üste binmesin: yakın komşu varsa bu ağaç çizilmez (rastgele akış etkilenmez).
+            if (kind == NatureKind.Tree)
+            {
+                bool crowded = false;
+                foreach (var other in lockedTrees)
+                    if ((other - (Vector2)go.transform.position).sqrMagnitude < 2.2f * 2.2f) { crowded = true; break; }
+                if (crowded) { Destroy(go); continue; }
+                lockedTrees.Add(go.transform.position);
+            }
             if (removed) { Destroy(go); continue; }
             var box = go.AddComponent<BoxCollider2D>();
             box.size = Vector2.one * (0.9f / size);
