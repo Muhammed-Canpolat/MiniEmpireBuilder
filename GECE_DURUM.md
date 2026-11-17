@@ -14,7 +14,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta` (bina sprite'la
 | 2 | Alt bar | BİTTİ | a4675ad | D107; radyal menü bayrakla kapalı (kod duruyor); kapalı barda alttaki şerit koyu kalıyor (kamera sabit kararı) |
 | 3 | Duvarlar | BİTTİ | 7e557fa | D108; zoom kaldırıldı, sabit kadraj; kalan: kapı referanstan iri/koyu, köşede mavi çatılı kule yok (EKSİK ASSET) |
 | 4 | Droplist | BİTTİ | e341d6d | D109; eski sol üst düğmeler bayrakla kalktı; Etkinlik ikonsuz (kupa EKSİK ASSET, ART_NEEDS #25); ok rozeti sağ kenarda kesik → 6. bölümde |
-| 5 | Sesler | BEKLİYOR | | |
+| 5 | Sesler | BİTTİ | 7641c50 | D110; bug 27 kök neden: ölçekli zamanlı solma (timeScale=0) → gerçek zamanlı; Torch/River/Night/Storm bağlanmadı (oyunda karşılığı yok) |
 | 6 | Son kontrol | BEKLİYOR | | |
 
 EKSİK ASSET:
