@@ -1010,3 +1010,4 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 ## D119 — Grup 7 ana üs
 - 13: BaseCameraController.HandleInput artık sıkıştırma/tekerlek zoom dallarını hiç çalıştırmıyor (duvar kapalı olsa da); HandlePinch kaldırıldı, ZoomBy test için duruyor; tek parmak kaydırma korunur.
 - 7: MineStorageGauge.LateUpdate madenin lossyScale değeri değiştikçe (DOScale ile büyürken) her karede Place() çağırır; ölçek durunca 1 sn aralık.
+- 9: BaseVisualCatalog type 7 (Köylü Evi) tüm kademeler mor: 1-3 Purple House1, 4-5 Purple House3 (House2 Kart Atölyesi için ayrı).
