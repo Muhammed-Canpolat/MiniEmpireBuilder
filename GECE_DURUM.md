@@ -14,7 +14,52 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `*.png.meta`, `ground_mine_r
 | 6 C+H çizim/ada UI | 1, 23, 17, 20, 21 | BİTTİ (1 cihazda DOĞRULANMADI) | (bu commit) | D118; hayalet ölçeği ayak izine sınırlı + güvenli sprite materyali; koyun yürünebilir/aynı yükseklik; FancyInfoPanel bantları ayrıldı; ada Ayarlar paneli açılır; kale yükseltme süresi görünür |
 | 7 G ana üs | 7, 8, 9, 12, 13, 14, 34 | BİTTİ | 064d9d0..(bu commit) | D119; madde başı ayrı commit: 13 zoom koşulsuz kapalı, 7 gösterge tween ölçeği, 9 mor ev, 12 Okçu Kışlası + tek okçu, 8 nöbetçi yok + okçu 2,4 u, 14 DecorScale tek kaynak, 34 HeroLook.ScreenHeightFraction |
 | 8 J tanıtım/e-posta | 26, 32 | BİTTİ | (bu commit) | D120; RaidIntro 6 adım (ATEŞ, güçlü atış, atış yeri, HARİTA, TAKİP, yetenekler), raidIntroSeen bit maskesi, ATLA, oyun donmaz; SupportEmail miniempirebuilder@gmail.com; 24/24 test |
-| 9 K Depo | 11 | BEKLİYOR | | |
+| 9 K Depo | 11 | BİTTİ | 9fec626 (plan), cecb137, 0bfcff5, (güvenlik) | D121; kayıt v14 + DepotService (ana üs/ada ortak); QA 107/107; güvenlik 3–6 düzeltildi, 35/35 |
+
+
+DURUM: TAMAMLANDI — 9/9 grup bitti, ENGELLENEN yok. Push yok. Son commit: bu commit.
+
+### 34 madde
+| # | Durum | Not |
+|---|---|---|
+| 1 | DOĞRULANMADI | taşıma hayaleti ayak izine sınırlı (iOS'ta denenmedi) |
+| 2 | DOĞRULANMADI | ortak TmpFontBootstrap; kök neden tahmin, iOS'ta denenmeli |
+| 3 | DOĞRULANMADI | aynı (A grubu) |
+| 4 | DOĞRULANMADI | ortak SceneTransition + [SceneLoad] günlüğü; çökme raporu gerekir |
+| 5 | DOĞRULANMADI | A grubu |
+| 6 | BİTTİ | pes et + devam teklifi timeScale=0 takılması kanıtlı; çökme ayrıca denenmeli |
+| 7 | BİTTİ | maden göstergesi tween ölçeği |
+| 8 | BİTTİ | nöbetçiler kalktı, çatı okçuları 2,4 u |
+| 9 | BİTTİ | mor Köylü Evi |
+| 10 | DOĞRULANMADI | A grubu + banner tween gerçek zamanlı |
+| 11 | BİTTİ | Depo (v14) |
+| 12 | BİTTİ | Okçu Kışlası, tek okçu |
+| 13 | BİTTİ | zoom koşulsuz kapalı |
+| 14 | BİTTİ | DecorScale tek kaynak |
+| 15 | DOĞRULANMADI | akışta istisna bulunamadı; klavye/çift onay koruması eklendi |
+| 16 | BİTTİ | yeni ada odun/et 0 |
+| 17 | BİTTİ | FancyInfoPanel + ada kartı |
+| 18 | BİTTİ | Kaldır dokunulan görünür hedefe (cihazda bakılmadı) |
+| 19 | BİTTİ | okçu Okçuluk Alanı çevresinde |
+| 20 | BİTTİ | adada Ayarlar açılır |
+| 21 | BİTTİ | kale yükseltme süresi |
+| 22 | BİTTİ | ortak elmas onayı |
+| 23 | BİTTİ | koyun yürünebilir/aynı yükseklik |
+| 24 | DOĞRULANMADI | A grubu |
+| 25 | BİTTİ | tek PostUnlocked kuralı |
+| 26 | BİTTİ | RaidIntro tanıtımı |
+| 27 | BİTTİ | müzik geçişi (KillAll kök nedeni testle kanıtlı; cihazda dinlenmeli) |
+| 28 | BİTTİ | okçu kale seviyesini canlı okur, P4 Kale 1 |
+| 29 | BİTTİ | 19 ile aynı |
+| 30 | BİTTİ | ada uçanları düz uçar + watchdog |
+| 31 | BİTTİ | kayıtlı dekor hücresi otorite |
+| 32 | BİTTİ | miniempirebuilder@gmail.com |
+| 33 | BİTTİ | kulübe görsel + 1 hücre boşluk |
+| 34 | BİTTİ | HeroLook.ScreenHeightFraction |
+
+Açık konular: GameClock saat geri alma koruması 7 günde sıfırlanıyor (güvenlik YÜKSEK, bu görev dışı); v14 kayıt eski sürümde açılırsa depo içeriği düşer (`v14.newer` arşivi var);
+IslandTerrain.prefab'daki commit'siz değişiklik grup 6 test temizliğinde geri alındı (test koşularının ürettiği değişiklik olduğu varsayılıyor);
+sefer düşmanı 6 sn ilerleyemezse 12 sn Ana Üs'e yönelir (watchdog tasarım değişikliği).
 
 ---
 # GECE_DURUM — 10. oturum: Ana Üs yeni UI tasarımı (17 Kasım 2026)
