@@ -12,7 +12,7 @@ public static class DarkFantasyHudPolish
     {
         if (canvas == null || hud == null) return;
         var safe = ReferenceUiVisuals.SafeArea(canvas.transform);
-        canvas.gameObject.AddComponent<WorldViewportBars>().Initialize(canvas, 64f, 92f, 22f);
+        canvas.gameObject.AddComponent<WorldViewportBars>().Initialize(canvas, 64f, 92f, 22f, true);   // D125: Ana Üs tam ekran dünya
         hud.SetParent(safe, false);
         var menu = canvas.transform.Find("BuildMenuPanel");
         if (menu != null) menu.SetParent(safe, false);

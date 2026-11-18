@@ -300,15 +300,31 @@ public sealed class BaseCastleWalls : MonoBehaviour
     public static float FitOrtho(Rect frame, float aspect)
         => Mathf.Max(frame.width / (2f * Mathf.Max(0.01f, aspect)), frame.height * 0.5f);
 
+    /// <summary>D125 (İş 2): kamera tam ekran çizerken (Ana Üs) kadrajın oturacağı piksel bandı (iki bar arası). Genişlik 0 = yok.</summary>
+    public static Rect FramingBand { get; set; }
+
     /// <summary>Kamerayı sabit kadraja oturtur (değişiklik yoksa dokunmaz). Duvar yoksa false.</summary>
     public static bool ApplyFraming(Camera camera)
     {
         if (camera == null || !TryGetFrame(out Rect frame)) return false;
-        float size = FitOrtho(frame, camera.aspect);
-        if (!Mathf.Approximately(camera.orthographicSize, size)) camera.orthographicSize = size;
+        float size;
         Vector3 p = camera.transform.position;
-        if (!Mathf.Approximately(p.x, frame.center.x) || !Mathf.Approximately(p.y, frame.center.y))
-            camera.transform.position = new Vector3(frame.center.x, frame.center.y, p.z);
+        float cx = frame.center.x, cy = frame.center.y;
+        Rect band = FramingBand;
+        Rect px = camera.pixelRect;
+        if (band.width > 1f && band.height > 1f && (px.height > band.height + 0.5f || px.width > band.width + 0.5f))
+        {
+            // Tam ekran kamera: kadraj, barlar arası banda göre hesaplanır (bantta piksel piksel eski görüntü); bandın dışı orman olarak görünür.
+            float sBand = FitOrtho(frame, band.width / band.height);
+            float wpp = 2f * sBand / band.height;
+            size = wpp * px.height * 0.5f;
+            cx = frame.center.x + (px.center.x - band.center.x) * wpp;
+            cy = frame.center.y + (px.center.y - band.center.y) * wpp;
+        }
+        else size = FitOrtho(frame, camera.aspect);
+        if (!Mathf.Approximately(camera.orthographicSize, size)) camera.orthographicSize = size;
+        if (!Mathf.Approximately(p.x, cx) || !Mathf.Approximately(p.y, cy))
+            camera.transform.position = new Vector3(cx, cy, p.z);
         return true;
     }
 }

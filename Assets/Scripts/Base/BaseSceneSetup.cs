@@ -533,8 +533,19 @@ public class BaseSceneSetup : MonoBehaviour
         backdropTile.flags = TileFlags.None;
         // Tablet gibi geniş ekranlarda kamera yüksekliğe sığar ve 22 hücreden çok daha
         // geniş görür; zemin yanlara taşar ki kenarlarda siyah şerit kalmasın.
-        for (int y = -12; y < BaseWorldLayout.Height + 12; y++)
-        for (int x = -14; x < BaseWorldLayout.Width + 14; x++)
+        // D125 (İş 2): Ana Üs kamerası artık tam ekran çizer (bar kapanınca alt bölge de orman); zemin duvar kadrajının
+        // ±16 (alt) / +8 (üst) ötesine uzar. Yalnız görünüm: BaseWorldLayout.Buildable değişmez.
+        int bx0 = -14, bx1 = BaseWorldLayout.Width + 14, by0 = -12, by1 = BaseWorldLayout.Height + 12;
+        if (BaseCastleWalls.Enabled)
+        {
+            Rect fr = BaseCastleWalls.FrameOf(BaseCastleWalls.PlannedOuter);
+            bx0 = Mathf.Min(bx0, Mathf.FloorToInt(fr.xMin - 16f));
+            bx1 = Mathf.Max(bx1, Mathf.CeilToInt(fr.xMax + 16f));
+            by0 = Mathf.Min(by0, Mathf.FloorToInt(fr.yMin - 16f));
+            by1 = Mathf.Max(by1, Mathf.CeilToInt(fr.yMax + 8f));
+        }
+        for (int y = by0; y < by1; y++)
+        for (int x = bx0; x < bx1; x++)
             backdropTiles.SetTile(new Vector3Int(x, y, 0), backdropTile);
         backdropTiles.CompressBounds();
 
@@ -669,7 +680,7 @@ public class BaseSceneSetup : MonoBehaviour
             float height = isBush ? 0.9f : 2.2f + (float)random.NextDouble() * 0.9f;
             go.transform.localScale = Vector3.one * (height / Mathf.Max(0.01f, renderer.sprite.bounds.size.y));
         }
-        if (castle) CreateForestBelts(root.transform, tree, bush);
+        if (castle) { CreateForestBelts(root.transform, tree, bush); CreateForestFarBelt(root.transform, tree, bush); }
     }
 
     /// <summary>D108: duvarın dışındaki dekorun sırası: arka plan karosunun (−30) üstünde, zemin (−20) ve duvarların arkasında.</summary>
@@ -705,6 +716,43 @@ public class BaseSceneSetup : MonoBehaviour
                 : outer.yMin - 0.1f - depth - (b.max.y - 0f);
             go.transform.position = new Vector3(x, y, 0f);
             renderer.sortingOrder = OutsideOrder(y);
+        }
+    }
+
+    /// <summary>D125 (İş 2): alt/üst dış zemini dolduran ek orman kuşağı. Ayrı sabit tohum (61337): mevcut dizilimler değişmez, her açılışta aynı yer.
+    /// ≤32 SpriteRenderer; çarpışma/MapObjectTag yok, kayda girmez.</summary>
+    public const int ForestFarBeltSeed = 61337;
+    private static void CreateForestFarBelt(Transform parent, Sprite tree, Sprite bush)
+    {
+        Sprite rock = Resources.Load<Sprite>("BaseDecor/rock");
+        Rect outer = BaseCastleWalls.PlannedOuter;
+        var root = new GameObject("ForestFarBelt");
+        root.transform.SetParent(parent, false);
+        var random = new System.Random(ForestFarBeltSeed);
+        for (int band = 0; band < 2; band++)
+        {
+            bool top = band == 1;
+            int count = top ? 10 : 22;
+            for (int i = 0; i < count; i++)
+            {
+                double roll = random.NextDouble();
+                Sprite sprite = roll < 0.70 ? tree : roll < 0.90 ? bush : rock;
+                if (sprite == null) sprite = tree;
+                float x = outer.xMin - 6f + (float)random.NextDouble() * (outer.width + 12f);
+                float y = top ? outer.yMax + 3f + (float)random.NextDouble() * 4f
+                    : outer.yMin - 14f + (float)random.NextDouble() * 8f;
+                float height = sprite == rock ? 0.65f : sprite == bush ? 0.9f : 2.0f + (float)random.NextDouble() * 0.9f;
+                float depth = Mathf.Clamp01(Mathf.Abs(y - (top ? outer.yMax : outer.yMin)) / 14f);
+                float shade = Mathf.Lerp(0.85f, 0.62f, depth);
+                var go = new GameObject("FarBelt_" + (top ? "T" : "B") + i);
+                go.transform.SetParent(root.transform, false);
+                go.transform.position = new Vector3(x, y, 0f);
+                var renderer = go.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite;
+                renderer.color = new Color(shade, shade * 1.02f, shade * 0.95f);
+                renderer.sortingOrder = OutsideOrder(y);
+                go.transform.localScale = Vector3.one * (height / Mathf.Max(0.01f, sprite.bounds.size.y));
+            }
         }
     }
 

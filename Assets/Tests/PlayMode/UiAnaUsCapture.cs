@@ -303,6 +303,7 @@ public class UiAnaUsCapture
         if (bottom != null) { bottom.GetWorldCorners(corners); lower = camera.WorldToScreenPoint(corners[2]).y; }
         float band = Mathf.Max(1f, upper - lower);
         camera.aspect = w / band;
+        T("BaseCastleWalls").GetProperty("FramingBand").SetValue(null, default(Rect));   // D125: bant kadrajı burada elle hesaplanır
         if (!(bool)T("BaseCastleWalls").GetMethod("ApplyFraming").Invoke(null, new object[] { camera }))
         {
             camera.orthographicSize = Mathf.Max(22f / (2f * camera.aspect), 19f);

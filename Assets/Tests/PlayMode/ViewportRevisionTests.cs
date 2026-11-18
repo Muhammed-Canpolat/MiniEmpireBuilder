@@ -78,10 +78,21 @@ public class ViewportRevisionTests
             .GetComponent<RectTransform>();
         var topRect = ScreenRect(top);
         var bottomRect = ScreenRect(bottom);
-        Assert.LessOrEqual(Mathf.Abs(camera.pixelRect.yMax - topRect.yMin), 1f);
-        Assert.LessOrEqual(Mathf.Abs(camera.pixelRect.yMin - bottomRect.yMax), 1f);
-        Assert.AreEqual(0f, camera.pixelRect.xMin, 0.1f);
-        Assert.AreEqual(Screen.width, camera.pixelRect.width, 0.1f);
+        // D125 (İş 2): Ana Üs kamerası tam ekran çizer; barlar arası "dünya bandı" WorldViewportBars.WorldBand'dedir. Savaşta kamera bandın kendisidir.
+        Rect view = camera.pixelRect;
+        if (scene == "BaseScene")
+        {
+            var bars = Object.FindFirstObjectByType(Type("WorldViewportBars")) as Component;
+            Assert.IsNotNull(bars);
+            Assert.IsTrue((bool)bars.GetType().GetProperty("FullBleed").GetValue(bars));
+            Assert.AreEqual(0f, view.yMin, 0.1f);
+            Assert.AreEqual(Screen.height, view.height, 0.1f);
+            view = (Rect)bars.GetType().GetProperty("WorldBand").GetValue(bars);
+        }
+        Assert.LessOrEqual(Mathf.Abs(view.yMax - topRect.yMin), 1f);
+        Assert.LessOrEqual(Mathf.Abs(view.yMin - bottomRect.yMax), 1f);
+        Assert.AreEqual(0f, view.xMin, 0.1f);
+        Assert.AreEqual(Screen.width, view.width, 0.1f);
         foreach (var image in Object.FindObjectsByType<Image>(FindObjectsSortMode.None))
         {
             if (!image.isActiveAndEnabled || !image.raycastTarget || image.color.a < 0.02f ||
@@ -89,12 +100,12 @@ public class ViewportRevisionTests
             var groups = image.GetComponentsInParent<CanvasGroup>();
             if (groups.Any(g => !g.blocksRaycasts || g.alpha < 0.02f)) continue;
             var rect = ScreenRect(image.rectTransform);
-            float left = Mathf.Max(rect.xMin, camera.pixelRect.xMin);
-            float right = Mathf.Min(rect.xMax, camera.pixelRect.xMax);
-            float low = Mathf.Max(rect.yMin, camera.pixelRect.yMin);
-            float high = Mathf.Min(rect.yMax, camera.pixelRect.yMax);
+            float left = Mathf.Max(rect.xMin, view.xMin);
+            float right = Mathf.Min(rect.xMax, view.xMax);
+            float low = Mathf.Max(rect.yMin, view.yMin);
+            float high = Mathf.Min(rect.yMax, view.yMax);
             float overlap = Mathf.Max(0f, right - left) * Mathf.Max(0f, high - low);
-            Assert.LessOrEqual(overlap, camera.pixelRect.width * camera.pixelRect.height * 0.02f,
+            Assert.LessOrEqual(overlap, view.width * view.height * 0.02f,
                 image.name);
         }
     }

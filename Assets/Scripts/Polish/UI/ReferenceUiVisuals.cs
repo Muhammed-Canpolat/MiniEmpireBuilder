@@ -304,9 +304,21 @@ public sealed class WorldViewportBars : MonoBehaviour
     private bool pendingRefresh;
     public RectTransform TopBar => top;
     public RectTransform BottomBar => bottom;
+    private bool fullBleed;
+    private Rect lastBand;
+    /// <summary>İki bar arasındaki dünya bandı (piksel). fullBleed'de kamera tam ekran çizer, kadraj bu banda göre kurulur.</summary>
+    public Rect WorldBand => lastBand;
+    public bool FullBleed => fullBleed;
 
-    public void Initialize(Canvas owner, float topPixels, float bottomPixels, float width)
+    private void OnDestroy()
     {
+        if (fullBleed) BaseCastleWalls.FramingBand = default;
+    }
+
+    /// <param name="fullBleed">D125 (İş 2): yalnız Ana Üs. Kamera tam ekran çizer (bar kapanınca alt bölge orman); barlar arası görüntü eskisiyle aynı.</param>
+    public void Initialize(Canvas owner, float topPixels, float bottomPixels, float width, bool fullBleed = false)
+    {
+        this.fullBleed = fullBleed;
         canvas = owner;
         topHeight = topPixels;
         bottomHeight = bottomPixels;
@@ -336,7 +348,9 @@ public sealed class WorldViewportBars : MonoBehaviour
         rt.pivot = new Vector2(0.5f, atTop ? 1f : 0f);
         rt.anchoredPosition = Vector2.zero;
         var image = go.GetComponent<Image>();
-        image.color = ReferenceUiVisuals.Hex(0x14110D);
+        var fill = ReferenceUiVisuals.Hex(0x14110D);
+        if (fullBleed && !atTop) fill.a = 0f;   // D125: alt bölge orman zemini görünür
+        image.color = fill;
         image.raycastTarget = false;
         return rt;
     }
@@ -364,8 +378,11 @@ public sealed class WorldViewportBars : MonoBehaviour
         hudTop.GetWorldCorners(corners);
         float upper = corners[0].y;
         hudBottom.GetWorldCorners(corners);
-        return Mathf.Abs(camera.pixelRect.yMax - upper) > 0.75f ||
-            Mathf.Abs(camera.pixelRect.yMin - corners[2].y) > 0.75f;
+        float camTop = fullBleed ? lastBand.yMax : camera.pixelRect.yMax;
+        float camBottom = fullBleed ? lastBand.yMin : camera.pixelRect.yMin;
+        if (fullBleed && camera.pixelRect.height < Screen.height - 0.5f && BaseCastleWalls.TryGetFrame(out _)) return true;
+        return Mathf.Abs(camTop - upper) > 0.75f ||
+            Mathf.Abs(camBottom - corners[2].y) > 0.75f;
     }
 
     public void UpdateLayout()
@@ -399,7 +416,16 @@ public sealed class WorldViewportBars : MonoBehaviour
         if (camera == null) return;
         lower = Mathf.Clamp(lower, 0f, Screen.height - 1f);
         upper = Mathf.Clamp(upper, lower + 1f, Screen.height);
-        camera.pixelRect = new Rect(0f, lower, Screen.width, upper - lower);
+        lastBand = new Rect(0f, lower, Screen.width, upper - lower);
+        if (fullBleed)
+        {
+            BaseCastleWalls.FramingBand = lastBand;
+            camera.pixelRect = new Rect(0f, 0f, Screen.width, Screen.height);
+            camera.aspect = Screen.width / (float)Screen.height;
+            if (BaseCastleWalls.ApplyFraming(camera)) return;
+            BaseCastleWalls.FramingBand = default;   // duvar yok: eski bant kadrajı
+        }
+        camera.pixelRect = lastBand;
         camera.aspect = camera.pixelRect.width / Mathf.Max(1f, camera.pixelRect.height);
         // D108: Ana Üs duvarları kuruluysa duvar + orman kadrajı; yoksa eski 22 birim genişlik kadrajı.
         if (worldWidth > 0f && !BaseCastleWalls.ApplyFraming(camera))

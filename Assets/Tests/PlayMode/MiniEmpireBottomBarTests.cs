@@ -117,6 +117,81 @@ public class MiniEmpireBottomBarTests
         Assert.AreEqual("ADA · 5", LabelOf(hud.Find("IslandBtn")), "kilitli ADA etiketi");
     }
 
+    /// <summary>D125 (İş 2): Ana Üs kamerası tam ekran çizer; 9:16, 9:21 ve 4:3'te alt %15 ve üst çentik bandı #14110D (siyah) değil, orman.</summary>
+    [UnityTest]
+    public IEnumerator OuterGroundFillsBottomAndNotchAtAllRatios()
+    {
+        PlayerPrefs.SetInt(OpenKey, 0);
+        yield return LoadBase(7);
+        var cam = Camera.main;
+        var wallsType = T("BaseCastleWalls");
+        var bandProp = wallsType.GetProperty("FramingBand");
+        var apply = wallsType.GetMethod("ApplyFraming");
+        var bars = Object.FindFirstObjectByType(T("WorldViewportBars")) as Component;
+        Assert.IsTrue((bool)bars.GetType().GetProperty("FullBleed").GetValue(bars), "Ana Üs fullBleed");
+        Rect oldRect = cam.rect; float oldSize = cam.orthographicSize; Vector3 oldPos = cam.transform.position;
+        foreach (var (w, h, name) in new[] { (360, 640, "9:16"), (360, 840, "9:21"), (768, 1024, "4:3") })
+        {
+            var rt = new RenderTexture(w, h, 24);
+            cam.targetTexture = rt;
+            cam.rect = new Rect(0, 0, 1, 1);
+            cam.aspect = (float)w / h;
+            bandProp.SetValue(null, new Rect(0f, h * 0.11f, w, h * 0.80f));   // iki bar arası (alt dock ~%11, üst bar ~%9)
+            Assert.IsTrue((bool)apply.Invoke(null, new object[] { cam }), name);
+            cam.Render();
+            var prev = RenderTexture.active;
+            RenderTexture.active = rt;
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
+            RenderTexture.active = prev;
+            int dark = 0, total = 0;
+            var bg = new Color32(0x14, 0x11, 0x0D, 255);
+            void Scan(int y0, int y1)
+            {
+                for (int y = y0; y < y1; y += 2)
+                for (int x = 0; x < w; x += 2)
+                {
+                    var c = (Color32)tex.GetPixel(x, y);
+                    total++;
+                    if (Mathf.Abs(c.r - bg.r) < 8 && Mathf.Abs(c.g - bg.g) < 8 && Mathf.Abs(c.b - bg.b) < 8) dark++;
+                }
+            }
+            Scan(0, (int)(h * 0.15f));              // alt %15
+            Scan((int)(h * 0.97f), h);              // üst çentik bandı
+            var sample = (Color32)tex.GetPixel(w / 2, 2);
+            Object.Destroy(tex);
+            cam.targetTexture = null;
+            rt.Release(); Object.Destroy(rt);
+            Assert.AreEqual(0, dark, name + ": #14110D (siyah) piksel var (" + dark + "/" + total + ")");
+            Assert.Greater(sample.g, sample.b, name + ": alt orta piksel orman yeşili değil");
+        }
+        cam.rect = oldRect; cam.ResetAspect(); cam.orthographicSize = oldSize; cam.transform.position = oldPos;
+        bars.GetType().GetMethod("UpdateLayout").Invoke(bars, null);
+    }
+
+    private static System.Collections.Generic.List<Vector3> FarBeltPositions()
+    {
+        var root = GameObject.Find("ForestFarBelt");
+        Assert.NotNull(root, "ForestFarBelt");
+        var list = new System.Collections.Generic.List<Vector3>();
+        foreach (Transform child in root.transform) { list.Add(child.position); Assert.IsNull(child.GetComponent<Collider2D>(), "collider yok"); }
+        return list;
+    }
+
+    /// <summary>D125: dış dekor sabit tohumlu; iki açılışta ForestFarBelt konumları aynı, ≤32 nesne, kayda girmez.</summary>
+    [UnityTest]
+    public IEnumerator ForestFarBeltIsStableAcrossTwoLoads()
+    {
+        yield return LoadBase(7);
+        var first = FarBeltPositions();
+        Assert.That(first.Count, Is.InRange(1, 32));
+        yield return LoadBase(7);
+        var second = FarBeltPositions();
+        Assert.AreEqual(first.Count, second.Count);
+        for (int i = 0; i < first.Count; i++) Assert.AreEqual(first[i], second[i], "far belt " + i);
+    }
+
     [UnityTest]
     public IEnumerator ArrowTogglesBarPersistsAndNeverMovesCamera()
     {
