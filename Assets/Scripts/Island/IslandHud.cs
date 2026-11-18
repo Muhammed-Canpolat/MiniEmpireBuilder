@@ -816,8 +816,9 @@ public sealed class IslandHud : MonoBehaviour
             abilityFill[i] = RadialOverlay(face.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.6f));
             abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", AbilityShortName(i), 9, Color.white, TextAlignmentOptions.Center,
                 new Vector2(0f, 0f), new Vector2(1f, 0.38f), new Vector2(6, 3), new Vector2(-6, 0), true);   // dairenin içine sığsın
-            abilityLabel[i].enableAutoSizing = true;
-            abilityLabel[i].fontSizeMin = 5; abilityLabel[i].fontSizeMax = 9;
+            // UI2: dairenin alt kirişi içinde kalır (görünen daire ≈ kutunun %72'si; 0,15-0,39 bandında %46 genişlik); dar Alegreya Kalın + koyu kontur
+            ReferenceUiVisuals.ApplyFont(abilityLabel[i], 9, Color.white, bodyBold: true);
+            ReferenceUiVisuals.FitButtonLabel(abilityLabel[i], new Vector2(0.27f, 0.15f), new Vector2(0.73f, 0.39f), 5f, 9f, false);
             abilityLabel[i].raycastTarget = false;
             // Kalan saniye: dolum sürerken dairenin ortasında iri sayı
             abilityTime[i] = ReferenceUiVisuals.Text(face.transform, "Seconds", "", 20, Color.white, TextAlignmentOptions.Center,
@@ -900,12 +901,9 @@ public sealed class IslandHud : MonoBehaviour
         button.transition = Selectable.Transition.None;
         image.gameObject.AddComponent<ReferenceButtonPress>();
         text = ReferenceUiVisuals.Text(image.transform, "Label", label, 12, Color.white, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(5, 6), new Vector2(-5, -8), true);
-        text.textWrappingMode = TextWrappingModes.Normal;
-        // Düğme kenarına taşmasın: uzun etiket ("OTO KAPALI", "HARİTA") küçülür.
-        text.enableAutoSizing = true;
-        text.fontSizeMin = 6f;
-        text.fontSizeMax = 11f;
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, bodyBold: true);
+        // UI2: etiket düğmenin görünen yüzünde kalır ("OTO KAPALI" iki satır, "HARİTA"/"TAKİP" tek satır küçülür); dar Alegreya Kalın + kontur.
+        ReferenceUiVisuals.FitButtonLabel(text, new Vector2(0.24f, 0.22f), new Vector2(0.76f, 0.82f), 6f, 12f, true);
         return button;
     }
 

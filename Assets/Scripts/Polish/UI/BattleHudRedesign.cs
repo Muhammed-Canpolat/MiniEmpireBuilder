@@ -190,7 +190,22 @@ public static class BattleHudRedesign
             countdown.anchorMax = new Vector2(0.76f, 0.816f);
             countdown.offsetMin = countdown.offsetMax = Vector2.zero;
             var text = countdown.GetComponent<TextMeshProUGUI>();
-            if (text != null) ReferenceUiVisuals.ApplyFont(text, 15f, ReferenceUiVisuals.Gold, false, true);
+            if (text != null)
+            {
+                ReferenceUiVisuals.ApplyFont(text, 30f, ReferenceUiVisuals.Hex(0xFFE08A), false, true);
+                text.enableAutoSizing = true;
+                text.fontSizeMin = 22f;
+                text.fontSizeMax = 34f;   // BattleCanvas 1080 referanslı: eski 22 pt telefonda ~%2 yükseklik, zeminde kayboluyordu
+                // UI2: "Sonraki dalga N" çimen/yol zemininde kaybolmasın: koyu kontur + yumuşak gölge (alt katman).
+                text.outlineWidth = 0.32f;
+                text.outlineColor = new Color32(0x14, 0x11, 0x0D, 0xFF);
+                var mat = text.fontMaterial;   // örnek malzeme (paylaşılan font malzemesi değişmez)
+                mat.EnableKeyword(TMPro.ShaderUtilities.Keyword_Underlay);
+                mat.SetColor(TMPro.ShaderUtilities.ID_UnderlayColor, new Color(0f, 0f, 0f, 0.75f));
+                mat.SetFloat(TMPro.ShaderUtilities.ID_UnderlayOffsetY, -0.8f);
+                mat.SetFloat(TMPro.ShaderUtilities.ID_UnderlaySoftness, 0.4f);
+                text.UpdateMeshPadding();
+            }
         }
     }
 }

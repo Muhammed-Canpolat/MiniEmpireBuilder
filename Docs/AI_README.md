@@ -303,3 +303,8 @@ Kayıt: `PlayerSaveData` JSON → PlayerPrefs (sürüm 4 geçişleri `SaveSystem
 - **Testler:** `Session9SaveTests` (göç v1…v13, karantina), `Session9RuleGuardTests`, `Session9BackKeyTests`; `SaveIsolation` ([SetUpFixture]) test
   koşusunun geliştiricinin gerçek kaydını değiştirmesini engeller. AAB: `Tools/check_aab.py` RELRO + manifest denetimi.
 - Editör kapalıyken testler doğrudan projede koşturuldu (kopya gerekmez).
+
+## 18 Kasım 2026 (13. oturum): yazı altyapısı (D124)
+- **TMP fontları EDİTÖRDE üretilmiş STATİK asset:** `Assets/Resources/Fonts/TMP/` (MEB Body = TMP varsayılanı, Bold, Title=Cinzel, Safety Dynamic = boş güvenlik ağı). Yeni metinde yeni karakter (ör. sembol) kullanırsan **Tools/Mini Empire Builder/Yazı/Font Asset'lerini Üret** (`-executeMethod FontPipeline.BuildCli`) çalıştır; **Font Denetimi** (`FontPipeline.AuditCli`) raporu `Docs/playtest/ui2/font-denetimi.txt`, eksik 0 olmalı.
+- **Yapma:** çalışma anında `TMP_FontAsset.CreateFontAsset`; TMP olaylarında (TEXT_CHANGED) font/malzeme değiştirme (grafik kurulumu içinde ağ/atlas uyumsuzluğu → görünmeyen/kırık yazı, D124). Font için `ReferenceUiVisuals.ApplyFont` / `TmpFontBootstrap.BodyFont|BoldFont|TitleFont`.
+- Küçük düğme etiketi: `ReferenceUiVisuals.FitButtonLabel` (görünen yüze daraltma + Auto Size + kontur). Tanı: `TmpTextIntegrity` (eksik glif, ağ/malzeme uyumu, taşma); testler `FontIntegrityTests`, `FontCaptureTests`.

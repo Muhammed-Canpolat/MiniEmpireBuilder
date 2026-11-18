@@ -43,8 +43,8 @@ public sealed class VictoryReferenceView : MonoBehaviour
         title.rectTransform.anchoredPosition = new Vector2(0, -182);
         title.fontSize = 38;
         title.color = ReferenceUiVisuals.Gold;
-        var titleFont = Resources.Load<Font>("Fonts/Cinzel-ExtraBold");
-        if (titleFont != null) title.font = TMP_FontAsset.CreateFontAsset(titleFont);
+        var titleFont = TmpFontBootstrap.TitleFont;   // D124: statik Türkçe-tam font seti
+        if (titleFont != null) title.font = titleFont;
 
         var portrait = ReferenceUiVisuals.Image(inner, "VictoryHero", new Vector2(0.5f, 1), new Vector2(0.5f, 1),
             new Vector2(-65, -162), new Vector2(65, -52), Color.white);
@@ -90,7 +90,7 @@ public sealed class VictoryReferenceView : MonoBehaviour
             text.text = BattleSession.IsCampaign ? L.T("BÖLGEYE DÖN", "BACK TO MAP") : L.T("ÜSSE DÖN", "BACK TO BASE");
             text.fontSize = 18;
             text.color = ReferenceUiVisuals.Hex(0x2A1A08);
-            if (titleFont != null) text.font = TMP_FontAsset.CreateFontAsset(titleFont);
+            if (titleFont != null) text.font = titleFont;
         }
         if (BattleSession.IsCampaign)
         {

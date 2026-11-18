@@ -194,6 +194,10 @@ public class BuildMenuController : MonoBehaviour
         var text = textGo.GetComponent<TextMeshProUGUI>();
         text.text = title;
         text.fontSize = 21f;
+        text.enableAutoSizing = true;   // UI2: 4:3 tablette sekme kısa kalıyor, yazı kartların altına kesilmesin
+        text.fontSizeMin = 11f;
+        text.fontSizeMax = 21f;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.alignment = TextAlignmentOptions.Center;
         text.color = new Color(1f, 0.87f, 0.56f);
         text.raycastTarget = false;

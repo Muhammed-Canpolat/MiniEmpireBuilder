@@ -5,7 +5,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `IslandTerrain.prefab`, `Dra
 
 | İş | Durum | Commit | Not |
 |---|---|---|---|
-| 1 Yazı kök nedeni + Font Denetimi (+ ui2-08) | BEKLİYOR | | |
+| 1 Yazı kök nedeni + Font Denetimi (+ ui2-08) | BİTTİ (cihaz DOĞRULANMADI) | UI2 İş 1 commit'i | D124: kök neden D113 TEXT_CHANGED font değişimi (grafik kurulumu içinde ağ/atlas uyumsuzluğu, testle kanıtlı) + her erişimde yeni BodyFont. Statik MEB font seti (TMP varsayılanı), Font Denetimi eksik 0, TMP shader'ları Always Included, taşmalar (ada düğmeleri, İnşa Et kartları/sekmeleri 4:3, Sonraki dalga). Görüntüler `Docs/playtest/ui2/`. Regresyon: ilgili 68 testte 67 (HudExpansionReviewTests.OwnershipBattleCardAndLevelVisual: seviyesiz kayıt, yazıyla ilgisiz); ExpansionFeatureTests 2 hata GameManager'sız sahne (ortam). |
 | 2 Ana üs alt bar kapalı siyah zemin | BEKLİYOR | | |
 | 3 Ada üst barı ana üs stilinde | BEKLİYOR | | |
 | 4 Ada Zafer/Yenilgi ekranları | BEKLİYOR | | |

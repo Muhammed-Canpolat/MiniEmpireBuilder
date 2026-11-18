@@ -19,12 +19,8 @@ public static class ReferenceUiVisuals
 
     private static Sprite goldSprite;
     private static Sprite darkSprite;
-    private static TMP_FontAsset titleFont;
-    private static TMP_FontAsset bodyFont;
-    private static TMP_FontAsset bodyBoldFont;
     private static Sprite toastSprite;
     private static Sprite pillSprite;
-    private const string TurkishCharacters = "ĞÜŞİÖÇğüşıöç";
 
     /// <summary>Üst barın altında, sol kenarda yığılan küçük yuvarlak HUD düğmesi (altın halkalı koyu daire + simge + minik etiket).</summary>
     /// <param name="slot">0 = barın hemen altı, 1 = onun altı...</param>
@@ -112,29 +108,39 @@ public static class ReferenceUiVisuals
         tmp.fontSize = size;
         tmp.color = color;
         tmp.fontStyle = FontStyles.Normal;
-        // Runtime font assets are generated from the bundled OFL font files.
-        if (title && titleFont == null)
+        // D124: editörde üretilmiş statik Türkçe-tam font seti (TmpFontBootstrap); çalışma anında font üretilmez.
+        var chosen = title ? TmpFontBootstrap.TitleFont : bodyBold ? TmpFontBootstrap.BoldFont : TmpFontBootstrap.BodyFont;
+        if (chosen != null && tmp.font != chosen)
         {
-            var font = Resources.Load<Font>("Fonts/Cinzel-ExtraBold");
-            if (font != null) titleFont = CreateTurkishFont(font);
+            tmp.font = chosen;
+            tmp.fontSharedMaterial = chosen.material;
         }
-        if (!title && bodyFont == null)
-        {
-            bodyFont = TmpFontBootstrap.BodyFont; // tek atlas
-        }
-        if (bodyBold && bodyBoldFont == null)
-        {
-            var font = Resources.Load<Font>("Fonts/AlegreyaSans-Bold");
-            if (font != null) bodyBoldFont = CreateTurkishFont(font);
-        }
-        var chosen = title ? titleFont : bodyBold ? bodyBoldFont : bodyFont;
-        if (chosen != null) tmp.font = chosen;
     }
 
-    internal static TMP_FontAsset CreateTitleFontForTest() { if (titleFont == null) titleFont = CreateTurkishFont(Resources.Load<Font>("Fonts/Cinzel-ExtraBold")); return titleFont; }
-    internal static TMP_FontAsset CreateBoldFontForTest() { if (bodyBoldFont == null) bodyBoldFont = CreateTurkishFont(Resources.Load<Font>("Fonts/AlegreyaSans-Bold")); return bodyBoldFont; }
+    /// <summary>
+    /// UI2 (D124): küçük düğme etiketi düğmenin GÖRÜNEN yüzünün içinde kalsın. Kutu, düğme kutusunun <paramref name="min"/>-<paramref name="max"/>
+    /// oranlarına daraltılır (Tiny Swords düğme sprite'larının kenar/gölge payı dışında), punto otomatik küçülür, koyu kontur okunurluk verir.
+    /// </summary>
+    public static void FitButtonLabel(TextMeshProUGUI tmp, Vector2 min, Vector2 max, float minSize, float maxSize, bool wrap)
+    {
+        if (tmp == null) return;
+        var rt = tmp.rectTransform;
+        rt.anchorMin = min; rt.anchorMax = max;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        tmp.enableAutoSizing = true;
+        tmp.fontSizeMin = minSize;
+        tmp.fontSizeMax = maxSize;
+        tmp.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.margin = Vector4.zero;
+        tmp.characterSpacing = 0f;
+        tmp.lineSpacing = -8f;
+        tmp.outlineWidth = 0.22f;
+        tmp.outlineColor = new Color32(0x14, 0x11, 0x0D, 0xFF);
+    }
 
-    private static TMP_FontAsset CreateTurkishFont(Font source) => TmpFontBootstrap.CreateDynamicFont(source);
+    internal static TMP_FontAsset CreateTitleFontForTest() => TmpFontBootstrap.TitleFont;
+    internal static TMP_FontAsset CreateBoldFontForTest() => TmpFontBootstrap.BoldFont;
 
     public static Sprite ToastSprite()
     {

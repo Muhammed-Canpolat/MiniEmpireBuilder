@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Intro sahnesi yazılarına (yüzde + ipucu) projenin iOS-güvenli dinamik Türkçe fontunu atar
-/// (ReferenceUiVisuals.ApplyFont → AlegreyaSans-Bold, TmpFontBootstrap zinciri; D113). Yeni font asset'i eklenmez,
+/// (ReferenceUiVisuals.ApplyFont → statik MEB Bold SDF, TmpFontBootstrap; D124). Yeni font asset'i eklenmez,
 /// yazılar sprite'a pişirilmez. Siyah kontur font atandıktan sonra uygulanır.
 /// </summary>
 public sealed class IntroTextFont : MonoBehaviour

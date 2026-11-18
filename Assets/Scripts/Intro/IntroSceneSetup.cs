@@ -216,8 +216,7 @@ public class IntroSceneSetup : MonoBehaviour
             typewriterText.fontSizeMin = 14;
             typewriterText.fontSizeMax = 14.5f;
             typewriterText.color = ReferenceUiVisuals.Hex(0x3A2410);
-            var font = Resources.Load<Font>("Fonts/AlegreyaSans-Bold");
-            if (font != null) typewriterText.font = TMP_FontAsset.CreateFontAsset(font);
+            typewriterText.font = TmpFontBootstrap.BoldFont;   // D124: statik Türkçe-tam font seti
         }
 
         var play = mainCanvas.transform.Find("PlayBtnContainer") as RectTransform;
@@ -239,8 +238,7 @@ public class IntroSceneSetup : MonoBehaviour
                 label.fontSize = hasSave ? 22 : 18;
                 label.fontSizeMax = label.fontSize;
                 label.color = hasSave ? ReferenceUiVisuals.Hex(0x2A1A08) : ReferenceUiVisuals.Light;
-                var font = Resources.Load<Font>("Fonts/Cinzel-Bold");
-                if (font != null) label.font = TMP_FontAsset.CreateFontAsset(font);
+                label.font = TmpFontBootstrap.TitleFont;   // D124
                 old.DOKill();
             }
         }
@@ -259,8 +257,7 @@ public class IntroSceneSetup : MonoBehaviour
                 label.text = L.T("YENİ OYUN", "NEW GAME");
                 label.fontSize = label.fontSizeMax = 18;
                 label.color = ReferenceUiVisuals.Light;
-                var font = Resources.Load<Font>("Fonts/Cinzel-Bold");
-                if (font != null) label.font = TMP_FontAsset.CreateFontAsset(font);
+                label.font = TmpFontBootstrap.TitleFont;   // D124
             }
         }
         var version = mainCanvas.transform.Find("VersionLabel");

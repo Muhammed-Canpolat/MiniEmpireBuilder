@@ -114,7 +114,7 @@ public sealed class IslandBuildTutorial : MonoBehaviour
                 Show(false, rect, L.T("Okçuluk Alanı'nı seç.", "Pick the Archery Range."), null);
                 break;
             case 3:
-                Show(false, null, L.T("Okçuluk Alanı'nı kalenin yakınına yerleştir ve ✓ ile onayla.", "Place the Archery Range near the keep and confirm with ✓."), null, passThrough: true);
+                Show(false, null, L.T("Okçuluk Alanı'nı kalenin yakınına yerleştir ve yeşil onay düğmesiyle onayla.", "Place the Archery Range near the keep and confirm with the green tick button."), null, passThrough: true);
                 break;
             case 4:
                 Show(false, null, L.T("Ada Ustası Okçuluk Alanı'nı kuruyor…", "The Island Builder is building the Archery Range…"), null, passThrough: true);

@@ -770,6 +770,10 @@ public class BaseWorldUI : MonoBehaviour
             var text = textGo.GetComponent<TextMeshProUGUI>();
             text.text = labels[i];
             text.fontSize = 19f;
+            text.enableAutoSizing = true;   // UI2: sekme yazısı düğmeye sığsın (tablet/telefon)
+            text.fontSizeMin = 10f;
+            text.fontSizeMax = 19f;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.alignment = TextAlignmentOptions.Center;
             text.color = new Color(1f, 0.84f, 0.49f);
             text.raycastTarget = false;

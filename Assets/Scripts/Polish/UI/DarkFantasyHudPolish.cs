@@ -205,7 +205,7 @@ public static class DarkFantasyHudPolish
             var item = panel.Find("Item_" + types[i]);
             if (item == null) continue;
             float left = 0.012f + i * 0.1635f;   // 6 sütun (Kart Atölyesi 4., Köylü Evi 5., Kışla 6.); yazılar otomatik küçülür
-            SetAnchors(item as RectTransform, new Vector2(left, 0.14f), new Vector2(left + 0.158f, 0.65f));
+            SetBelowTabs(item as RectTransform, new Vector2(left, 0.14f), left + 0.158f);
             var itemBg = item.GetComponent<Image>();
             if (itemBg != null) itemBg.color = ReferenceUiVisuals.Background;
             var outline = item.GetComponent<Outline>();
@@ -216,15 +216,26 @@ public static class DarkFantasyHudPolish
             var icon = item.Find("Icon")?.GetComponent<Image>();
             if (icon != null) { icon.color = Color.white; icon.preserveAspect = true; }
             StyleText(item, "Name", 14, ReferenceUiVisuals.Light, true);
+            // UI2: ad kart kenarına değmesin ("MANASTIR"), uzun ad iki satıra insin ("KART ATÖLYESİ"); kutu Fiyat'ın üstünde.
+            var cardName = item.Find("Name")?.GetComponent<TMPro.TextMeshProUGUI>();
+            if (cardName != null)
+            {
+                SetAnchors(cardName.rectTransform, new Vector2(0.06f, 0.27f), new Vector2(0.94f, 0.43f));
+                cardName.enableAutoSizing = true;
+                cardName.fontSizeMin = 8f;
+                cardName.fontSizeMax = 14f;
+                cardName.textWrappingMode = TMPro.TextWrappingModes.Normal;
+                cardName.lineSpacing = -14f;
+            }
             StyleText(item, "Cost", 13, ReferenceUiVisuals.Gold, false);
             SetAnchors(item.Find("Cost") as RectTransform, new Vector2(0, 0.12f), new Vector2(1, 0.27f));
             StyleText(item, "PlacedCount", 11, ReferenceUiVisuals.Muted, false);
             SetAnchors(item.Find("PlacedCount") as RectTransform, new Vector2(0, 0.01f), new Vector2(1, 0.14f));
         }
         // Dekor kartları kaydırılabilir ızgarada; alan sekmelerin altından ipucunun üstüne.
-        SetAnchors(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
-        SetAnchors(panel.Find("ShopScroll") as RectTransform, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.64f));
-        SetAnchors(panel.Find("DepotScroll") as RectTransform, new Vector2(0.03f, 0.09f), new Vector2(0.97f, 0.64f));
+        SetBelowTabs(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), 0.97f);
+        SetBelowTabs(panel.Find("ShopScroll") as RectTransform, new Vector2(0.03f, 0.02f), 0.97f);
+        SetBelowTabs(panel.Find("DepotScroll") as RectTransform, new Vector2(0.03f, 0.09f), 0.97f);
         ReferenceUiVisuals.Text(panel, "BuildMenuHint", L.T("Kilitli yapılar üs geliştikçe açılır.", "Locked buildings open as your base grows."), 12,
             SoftGold, TextAlignmentOptions.Center, new Vector2(0, 0.005f),
             new Vector2(1, 0.085f), new Vector2(12, 0), new Vector2(-12, 0));
@@ -474,6 +485,19 @@ public static class DarkFantasyHudPolish
             if (text.name != childName) continue;
             ReferenceUiVisuals.ApplyFont(text, size, color, title, !title);
         }
+    }
+
+    /// <summary>
+    /// UI2: İnşa Et içeriği sekmelerin (üstten -62..-106 sabit) hemen altından başlar. Eskiden üst kenar panelin %65'iydi; 4:3 tablette
+    /// panel kısa kaldığından kartlar sekme yazılarının üstüne biniyordu (YAPI/DEKOR/DÜKKÂN/DEPO yarım görünüyordu). 9:16'da konum aynı kalır.
+    /// </summary>
+    private static void SetBelowTabs(RectTransform rt, Vector2 min, float maxX)
+    {
+        if (rt == null) return;
+        rt.anchorMin = min;
+        rt.anchorMax = new Vector2(maxX, 1f);
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = new Vector2(0f, -110f);
     }
 
     private static void SetAnchors(RectTransform rt, Vector2 min, Vector2 max)
