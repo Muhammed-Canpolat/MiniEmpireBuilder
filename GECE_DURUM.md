@@ -10,6 +10,19 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `IslandTerrain.prefab`, `Dra
 | 3 Ada üst barı ana üs stilinde | BİTTİ | 8301524 | D126: ortak MiniEmpireTopBarSkin (PlacePills + ApplyIsland), ana üs barı değişmedi (bar bölgesinde %0,4 piksel farkı, animasyon). KIYI KALESİ kalkanı + IslandSession.KeepLevel(). ANA ÜS butonu sol altta, ada adı/yeniden adlandırma kalkan altı plakada, akında aynı plaka AKIN N · DALGA x/y, kum saati yerinde, dişli barda. İnşaatçı yuvası gerçek Ada Ustası (1/1 / 0/1). IslandTopBar_MatchesBaseStyle geçti; 142 testte 137, 5 kırmızı değişiklik öncesinde de kırmızı (IslandPhaseCTests, Nov13Feedback IslandFrame, UiNightTests ×3). Not: kalkan alt yazısı telefonda küçük (ana üste de öyle). |
 | 4 Ada Zafer/Yenilgi ekranları | BİTTİ | 751d9e2 | D127: menuFrame kart (içerik boyutlu), altın/kırmızı/koyu kurdele, Akın N temizlendi, altın/odun/et (+elmas) ikonlu satırlar, çekiçli onarım satırı, zaferde SONRAKİ AKIN altın; yenilgide TEKRAR altın ve üstte. Buton işlevleri/görünürlük aynı. IslandResultUiTests 2/2; ada testlerinde yalnız bilinen 2 kırmızı. **Sonraki iş:** sefer (ana üs savaşı) sonuç ekranı ayrı kod (VictoryReferenceView), dokunulmadı; aynı tasarım diline getirilmeli. |
 
+### Kabul listesi (UI_DUZELTMELER_2.md) — son QA + yönetici kontrolü
+| Madde | Durum | Kanıt |
+|---|---|---|
+| Font Denetimi sıfır eksik, yazılar okunuyor (dalga kutusu, sekmeler, Kahraman/Çırak, HUD) | BİTTİ | AuditCli eksik=0 dinamik=0 fallback=0 eski=0; FontIntegrity/FontCapture testleri 3 tur aç-kapa ve sahne geçişinde ağ/atlas uyumsuzluğu 0; görüntüler `Docs/playtest/ui2/`. Gerçek cihaz DOĞRULANMADI. |
+| Çözüm Android ve iOS için aynı, platforma özel yama yok | BİTTİ (cihaz DOĞRULANMADI) | Statik MEB font seti (ClearDynamicDataOnBuild=0), TMP_SDF + TMP_SDF-Mobile Always Included, diff'te UNITY_ANDROID/UNITY_IOS yok; shader'lar Vulkan/GLES3/Metal için CompileVariant hatasız. Tam -buildTarget build ve cihaz testi DOĞRULANMADI. |
+| Alt bar kapalıyken siyah alan yok, dış zemin/dekor sabit, 3 oran | BİTTİ | is2-* görüntüleri 9:16/9:21/4:3; piksel testi + iki açılışta aynı konum testi geçti. |
+| Ada üst barı ana üs stili, Kıyı Kalesi kalkanı, Ana Üs dönüşü + ad + süre sayacı + akın bilgisi | BİTTİ | is3-* görüntüleri; süre sayacı (kum saati) normal görünümde, akında eskisi gibi gizli; IslandTopBar_MatchesBaseStyle geçti. |
+| Zafer/Yenilgi yeni tasarım, ikonlu ödül satırları, butonlar çalışıyor | BİTTİ | is4-* görüntüleri; IslandResultUiTests 2/2 (buton hiyerarşisi, ödül = LastReward). Sefer sonuç ekranı ayrı kod → sonraki iş. |
+| Oyun mantığı, kayıtlar, ekonomi bozulmadı, her adım ayrı commit | BİTTİ | Systems/Data/Managers/Save/GemEconomy/Progression/IslandEconomy/IslandRaidManager diff'i boş; her iş ayrı commit. |
+
+**Regresyon:** tam koşu 490 test / 453 geçti / 20 kırmızı. Kırmızıların 17'si dal öncesinde (c5537a6) de kırmızı (testle kanıtlı, ayrıca önceki bilinen liste). Dalın yol açtığı 2 regresyon düzeltildi (c120f4c: FullSize/FramedSize, HudExpansion testi fullBleed sözleşmesi). IslandPhaseE2Tests.Succubus: tek başına 3/3 geçiyor, takım içinde sıra bağımlı/kararsız (262.5 sınır eşitliği) — DOĞRULANMADI, savaş koduna dokunulmadı.
+**Sonraki işler:** sefer sonuç ekranı (VictoryReferenceView) aynı dile; savaş üst barı ile dünya arasında ~%7 koyu şerit; ATEŞ OK pulu YAĞMUR dairesine ~5 px değiyor; kalkan alt yazısı ("KIYI KALESİ"/"ANA ÜS") telefonda küçük.
+
 # GECE_DURUM — 12. oturum ek: intro → Ana Üs, Ayarlar YENİ OYUN, kilitli arazi dekoru (18 Kasım 2026)
 Ayrıntı: DECISIONS D123. Görüntüler: `Docs/playtest/intro/` (settings_new_game, new_game_confirm, base_after_new_game, base_locked_decor_map).
 | İş | Durum | Not |
