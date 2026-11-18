@@ -1,3 +1,15 @@
+# GECE_DURUM — 13. oturum: UI Düzeltmeler 2 (18 Kasım 2026, dal `ui-duzeltmeler-2`, birleştirilmedi)
+Görev: `Docs/UI/UI_DUZELTMELER_2.md` (+ kullanıcı eki: `ui2-08` Kahraman/Çırak sekme adları bazen görünmüyor). Kararlar D124+.
+Yönetim: ana oturum yönetici; envanter explorer, kök neden/çözüm Opus genel ajan, plan art-director, uygulama gameplay-engineer, son kontrol qa-playtester.
+Dokunulmayan commit'siz dosyalar (önceden vardı): `IslandTerrain.prefab`, `Dragon Warrior Files/`, `UIReviewScreenshots/CurrentReview/*`.
+
+| İş | Durum | Commit | Not |
+|---|---|---|---|
+| 1 Yazı kök nedeni + Font Denetimi (+ ui2-08) | BEKLİYOR | | |
+| 2 Ana üs alt bar kapalı siyah zemin | BEKLİYOR | | |
+| 3 Ada üst barı ana üs stilinde | BEKLİYOR | | |
+| 4 Ada Zafer/Yenilgi ekranları | BEKLİYOR | | |
+
 # GECE_DURUM — 12. oturum ek: intro → Ana Üs, Ayarlar YENİ OYUN, kilitli arazi dekoru (18 Kasım 2026)
 Ayrıntı: DECISIONS D123. Görüntüler: `Docs/playtest/intro/` (settings_new_game, new_game_confirm, base_after_new_game, base_locked_decor_map).
 | İş | Durum | Not |
