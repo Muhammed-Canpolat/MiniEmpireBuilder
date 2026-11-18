@@ -15,13 +15,16 @@ namespace MiniEmpire.Intro
         [SerializeField] private CanvasGroup rootGroup; // fade için (tüm intro canvas'ı)
 
         [Header("Sahne")]
-        [SerializeField] private string gameSceneName = "MainMenuScene"; // eski ilk sahne (Build Settings index 1)
+        [SerializeField] private string gameSceneName = "BaseScene"; // intro bitince doğrudan Ana Üs
 
         [Header("Süreler (sn)")]
         [SerializeField] private float fadeInTime = 0.6f;
         [SerializeField] private float fadeOutTime = 0.5f;
         [SerializeField] private float minimumShowTime = 2.5f;   // yükleme çok hızlı olsa bile intro bu kadar görünsün
         [SerializeField] private float holdAtFullTime = 0.35f;   // %100'de kısa bekleme
+
+        /// <summary>Oyun tarafı hazır mı (kayıt yüklendi / yeni oyun kuruldu)? Null ise beklenmez. Çubuk %100'de bunu bekler.</summary>
+        public static System.Func<bool> CanFinish;
 
         private void Start()
         {
@@ -45,13 +48,19 @@ namespace MiniEmpire.Intro
                 try { op = SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single); }
                 catch (System.Exception e) { Debug.LogError($"[Intro] LoadSceneAsync hata: {e}"); op = null; }
             }
-            if (op == null) { FallbackLoad(); yield break; }
+            if (op == null)
+            {
+                while (CanFinish != null && !CanFinish()) yield return null;
+                FallbackLoad();
+                yield break;
+            }
 
             op.allowSceneActivation = false;           // %100 olmadan açma
             float startTime = Time.unscaledTime;
 
             // Unity, allowSceneActivation=false iken progress'i 0.9'da bekletir.
-            while (!loadingBar.IsFull || op.progress < 0.9f || Time.unscaledTime - startTime < minimumShowTime)
+            while (!loadingBar.IsFull || op.progress < 0.9f || Time.unscaledTime - startTime < minimumShowTime
+                   || (CanFinish != null && !CanFinish()))
             {
                 float real = Mathf.Clamp01(op.progress / 0.9f);                       // gerçek yükleme
                 float time = Mathf.Clamp01((Time.unscaledTime - startTime) / minimumShowTime); // min. süre

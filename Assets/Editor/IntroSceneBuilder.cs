@@ -16,7 +16,7 @@ using UnityEngine.UI;
 public static class IntroSceneBuilder
 {
     public const string ScenePath = "Assets/Scenes/Intro.unity";
-    public const string GameSceneName = "MainMenuScene";
+    public const string GameSceneName = "BaseScene";   // intro bitince doğrudan Ana Üs (eski MainMenuScene gösterilmez)
     private const string SpriteDir = "Assets/MiniEmpire_Intro/Assets/MiniEmpire/Sprites/Intro/";
     private const string Background = SpriteDir + "intro_background.png";
     private const string Frame = SpriteDir + "loading_bar_frame.png";
@@ -183,6 +183,7 @@ public static class IntroSceneBuilder
 
         var controllerGo = new GameObject("IntroSceneController");
         var controller = controllerGo.AddComponent<IntroSceneController>();
+        controllerGo.AddComponent<IntroGameBoot>();   // GameManager + kayıt yükleme / yeni oyun (eski menünün görevi)
         SetRef(controller, "loadingBar", bar);
         SetRef(controller, "rootGroup", group);
         var so = new SerializedObject(controller);

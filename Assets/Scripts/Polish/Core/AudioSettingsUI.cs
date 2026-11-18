@@ -382,6 +382,15 @@ if (!miniGear)
             "Mini Empire Builder " + Application.version,
             L.T("Merhaba,\n\n", "Hello,\n\n") + "(" + Application.platform + " - " + SystemInfo.deviceModel + ")")));
 
+        // YENİ OYUN (eski açılış menüsünden taşındı): yalnız Ana Üs ve Sefer haritasında; savaş/ada akınında yok.
+        string activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (!battleScene && (activeScene == "BaseScene" || activeScene == "CampaignScene"))
+        {
+            Section(content, "ui_icon_gear", L.T("OYUN", "GAME"));
+            var newGame = WideButton(content, "NewGameButton", L.T("YENİ OYUN", "NEW GAME"), true, out _);
+            newGame.onClick.AddListener(AskNewGame);
+        }
+
         if (battleScene)
         {
             Section(content, "ui_icon_sword", L.T("SAVAŞ", "BATTLE"));
@@ -402,6 +411,19 @@ if (!miniGear)
         close.onClick.AddListener(Close);
         if (battleScene) CreateForfeitConfirm();
         panel.SetActive(false);
+    }
+
+    private void AskNewGame()
+    {
+        ConfirmDialog.Show("NewGameConfirm", L.T("YENİ OYUN", "NEW GAME"),
+            L.T("Oyunun ilerlemesi kaybedilecek ve oyun yeniden başlayacak. Onaylıyor musunuz?",
+                "All game progress will be lost and the game will restart. Do you confirm?"),
+            L.T("VAZGEÇ", "CANCEL"), L.T("ONAYLA", "CONFIRM"),
+            () =>
+            {
+                Close();
+                if (GameManager.Instance != null) GameManager.Instance.RestartNewGame();
+            });
     }
 
     private void CreateForfeitConfirm()

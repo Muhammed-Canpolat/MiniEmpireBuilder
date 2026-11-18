@@ -1152,11 +1152,9 @@ public class IntroSceneSetup : MonoBehaviour
     private IEnumerator ConfirmWeapon(WeaponType weapon)
     {
         yield return new WaitForSeconds(0.6f);
-        SaveSystem.DeleteSave();
-        // Yeni oyunda ilk görüş ipuçları yeniden gösterilir.
-        FirstTimeTips.Reset("builders", "cards", "gems", "lives", "quests", "respawn");
-        PlayerPrefs.DeleteKey("MiniEmpire_MoveHintSeen");
-        GameManager.Instance.StartNewGame(weapon);
+        // Yeni oyunda ilk görüş ipuçları yeniden gösterilir (tek kaynak: GameManager.ResetProgressForNewGame).
+        GameManager.Instance.ResetProgressForNewGame();
+        GameManager.Instance.LoadBaseWorld();
     }
 
     // ──────────────────────────────────────────────────────────────────────

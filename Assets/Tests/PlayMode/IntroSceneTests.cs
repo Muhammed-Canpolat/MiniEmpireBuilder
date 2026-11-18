@@ -43,8 +43,7 @@ public class IntroSceneTests
     public IEnumerator Intro_FillsBar_RotatesTips_ThenOpensGame()
     {
         StringAssert.EndsWith("Intro.unity", SceneUtility.GetScenePathByBuildIndex(0), "Build index 0 Intro olmalı");
-        StringAssert.EndsWith("MainMenuScene.unity", SceneUtility.GetScenePathByBuildIndex(1), "Eski ilk sahne index 1 olmalı");
-        StringWriterLog log = new StringWriterLog();
+                StringWriterLog log = new StringWriterLog();
         Application.logMessageReceived += log.On;
         try
         {
@@ -96,7 +95,7 @@ public class IntroSceneTests
                 if (bar != null && Prog() >= 0.999f) { sawFull = true; Assert.AreEqual("%100", percent.text); }
                 yield return null;
             }
-            Assert.AreEqual("MainMenuScene", SceneManager.GetActiveScene().name, "Intro bitince oyun açılmalı");
+            Assert.AreEqual("BaseScene", SceneManager.GetActiveScene().name, "Intro bitince doğrudan Ana Üs açılmalı");
             Assert.IsTrue(sawFull, "Çubuk %100'e ulaşmadı");
             Assert.IsTrue(tipChanged, "İpucu değişmedi");
             yield return null;
@@ -105,25 +104,58 @@ public class IntroSceneTests
             yield return new WaitForSecondsRealtime(0.5f);
             Debug.Log("[IntroTest] " + log.Activation);
 
-            // "Başa dönme" (GameManager.LoadMainMenu) intro'ya değil eski ilk sahneye gider
+            Assert.IsNull(Object.FindFirstObjectByType(T("IntroSceneSetup")), "Eski giriş ekranı (MainMenuScene) gösterilmemeli");
+
+            // Ayarlar → YENİ OYUN → onay: ilerleme silinir, Ana Üs sıfırdan açılır (eski sahneye/intro'ya düşmez)
             var gmType = T("GameManager");
             var gm = gmType.GetProperty("Instance").GetValue(null);
             Assert.IsNotNull(gm, "GameManager yok");
-            yield return new WaitForSecondsRealtime(1f);
-            gmType.GetMethod("LoadMainMenu").Invoke(gm, null);
+            var data = gmType.GetProperty("PlayerData").GetValue(gm);
+            Assert.IsNotNull(data, "Oyun verisi hazır değil");
+            var goldField = data.GetType().GetField("gold");
+            goldField.SetValue(data, 987654);
+            yield return new WaitForSecondsRealtime(1.5f);
+            var settings = Object.FindFirstObjectByType(T("AudioSettingsUI")) as Component;
+            Assert.IsNotNull(settings, "Ayarlar paneli yok");
+            settings.GetType().GetMethod("Open").Invoke(settings, null);
+            yield return new WaitForSecondsRealtime(0.4f);
+            var newGameBtn = GameObject.Find("NewGameButton");
+            Assert.IsNotNull(newGameBtn, "Ayarlarda YENİ OYUN düğmesi yok");
+            CaptureGame("settings_new_game");
+            newGameBtn.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+            var dialog = GameObject.Find("NewGameConfirm");
+            Assert.IsNotNull(dialog, "Onay penceresi açılmadı");
+            StringAssert.Contains("ilerlemesi kaybedilecek", dialog.GetComponentsInChildren<Component>().Length > 0 ? AllText(dialog) : "");
+            CaptureGame("new_game_confirm");
+            dialog.transform.Find("SafeArea/Panel/ConfirmButton").GetComponent<Button>().onClick.Invoke();
             string seen = "";
             t0 = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - t0 < 6f)
+            while (Time.realtimeSinceStartup - t0 < 8f)
             {
                 string n = SceneManager.GetActiveScene().name;
-                if (n == "Intro") seen = n;
+                if (n == "Intro" || n == "MainMenuScene") seen = n;
                 yield return null;
             }
-            Assert.AreEqual("", seen, "Başa dönme intro'ya düşmemeli");
-            Assert.AreEqual("MainMenuScene", SceneManager.GetActiveScene().name);
+            Assert.AreEqual("", seen, "Yeni oyun eski sahneye/intro'ya düşmemeli");
+            Assert.AreEqual("BaseScene", SceneManager.GetActiveScene().name);
+            var fresh = gmType.GetProperty("PlayerData").GetValue(gm);
+            Assert.AreNotEqual(987654, (int)goldField.GetValue(fresh), "İlerleme sıfırlanmadı");
+            CaptureGame("base_after_new_game");
         }
         finally { Application.logMessageReceived -= log.On; }
     }
+
+    private static string AllText(GameObject root)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in root.GetComponentsInChildren<Component>(true))
+            if (c != null && c.GetType().Name == "TextMeshProUGUI") sb.Append((string)c.GetType().GetProperty("text").GetValue(c)).Append(' ');
+        return sb.ToString();
+    }
+
+    /// <summary>Oyun ekranı (tüm Overlay tuvalleri dahil) 780x1688: PlaytestOutput/intro/.</summary>
+    private static void CaptureGame(string name) => CardWorkshopTests.CaptureScreen(name, "intro");
 
     /// <summary>TextMeshProUGUI'ye yansıma ile erişim (test derlemesi TMP'ye bağlı değil).</summary>
     private sealed class Txt

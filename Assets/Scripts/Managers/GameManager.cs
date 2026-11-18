@@ -66,22 +66,47 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void StartNewGame(WeaponType selectedWeapon)
     {
-        // 9. oturum (K-1): açılamayan bir kayıt varken yeni oyun yalnız oyuncunun açık onayıyla başlar (ana menü: YENİ OYUN →
+        // 9. oturum (K-1): açılamayan bir kayıt varken yeni oyun yalnız oyuncunun açık onayıyla başlar (YENİ OYUN →
         // SaveSystem.DeleteSave kaydı arşivler ve kilidi kaldırır). Sahnelerin "veri yok → yeni oyun" kısayolu kaydı ezemez.
-        if (SaveLoadFailed)
+        if (!PrepareNewGame(selectedWeapon))
         {
             Debug.LogWarning("[GameManager] Kayıt açılamadı; yeni oyun başlatılmadı, ana menüye dönülüyor.");
             LoadMainMenu();
             return;
         }
+        // Üs dünyasına git
+        LoadBaseWorld();
+    }
+
+    /// <summary>Yeni oyun verisini kurar ve kaydeder; sahne yüklemez (açılış intro'su ve StartNewGame). Kayıt kilitliyse false.</summary>
+    public bool PrepareNewGame(WeaponType selectedWeapon)
+    {
+        if (SaveLoadFailed) return false;
         PlayerData = PlayerSaveData.CreateNew(selectedWeapon);
         RebuildBuildingData();
         IsGameStarted = true;
         SaveGame();
-
         Debug.Log($"[GameManager] Yeni oyun başlatıldı! Silah: {selectedWeapon}");
+        return true;
+    }
 
-        // Üs dünyasına git
+    /// <summary>
+    /// Oyuncunun onayladığı sıfırdan başlangıç (Ayarlar → YENİ OYUN; açılışta açılamayan kayıt): kayıt arşivlenip silinir
+    /// (SaveSystem.DeleteSave), ilk görüş ipuçları sıfırlanır, Savaşçı ile yeni veri kurulur. Sahne yüklemez.
+    /// </summary>
+    public void ResetProgressForNewGame()
+    {
+        SaveSystem.DeleteSave();
+        FirstTimeTips.Reset("builders", "cards", "gems", "lives", "quests", "respawn");
+        PlayerPrefs.DeleteKey("MiniEmpire_MoveHintSeen");
+        PlayerData = null;
+        PrepareNewGame(WeaponType.Axe);
+    }
+
+    /// <summary>Ayarlar → YENİ OYUN onayı: ilerleme silinir, oyun Ana Üs'te sıfırdan başlar.</summary>
+    public void RestartNewGame()
+    {
+        ResetProgressForNewGame();
         LoadBaseWorld();
     }
 
