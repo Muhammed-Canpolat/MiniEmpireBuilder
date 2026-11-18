@@ -1,3 +1,13 @@
+# GECE_DURUM — 12. oturum ek: intro → Ana Üs, Ayarlar YENİ OYUN, kilitli arazi dekoru (18 Kasım 2026)
+Ayrıntı: DECISIONS D123. Görüntüler: `Docs/playtest/intro/` (settings_new_game, new_game_confirm, base_after_new_game, base_locked_decor_map).
+| İş | Durum | Not |
+|---|---|---|
+| Intro bitince doğrudan Ana Üs, eski giriş ekranı yok | BİTTİ | Testte intro → BaseScene (~480 ms etkinleşme); kayıt yoksa Savaşçı ile yeni oyun, açılamayan kayıtta onay penceresi (DOĞRULANMADI: bozuk kayıt yolu testte tetiklenmedi). |
+| Ayarlar'da YENİ OYUN + onay uyarısı, kabulde sıfırdan başlama | BİTTİ | BaseScene/CampaignScene; testte altın sıfırlandı, Ana Üs yeniden açıldı. |
+| Rastgele dekor çakışması + ızgara kuralı | BİTTİ | Hücre merkezi + yarıçap kuralı; LockedDecorTests. |
+| Kaya/kütük boyutu, dekorla tutarlılık | BİTTİ | Dekorla aynı sprite/ölçek; kütük 2,76→0,7 u, kaya 1,84→0,9–1,1 u. Cihazda görsel onay bekliyor. |
+| Regresyon | 86/87 | Tek hata önceden var: Session9RuleGuardTests (SceneTransition.cs:86 ham saat). |
+
 # GECE_DURUM — 12. oturum: Açılış intro sahnesi (18 Kasım 2026, dal `intro-sahnesi`, birleştirilmedi)
 
 Ayrıntı: DECISIONS D122. Kurulum aracı: Tools/Intro/Intro Sahnesini Kur (`IntroSceneBuilder`). Görüntüler: `Docs/playtest/intro/`.

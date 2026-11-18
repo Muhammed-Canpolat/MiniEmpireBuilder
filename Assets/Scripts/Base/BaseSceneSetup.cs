@@ -727,11 +727,15 @@ public class BaseSceneSetup : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Kilitli (açılmamış) arazideki doğa engelleri. 12. oturum (D123): görseller ve ölçek YERLEŞTİRİLEN dekorla aynı
+    /// (DecorData.Visual + DecorScale; eskiden Resources/BaseDecor'daki KIRPILMIŞ kaya/kütük/çalı sprite'ları tam kare ölçeğiyle
+    /// büyütülüyordu: kütük ~4×, kaya/çalı ~2×). Her nesne hücre merkezine ve dekorla aynı taban hizasına (VerticalOffset) oturur;
+    /// türe göre yarıçap kuralıyla komşusuna binen nesne çizilmez. Rastgele akış (tohum, çekim sırası) değişmedi: hangi hücrede hangi
+    /// türün olduğu ve kayıtlı removedNatureIds kimlikleri aynı kalır.
+    /// </summary>
     private void CreateLockedDecor()
     {
-        Sprite tree = System.Array.Find(DecorPlacementController.All, item => item.id == "tree")?.sprite;
-        Sprite[] sprites = { tree, Resources.Load<Sprite>("BaseDecor/bush"),
-            Resources.Load<Sprite>("BaseDecor/rock"), Resources.Load<Sprite>("BaseDecor/stump") };
         int currentLevel = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
         var saveData = GameManager.Instance?.PlayerData;
         // Doğa genişlemeyle silinmez: dizilim, ilk spawn anındaki (taban) temiz alana göre sabittir.
@@ -741,7 +745,7 @@ public class BaseSceneSetup : MonoBehaviour
         var clean = BaseWorldLayout.CleanForTier(LandExpansion.OpenedTier);
         var random = new System.Random(76143);
         var centers = new System.Collections.Generic.List<Vector2>();
-        var lockedTrees = new System.Collections.Generic.List<Vector2>();
+        var placed = new System.Collections.Generic.List<(Vector2 pos, float radius)>();
         for (int i = 0; i < 18; i++)
             centers.Add(new Vector2(random.Next(BaseWorldLayout.Buildable.xMin, BaseWorldLayout.Buildable.xMax), random.Next(2, 36)));
         foreach (Vector2Int cell in EnumerateInteriorCells())
@@ -754,45 +758,73 @@ public class BaseSceneSetup : MonoBehaviour
             float density = Mathf.Lerp(0.05f, 0.62f, Mathf.Clamp01((3.6f - nearest) / 3.2f));
             if (cell.y < 4 || cell.y >= 34) density = Mathf.Max(density, 0.42f);
             if (random.NextDouble() > density) continue;
-            int spriteIndex = random.Next(sprites.Length);
-            Sprite sprite = sprites[spriteIndex];
-            if (sprite == null) continue;
+            int spriteIndex = random.Next(4);
             var kind = spriteIndex == 0 ? NatureKind.Tree : spriteIndex == 1 ? NatureKind.Bush
                 : spriteIndex == 2 ? NatureKind.Rock : NatureKind.Stump;
             bool removed = saveData?.removedNatureIds != null
                 && saveData.removedNatureIds.Contains(NatureObstacle.MakeId(kind, cell));
+            random.NextDouble(); random.NextDouble();   // eski konum titremesi: akış korunur, değer kullanılmaz (ızgara hizası)
+            float variety = DecorScale.Variety((float)random.NextDouble());
+            if (removed) continue;
+            var decorData = DecorScale.Find(LockedDecorId(kind, cell));
+            Sprite sprite = decorData != null ? decorData.Visual : null;
+            if (sprite == null) continue;
+            var pos = new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+            float radius = LockedDecorRadius(kind);
+            bool crowded = false;
+            foreach (var other in placed)
+                if ((other.pos - pos).sqrMagnitude < (other.radius + radius) * (other.radius + radius)) { crowded = true; break; }
+            if (crowded) continue;
+            placed.Add((pos, radius));
+
             var go = new GameObject("LockedObstacle_" + cell.x + "_" + cell.y);
-            go.transform.position = new Vector3(cell.x + 0.5f + (float)(random.NextDouble() - 0.5) * 0.4f,
-                cell.y + 0.5f + (float)(random.NextDouble() - 0.5) * 0.4f, 0f);
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.sortingOrder = 5;
-            // Bug 14: tek ölçek kaynağı DecorScale (±%8, aynı rastgele çekim: dizilim ve kayıtlı kimlikler değişmez).
-            string decorId = kind == NatureKind.Tree ? "tree" : kind == NatureKind.Bush ? "bush"
-                : kind == NatureKind.Rock ? "rock" : "stump";
-            var decorData = DecorScale.Find(decorId);
-            float variety = DecorScale.Variety((float)random.NextDouble());
-            float size = decorData != null ? DecorScale.For(decorData, sprite) * variety
-                : 1f / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            float size = DecorScale.For(decorData, sprite) * variety;
             go.transform.localScale = Vector3.one * size;
-            // Büyük ağaçlar üst üste binmesin: yakın komşu varsa bu ağaç çizilmez (rastgele akış etkilenmez).
-            if (kind == NatureKind.Tree)
-            {
-                bool crowded = false;
-                foreach (var other in lockedTrees)
-                    if ((other - (Vector2)go.transform.position).sqrMagnitude < 2.2f * 2.2f) { crowded = true; break; }
-                if (crowded) { Destroy(go); continue; }
-                lockedTrees.Add(go.transform.position);
-            }
-            if (removed) { Destroy(go); continue; }
+            // Dekorla aynı yerleşim kuralı: görünen alt kenar hücre tabanına oturur (DecorInstance.SetCell, footprint 1x1).
+            float offset = decorData.VerticalOffset(sprite, size);
+            go.transform.position = new Vector3(pos.x, cell.y + 0.5f + offset, 0f);
             var box = go.AddComponent<BoxCollider2D>();
             box.size = Vector2.one * (0.9f / size);
+            box.offset = new Vector2(0f, -offset / size);   // tıklama/doluluk hücrenin kendisinde kalır
             var nature = go.AddComponent<NatureObstacle>();
             nature.kind = kind;
             nature.cell = cell;
             _lockedDecor[cell] = go;
         }
         RefreshLockedShade(clean);
+    }
+
+    /// <summary>
+    /// Kilitli arazi dekorunun katalog kimliği; varyant hücreden kararlı seçilir (rastgele akışı tüketmez). Yalnız bir hücreye
+    /// sığan küçük varyantlar: kaya 1/3 (0,9–1,1 u), çalı 1/2/4 (0,9–1,3 u); kaya4 (1,7 u) ve çalı3 (1,5 u) kullanılmaz.
+    /// </summary>
+    private static readonly string[] LockedRocks = { "rock", "rock3" };
+    private static readonly string[] LockedBushes = { "bush", "bush2", "bush4" };
+    private static string LockedDecorId(NatureKind kind, Vector2Int cell)
+    {
+        float unit = BaseMapManager.StableUnit(cell.x + "_" + cell.y, 7);
+        switch (kind)
+        {
+            case NatureKind.Tree: return "tree";
+            case NatureKind.Bush: return LockedBushes[Mathf.Min(LockedBushes.Length - 1, (int)(unit * LockedBushes.Length))];
+            case NatureKind.Rock: return LockedRocks[Mathf.Min(LockedRocks.Length - 1, (int)(unit * LockedRocks.Length))];
+            default: return "stump";
+        }
+    }
+
+    /// <summary>Çakışma yarıçapı (dünya birimi, görünen gövdenin yarısı kadar): iki nesne arası en az rA + rB.</summary>
+    public static float LockedDecorRadius(NatureKind kind)
+    {
+        switch (kind)
+        {
+            case NatureKind.Tree: return 1.1f;   // eski ağaç-ağaç kuralı (2,2 u) korunur
+            case NatureKind.Bush: return 0.62f;
+            case NatureKind.Rock: return 0.55f;
+            default: return 0.36f;
+        }
     }
 
     private void RefreshLockedShade(RectInt clean)
