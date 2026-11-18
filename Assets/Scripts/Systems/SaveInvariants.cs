@@ -62,16 +62,38 @@ public static class SaveInvariants
         var seen = new HashSet<string>();
         int before = data.depot.Count;
         bool changed = false;
-        data.depot.RemoveAll(item => item == null || string.IsNullOrEmpty(item.id) || string.IsNullOrEmpty(item.type)
-            || placed.Contains(DepotKey(item.region, item.category, item.id)) || !seen.Add(DepotKey(item.region, item.category, item.id)));
+        data.depot.RemoveAll(item =>
+        {
+            if (item == null || string.IsNullOrEmpty(item.id) || string.IsNullOrEmpty(item.type)) return true;
+            if (!ValidDepotType(item))
+            {
+                Debug.LogWarning($"[Depot] geçersiz depo öğesi silindi: bölge {item.region} kategori {item.category} tür '{item.type}' kimlik '{item.id}'");
+                return true;
+            }
+            return placed.Contains(DepotKey(item.region, item.category, item.id)) || !seen.Add(DepotKey(item.region, item.category, item.id));
+        });
         changed |= data.depot.Count != before;
         foreach (var item in data.depot)
         {
             int level = Mathf.Clamp(item.level, 1, Progression.MaxLevel);
             if (level != item.level) { item.level = level; changed = true; }
-            if (item.stock < 0f) { item.stock = 0f; changed = true; }
+            if (float.IsNaN(item.stock) || float.IsInfinity(item.stock) || item.stock < 0f) { item.stock = 0f; changed = true; }
+            if (item.workers < -1) { item.workers = -1; changed = true; }
         }
         return changed;
+    }
+
+    /// <summary>Depo öğesinin bölge/kategori/türü bilinen mi (ParseKind'in House'a düşürmesi burada kullanılmaz).</summary>
+    private static bool ValidDepotType(DepotItem item)
+    {
+        if (item.region == DepotService.RegionBase)
+        {
+            if (item.category == DepotService.CategoryDecor) return DecorScale.Find(item.type) != null;
+            if (item.category != DepotService.CategoryBuilding) return false;
+            return System.Enum.TryParse(item.type, false, out BuildingType t) && System.Enum.IsDefined(typeof(BuildingType), t);
+        }
+        if (item.region != DepotService.RegionIsland || item.category != DepotService.CategoryBuilding) return false;
+        return System.Enum.TryParse(item.type, false, out IslandLayout.BuildingKind k) && System.Enum.IsDefined(typeof(IslandLayout.BuildingKind), k);
     }
 
     private static string DepotKey(int region, int category, string id) => region + ":" + category + ":" + id;

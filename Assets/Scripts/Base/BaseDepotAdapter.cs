@@ -68,7 +68,8 @@ public sealed class BaseDepotAdapter : IDepotRegion
             data.placedDecor.Add(new PlacedDecorSave { instanceId = item.id, decorId = item.type, x = cell.x, y = cell.y });
             return true;
         }
-        if (!Enum.TryParse(item.type, out BuildingType type) || type == BuildingType.MainBase) return false;
+        if (!Enum.TryParse(item.type, false, out BuildingType type) || type == BuildingType.MainBase) return false;
+        if (type == BuildingType.GoldMine) GameManager.Instance.ApplyOfflineGoldMineProduction();   // diğer madenlerin birikimi kaybolmasın
         var map = BaseMapManager.Instance;
         if (map != null)
         {

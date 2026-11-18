@@ -248,6 +248,67 @@ public class Session15DepotTests
         Assert.IsFalse(problems.Any(p => p.Contains("depo")), string.Join(" | ", problems));
     }
 
+    [Test]
+    public void RepairDepotSanitizesNumbersAndDropsUnknownTypes()
+    {
+        var save = NewSave();
+        var depot = (IList)F(save, "depot");
+        var nan = DepotItem("nan_1", 1, 0, "House", 1); SetF(nan, "stock", float.NaN); SetF(nan, "workers", -7);
+        var inf = DepotItem("inf_1", 1, 0, "Lumber", 1); SetF(inf, "stock", float.PositiveInfinity);
+        depot.Add(nan); depot.Add(inf);
+        depot.Add(DepotItem("bad_type", 0, 0, "Nope", 1));
+        depot.Add(DepotItem("bad_case", 0, 0, "archertower", 1));
+        depot.Add(DepotItem("bad_kind", 1, 0, "Nope", 1));
+        depot.Add(DepotItem("bad_region", 5, 0, "House", 1));
+        depot.Add(DepotItem("bad_cat", 0, 7, "House", 1));
+        depot.Add(DepotItem("bad_decor", 0, 1, "no_such_decor_xyz", 1));
+        Assert.IsTrue((bool)S("SaveInvariants", "RepairDepot", save));
+        Assert.AreEqual(2, depot.Count, string.Join(",", depot.Cast<object>().Select(d => F(d, "id"))));
+        Assert.AreEqual(0f, (float)F(nan, "stock"), "NaN stok");
+        Assert.AreEqual(-1, (int)F(nan, "workers"), "workers < -1");
+        Assert.AreEqual(0f, (float)F(inf, "stock"), "Infinity stok");
+    }
+
+    [UnityTest, Timeout(120000)]
+    public IEnumerator RestoreRejectsOverLimitAndExcludedTypesButNotLegitItems()
+    {
+        yield return LoadDepotBase();
+        // Düzenlenmiş kayıt: 2/2 okçu yerleşikken depoda 3. okçu
+        var extra = DepotItem("archer_edit", 0, 0, "ArcherTower", 3);
+        Depot.Add(extra);
+        string why = (string)S("DepotService", "RestoreBlockedReason", extra);
+        Assert.IsNotNull(why, "limit aşımı reddedilir");
+        Assert.IsFalse(Restore(BaseAdapter, "archer_edit", Vector2.zero, out _));
+        Assert.AreEqual(1, Depot.Count, "depo değişmedi");
+        Depot.Clear();
+        // Hariç türler
+        var main = DepotItem("main_edit", 0, 0, "MainBase", 1);
+        Depot.Add(main);
+        Assert.IsNotNull(S("DepotService", "RestoreBlockedReason", main), "Ana Üs");
+        var castle = DepotItem("castle_edit", 1, 0, "Castle", 1);
+        var archery = DepotItem("archery_edit", 1, 0, "Archery", 1);
+        Assert.IsNotNull(S("DepotService", "RestoreBlockedReason", castle), "Kıyı Kalesi");
+        Assert.IsNotNull(S("DepotService", "RestoreBlockedReason", archery), "Okçuluk Alanı");
+        Depot.Clear();
+        // Meşru: depola → kurma engellenmez (limit yerleşik+depo)
+        Assert.IsTrue(Store(BaseAdapter, "archer_1", 0, out why), why);
+        yield return null;
+        Assert.IsNull(S("DepotService", "RestoreBlockedReason", Depot[0]), "meşru kurma serbest");
+    }
+
+    [UnityTest, Timeout(120000)]
+    public IEnumerator GoldMineRestoreKeepsOtherMinesOfflineProduction()
+    {
+        yield return LoadDepotBase();
+        var data = Data;
+        SetF(data, "goldMineLastCollectTime", DateTime.UtcNow.AddHours(-2).Ticks);
+        float before = Convert.ToSingle(F(data, "goldMineStoredGold"));
+        var item = DepotItem("mine_extra", 0, 0, "GoldMine", 1);
+        BaseAdapter.GetType().GetMethod("Spawn").Invoke(BaseAdapter, new object[] { item, Vector2.zero });
+        float after = Convert.ToSingle(F(data, "goldMineStoredGold"));
+        Assert.Greater(after, before, "kurmadan önce mevcut madenin birikimi yazıldı");
+    }
+
     // ==================== ANA ÜS ====================
 
     [UnityTest, Timeout(120000)]

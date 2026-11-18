@@ -193,14 +193,20 @@ public static class DepotService
         {
             if (item.category == CategoryDecor) return null;
             var gm = GameManager.Instance;
-            if (gm == null || !Enum.TryParse(item.type, out BuildingType type)) return L.T("Bilinmeyen bina", "Unknown building");
+            if (gm == null || !Enum.TryParse(item.type, false, out BuildingType type)) return L.T("Bilinmeyen bina", "Unknown building");
             if (!gm.Buildings.TryGetValue(type, out var bd)) return L.T("Bilinmeyen bina", "Unknown building");
+            if (!ShowButton(RegionBase, item.category, item.type)) return L.T("Bu yapı depodan kurulamaz", "This can't be placed from storage");
+            int limit = bd.MaxCountAtBaseLevel(gm.GetMainBaseLevel());
+            if (PlacedCount(RegionBase, item.type) >= limit)
+                return L.T($"Bu türden en fazla {limit} bina kurulabilir", $"At most {limit} of this building allowed");
             int cap = bd.GetMaxLevel(gm.GetMainBaseLevel());
             if (item.level > cap)
                 return L.T($"Seviye tavanı aşılıyor (Sev. {item.level} > {cap})", $"Level cap exceeded (Lv. {item.level} > {cap})");
             return null;
         }
         if (IslandEconomy.InDefense) return L.T("Savaşta kurulamaz", "Can't place during defense");
+        if (item.type == nameof(IslandLayout.BuildingKind.Castle) || item.type == nameof(IslandLayout.BuildingKind.Archery))
+            return L.T("Bu yapı depodan kurulamaz", "This can't be placed from storage");
         int islandCap = Progression.Island.MaxBuildingLevel(IslandEconomy.Keep);
         if (item.level > islandCap)
             return L.T($"Kıyı Kalesi tavanı aşılıyor (Sev. {item.level} > {islandCap})", $"Keep level cap exceeded (Lv. {item.level} > {islandCap})");
