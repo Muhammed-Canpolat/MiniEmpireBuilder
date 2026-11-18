@@ -1,3 +1,22 @@
+# GECE_DURUM — 12. oturum: Açılış intro sahnesi (18 Kasım 2026, dal `intro-sahnesi`, birleştirilmedi)
+
+Ayrıntı: DECISIONS D122. Kurulum aracı: Tools/Intro/Intro Sahnesini Kur (`IntroSceneBuilder`). Görüntüler: `Docs/playtest/intro/`.
+Test: `IntroSceneTests` + `SceneTransitionTests` 6/6 geçti (batchmode PlayMode). Elle adım gerekmedi (MANUEL_ADIMLAR.md yok).
+
+### Kabul listesi (Docs/Intro/INTRO_ENTEGRASYON.md)
+| Madde | Durum | Not |
+|---|---|---|
+| Oyun intro ile açılıyor, görünüm referansa çok benziyor (tek logo, temiz) | BİTTİ | Build index 0 = Intro; tek logo (arka planda). 2 tur karşılaştırma (`referans_vs_9x16.jpg`). Kalan fark: ampul ikonu paketten alfasız gelir, çevresinde koyu kare (ART_NEEDS'e yazıldı); yüzde yazısı referanstan biraz ince. |
+| Çubuk %0→%100 doluyor, yüzde doğru, bitince oyun açılıyor | BİTTİ | Testte çubuk geri gitmiyor, fill = yazı, %100 görüldü, MainMenuScene açıldı; etkinleşme ~230 ms (editör). |
+| İpucu döngüsü çalışıyor, Türkçe karakterler görünüyor | BİTTİ | İpucu 3 sn'de değişiyor; AlegreyaSans-Bold dinamik font, çğıöşüİ glifleri testte doğrulandı. iOS cihazda DOĞRULANMADI. |
+| "Başa dönme" intro'ya düşürmüyor, kayıtlar ve ana üs aynı | BİTTİ | Kodda index bağımlılığı yok; testte `GameManager.LoadMainMenu()` → MainMenuScene. Kayıt/ana üs koduna dokunulmadı. |
+| 9:16, 9:21, 4:3 ve Safe Area kontrol edildi | BİTTİ | Görüntüler `intro_9x16/9x21/4x3/safe_notch.jpg`; 4:3'te tam sığdırma + karartılmış dolgu. Gerçek çentikli cihaz DOĞRULANMADI (benzetim). |
+| Sahne geçişinde hata yakalama ve yedek yükleme var | BİTTİ | CanStreamedLevelBeLoaded + try/catch → LoadScene(ad) → LoadScene(1). Yedek yol testte tetiklenmedi (DOĞRULANMADI). |
+| Hiçbir eski ayar/kayıt bozulmadı, her şey commit'lendi | BİTTİ | Yalnız SceneAutoSetup'a `case "Intro"` ve Build Settings sırası; Project Settings/paketler değişmedi. Sahne, .meta, yeni dosyalar commit'li. Tam test paketi koşulmadı. |
+
+### 12 madde özeti
+1 çift logo yok · 2 index/ad taraması + SceneAutoSetup düzeltmesi · 3 güvenli async + yedek · 4 gerçek ilerleme × min süre korundu, donma yok (230 ms) · 5 süreler SerializeField, arka plandan dönüşte intro yok · 6 targetFrameRate intro'dan kaldırıldı · 7 iOS-güvenli dinamik font · 8 ipuçları gerçek özelliklere göre · 9 ASTC import · 10 oranlar + Safe Area · 11 yeni ses yok · 12 LFS kuralı png için yok, normal git.
+
 # GECE_DURUM — 11. oturum: Hata grupları 1–9 (17 Kasım 2026)
 
 AKTİF GÖREV: Docs/Bugs/PROMPTLAR.md grupları 1→9 (ayrıntı Docs/Bugs/BUGLAR.md). DAL: `gece-gelistirme` (başlangıç `5a46d49`). Kararlar D112+.

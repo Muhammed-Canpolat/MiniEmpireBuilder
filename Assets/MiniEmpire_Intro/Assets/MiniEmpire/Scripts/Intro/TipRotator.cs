@@ -8,12 +8,13 @@ namespace MiniEmpire.Intro
     {
         [SerializeField] private TMP_Text tipText;
         [SerializeField] private float interval = 3f;
+        // İpucu listesi TEK YER: burası (sahne kurulumu bu varsayılanları kullanır; Intro sahnesinde Inspector'dan da düzenlenebilir).
         [SerializeField] private string[] tips =
         {
             "Ordunu güçlendir, imparatorluğunu büyüt!",
-            "Kaynaklarını düzenli topla, yeni binalar aç!",
-            "Kulelerini yükselt, krallığını koru!",
-            "Çiftliklerin ordunun gücüdür!"
+            "Madenlerini yükselt, daha çok altın topla!",
+            "Kulelerini yükselt, Ana Üs'ü koru!",
+            "Seferde bölgeleri fethet, ödülleri topla!"
         };
 
         private float _timer;

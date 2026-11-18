@@ -51,6 +51,10 @@ public static class SceneAutoSetup
                 EnsureComponent<UiRevampBootstrap>("UiRevampBootstrap");
                 break;
 
+            case "Intro":
+                // Açılış intro sahnesi (Build index 0): kendi IntroSceneController'ı var; eski giriş (IntroSceneSetup) EKLENMEZ.
+                break;
+
             case "CampaignScene":
                 EnsureComponent<CampaignSceneSetup>("CampaignSceneSetup");
                 break;

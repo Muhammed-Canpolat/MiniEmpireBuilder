@@ -15,7 +15,7 @@ namespace MiniEmpire.Intro
         [SerializeField] private CanvasGroup rootGroup; // fade için (tüm intro canvas'ı)
 
         [Header("Sahne")]
-        [SerializeField] private string gameSceneName = "MainMenu"; // Build Settings'e eklenmiş olmalı
+        [SerializeField] private string gameSceneName = "MainMenuScene"; // eski ilk sahne (Build Settings index 1)
 
         [Header("Süreler (sn)")]
         [SerializeField] private float fadeInTime = 0.6f;
@@ -25,15 +25,28 @@ namespace MiniEmpire.Intro
 
         private void Start()
         {
-            Application.targetFrameRate = 60;
+            // Not: Application.targetFrameRate projede tek yerde (MobilePerformanceConfig) ayarlanır; burada ayarlanmaz.
             StartCoroutine(IntroRoutine());
         }
+
+        /// <summary>Etkinleştirme anı (oyun sahnesi açılırken donma ölçümü için).</summary>
+        private static float activationStartedAt = -1f;
 
         private IEnumerator IntroRoutine()
         {
             yield return Fade(0f, 1f, fadeInTime);
 
-            AsyncOperation op = SceneManager.LoadSceneAsync(gameSceneName);
+            // Güvenli başlatma: sahne Build Settings'te yoksa ya da async işlem başlatılamazsa doğrudan yedek yükleme.
+            AsyncOperation op = null;
+            if (!Application.CanStreamedLevelBeLoaded(gameSceneName))
+                Debug.LogError($"[Intro] '{gameSceneName}' Build Settings'te yok; yedek yükleme deneniyor.");
+            else
+            {
+                try { op = SceneManager.LoadSceneAsync(gameSceneName, LoadSceneMode.Single); }
+                catch (System.Exception e) { Debug.LogError($"[Intro] LoadSceneAsync hata: {e}"); op = null; }
+            }
+            if (op == null) { FallbackLoad(); yield break; }
+
             op.allowSceneActivation = false;           // %100 olmadan açma
             float startTime = Time.unscaledTime;
 
@@ -50,7 +63,30 @@ namespace MiniEmpire.Intro
             yield return new WaitForSecondsRealtime(holdAtFullTime);
             yield return Fade(1f, 0f, fadeOutTime);
 
-            op.allowSceneActivation = true;            // oyun açılır
+            activationStartedAt = Time.realtimeSinceStartup;
+            SceneManager.sceneLoaded -= LogActivation;
+            SceneManager.sceneLoaded += LogActivation;
+            op.allowSceneActivation = true;            // oyun açılır; Single mod intro sahnesini bellekten tamamen çıkarır
+        }
+
+        /// <summary>Async yol kullanılamazsa intro'da takılı kalmamak için eşzamanlı yükleme.</summary>
+        private void FallbackLoad()
+        {
+            try { SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single); }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[Intro] Yedek yükleme de başarısız ({gameSceneName}): {e}. Build index 1 deneniyor.");
+                if (SceneManager.sceneCountInBuildSettings > 1) SceneManager.LoadScene(1, LoadSceneMode.Single);
+            }
+        }
+
+        private static void LogActivation(Scene scene, LoadSceneMode mode)
+        {
+            SceneManager.sceneLoaded -= LogActivation;
+            if (activationStartedAt < 0f) return;
+            float ms = (Time.realtimeSinceStartup - activationStartedAt) * 1000f;
+            activationStartedAt = -1f;
+            Debug.Log($"[Intro] {scene.name} etkinleşme süresi: {ms:0} ms");
         }
 
         private IEnumerator Fade(float from, float to, float duration)

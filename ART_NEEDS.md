@@ -129,3 +129,6 @@ parçalarından **türetilmiş** (`Tools/campaign_art/battle_props.py`, D91). Ge
 | # | Varlık | Dosya | Ölçü | Not |
 |---|---|---|---|---|
 | 26 | Depo simgesi (DEPOYA düğmesi, DEPO sekmesi/satırı) | Assets/Resources/CampaignArt/ui_icon_depot.png | 68×68 (34×29 kare ×2, en-yakın-komşu) | KARŞILANDI (karar 7): yeni çizim yok, Cainos `TX Chest Animation Wooden 0` karesi `Tools/campaign_art/depot_icon.py` ile kopyalandı (Point filtre, sıkıştırmasız). İstenirse ileride HUD ailesinde (koyu kontur) 64×64 sandık simgesi çizilebilir; o zamana kadar bu kullanılır, dosya yoksa kod `ui_icon_hammer`'a düşer. |
+
+## Intro: ipucu ampul ikonu (şeffaf)
+`Assets/MiniEmpire_Intro/.../Sprites/Intro/icon_tip_bulb.png` alfasız (koyu dikdörtgen zemin pişmiş). Şeffaf arka planlı aynı ikon (50x60, RGBA) gerekli; gelince aynı dosyanın yerine konması yeterli (D122).
