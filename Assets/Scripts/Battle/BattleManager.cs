@@ -1097,6 +1097,7 @@ public class BattleManager : MonoBehaviour
         float baseHealth = 200f;
         if (GameManager.Instance != null)
         {
+            // D121: Altın Madeni depodaysa da mod bilinçli çalışır; seviye tür kaydından (RecomputeTypeLevel eski seviyeyi tutar = son bilinen).
             if (GameManager.Instance.Buildings.TryGetValue(BuildingType.GoldMine, out var mineData))
                 mineLevel = Mathf.Max(1, mineData.level);
             baseHealth = GameManager.Instance.CreateLevelData(BuildingType.MainBase,

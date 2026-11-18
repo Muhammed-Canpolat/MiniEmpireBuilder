@@ -28,6 +28,13 @@ public static class UnitScale
         }
     }
 
-    public static float InBattle(Kind kind) => Battle * Relative(kind);
+    /// <summary>Savaşta kahramanın gerçek kök ölçeği (HeroController ile aynı tek kaynak: HeroLook.WarriorScaleFor, sefer kamerası ortho'su). Bug 34.</summary>
+    public static float BattleHero()
+    {
+        var cam = Camera.main;
+        return HeroLook.WarriorScaleFor(BattleSceneSetup.CameraSizeFor(cam != null ? cam.aspect : 0.5625f));
+    }
+
+    public static float InBattle(Kind kind) => BattleHero() * Relative(kind);
     public static float InBase(Kind kind) => Base * Relative(kind);
 }

@@ -14,7 +14,30 @@ public static class TmpFontBootstrap
     private static TMP_FontAsset bodyFont;
     private static bool hooked;
 
-    public static TMP_FontAsset BodyFont => bodyFont != null ? bodyFont : bodyFont = CreateDynamicFont(Resources.Load<Font>("Fonts/AlegreyaSans-Medium"));
+    public static TMP_FontAsset BodyFont
+    {
+        get
+        {
+            // D113 QA: uzun oturum/sahne geçişleri sonrası önbellekteki asset bozulabiliyor (TryAddCharacters mevcut 'a' için bile false,
+            // taze asset sorunsuz) → sağlıksızsa yeniden üret ve fallback zincirine yeniden bağla.
+            if (bodyFont != null && !bodyFont.TryAddCharacters("a" + ExtraCharacters, out _)) bodyFont = null;
+            if (bodyFont == null)
+            {
+                bodyFont = CreateDynamicFont(Resources.Load<Font>("Fonts/AlegreyaSans-Medium"));
+                if (bodyFont != null && hooked) LinkFallback(bodyFont);
+            }
+            return bodyFont;
+        }
+    }
+
+    private static void LinkFallback(TMP_FontAsset body)
+    {
+        var def = TMP_Settings.defaultFontAsset;
+        if (body == null || def == null) return;
+        if (def.fallbackFontAssetTable == null) def.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset>();
+        def.fallbackFontAssetTable.RemoveAll(f => f == null);
+        if (!def.fallbackFontAssetTable.Contains(body)) def.fallbackFontAssetTable.Add(body);
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Init()
@@ -53,9 +76,12 @@ public static class TmpFontBootstrap
     public static TMP_FontAsset CreateDynamicFont(Font source)
     {
         if (source == null) return null;
-        var asset = TMP_FontAsset.CreateFontAsset(source);
+        // D113: varsayılan 1024 atlas 90 pt glifle ~87 karakterde doluyor; sonraki glifler (TryAddCharacters) sessizce eksik kalıyordu → 2048 + çok atlas.
+        var asset = TMP_FontAsset.CreateFontAsset(source, 90, 9, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 2048, 2048,
+            AtlasPopulationMode.Dynamic, true);
         if (asset == null) return null;
         asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+        asset.isMultiAtlasTexturesEnabled = true;
         var def = TMP_Settings.defaultFontAsset;
         if (asset.material != null && def != null && def.material != null &&
             (asset.material.shader == null || asset.material.shader.name.StartsWith("Hidden/")))
@@ -127,7 +153,7 @@ public static class TmpFontBootstrap
                 float joined = tmp.GetPreferredValues("yakındakiağaçları+250altın").x;
                 bool has = f.characterLookupTable.TryGetValue(32, out var ch) && ch.glyph != null;
                 float adv = has ? ch.glyph.metrics.horizontalAdvance : -1f;
-                if (!has || adv < f.faceInfo.pointSize * MinSpaceEm - 0.01f || spaced < ab + 20f * (MinSpaceEm - 0.01f) || sentence < joined + 20f * 3f * (MinSpaceEm - 0.01f))
+                if (!has || adv < f.faceInfo.pointSize * MinSpaceEm - 0.01f || spaced < ab + 20f * (MinSpaceEm - 0.02f) || sentence < joined + 20f * 3f * (MinSpaceEm - 0.01f))
                 { report = $"{f.name}: boşluk glifi={has} adv={adv} ab={ab} a_b={spaced} cümle={sentence} bitişik={joined}"; return false; }
             }
             return true;

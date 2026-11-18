@@ -821,7 +821,7 @@ public class Session4Tests
         float heroScale = hero.transform.lossyScale.x;
         foreach (var l in lancers)
             Assert.AreEqual(heroScale, l.transform.lossyScale.x, 0.02f, "mızraklı ölçeği = kahraman ölçeği (UnitScale.Battle)");
-        Assert.AreEqual((float)T("UnitScale").GetField("Battle").GetValue(null), heroScale, 0.02f, "kahraman = tablo");
+        Assert.AreEqual((float)T("UnitScale").GetMethod("BattleHero").Invoke(null, null), heroScale, 0.02f, "kahraman = tablo (HeroLook.WarriorScaleFor)");
         var bcam = Camera.main;
         var follow = bcam.GetComponent(T("CameraFollow")) as Behaviour;
         if (follow != null) follow.enabled = false;
@@ -981,10 +981,11 @@ public class Session4Tests
     public IEnumerator BattleObjectiveSitsInTheTopBarNotOverTheWorld()
     {
         yield return StartBattle(1, 3);
-        var pill = GameObject.Find("ObjectivePill");
-        Assert.NotNull(pill, "Madeni Koru göstergesi");
-        Assert.AreEqual("TopBar", pill.transform.parent.name, "3.4 gösterge üst barın içinde (dünya halkalarının üstüne binmez)");
-        StringAssert.Contains("MADEN", Text(pill.transform.Find("ObjectiveText")).ToUpperInvariant());
+        yield return null;   // D98: gösterge BattleTopBar'ın "ObjectiveCard" hedef kartı (eski ObjectivePill kalktı)
+        var pill = GameObject.Find("ObjectiveCard");
+        Assert.NotNull(pill, "Madeni Koru göstergesi (hedef kartı)");
+        Assert.IsNotNull(pill.GetComponentInParent<Canvas>(), "3.4 gösterge üst barın tuvalinde (dünya halkalarının üstüne binmez)");
+        StringAssert.Contains("MADEN", Text(pill.transform.Find("ObjectiveLabel")).ToUpperInvariant());
         foreach (var r in Ratios) CaptureUi("S3_battle_mine_hud_" + r.tag, r.w, r.h);
         var battle = Object.FindFirstObjectByType(T("BattleManager"));
         battle.GetType().GetMethod("BattleLost", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(battle, null);
