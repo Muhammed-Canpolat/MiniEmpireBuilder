@@ -139,6 +139,7 @@ public static class ReferenceUiVisuals
         tmp.outlineColor = new Color32(0x14, 0x11, 0x0D, 0xFF);
     }
 
+
     internal static TMP_FontAsset CreateTitleFontForTest() => TmpFontBootstrap.TitleFont;
     internal static TMP_FontAsset CreateBoldFontForTest() => TmpFontBootstrap.BoldFont;
 

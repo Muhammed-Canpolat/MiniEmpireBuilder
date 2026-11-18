@@ -814,11 +814,19 @@ public sealed class IslandHud : MonoBehaviour
             }
             else icon.sprite = IslandAbilityArt.Net();
             abilityFill[i] = RadialOverlay(face.transform, "Cooldown", round, new Color(0f, 0f, 0f, 0.6f));
-            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", AbilityShortName(i), 9, Color.white, TextAlignmentOptions.Center,
-                new Vector2(0f, 0f), new Vector2(1f, 0.38f), new Vector2(6, 3), new Vector2(-6, 0), true);   // dairenin içine sığsın
-            // UI2: dairenin alt kirişi içinde kalır (görünen daire ≈ kutunun %72'si; 0,15-0,39 bandında %46 genişlik); dar Alegreya Kalın + koyu kontur
-            ReferenceUiVisuals.ApplyFont(abilityLabel[i], 9, Color.white, bodyBold: true);
-            ReferenceUiVisuals.FitButtonLabel(abilityLabel[i], new Vector2(0.27f, 0.15f), new Vector2(0.73f, 0.39f), 5f, 9f, false);
+            // UI2 rötuş: etiket dairenin ALTINDA koyu pul (#14110D %75); dairede yalnız simge + geri sayım kalır
+            var pillMin = new Vector2(-0.2f, -0.34f);
+            var pillMax = new Vector2(1.2f, -0.04f);
+            var pill = ReferenceUiVisuals.Image(face.transform, "LabelPill", pillMin, pillMax, Vector2.zero, Vector2.zero,
+                new Color32(0x14, 0x11, 0x0D, 0xBF));
+            pill.sprite = ReferenceUiVisuals.ToastSprite();
+            pill.type = Image.Type.Sliced;
+            abilityLabel[i] = ReferenceUiVisuals.Text(face.transform, "Label", AbilityShortName(i), 12, Color.white, TextAlignmentOptions.Center,
+                pillMin, pillMax, Vector2.zero, Vector2.zero, true);
+            ReferenceUiVisuals.ApplyFont(abilityLabel[i], 12, Color.white, bodyBold: true);
+            ReferenceUiVisuals.FitButtonLabel(abilityLabel[i], pillMin, pillMax, 10f, 12f, false);
+            abilityLabel[i].outlineWidth = 0.25f;
+            abilityLabel[i].outlineColor = new Color32(0, 0, 0, 0xFF);
             abilityLabel[i].raycastTarget = false;
             // Kalan saniye: dolum sürerken dairenin ortasında iri sayı
             abilityTime[i] = ReferenceUiVisuals.Text(face.transform, "Seconds", "", 20, Color.white, TextAlignmentOptions.Center,

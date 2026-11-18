@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -198,6 +199,7 @@ public static class DarkFantasyHudPolish
             }
         }
 
+        var nameGroup = new List<TextMeshProUGUI>();
         BuildingType[] types = { BuildingType.ArcherTower, BuildingType.CannonTower, BuildingType.Monastery, BuildingType.CardWorkshop,
             BuildingType.House, BuildingType.Barracks };
         for (int i = 0; i < types.Length; i++)
@@ -220,10 +222,13 @@ public static class DarkFantasyHudPolish
             var cardName = item.Find("Name")?.GetComponent<TMPro.TextMeshProUGUI>();
             if (cardName != null)
             {
-                SetAnchors(cardName.rectTransform, new Vector2(0.06f, 0.27f), new Vector2(0.94f, 0.43f));
+                nameGroup.Add(cardName);
+                SetAnchors(cardName.rectTransform, new Vector2(0f, 0.25f), new Vector2(1f, 0.52f));
+                cardName.rectTransform.offsetMin = new Vector2(4f, cardName.rectTransform.offsetMin.y);
+                cardName.rectTransform.offsetMax = new Vector2(-4f, cardName.rectTransform.offsetMax.y);
                 cardName.enableAutoSizing = true;
-                cardName.fontSizeMin = 8f;
-                cardName.fontSizeMax = 14f;
+                cardName.fontSizeMin = 9f;
+                cardName.fontSizeMax = 12f;
                 cardName.textWrappingMode = TMPro.TextWrappingModes.Normal;
                 cardName.lineSpacing = -14f;
             }
@@ -231,6 +236,11 @@ public static class DarkFantasyHudPolish
             SetAnchors(item.Find("Cost") as RectTransform, new Vector2(0, 0.12f), new Vector2(1, 0.27f));
             StyleText(item, "PlacedCount", 11, ReferenceUiVisuals.Muted, false);
             SetAnchors(item.Find("PlacedCount") as RectTransform, new Vector2(0, 0.01f), new Vector2(1, 0.14f));
+        }
+        if (nameGroup.Count > 0)
+        {
+            var uniform = panel.gameObject.GetComponent<UniformAutoSizeGroup>() ?? panel.gameObject.AddComponent<UniformAutoSizeGroup>();
+            uniform.Set(nameGroup);
         }
         // Dekor kartları kaydırılabilir ızgarada; alan sekmelerin altından ipucunun üstüne.
         SetBelowTabs(panel.Find("DecorScroll") as RectTransform, new Vector2(0.03f, 0.09f), 0.97f);
@@ -525,5 +535,36 @@ public static class DarkFantasyHudPolish
         }
         texture.Apply();
         return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+    }
+}
+
+/// <summary>UI2 rötuş: kart adları Auto Size (9-12) ile sığdırılır, sonra hepsi en küçük sonuca eşitlenir (tüm kartlarda punto tutarlı).</summary>
+public sealed class UniformAutoSizeGroup : MonoBehaviour
+{
+    private List<TextMeshProUGUI> items = new List<TextMeshProUGUI>();
+
+    public void Set(List<TextMeshProUGUI> list) { items = list; }
+
+    private void OnEnable() { StartCoroutine(Apply()); }
+
+    private System.Collections.IEnumerator Apply()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        float min = float.MaxValue;
+        foreach (var t in items)
+        {
+            if (t == null) continue;
+            t.enableAutoSizing = true;
+            t.ForceMeshUpdate();
+            min = Mathf.Min(min, t.fontSize);
+        }
+        if (min == float.MaxValue) yield break;
+        foreach (var t in items)
+        {
+            if (t == null) continue;
+            t.enableAutoSizing = false;
+            t.fontSize = min;
+        }
     }
 }

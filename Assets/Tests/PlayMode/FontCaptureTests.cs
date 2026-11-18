@@ -72,45 +72,118 @@ public class FontCaptureTests
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         var texture = new RenderTexture(w, h, 24);
+        // Kök neden (İş 5): ScreenSpaceCamera tuvali kameranın rect'ine sığar. Dünya kamerası WorldViewportBars ile (0,0.12,1,0.68) gibi
+        // daraltıldığından HUD da o kutuya sıkışıp üstte/altta siyah bant çıkıyordu (yalnız yakalama hatası). Tuvaller tam ekran
+        // bir UI kamerasına bağlanır; dünya kamerası HUD'ın gerçek bar yüksekliklerinden hesaplanan rect ile çizilir.
+        var uiGo = new GameObject("CaptureUiCamera");
+        var uiCam = uiGo.AddComponent<Camera>();
+        uiCam.orthographic = true; uiCam.clearFlags = CameraClearFlags.SolidColor; uiCam.backgroundColor = new Color(0, 0, 0, 0); uiCam.cullingMask = 1 << 31;
+        uiCam.rect = new Rect(0, 0, 1, 1); uiCam.depth = 1000;
+        var uiTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+        uiCam.targetTexture = uiTexture;
+        var layers = new List<(GameObject go, int layer)>();   // tuvaller geçici olarak 31. katmana; dünya kamerası görmez, UI kamerası yalnız bunu çizer
         var changed = new List<(Canvas c, RenderMode m, Camera cam, int order, bool over, float dist)>();
         foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
         {
             if (!canvas.isRootCanvas || canvas.renderMode != RenderMode.ScreenSpaceOverlay) continue;
             changed.Add((canvas, canvas.renderMode, canvas.worldCamera, canvas.sortingOrder, canvas.overrideSorting, canvas.planeDistance));
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = camera;
+            foreach (var tr in canvas.GetComponentsInChildren<Transform>(true)) { layers.Add((tr.gameObject, tr.gameObject.layer)); tr.gameObject.layer = 31; }
+            canvas.worldCamera = uiCam;
             canvas.planeDistance = 10f - canvas.sortingOrder * 0.001f;
             canvas.overrideSorting = true;
             canvas.sortingOrder = 2000 + canvas.sortingOrder;
         }
         var oldTarget = camera.targetTexture;
+        var oldRect = camera.rect;
+        camera.rect = new Rect(0, 0, 1, 1);
         camera.targetTexture = texture;
         camera.aspect = (float)w / h;
         Canvas.ForceUpdateCanvases();
+        // Kök neden (İş 5): oyunda WorldViewportBars kamera rect'ini EKRAN çözünürlüğüne göre kurar; yakalama farklı çözünürlükte
+        // (1080x1920 / 1536x2048) çizdiği için bu normalize rect üst/alt barlarla uyuşmaz ve siyah bant oluşur.
+        // Yakalamada rect'i yakalama tuvalinin gerçek bar yüksekliklerinden yeniden hesapla.
+        float barTop = 0f, barBottom = 0f;
+        var barsType = T("WorldViewportBars");
+        foreach (var obj in Object.FindObjectsByType(barsType, FindObjectsSortMode.None))
+        {
+            var cv = ((Component)obj).GetComponent<Canvas>();
+            if (cv == null) continue;
+            var hudTop = cv.transform.Find("SafeArea/HudRoot/TopBarBG") as RectTransform ?? cv.transform.Find("SafeArea/TopBar") as RectTransform;
+            var hudBottom = cv.transform.Find("SafeArea/HudRoot/BottomDock") as RectTransform ?? cv.transform.Find("SafeArea/BattleBottomDock") as RectTransform;
+            if (hudTop == null || hudBottom == null) continue;
+            var cc = new Vector3[4]; var tc = new Vector3[4]; var bc = new Vector3[4];
+            ((RectTransform)cv.transform).GetWorldCorners(cc);
+            hudTop.GetWorldCorners(tc);
+            hudBottom.GetWorldCorners(bc);
+            float full = Mathf.Max(0.0001f, cc[1].y - cc[0].y);
+            barTop = Mathf.Max(barTop, (cc[1].y - tc[0].y) / full * h);
+            barBottom = Mathf.Max(barBottom, (bc[1].y - cc[0].y) / full * h);
+        }
+        Debug.Log($"[FontCapture] kadraj {w}x{h}: ekran {Screen.width}x{Screen.height} kamera.rect(oyun)={oldRect} bar üst/alt px(yakalama)={barTop:0}/{barBottom:0}");
+        if (barTop + barBottom > 0f)
+        {
+            camera.rect = new Rect(0f, barBottom / h, 1f, Mathf.Clamp01((h - barTop - barBottom) / h));
+            camera.aspect = (float)w / Mathf.Max(1f, h - barTop - barBottom);
+        }
         foreach (var part in new[] { "MapButton", "AutoButton", "Ability", "Item_", "NextWave" })
         {
             string d = (string)T("TmpTextIntegrity").GetMethod("Describe").Invoke(null, new object[] { part });
             if (!string.IsNullOrEmpty(d)) Debug.Log($"[FontCapture] ölçü {w}x{h} {part}: {d}");
         }
         camera.Render();
+        uiCam.Render();
         var previous = RenderTexture.active;
         RenderTexture.active = texture;
-        var pixels = new Texture2D(w, h, TextureFormat.RGB24, false);
+        var pixels = new Texture2D(w, h, TextureFormat.RGBA32, false);
         pixels.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        var uiPixels = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        RenderTexture.active = uiTexture;
+        uiPixels.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        var world = pixels.GetPixels32();
+        var ui = uiPixels.GetPixels32();
+        for (int i = 0; i < world.Length; i++)   // UI kamerası şeffaf zeminde çizdi (premultiplied): ui + dünya*(1-a)
+        {
+            int inv = 255 - ui[i].a;
+            world[i] = new Color32((byte)Mathf.Min(255, ui[i].r + world[i].r * inv / 255), (byte)Mathf.Min(255, ui[i].g + world[i].g * inv / 255),
+                (byte)Mathf.Min(255, ui[i].b + world[i].b * inv / 255), 255);
+        }
+        pixels.SetPixels32(world);
         pixels.Apply();
         File.WriteAllBytes(path, pixels.EncodeToPNG());
         Object.Destroy(pixels);
+        Object.Destroy(uiPixels);
         RenderTexture.active = previous;
         camera.targetTexture = oldTarget;
+        camera.rect = oldRect;
         camera.ResetAspect();
         foreach (var (c, m, cam, order, over, dist) in changed)
         {
             if (c == null) continue;
             c.renderMode = m; c.worldCamera = cam; c.sortingOrder = order; c.overrideSorting = over; c.planeDistance = dist;
         }
+        foreach (var (go, layer) in layers) if (go != null) go.layer = layer;
+        Object.Destroy(uiGo);
+        uiTexture.Release();
+        Object.Destroy(uiTexture);
         texture.Release();
         Object.Destroy(texture);
         Canvas.ForceUpdateCanvases();
+    }
+
+    private static void LogPanelFit(string when)
+    {
+        foreach (var rt in Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            if (rt.name != "HeroInfo") continue;
+            var canvas = rt.GetComponentInParent<Canvas>()?.rootCanvas;
+            if (canvas == null) continue;
+            var cc = new Vector3[4]; var pc = new Vector3[4];
+            ((RectTransform)canvas.transform).GetWorldCorners(cc);
+            rt.GetWorldCorners(pc);
+            float full = cc[1].y - cc[0].y;
+            Debug.Log($"[FontCapture] {when}: HeroInfo alt={(pc[0].y - cc[0].y) / full:0.000} üst={(pc[1].y - cc[0].y) / full:0.000} (0..1 dışı = taşma) scale={rt.lossyScale.y:0.00} aktif={rt.gameObject.activeInHierarchy}");
+        }
     }
 
     private static void ShootBoth(Camera camera, string name)
@@ -247,6 +320,13 @@ public class FontCaptureTests
         {
             world.GetType().GetMethod("ShowHeroInfo").Invoke(world, null);
             yield return null; yield return null;
+            if (round == 0)
+            {
+                // İş 4: açılış animasyonu karesi mi gerçek taşma mı? Hemen ve animasyon bittikten sonra panel kutusunu tuvalle karşılaştır.
+                LogPanelFit("kahraman +2 kare");
+                yield return new WaitForSecondsRealtime(1.2f);
+                LogPanelFit("kahraman +1.2 sn");
+            }
             Scan($"Kahraman tur {round}", problems);
             if (round == 0) foreach (var (w, h, tag) in Sizes) UiAnaUsCapture.ShootFramed(w, h, Out("kahraman-sekme-" + tag));
             world.GetType().GetMethod("ShowApprenticeInfo").Invoke(world, null);

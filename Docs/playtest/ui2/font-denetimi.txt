@@ -1,4 +1,4 @@
-# Font Denetimi — 2026-11-18 19:56 (FontPipeline.Audit, D124)
+# Font Denetimi — 2026-11-18 20:24 (FontPipeline.Audit, D124)
 
 ## 1. Font asset envanteri
 - Assets/DungeonMonsters2D/UserInterface/Georgia SDF.asset: mod=Static, atlas=512x512 x1 sayfa, çok-atlas=False, karakter=98, ClearDynamicDataOnBuild=False, kaynak=-, shader=TextMeshPro/Distance Field, fallback=[]

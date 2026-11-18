@@ -197,8 +197,8 @@ public static class BattleHudRedesign
                 text.fontSizeMin = 22f;
                 text.fontSizeMax = 34f;   // BattleCanvas 1080 referanslı: eski 22 pt telefonda ~%2 yükseklik, zeminde kayboluyordu
                 // UI2: "Sonraki dalga N" çimen/yol zemininde kaybolmasın: koyu kontur + yumuşak gölge (alt katman).
-                text.outlineWidth = 0.32f;
-                text.outlineColor = new Color32(0x14, 0x11, 0x0D, 0xFF);
+                text.outlineWidth = 0.3f;
+                text.outlineColor = new Color32(0x1A, 0x12, 0x08, 0xFF);
                 var mat = text.fontMaterial;   // örnek malzeme (paylaşılan font malzemesi değişmez)
                 mat.EnableKeyword(TMPro.ShaderUtilities.Keyword_Underlay);
                 mat.SetColor(TMPro.ShaderUtilities.ID_UnderlayColor, new Color(0f, 0f, 0f, 0.75f));
