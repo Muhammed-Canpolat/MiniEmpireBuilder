@@ -41,7 +41,7 @@ public sealed class BaseCameraController : MonoBehaviour
 
     /// <summary>Tüm harita genişliği (ya da yüksekliği) sığan en uzak ortografik boyut. D108 duvarları varken: duvar + orman kadrajı.</summary>
     public float FullSize => cam == null ? 0f
-        : BaseCastleWalls.TryGetFrame(out Rect frame) ? BaseCastleWalls.FitOrtho(frame, cam.aspect)
+        : BaseCastleWalls.TryGetFrame(out Rect frame) ? BaseCastleWalls.FramedSize(cam, frame)
         : Mathf.Max(BaseWorldLayout.Width * 0.5f / Mathf.Max(0.01f, cam.aspect), BaseWorldLayout.Height * 0.5f);
 
     /// <summary>D108 / bug 13: Ana Üs kadrajı sabit (duvarlar kurulu); sıkıştırma/tekerlek zoom ve kaydırma yok.</summary>

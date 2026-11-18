@@ -303,6 +303,15 @@ public sealed class BaseCastleWalls : MonoBehaviour
     /// <summary>D125 (İş 2): kamera tam ekran çizerken (Ana Üs) kadrajın oturacağı piksel bandı (iki bar arası). Genişlik 0 = yok.</summary>
     public static Rect FramingBand { get; set; }
 
+    /// <summary>Kameranın sabit kadraj boyu: tam ekran kamerada banda göre, aksi halde kamera en-boy oranına göre.</summary>
+    public static float FramedSize(Camera camera, Rect frame)
+    {
+        Rect band = FramingBand; Rect px = camera.pixelRect;
+        if (band.width > 1f && band.height > 1f && (px.height > band.height + 0.5f || px.width > band.width + 0.5f))
+            return 2f * FitOrtho(frame, band.width / band.height) / band.height * px.height * 0.5f;
+        return FitOrtho(frame, camera.aspect);
+    }
+
     /// <summary>Kamerayı sabit kadraja oturtur (değişiklik yoksa dokunmaz). Duvar yoksa false.</summary>
     public static bool ApplyFraming(Camera camera)
     {
@@ -315,9 +324,8 @@ public sealed class BaseCastleWalls : MonoBehaviour
         if (band.width > 1f && band.height > 1f && (px.height > band.height + 0.5f || px.width > band.width + 0.5f))
         {
             // Tam ekran kamera: kadraj, barlar arası banda göre hesaplanır (bantta piksel piksel eski görüntü); bandın dışı orman olarak görünür.
-            float sBand = FitOrtho(frame, band.width / band.height);
-            float wpp = 2f * sBand / band.height;
-            size = wpp * px.height * 0.5f;
+            size = FramedSize(camera, frame);
+            float wpp = 2f * size / px.height;
             cx = frame.center.x + (px.center.x - band.center.x) * wpp;
             cy = frame.center.y + (px.center.y - band.center.y) * wpp;
         }

@@ -163,8 +163,12 @@ public class HudExpansionReviewTests
         var debug = Object.FindFirstObjectByType(Type("BaseDebugOverlay")) as Component;
         Assert.NotNull(debug);
         debug.GetType().GetMethod("SetVisible").Invoke(debug, new object[] { true });
-        Assert.Greater(Camera.main.rect.yMin, 0f);
-        Assert.Less(Camera.main.rect.yMax, 1f);
+        // D125 (İş 2): Ana Üs kamerası tam ekran çizer; barlar arası bant FramingBand'dir (üstte ve altta bar payı kalır).
+        Assert.AreEqual(0f, Camera.main.rect.yMin, 1e-4f);
+        Assert.AreEqual(1f, Camera.main.rect.yMax, 1e-4f);
+        var band = (Rect)Type("BaseCastleWalls").GetProperty("FramingBand").GetValue(null);
+        Assert.Greater(band.yMin, 0f, "alt bar payı");
+        Assert.Less(band.yMax, Camera.main.pixelRect.yMax, "üst bar payı");
         Capture("viewport-item-02.png");
 
         var layout = Type("BaseWorldLayout");
