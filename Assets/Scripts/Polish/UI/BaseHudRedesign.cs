@@ -379,6 +379,8 @@ public sealed class LevelCrest : MonoBehaviour
     private TextMeshProUGUI number;
     private int shownLevel = -1;
     private bool tinted = true;
+    /// <summary>D126: true ise Ada kalkanı ("KIYI KALESİ" + Kıyı Kalesi seviyesi); varsayılan Ana Üs yolu değişmez.</summary>
+    public bool keep;
 
     public void Build(RectTransform root)
     {
@@ -396,12 +398,12 @@ public sealed class LevelCrest : MonoBehaviour
             number.textWrappingMode = TextWrappingModes.NoWrap;
             number.fontSizeMin = 14f;   // 1-2 haneli seviye (1..15) kalkana sığar
             number.fontSizeMax = 26f;
-            var label = ReferenceUiVisuals.Text(root, "Caption", L.T("ANA ÜS", "BASE"), 7, ReferenceUiVisuals.Light,
-                TextAlignmentOptions.Center, new Vector2(0.28f, 0.2f), new Vector2(0.72f, 0.37f),
+            var label = ReferenceUiVisuals.Text(root, "Caption", keep ? L.T("KIYI KALESİ", "COASTAL KEEP") : L.T("ANA ÜS", "BASE"), 7, ReferenceUiVisuals.Light,
+                TextAlignmentOptions.Center, keep ? new Vector2(0.18f, 0.2f) : new Vector2(0.28f, 0.2f), keep ? new Vector2(0.82f, 0.37f) : new Vector2(0.72f, 0.37f),
                 Vector2.zero, Vector2.zero, title: true);
             label.enableAutoSizing = true;
             label.fontSizeMin = 3f;
-            label.fontSizeMax = 5.5f;
+            label.fontSizeMax = keep ? 4.2f : 5.5f;   // KIYI KALESİ daha uzun: kalkan içinde kalsın
             label.textWrappingMode = TextWrappingModes.NoWrap;
             Refresh(true);
             return;
@@ -426,6 +428,11 @@ public sealed class LevelCrest : MonoBehaviour
         Refresh(true);
     }
 
+    private void Update()
+    {
+        if (keep && body != null) Refresh(false);   // Kıyı Kalesi yükseltmesi olay vermez: seviye yoklanır (tamsayı karşılaştırma)
+    }
+
     private void OnEnable()
     {
         if (GameManager.Instance != null) GameManager.Instance.OnBuildingUpgraded += OnUpgraded;
@@ -444,7 +451,7 @@ public sealed class LevelCrest : MonoBehaviour
     private void Refresh(bool silent)
     {
         if (body == null || number == null) return;
-        int level = GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
+        int level = keep ? IslandSession.KeepLevel() : GameManager.Instance != null ? GameManager.Instance.GetMainBaseLevel() : 1;
         if (level == shownLevel) return;
         shownLevel = level;
         number.text = level.ToString();

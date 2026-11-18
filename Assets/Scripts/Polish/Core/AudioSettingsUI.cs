@@ -113,7 +113,7 @@ public sealed class AudioSettingsUI : MonoBehaviour
             hit.anchoredPosition = new Vector2(-8f, 0f);
             hit.sizeDelta = new Vector2(42f, 42f);
         }
-        bool miniGear = baseScene && MiniEmpireUiCatalog.TopBarReady;
+        bool miniGear = (baseScene && MiniEmpireUiCatalog.TopBarReady) || (battleLayout && MiniEmpireTopBarSkin.IslandEnabled);   // D126: ada barı da ana üs stilinde
         if (miniGear)
         {
             // D106: Ana Üs'te paket dişlisi (btn_settings, tek parça), üst barın sağ ucunda; anchor + ref. birim.

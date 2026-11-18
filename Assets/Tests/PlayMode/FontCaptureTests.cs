@@ -369,4 +369,88 @@ public class FontCaptureTests
         Scan("geçiş sonrası ana üs", problems);
         Assert.IsEmpty(problems, string.Join("\n", problems));
     }
+
+    // ==================== D126 (UI2 İş 3): ada üst barı ana üs stilinde ====================
+
+    private static Rect WorldRect(RectTransform rt)
+    {
+        var c = new Vector3[4];
+        rt.GetWorldCorners(c);
+        return new Rect(c[0].x, c[0].y, c[2].x - c[0].x, c[2].y - c[0].y);
+    }
+
+    [UnityTest]
+    public IEnumerator IslandTopBar_MatchesBaseStyle()
+    {
+        var problems = new List<string>();
+        yield return LoadIsland(island => { Set(island, "highestAkin", 5); }, 6, v => { });
+        var setup = Setup;
+        var camera = (Camera)Prop(setup, "WorldCamera");
+        var bar = GameObject.Find("TopBar");
+        Assert.NotNull(bar, "TopBar adı korunur");
+        var barRt = (RectTransform)bar.transform;
+        var safe = (RectTransform)barRt.parent;
+        yield return new WaitForSecondsRealtime(0.8f);
+        Assert.AreEqual("KIYI KALESİ", Txt(bar.transform.Find("LevelCrest/Caption")), "kalkan etiketi");
+        int keep = (int)T("IslandSession").GetMethod("KeepLevel").Invoke(null, null);
+        Assert.AreEqual(keep.ToString(), Txt(bar.transform.Find("LevelCrest/Number")), "kalkan = gerçek Kıyı Kalesi seviyesi");
+        Assert.NotNull(bar.transform.Find("HomeButton"), "ANA ÜS düğmesi");
+        Assert.NotNull(bar.transform.Find("IslandNameButton"), "ada adı");
+        Assert.NotNull(bar.transform.Find("GoldPill/Value"), "altın değeri");
+        // Yükseltme: seviye değişince kalkan güncellenir
+        var island = CurrentIsland();
+        Set(island, "keepLevel", Mathf.Min(keep + 1, 15));
+        yield return null; yield return null;
+        int keep2 = (int)T("IslandSession").GetMethod("KeepLevel").Invoke(null, null);
+        Assert.AreEqual(keep2.ToString(), Txt(bar.transform.Find("LevelCrest/Number")), "yükseltmede kalkan güncellenir");
+
+        // Çakışma / Safe Area: öğe dikdörtgenleri kesişmez, hepsi SafeArea içinde
+        Canvas.ForceUpdateCanvases();
+        var items = new List<(string name, Rect rect)>();
+        foreach (var name in new[] { "GoldPill", "WoodPill", "MeatPill", "GemPill", "BuilderPill", "LevelCrest", "HomeButton", "IslandNameButton" })
+        {
+            var t = bar.transform.Find(name) as RectTransform;
+            if (t != null && t.gameObject.activeInHierarchy) items.Add((name, WorldRect(t)));
+        }
+        RectTransform gear = null;
+        foreach (var r in Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None)) if (r.name == "AudioSettingsButton") gear = r;
+        Assert.NotNull(gear, "ayarlar dişlisi korunur");
+        items.Add(("AudioSettingsButton", WorldRect(gear)));
+        var safeRect = WorldRect(safe);
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (!safeRect.Contains(items[i].rect.min) || !safeRect.Contains(items[i].rect.max - new Vector2(0.001f, 0.001f)))
+                problems.Add($"{items[i].name} SafeArea dışında");
+            Debug.Log($"[IslandBar] {items[i].name} {items[i].rect} (güvenli {safeRect})");
+            for (int j = i + 1; j < items.Count; j++)
+                if (items[i].rect.Overlaps(items[j].rect)) problems.Add($"{items[i].name} ile {items[j].name} kesişiyor");
+        }
+        Scan("ada üst bar", problems);
+        var sizes = new[] { (1080, 1920, "9x16"), (1080, 2340, "9x21"), (1536, 2048, "4x3") };
+        foreach (var (w, h, tag) in sizes) Shoot(camera, w, h, Out("is3-ada-normal-" + tag));
+
+        var raid = Prop(setup, "Raid");
+        raid.GetType().GetMethod("StartAkin").Invoke(raid, new object[] { 6 });
+        yield return new WaitForSecondsRealtime(1.5f);
+        var plate = Txt(bar.transform.Find("IslandNameButton/Title"));
+        StringAssert.Contains("6", plate, "akın bilgisi");
+        StringAssert.Contains("1/", plate, "dalga bilgisi");
+        Scan("ada üst bar akın", problems);
+        foreach (var (w, h, tag) in new[] { (1080, 1920, "9x16"), (1536, 2048, "4x3") }) Shoot(camera, w, h, Out("is3-ada-akin-" + tag));
+        raid.GetType().GetMethod("Abandon").Invoke(raid, null);
+        yield return null;
+        Assert.IsEmpty(problems, string.Join("; ", problems));
+    }
+
+    private static string Txt(Transform t)
+    {
+        var tmp = t.GetComponent("TextMeshProUGUI");
+        return (string)tmp.GetType().GetProperty("text").GetValue(tmp);
+    }
+
+    private static RectTransform FindDeep(Transform root, string name)
+    {
+        foreach (var t in root.GetComponentsInChildren<RectTransform>(false)) if (t.name == name) return t;
+        return null;
+    }
 }

@@ -24,6 +24,8 @@ public sealed class ResourceTopBar : MonoBehaviour
 
     public Mode mode;
     public Chip Gold, Gem, Meat, Wood;
+    /// <summary>D126: yalnız Ada'nın yeni (ana üs stili) barında; "1/1" boşta, "0/1" Ada Ustası meşgulken. Başka yerde null.</summary>
+    public Chip Builder;
     private RectTransform toastRect;
     private TextMeshProUGUI toastText;
     private float toastUntil, nextRefresh;
@@ -69,6 +71,20 @@ public sealed class ResourceTopBar : MonoBehaviour
         component.BuildToast(bar);
         component.Refresh(true);
         return component;
+    }
+
+    /// <summary>Ada Ustası yuvası (gerçek veri: IslandEconomy.BuilderBusy); başlangıçta gizli, yerleşimi çağıran yapar.</summary>
+    public void EnsureBuilder(RectTransform bar)
+    {
+        if (Builder != null) return;
+        var catalog = MiniEmpireUiCatalog.Instance;
+        Builder = MakeChip(bar, "BuilderPill", "builder", catalog != null ? catalog.iconBuilder : null, Vector2.zero, Vector2.zero);
+        Builder.rect.gameObject.SetActive(false);
+        Builder.button.onClick.AddListener(() =>
+            ShowToast(IslandEconomy.BuilderBusy
+                ? L.T($"Ada Ustası meşgul · kalan {IslandHud.ShortSpan(IslandEconomy.TaskSecondsLeft)}", $"Island Builder is busy · {IslandHud.ShortSpan(IslandEconomy.TaskSecondsLeft)} left")
+                : L.T("Ada Ustası boşta", "Island Builder is free")));
+        Refresh(true);
     }
 
     // ==================== 3. oturum (2.2): config'ten sıra ====================
@@ -275,6 +291,7 @@ public sealed class ResourceTopBar : MonoBehaviour
         bool locked = mode == Mode.Base && !IslandSession.Unlocked();   // adada kilit yok (oraya girilmiş demektir)
         SetResource(Meat, locked, save != null ? save.meat : 0, save != null && !locked && save.meat >= IslandEconomy.MeatCap, shortFrom);
         SetResource(Wood, locked, save != null ? save.wood : 0, save != null && !locked && save.wood >= IslandEconomy.WoodCap, shortFrom);
+        if (Builder != null) Builder.text.text = IslandEconomy.BuilderBusy ? "0/1" : "1/1";
     }
 
     private static void SetResource(Chip chip, bool locked, int value, bool capped, long shortFrom)

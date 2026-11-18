@@ -36,36 +36,22 @@ public static class MiniEmpireTopBarSkin
         // Sol/sağ yuvalar: sıra FeatureConfig.baseTopBarOrder (varsayılan gold,wood,meat | gem,builder).
         var bar = hud.GetComponentInChildren<ResourceTopBar>(true);
         var order = ResourceTopBar.Order(FeatureConfig.Instance.baseTopBarOrder, ResourceTopBar.DefaultBaseOrder);
-        int left = (order.Count + 1) / 2;
-        float[] cursor = { 0.02f, 0.60f };   // sol grup 0,02–0,40 · sağ grup 0,60–0,855 (referans)
-        float[] total = new float[2];
-        for (int i = 0; i < order.Count; i++) total[i < left ? 0 : 1] += SlotWeight(order[i]);
-        for (int i = 0; i < order.Count; i++)
-        {
-            int group = i < left ? 0 : 1;
-            float span = (group == 0 ? 0.38f : 0.255f) * SlotWeight(order[i]) / total[group];
-            float x0 = cursor[group] + 0.003f, x1 = cursor[group] + span - 0.003f;
-            cursor[group] += span;
-            string id = order[i];
-            RectTransform pill = id == "gold" ? hud.Find("GoldPill") as RectTransform
+        PlacePills(order, id => id == "gold" ? hud.Find("GoldPill") as RectTransform
                 : id == "gem" ? hud.Find("GemPill") as RectTransform
                 : id == "builder" ? hud.Find("BuilderPill") as RectTransform
                 : id == "meat" ? (bar != null && bar.Meat != null ? bar.Meat.rect : null)
-                : (bar != null && bar.Wood != null ? bar.Wood.rect : null);
-            if (pill == null) continue;
-            pill.gameObject.SetActive(true);
-            TopRect(pill, x0, x1, (BarHeight - PillHeight) * 0.5f, PillHeight);
-            var image = pill.GetComponent<Image>();
-            if (image != null) { image.sprite = c.resPill; Slice(image); image.color = Color.white; }
-            switch (id)
+                : (bar != null && bar.Wood != null ? bar.Wood.rect : null),
+            (id, pill) =>
             {
-                case "gold": StylePill(pill, "CoinIcon", "GoldText", c.iconGold); break;
-                case "gem": StylePill(pill, "GemIcon", "GemText", c.iconGem); break;
-                case "builder": StylePill(pill, "AvatarIcon", "BuilderCount", c.iconBuilder); break;
-                case "meat": StylePill(pill, "Icon", "Value", c.iconMeat); break;
-                case "wood": StylePill(pill, "Icon", "Value", c.iconWood); break;
-            }
-        }
+                switch (id)
+                {
+                    case "gold": StylePill(pill, "CoinIcon", "GoldText", c.iconGold); break;
+                    case "gem": StylePill(pill, "GemIcon", "GemText", c.iconGem); break;
+                    case "builder": StylePill(pill, "AvatarIcon", "BuilderCount", c.iconBuilder); break;
+                    case "meat": StylePill(pill, "Icon", "Value", c.iconMeat); break;
+                    case "wood": StylePill(pill, "Icon", "Value", c.iconWood); break;
+                }
+            });
 
         // GpsText (altın/sn) yeni barda gösterilmez (yalnız görünüm; veri ResourceHUD'da güncellenmeye devam eder).
         var gps = hud.Find("GoldPill/GpsText");
@@ -81,6 +67,77 @@ public static class MiniEmpireTopBarSkin
         }
         // Et/Odun bilgi satırı üst sırada kalsın.
         var toast = bar != null ? bar.transform.Find("ResourceToast") : null;
+        if (toast != null) toast.SetAsLastSibling();
+    }
+
+    /// <summary>Ortak hap yerleşimi (Ana Üs + Ada): sol grup 0,02–0,40, sağ grup 0,60–0,855; <paramref name="style"/> simge/yazı biçimler.</summary>
+    private static void PlacePills(System.Collections.Generic.List<string> order, System.Func<string, RectTransform> find, System.Action<string, RectTransform> style)
+    {
+        var c = MiniEmpireUiCatalog.Instance;
+        int left = (order.Count + 1) / 2;
+        float[] cursor = { 0.02f, 0.60f };
+        float[] total = new float[2];
+        for (int i = 0; i < order.Count; i++) total[i < left ? 0 : 1] += SlotWeight(order[i]);
+        for (int i = 0; i < order.Count; i++)
+        {
+            int group = i < left ? 0 : 1;
+            float span = (group == 0 ? 0.38f : 0.255f) * SlotWeight(order[i]) / total[group];
+            float x0 = cursor[group] + 0.003f, x1 = cursor[group] + span - 0.003f;
+            cursor[group] += span;
+            var pill = find(order[i]);
+            if (pill == null) continue;
+            pill.gameObject.SetActive(true);
+            TopRect(pill, x0, x1, (BarHeight - PillHeight) * 0.5f, PillHeight);
+            var image = pill.GetComponent<Image>();
+            if (image != null) { image.sprite = c.resPill; Slice(image); image.color = Color.white; }
+            style(order[i], pill);
+        }
+    }
+
+    /// <summary>
+    /// D126 (UI2 İş 3): Ada üst barı ana üsle aynı görünüm (paylaşılan yardımcılar). TopBar adı/hiyerarşisi ve çipler aynen kalır;
+    /// yalnız sprite/anchor değişir. Sıra: islandTopBarOrder + inşaatçı yuvası (varsayılan gold,wood,meat | gem,builder).
+    /// </summary>
+    public static bool IslandEnabled => IslandSession.Active && FeatureConfig.Instance.sharedTopBar && MiniEmpireUiCatalog.TopBarReady;
+
+    public static void ApplyIsland(RectTransform topBar, ResourceTopBar chips)
+    {
+        if (topBar == null || chips == null || !MiniEmpireUiCatalog.TopBarReady) return;
+        var c = MiniEmpireUiCatalog.Instance;
+        var bg = topBar.GetComponent<Image>();
+        if (bg != null) { bg.sprite = c.topbarBg; Slice(bg); bg.color = Color.white; bg.raycastTarget = false; }
+        var ornament = topBar.Find("Ornament");
+        if (ornament != null) ornament.gameObject.SetActive(false);
+        TopRect(topBar, 0f, 1f, 0f, BarHeight);
+        topBar.SetAsFirstSibling();
+
+        BuildBanner(topBar, "BannerLeft", c.bannerLeft, -30f);
+        BuildBanner(topBar, "BannerRight", c.bannerRight, 30f);
+
+        chips.EnsureBuilder(topBar);
+        var order = ResourceTopBar.Order(FeatureConfig.Instance.islandTopBarOrder, ResourceTopBar.DefaultIslandOrder);
+        if (!order.Contains("builder")) order.Add("builder");
+        var rects = new System.Collections.Generic.Dictionary<string, (RectTransform rt, Sprite icon)>
+        {
+            { "gold", (chips.Gold.rect, c.iconGold) }, { "gem", (chips.Gem.rect, c.iconGem) },
+            { "meat", (chips.Meat.rect, c.iconMeat) }, { "wood", (chips.Wood.rect, c.iconWood) },
+            { "builder", (chips.Builder.rect, c.iconBuilder) },
+        };
+        foreach (var pair in rects) pair.Value.rt.gameObject.SetActive(false);
+        PlacePills(order, id => rects.TryGetValue(id, out var r) ? r.rt : null, (id, pill) => StylePill(pill, "Icon", "Value", rects[id].icon));
+
+        var crest = topBar.Find("LevelCrest") as RectTransform;
+        if (crest == null)
+        {
+            crest = ReferenceUiVisuals.Rect(topBar, "LevelCrest", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
+            var comp = crest.gameObject.AddComponent<LevelCrest>();
+            comp.keep = true;
+            comp.Build(crest);
+        }
+        TopRect(crest, 0.5f, 0.5f, 1.5f, ShieldHeight);
+        crest.sizeDelta = new Vector2(ShieldWidth, ShieldHeight);
+        crest.SetAsLastSibling();
+        var toast = topBar.Find("ResourceToast");
         if (toast != null) toast.SetAsLastSibling();
     }
 

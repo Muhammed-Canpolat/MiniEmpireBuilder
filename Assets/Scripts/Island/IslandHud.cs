@@ -128,8 +128,9 @@ public sealed class IslandHud : MonoBehaviour
         goldText = ResourceChip(bar.transform, 2, catalog != null ? catalog.Single("gold_icon") : null);
         }
 
-        var barBg = ReferenceUiVisuals.Image(safe, "CastleBar", new Vector2(0.18f, 1), new Vector2(0.82f, 1),
-            new Vector2(0, -74), new Vector2(0, -58), new Color(0.05f, 0.04f, 0.03f, 0.85f));
+        bool mini = MiniEmpireTopBarSkin.IslandEnabled;   // plaka (y 74–96) altına iner
+        var barBg = ReferenceUiVisuals.Image(safe, "CastleBar", new Vector2(mini ? 0.25f : 0.18f, 1), new Vector2(mini ? 0.75f : 0.82f, 1),
+            new Vector2(0, mini ? -120 : -74), new Vector2(0, mini ? -104 : -58), new Color(0.05f, 0.04f, 0.03f, 0.85f));
         castleBar = barBg.gameObject;
         castleFill = ReferenceUiVisuals.Image(barBg.transform, "Fill", Vector2.zero, Vector2.one, new Vector2(2, 2), new Vector2(-2, -2),
             new Color(0.35f, 0.7f, 0.95f));
@@ -181,7 +182,32 @@ public sealed class IslandHud : MonoBehaviour
         titleText.fontSizeMin = 7f;
         titleText.fontSizeMax = 13f;
         resourceBar = ResourceTopBar.BuildIsland(bar.rectTransform, 0.365f, 0.875f);
+        if (MiniEmpireTopBarSkin.IslandEnabled) ApplyMiniEmpireTopBar(bar.rectTransform, nameRect);
     }
+
+    private RectTransform namePlate;
+
+    /// <summary>
+    /// D126 (UI2 İş 3): ana üs stili. Çipler/kalkan/bayrak MiniEmpireTopBarSkin.ApplyIsland (ortak); ANA ÜS düğmesi sol altta,
+    /// ada adı (dokununca yeniden adlandırma; akında "AKIN N · DALGA x/y") kalkanın altında plaka. Kum saati RaidBadge yerinde.
+    /// </summary>
+    private void ApplyMiniEmpireTopBar(RectTransform bar, RectTransform nameRect)
+    {
+        MiniEmpireTopBarSkin.ApplyIsland(bar, resourceBar);
+        var home = (RectTransform)homeButton.transform;
+        home.anchorMin = home.anchorMax = new Vector2(0f, 0f);
+        home.pivot = new Vector2(0f, 1f);
+        home.sizeDelta = new Vector2(88f, 26f);
+        home.anchoredPosition = new Vector2(8f, -5f);
+        namePlate = nameRect;
+        nameRect.anchorMin = nameRect.anchorMax = new Vector2(0.5f, 0f);
+        nameRect.pivot = new Vector2(0.5f, 1f);
+        nameRect.sizeDelta = new Vector2(NamePlateWidth, 22f);
+        nameRect.anchoredPosition = new Vector2(0f, -27f);
+        nameRect.SetAsLastSibling();
+    }
+
+    private const float NamePlateWidth = 150f, NamePlateRaidWidth = 176f;
 
     /// <summary>Üst çubuktaki ada adına dokunma: yeniden adlandırma (bedel gösterilir). Akın/yerleştirme sırasında kapalı.</summary>
     public void OpenRename()
@@ -1396,6 +1422,8 @@ public sealed class IslandHud : MonoBehaviour
             : raid.Phase == IslandRaidManager.State.Running
             ? L.T($"AKIN {raid.Akin} · DALGA {raid.Wave}/{raid.TotalWaves}", $"RAID {raid.Akin} · WAVE {raid.Wave}/{raid.TotalWaves}")
             : resourceBar != null ? IslandNameRules.Display(save) : L.T("MARTI ADASI", "GULL ISLE");
+        if (namePlate != null)
+            namePlate.sizeDelta = new Vector2(raid.Phase == IslandRaidManager.State.Running ? NamePlateRaidWidth : NamePlateWidth, namePlate.sizeDelta.y);
         if (homeLabel != null)
             homeLabel.text = Time.unscaledTime < homeConfirmUntil ? L.T("EMİN MİSİN?", "SURE?") : L.T("ANA ÜS", "BASE");
 
