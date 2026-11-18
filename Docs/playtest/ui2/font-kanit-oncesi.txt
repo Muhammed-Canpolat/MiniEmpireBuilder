@@ -1,0 +1,15 @@
+# D124 kanıt: düzeltme ÖNCESİ (D113 kodu) FontIntegrityTests çıktısı, batchmode PlayMode, 2026-11-18
+
+          </properties>
+          <failure>
+            <message><![CDATA[  BodyFont ikinci erişimde değişti: -1650 → -1810
+  Expected: same as < (TMPro.TMP_FontAsset)>
+  But was:  < (TMPro.TMP_FontAsset)>
+]]></message>
+
+[FontIntegrity] tur 0: FontProbeCanvas/FontProbeText "DALGA 1 · YAPI DEKOR DÜKKAN DEPO · KAHRA…": eksik glif 'DALGYPIEKORNHM' (font ); ağ/malzeme uyumsuz: ağ 'LiberationSans SDF' atlasından, çizim 'Alegreya Sans - Medium Atlas' ile; bayat ağ: yazı fontu '' ama ağ 'LiberationSans SDF' ile üretilmiş; 
+
+tur 1: temiz
+tur 2: temiz
+tur 3: temiz
+son: temiz

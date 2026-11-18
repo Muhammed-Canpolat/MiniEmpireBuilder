@@ -1,0 +1,36 @@
+# Font Denetimi — 2026-11-18 19:56 (FontPipeline.Audit, D124)
+
+## 1. Font asset envanteri
+- Assets/DungeonMonsters2D/UserInterface/Georgia SDF.asset: mod=Static, atlas=512x512 x1 sayfa, çok-atlas=False, karakter=98, ClearDynamicDataOnBuild=False, kaynak=-, shader=TextMeshPro/Distance Field, fallback=[]
+- Assets/Fonts/Cinzel-Regular SDF.asset: mod=Dynamic, atlas=1024x1024 x0 sayfa, çok-atlas=False, karakter=0, ClearDynamicDataOnBuild=True, kaynak=Cinzel-Regular, shader=TextMeshPro/Distance Field, fallback=[]
+- Assets/Resources/Fonts/TMP/MEB Body SDF.asset: mod=Static, atlas=1024x1024 x1 sayfa, çok-atlas=True, karakter=198, ClearDynamicDataOnBuild=False, kaynak=-, shader=TextMeshPro/Mobile/Distance Field, fallback=[MEB Safety Dynamic SDF]
+- Assets/Resources/Fonts/TMP/MEB Bold SDF.asset: mod=Static, atlas=1024x1024 x1 sayfa, çok-atlas=True, karakter=198, ClearDynamicDataOnBuild=False, kaynak=-, shader=TextMeshPro/Mobile/Distance Field, fallback=[MEB Body SDF, MEB Safety Dynamic SDF]
+- Assets/Resources/Fonts/TMP/MEB Safety Dynamic SDF.asset: mod=Dynamic, atlas=512x512 x0 sayfa, çok-atlas=True, karakter=0, ClearDynamicDataOnBuild=False, kaynak=AlegreyaSans-Medium, shader=TextMeshPro/Mobile/Distance Field, fallback=[]
+- Assets/Resources/Fonts/TMP/MEB Title SDF.asset: mod=Static, atlas=1024x1024 x1 sayfa, çok-atlas=True, karakter=183, ClearDynamicDataOnBuild=False, kaynak=-, shader=TextMeshPro/Mobile/Distance Field, fallback=[MEB Bold SDF, MEB Body SDF, MEB Safety Dynamic SDF]
+- Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset: mod=Dynamic, atlas=512x512 x0 sayfa, çok-atlas=True, karakter=0, ClearDynamicDataOnBuild=True, kaynak=LiberationSans, shader=TextMeshPro/Mobile/Distance Field, fallback=[]
+- Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset: mod=Static, atlas=1024x1024 x1 sayfa, çok-atlas=False, karakter=250, ClearDynamicDataOnBuild=False, kaynak=-, shader=TextMeshPro/Mobile/Distance Field, fallback=[MEB Body SDF, LiberationSans SDF - Fallback]
+- TMP Settings: varsayılan=MEB Body SDF, genel fallback=[MEB Safety Dynamic SDF], ClearDynamicDataOnBuild=False, uyarılar kapalı=False
+
+## 2. Sahne ve prefab TMP yazıları (eksik = zincirde yok; fallback = birincil fontta yok, zincirden gelir)
+Taranan yazı: 9
+- kullanım: MEB Body SDF × 9
+
+## 3. Kod ve veri metinleri (Assets/Scripts dize sabitleri + sahne/prefab/veri YAML dizeleri)
+Ekranda görünebilecek farklı karakter: 138 (yalnız günlük/istisna satırlarında: 0)
+- Gövde (MEB Body, varsayılan): eksik 0, yalnız dinamik güvenlik ağında 0, fallback'e bağımlı 0
+- Kalın (MEB Bold): eksik 0, yalnız dinamik güvenlik ağında 0, fallback'e bağımlı 0
+- Başlık (MEB Title): eksik 0, yalnız dinamik güvenlik ağında 0, fallback'e bağımlı 12
+  - fallback: '₩'→MEB Bold SDF '₫'→MEB Bold SDF '₱'→MEB Bold SDF '₴'→MEB Bold SDF '₹'→MEB Bold SDF '₺'→MEB Bold SDF '₽'→MEB Bold SDF '→'→MEB Bold SDF '↔'→MEB Bold SDF '▲'→MEB Bold SDF '▶'→MEB Bold SDF '▼'→MEB Bold SDF
+
+## 4. Shader / platform (Android, iOS)
+- Always Included: Legacy Shaders/Diffuse, Hidden/CubeBlur, Hidden/CubeCopy, Hidden/CubeBlend, Sprites/Default, UI/Default, UI/DefaultETC1, TextMeshPro/Mobile/Distance Field, TextMeshPro/Distance Field
+- Android: grafik API otomatik = Vulkan, OpenGLES3; modül kurulu=True
+- iOS: grafik API otomatik = Metal; modül kurulu=True
+- TextMeshPro/Mobile/Distance Field [GLES3x/Android]: derlenen varyant 10, hata 0
+- TextMeshPro/Mobile/Distance Field [Vulkan/Android]: derlenen varyant 10, hata 0
+- TextMeshPro/Mobile/Distance Field [Metal/iOS]: derlenen varyant 10, hata 0
+- TextMeshPro/Distance Field [GLES3x/Android]: derlenen varyant 10, hata 0
+- TextMeshPro/Distance Field [Vulkan/Android]: derlenen varyant 10, hata 0
+- TextMeshPro/Distance Field [Metal/iOS]: derlenen varyant 10, hata 0
+
+## SONUÇ: eksik=0, yalnız-dinamik=0, fallback'e bağımlı (yazı başına)=0, eski font kullanımı=0
