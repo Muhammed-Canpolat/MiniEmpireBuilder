@@ -6,7 +6,7 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `IslandTerrain.prefab`, `Dra
 | İş | Durum | Commit | Not |
 |---|---|---|---|
 | 1 Yazı kök nedeni + Font Denetimi (+ ui2-08) | BİTTİ (cihaz DOĞRULANMADI) | dede5e0, 9bff9ec, 76aeead | D124: kök neden D113 TEXT_CHANGED font değişimi (grafik kurulumu içinde ağ/atlas uyumsuzluğu, testle kanıtlı) + her erişimde yeni BodyFont. Statik MEB font seti (TMP varsayılanı), Font Denetimi eksik 0, TMP shader'ları Always Included, taşmalar (ada düğmeleri, İnşa Et kartları/sekmeleri 4:3, Sonraki dalga). Görüntüler `Docs/playtest/ui2/`. Regresyon: ilgili 68 testte 67 (HudExpansionReviewTests.OwnershipBattleCardAndLevelVisual: seviyesiz kayıt, yazıyla ilgisiz); ExpansionFeatureTests 2 hata GameManager'sız sahne (ortam). Rötuş (76aeead): yetenek etiketleri daire altında pul, kart adları tek punto, Sonraki dalga konturu; Kahraman paneli 9:16 taşması animasyon karesiydi (gerçek değil). Sonraki iş: savaş üst barı ile dünya arasında ~%7 koyu şerit (savaş kadrajı); ATEŞ OK pulu YAĞMUR dairesine ~5 px değiyor. |
-| 2 Ana üs alt bar kapalı siyah zemin | BEKLİYOR | | |
+| 2 Ana üs alt bar kapalı siyah zemin | BİTTİ | 7919a5f | D125: kamera pixelRect barlar arasına kesiliyordu, altı ScreenBottomFill #14110D. fullBleed yalnız Ana Üs, kadraj aynı (bug 13); zemin genişledi; CreateForestFarBelt tohum 61337, 32 nesne, collider/kayıt yok. 9:16/9:21/4:3 piksel testi + iki açılış konum testi geçti; MiniEmpireBottomBarTests 8/8. ViewportRevisionTests 2 hata İş 2 öncesinde de aynı (Garrison sayısı, orman savaşı NRE). |
 | 3 Ada üst barı ana üs stilinde | BEKLİYOR | | |
 | 4 Ada Zafer/Yenilgi ekranları | BEKLİYOR | | |
 
