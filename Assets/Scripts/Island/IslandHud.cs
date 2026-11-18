@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -1108,34 +1109,261 @@ public sealed class IslandHud : MonoBehaviour
         }
     }
 
+    // ---- Sonuç ekranı (UI2 İş 4, D127): çerçeveli kompakt kart + kurdele + ikonlu ödül satırları ----
+    private RectTransform resultCard, rewardRow, repairRow;
+    private Image resultDim, resultRibbon, repairIcon;
+    private readonly Image[] rewardIcons = new Image[4];
+    private readonly TextMeshProUGUI[] rewardTexts = new TextMeshProUGUI[4];
+    private readonly GameObject[] rewardCells = new GameObject[4];
+    private TextMeshProUGUI repairText, stolenText, tipText;
+    private bool resultVisible;
+    private float resultFit = 1f;
+    private static readonly Color ResultDimColor = new Color(0.03f, 0.04f, 0.06f, 0.72f);
+
+    private static LayoutElement Fixed(RectTransform rt, float height)
+    {
+        var le = rt.gameObject.GetComponent<LayoutElement>() ?? rt.gameObject.AddComponent<LayoutElement>();
+        le.preferredHeight = height; le.minHeight = height;
+        return le;
+    }
+
+    private static TextMeshProUGUI ResultLine(Transform parent, string name, float size, Color color, bool bold)
+    {
+        var t = ReferenceUiVisuals.Text(parent, name, "", size, color, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, false, bold);
+        t.enableAutoSizing = false;
+        t.fontSize = size;
+        t.textWrappingMode = TextWrappingModes.Normal;
+        t.overflowMode = TextOverflowModes.Overflow;
+        return t;
+    }
+
     private void BuildResult()
     {
-        var dim = ReferenceUiVisuals.Image(safe, "ResultPanel", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero,
-            new Color(0f, 0f, 0f, 0.6f));
+        var dim = ReferenceUiVisuals.Image(safe, "ResultPanel", Vector2.zero, Vector2.one, new Vector2(-400f, -400f), new Vector2(400f, 400f),
+            ResultDimColor);
         dim.raycastTarget = true;
+        resultDim = dim;
         resultPanel = dim.gameObject;
         var center = new Vector2(0.5f, 0.5f);
-        var card = ReferenceUiVisuals.Image(dim.transform, "Card", center, center, new Vector2(-165, -200), new Vector2(165, 200),
-            new Color(0.12f, 0.09f, 0.06f, 0.97f));
-        card.sprite = ReferenceUiVisuals.PillSprite();
-        card.type = Image.Type.Sliced;
-        resultTitle = ReferenceUiVisuals.Text(card.transform, "Title", "", 28, Gold, TextAlignmentOptions.Center,
-            new Vector2(0, 1), Vector2.one, new Vector2(10, -64), new Vector2(-10, -14), true);
-        resultBody = ReferenceUiVisuals.Text(card.transform, "Body", "", 15, ReferenceUiVisuals.Light, TextAlignmentOptions.Center,
-            Vector2.zero, Vector2.one, new Vector2(18, 130), new Vector2(-18, -74), false, true);
+        var card = ReferenceUiVisuals.Image(dim.transform, "Card", center, center, new Vector2(-165, -200), new Vector2(165, 200), Color.white);
+        resultCard = card.rectTransform;
+        var catalog = MiniEmpireUiCatalog.Instance;
+        if (catalog != null && catalog.menuFrame != null)
+        {
+            card.sprite = catalog.menuFrame;
+            card.type = Image.Type.Sliced;
+            card.pixelsPerUnitMultiplier = MiniEmpireTopBarSkin.SliceMultiplier;
+        }
+        else
+        {
+            card.color = new Color(0.12f, 0.09f, 0.06f, 0.97f);   // katalog yoksa eski koyu kart
+            card.sprite = ReferenceUiVisuals.PillSprite();
+            card.type = Image.Type.Sliced;
+        }
+        card.raycastTarget = true;
+        var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        var fitter = card.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // Kurdele + başlık
+        var ribbon = ReferenceUiVisuals.Image(card.transform, "Ribbon", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, Color.white);
+        resultRibbon = ribbon;
+        ribbon.preserveAspect = true;
+        Fixed(ribbon.rectTransform, 104f);
+        resultTitle = ReferenceUiVisuals.Text(ribbon.transform, "Title", "", 28, new Color32(0xFF, 0xF1, 0xC9, 0xFF), TextAlignmentOptions.Center,
+            center, center, new Vector2(-88, -26), new Vector2(88, 26), true);
+        resultTitle.fontSizeMin = 15;
+        resultTitle.textWrappingMode = TextWrappingModes.Normal;
+        resultTitle.outlineWidth = 0.22f;
+        resultTitle.outlineColor = new Color32(0x14, 0x11, 0x0D, 0xFF);
+
+        resultBody = ResultLine(card.transform, "Body", 16, ReferenceUiVisuals.Light, true);
+
+        // Ödül satırı: ikon + "+N"
+        var row = ReferenceUiVisuals.Rect(card.transform, "Rewards", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        rewardRow = row;
+        Fixed(row, 34f);
+        var rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        rowLayout.spacing = 14f;
+        rowLayout.childAlignment = TextAnchor.MiddleCenter;
+        rowLayout.childControlWidth = rowLayout.childControlHeight = true;
+        rowLayout.childForceExpandWidth = rowLayout.childForceExpandHeight = false;
+        for (int i = 0; i < rewardCells.Length; i++)
+        {
+            var cell = ReferenceUiVisuals.Rect(row, "Reward" + i, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            rewardCells[i] = cell.gameObject;
+            var cellLayout = cell.gameObject.AddComponent<HorizontalLayoutGroup>();
+            cellLayout.spacing = 4f;
+            cellLayout.childAlignment = TextAnchor.MiddleCenter;
+            cellLayout.childControlWidth = cellLayout.childControlHeight = true;
+            cellLayout.childForceExpandWidth = cellLayout.childForceExpandHeight = false;
+            var icon = ReferenceUiVisuals.Image(cell, "Icon", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, Color.white);
+            icon.preserveAspect = true;
+            var iconLe = icon.gameObject.AddComponent<LayoutElement>();
+            iconLe.preferredWidth = iconLe.minWidth = 28f; iconLe.preferredHeight = iconLe.minHeight = 28f;
+            rewardIcons[i] = icon;
+            var txt = ResultLine(cell, "Amount", 20, ReferenceUiVisuals.Light, true);
+            txt.alignment = TextAlignmentOptions.Left;
+            txt.textWrappingMode = TextWrappingModes.NoWrap;
+            rewardTexts[i] = txt;
+        }
+
+        stolenText = ResultLine(card.transform, "Stolen", 15, new Color32(0xE0, 0x7A, 0x5F, 0xFF), true);
+
+        // Onarım satırı: çekiç ikonu + metin
+        var repair = ReferenceUiVisuals.Rect(card.transform, "Repair", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        repairRow = repair;
+        repairIcon = ReferenceUiVisuals.Image(repair, "Icon", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, -13), new Vector2(26, 13), Color.white);
+        repairIcon.preserveAspect = true;
+        repairIcon.sprite = CampaignSceneSetup.Art("ui_icon_hammer");
+        repairText = ReferenceUiVisuals.Text(repair, "Label", "", 14, ReferenceUiVisuals.Light, TextAlignmentOptions.Left,
+            Vector2.zero, Vector2.one, new Vector2(32, 0), Vector2.zero, false, true);
+        repairText.enableAutoSizing = false;
+        repairText.textWrappingMode = TextWrappingModes.Normal;
+        repairText.overflowMode = TextOverflowModes.Overflow;
+
+        tipText = ResultLine(card.transform, "Tip", 14, ReferenceUiVisuals.Gold, true);
+
         resultNext = ReferenceUiVisuals.Button(card.transform, "Next", L.T("SONRAKİ AKIN", "NEXT RAID"), true,
-            new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 76), new Vector2(0, 118), 16);
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, 16);
         resultAgain = ReferenceUiVisuals.Button(card.transform, "Again", L.T("TEKRAR", "AGAIN"), false,
-            new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 42), new Vector2(0, 72), 14);
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, 14);
         // 13 Kasım: Akın adadan başlar → sonuç ekranı adaya dönmeyi teklif eder (Ana Üs'e üst çubuktaki ANA ÜS ile gidilir).
         bool toIsland = FeatureConfig.Instance.raidResultReturnToIsland;
         resultHome = ReferenceUiVisuals.Button(card.transform, toIsland ? "ReturnIsland" : "Home", toIsland ? L.T("ADAYA DÖN", "BACK TO ISLE") : L.T("ANA ÜS", "BASE"), false,
-            new Vector2(0.1f, 0), new Vector2(0.9f, 0), new Vector2(0, 8), new Vector2(0, 38), 14);
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, 14);
+        Fixed((RectTransform)resultNext.transform, 48f);
+        Fixed((RectTransform)resultAgain.transform, 40f);
+        Fixed((RectTransform)resultHome.transform, 40f);
+        foreach (var b in new[] { resultNext, resultAgain, resultHome })
+            b.onClick.AddListener(() => AudioManager.Instance?.PlaySfx("click"));
         resultNext.onClick.AddListener(() => { raid.ReturnToIdle(); prepOpen = true; selectedAkin = Mathf.Min(MaxSelectable(), raid.Akin + 1); Refresh(); });
         resultAgain.onClick.AddListener(() => { raid.ReturnToIdle(); prepOpen = true; selectedAkin = raid.Akin; Refresh(); });
         if (toIsland) resultHome.onClick.AddListener(ReturnToIsland);
         else resultHome.onClick.AddListener(GoHome);
         resultPanel.SetActive(false);
+    }
+
+    private enum ResultKind { Victory, Defeat, RaidWon, RaidLost }
+
+    private struct ResultView
+    {
+        public ResultKind kind;
+        public string title, body, stolen, tip;
+        public int gold, wood, meat, gems;
+        public bool showRewards;
+    }
+
+    private static void StyleResultButton(Button button, bool gold)
+    {
+        ReferenceUiVisuals.ApplyButtonSkin(button, gold);
+        var label = button.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null) label.color = gold ? new Color32(0x2A, 0x1A, 0x08, 0xFF) : ReferenceUiVisuals.Light;
+    }
+
+    private void SetRewardCell(int i, Sprite icon, int amount, string fallbackName)
+    {
+        rewardCells[i].SetActive(true);
+        rewardIcons[i].sprite = icon;
+        rewardIcons[i].gameObject.SetActive(icon != null);
+        rewardTexts[i].text = icon != null ? $"+{amount}" : $"+{amount} {fallbackName}";
+        var light = ReferenceUiVisuals.Light;
+        rewardTexts[i].color = amount > 0 ? light : new Color(light.r, light.g, light.b, 0.45f);
+        rewardIcons[i].color = amount > 0 ? Color.white : new Color(1f, 1f, 1f, 0.45f);
+    }
+
+    /// <summary>Sonuç kartını doldurur, boyutlandırır; panel yeni açılıyorsa giriş animasyonunu bir kez oynatır.</summary>
+    private void PresentResult(ResultView v)
+    {
+        var catalog = MiniEmpireUiCatalog.Instance;
+        bool won = v.kind == ResultKind.Victory || v.kind == ResultKind.RaidWon;
+        string ribbonArt = won ? "ui_ribbon_gold" : v.kind == ResultKind.Defeat ? "ui_ribbon_red" : "ui_ribbon_dark";
+        resultRibbon.sprite = CampaignSceneSetup.Art(ribbonArt);
+        resultRibbon.color = resultRibbon.sprite != null ? Color.white : new Color(0, 0, 0, 0);
+        resultTitle.text = v.title;
+
+        float width = Mathf.Min(340f, Mathf.Max(220f, safe.rect.width - 28f));
+        resultCard.sizeDelta = new Vector2(width, resultCard.sizeDelta.y);
+        float inner = width - 40f;
+
+        resultBody.text = v.body ?? "";
+        resultBody.gameObject.SetActive(!string.IsNullOrEmpty(v.body));
+        Fixed(resultBody.rectTransform, resultBody.GetPreferredValues(v.body ?? "", inner, 0f).y + 2f);
+
+        rewardRow.gameObject.SetActive(v.showRewards);
+        for (int i = 0; i < rewardCells.Length; i++) rewardCells[i].SetActive(false);
+        if (v.showRewards)
+        {
+            SetRewardCell(0, catalog != null ? catalog.iconGold : null, v.gold, L.T("altın", "gold"));
+            if (v.kind == ResultKind.Victory)
+            {
+                SetRewardCell(1, catalog != null ? catalog.iconWood : null, v.wood, L.T("odun", "wood"));
+                SetRewardCell(2, catalog != null ? catalog.iconMeat : null, v.meat, L.T("et", "meat"));
+                if (v.gems > 0) SetRewardCell(3, catalog != null ? catalog.iconGem : null, v.gems, L.T("elmas", "gems"));
+            }
+        }
+
+        stolenText.gameObject.SetActive(!string.IsNullOrEmpty(v.stolen));
+        stolenText.text = v.stolen ?? "";
+        Fixed(stolenText.rectTransform, stolenText.GetPreferredValues(v.stolen ?? "", inner, 0f).y + 2f);
+
+        string repairs = RepairList();
+        repairRow.gameObject.SetActive(repairs.Length > 0);
+        if (repairs.Length > 0)
+        {
+            string line = L.T("Onarımda (ücretsiz): ", "Repairing (free): ") + repairs;
+            repairText.text = line;
+            repairIcon.gameObject.SetActive(repairIcon.sprite != null);
+            Fixed(repairRow, Mathf.Max(28f, repairText.GetPreferredValues(line, inner - 32f, 0f).y + 4f));
+        }
+
+        tipText.gameObject.SetActive(!string.IsNullOrEmpty(v.tip));
+        tipText.text = v.tip ?? "";
+        Fixed(tipText.rectTransform, tipText.GetPreferredValues(v.tip ?? "", inner, 0f).y + 2f);
+
+        // Buton sırası ve renkleri: zafer Next altın; yenilgi Again altın ve en üstte; baskında tek düğme altın.
+        bool raidOnly = v.kind == ResultKind.RaidWon || v.kind == ResultKind.RaidLost;
+        StyleResultButton(resultNext, true);
+        StyleResultButton(resultAgain, v.kind == ResultKind.Defeat);
+        StyleResultButton(resultHome, raidOnly);
+        resultNext.transform.SetAsLastSibling();
+        resultAgain.transform.SetAsLastSibling();
+        resultHome.transform.SetAsLastSibling();
+        Fixed((RectTransform)resultAgain.transform, v.kind == ResultKind.Defeat ? 48f : 40f);
+        Fixed((RectTransform)resultHome.transform, raidOnly ? 48f : 40f);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(resultCard);
+        float maxH = safe.rect.height * 0.8f;
+        resultFit = resultCard.rect.height > maxH && resultCard.rect.height > 1f ? maxH / resultCard.rect.height : 1f;
+
+        if (resultVisible) { resultCard.localScale = Vector3.one * resultFit; return; }
+        resultVisible = true;
+        AudioManager.Instance?.PlaySfx(won ? "victory" : "defeat");
+        resultDim.DOKill(); resultCard.DOKill(); resultRibbon.rectTransform.DOKill();
+        resultDim.color = new Color(ResultDimColor.r, ResultDimColor.g, ResultDimColor.b, 0f);
+        resultDim.DOFade(ResultDimColor.a, 0.18f).SetUpdate(true).SetLink(resultPanel);
+        resultCard.localScale = Vector3.one * (0.85f * resultFit);
+        resultCard.DOScale(resultFit, 0.28f).SetEase(Ease.OutBack).SetUpdate(true).SetLink(resultPanel);
+        var rr = resultRibbon.rectTransform;
+        rr.localScale = Vector3.one * 1.15f;
+        rr.DOScale(1f, 0.28f).SetDelay(0.1f).SetEase(Ease.OutBack).SetUpdate(true).SetLink(resultPanel);
+    }
+
+    private void HideResultState()
+    {
+        if (!resultVisible) return;
+        resultVisible = false;
+        if (resultDim != null) resultDim.DOKill();
+        if (resultCard != null) resultCard.DOKill();
+        if (resultRibbon != null) resultRibbon.rectTransform.DOKill();
     }
 
     // ==================== DAVRANIŞ ====================
@@ -1291,7 +1519,9 @@ public sealed class IslandHud : MonoBehaviour
             }
         }
 
-        if (raid.IsRaid && (state == IslandRaidManager.State.Won || state == IslandRaidManager.State.Lost))
+        bool resultNow = state == IslandRaidManager.State.Won || state == IslandRaidManager.State.Lost;
+        if (!resultNow) HideResultState();
+        if (raid.IsRaid && resultNow)
         {
             ShowRaidResult(state == IslandRaidManager.State.Won);
         }
@@ -1299,26 +1529,29 @@ public sealed class IslandHud : MonoBehaviour
         {
             resultAgain.gameObject.SetActive(true);
             var r = raid.LastReward;
-            resultTitle.text = L.T("ZAFER!", "VICTORY!");
-            string gems = r.gems > 0 ? L.T($"\n+{r.gems} elmas", $"\n+{r.gems} gems") : "";
-            resultBody.text = L.T(
-                $"Akın {raid.Akin} temizlendi.\n+{r.gold} altın (Ana Üs) · +{r.meat} Et · +{r.wood} Odun{gems}",
-                $"Raid {raid.Akin} cleared.\n+{r.gold} gold (Base) · +{r.meat} Meat · +{r.wood} Wood{gems}");
-            if (raid.TutorialFinishedThisRun)
+            var view = new ResultView
             {
-                resultBody.text += "\n" + L.T("Odun ödülünü İNŞA ET menüsünde harca. Et yavaş gelir: Ağıl'ı yükselt.",
-                    "Spend the Wood in the BUILD menu. Meat comes slowly: upgrade the Pasture.");
-            }
-            resultBody.text += DamagedBuildings();
+                kind = ResultKind.Victory, title = L.T("ZAFER!", "VICTORY!"),
+                body = L.T($"Akın {raid.Akin} temizlendi.", $"Raid {raid.Akin} cleared."),
+                showRewards = true, gold = r.gold, wood = r.wood, meat = r.meat, gems = r.gems,
+                tip = raid.TutorialFinishedThisRun
+                    ? L.T("Odun ödülünü İNŞA ET menüsünde harca. Et yavaş gelir: Ağıl'ı yükselt.",
+                        "Spend the Wood in the BUILD menu. Meat comes slowly: upgrade the Pasture.")
+                    : null
+            };
             bool next = raid.CanStart(raid.Akin + 1);
             resultNext.gameObject.SetActive(next);
+            PresentResult(view);
         }
         else if (state == IslandRaidManager.State.Lost)
         {
             resultAgain.gameObject.SetActive(true);
-            resultTitle.text = L.T("YENİLGİ", "DEFEAT");
-            resultBody.text = L.T($"Kıyı Kalesi düştü.\n{raid.DefeatReason}", $"The keep has fallen.\n{raid.DefeatReason}") + DamagedBuildings();
             resultNext.gameObject.SetActive(false);
+            PresentResult(new ResultView
+            {
+                kind = ResultKind.Defeat, title = L.T("YENİLGİ", "DEFEAT"),
+                body = L.T("Kıyı Kalesi düştü.", "The keep has fallen.") + (string.IsNullOrEmpty(raid.DefeatReason) ? "" : "\n" + raid.DefeatReason)
+            });
         }
         RefreshAuto();
     }
@@ -1329,18 +1562,23 @@ public sealed class IslandHud : MonoBehaviour
         var o = raid.LastRaidOutcome;
         resultNext.gameObject.SetActive(false);
         resultAgain.gameObject.SetActive(false);
-        resultTitle.text = won ? L.T("BASKIN PÜSKÜRTÜLDÜ!", "RAID REPELLED!") : L.T("KORSANLAR KAÇTI", "PIRATES GOT AWAY");
         string loot = o.wood > 0 || o.meat > 0
             ? L.T($"Çalınan: {o.wood} Odun · {o.meat} Et", $"Stolen: {o.wood} Wood · {o.meat} Meat")
             : L.T("Hiçbir şey çalınmadı.", "Nothing was stolen.");
+        string reason = string.IsNullOrEmpty(raid.DefeatReason) ? "" : "\n" + raid.DefeatReason;
         string body = won
-            ? L.T($"Beklemedeki üretime +%{Mathf.RoundToInt(Progression.Island.RaidWinBonus * 100)}, +{o.gold} altın (Ana Üs).\n{loot}", $"+{Mathf.RoundToInt(Progression.Island.RaidWinBonus * 100)}% on pending production, +{o.gold} gold (Base).\n{loot}")
-            : L.T($"Kıyı Kalesi düştü; korsanlar kumsaldan döndü.\n{loot}\n{raid.DefeatReason}", $"The keep fell; the pirates sailed off.\n{loot}\n{raid.DefeatReason}");
-        resultBody.text = body + DamagedBuildings();
+            ? L.T($"Beklemedeki üretime +%{Mathf.RoundToInt(Progression.Island.RaidWinBonus * 100)} bonus.", $"+{Mathf.RoundToInt(Progression.Island.RaidWinBonus * 100)}% bonus on pending production.")
+            : L.T("Kıyı Kalesi düştü; korsanlar kumsaldan döndü.", "The keep fell; the pirates sailed off.") + reason;
+        PresentResult(new ResultView
+        {
+            kind = won ? ResultKind.RaidWon : ResultKind.RaidLost,
+            title = won ? L.T("BASKIN PÜSKÜRTÜLDÜ!", "RAID REPELLED!") : L.T("KORSANLAR KAÇTI", "PIRATES GOT AWAY"),
+            body = body, stolen = loot, showRewards = won, gold = o.gold
+        });
     }
 
     /// <summary>Sonuç ekranı: hasarlı binalar ve onarım süresi (§7.7; ücretsiz, yalnız bekleme).</summary>
-    private static string DamagedBuildings()
+    private static string RepairList()
     {
         var names = new System.Text.StringBuilder();
         int count = 0;
@@ -1351,7 +1589,7 @@ public sealed class IslandHud : MonoBehaviour
             int left = Mathf.CeilToInt(building.RepairSecondsLeft);
             names.Append($"{BuildingName(building.Kind)} {left / 60}:{left % 60:00}");
         }
-        return count == 0 ? "" : "\n" + L.T("Onarımda (ücretsiz): ", "Repairing (free): ") + names;
+        return names.ToString();
     }
 
     private static string BuildingName(IslandLayout.BuildingKind kind)

@@ -47,9 +47,9 @@ public class FontCaptureTests
         Time.timeScale = 1f;
     }
 
-    private static string Out(string name) => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Docs/playtest/ui2", name + ".png"));
+    internal static string Out(string name) => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Docs/playtest/ui2", name + ".png"));
 
-    private static int Scan(string where, List<string> problems)
+    internal static int Scan(string where, List<string> problems)
     {
         var args = new object[] { null };
         int bad = (int)T("TmpTextIntegrity").GetMethod("ScanLoaded").Invoke(null, args);
@@ -59,7 +59,7 @@ public class FontCaptureTests
     }
 
     /// <summary>Taşma: filtreye uyan yazılarda metin kutusunu aşan varsa <paramref name="problems"/>'a ekler (assert=false ise yalnız günlük).</summary>
-    private static void Overflow(string where, string[] filter, List<string> problems, bool assert = true)
+    internal static void Overflow(string where, string[] filter, List<string> problems, bool assert = true)
     {
         var args = new object[] { filter, null };
         int bad = (int)T("TmpTextIntegrity").GetMethod("ScanOverflow").Invoke(null, args);
@@ -68,7 +68,7 @@ public class FontCaptureTests
     }
 
     /// <summary>Overlay canvas'ları geçici olarak kameraya bağlayıp hedef çözünürlükte çeker, sonra geri alır.</summary>
-    private static void Shoot(Camera camera, int w, int h, string path)
+    internal static void Shoot(Camera camera, int w, int h, string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         var texture = new RenderTexture(w, h, 24);
