@@ -1144,3 +1144,20 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 - **Bar altı yerleşim:** sol HomeButton (labelPlate, "ANA ÜS / EMİN MİSİN?" mantığı aynı); orta kalkan altında IslandNameButton plakası (ada adı, dokununca yeniden adlandırma); sağ RaidBadge yerinde. Akında aynı plaka titleText ile "AKIN N · DALGA x/y" (genişlik 170), kale can çubuğu plakanın altına iner. Safe Area içinde, ref birimli; 9:16/9:21/4:3.
 - **Hiyerarşi adları korunur** (TopBar, TopBar/HomeButton, TopBar/GoldPill, TopBar/<Chip>/Value; testler: Nov13FeedbackTests:445,494, Session3Tests:341-342, FontCaptureTests:112). Eski bar silinmez: katalog yoksa eski yol çalışır.
 - **Test/görüntü:** FontCaptureTests'e `IslandTopBar_MatchesBaseStyle` (kalkan metni/seviye, öğe dikdörtgenleri kesişmez ve SafeArea içinde, Font Denetimi 0). Regresyon: Session3Tests ana üs barı, UiAnaUsCapture, ana-us-hud. Görüntüler `Docs/playtest/ui2/is3-ada-normal-{9x16,9x21,4x3}.png`, `is3-ada-akin-{9x16,4x3}.png`. Yeni sprite gerekmez.
+
+## D127 — İş 4: Ada Zafer/Yenilgi ekranları (plan, art-director)
+- **Kaynaklar:** panel `IslandHud.BuildResult()` (`Island/IslandHud.cs:1111-1139`); metin `Refresh()` (:1298-1322); canlı baskın `ShowRaidResult` (:1327-1340); onarım `DamagedBuildings()` (:1343-1355). Ödül `raid.LastReward` (IslandRaidManager.cs:25,396), `raid.Akin`, `raid.DefeatReason`.
+- **Buton işlevleri ve görünürlük DEĞİŞMEZ:** Next :1134 (yalnız `raid.CanStart(Akin+1)`), Again :1135, ReturnIsland/Home :1136-1137 (`FeatureConfig.raidResultReturnToIsland`); yenilgide Next gizli; baskında yalnız Home.
+- **Sefer sonuç ekranı ayrı kod** (`VictoryReferenceView`; BattleSceneSetup.cs:624, BattleUI.cs:63) → dokunulmaz; "sonraki iş" olarak GECE_DURUM'a yazılır.
+- **Korunan hiyerarşi:** `SafeArea/ResultPanel`, `ResultPanel/Card/{Next,Again,ReturnIsland|Home}` (Nov13FeedbackTests.cs:340-345), `Title`, `Body`.
+- **Zemin:** ResultPanel rengi (0.03,0.04,0.06,0.72), SetAsLastSibling, tüm canvas'ı örter, raycast açık.
+- **Kart:** genişlik min(340, safe.width-28), `MiniEmpireUiCatalog.menuFrame` sliced (BaseDropMenu.cs:108-120 deseni), VerticalLayoutGroup + ContentSizeFitter (içerik boyutlu), safe yüksekliğin ≤%80'i; katalog yoksa eski koyu kart yedek.
+- **Kurdele:** `Card/Ribbon` 300x119 preserveAspect, `CampaignArt/ui_ribbon_gold` (zafer) / `ui_ribbon_red` (yenilgi) / `ui_ribbon_dark` (baskın kaybı); `Title` kurdele içinde, TitleFont 26–30, #FFF1C9, kontur.
+- **Alt başlık:** `L.T($"Akın {N} temizlendi.", ...)`; yenilgide `L.T("Kıyı Kalesi düştü.", ...)` + DefeatReason.
+- **Ödüller:** `Rewards` satırı ikon + "+N": iconGold, iconWood, iconMeat (üst bar ikonları), gems>0 ise iconGem; 0 değer soluk. Baskın: bonus + `Stolen` satırı (#E07A5F).
+- **Onarım:** `Repair` satırı `CampaignArt/ui_icon_hammer` + `L.T("Onarımda (ücretsiz): ", ...)` + isimler (m:ss aynı); onarım yoksa gizli. Eğitim ipucu ayrı `Tip` satırı.
+- **Butonlar:** 48/40/40; zafer Next altın + Again/ReturnIsland koyu; yenilgi Again altın ve en üstte, ReturnIsland koyu; etiket rengi duruma göre; FitButtonLabel.
+- **Animasyon:** yalnız açılışta bir kez: zemin alfa 0→1 0.18 sn, kart 0.85→1 OutBack 0.28 sn, kurdele 0.1 sn gecikmeli 1.15→1; hepsi SetUpdate(true), kapanışta DOKill.
+- **Ses:** açılışta `AudioManager.Instance?.PlaySfx(won ? "victory" : "defeat")`, butonlarda `PlaySfx("click")`; yeni ses sistemi yok.
+- **Font:** tüm TMP'ler ReferenceUiVisuals.Text/ApplyFont (D124). Yeni sprite gerekmez.
+- **Test:** `IslandResultUiTests` 3 oran: kart safe içinde, taşma yok, eksik glif yok, buton hiyerarşisi, ödül metni = LastReward, 0.5 sn unscaled sonra ölçek 1. Görüntüler `Docs/playtest/ui2/is4-zafer-{9x16,4x3,9x21}.png`, `is4-yenilgi-{9x16,4x3}.png`.
