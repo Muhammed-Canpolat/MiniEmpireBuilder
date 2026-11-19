@@ -39,6 +39,27 @@ public class IntroSceneTests
 
     private static Type T(string name) => Type.GetType(name + ", Assembly-CSharp");
 
+    private static bool DevToggleVisible()
+    {
+        foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (t.name == "DevToggle" && t.gameObject.activeInHierarchy) return true;
+        return false;
+    }
+
+    /// <summary>Kullanıcı isteği: açılış (Intro) ekranında "DEV" düğmesi görünmez; diğer sahnelerde DevMenu davranışı aynı.</summary>
+    [UnityTest]
+    public IEnumerator Intro_HasNoDevButton_ButBaseSceneKeepsIt()
+    {
+        SceneManager.LoadScene("Intro");
+        for (int i = 0; i < 4; i++) yield return null;
+        Assert.AreEqual("Intro", SceneManager.GetActiveScene().name);
+        Assert.IsFalse(DevToggleVisible(), "Intro sahnesinde DEV düğmesi görünmemeli");
+        SceneManager.LoadScene("BaseScene");
+        for (int i = 0; i < 20; i++) yield return null;
+        Assert.AreEqual("BaseScene", SceneManager.GetActiveScene().name);
+        Assert.IsTrue(DevToggleVisible(), "Ana Üs'te geliştirici menüsü düğmesi aynen duruyor (Development/Editor)");
+    }
+
     [UnityTest]
     public IEnumerator Intro_FillsBar_RotatesTips_ThenOpensGame()
     {

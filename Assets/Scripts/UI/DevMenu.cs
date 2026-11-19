@@ -15,6 +15,7 @@ public sealed class DevMenu : MonoBehaviour
     private RectTransform safe;
     private GameObject panel;
     private TextMeshProUGUI info;
+    private GameObject canvasRoot;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Install()
@@ -29,6 +30,7 @@ public sealed class DevMenu : MonoBehaviour
     {
         var canvasObject = new GameObject("DevMenuCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
+        canvasRoot = canvasObject;
         var canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 280; // dükkânın (250) üstünde, onay penceresinin (300) altında
@@ -40,6 +42,14 @@ public sealed class DevMenu : MonoBehaviour
             new Vector2(6, -14), new Vector2(50, 14), 11);
         toggle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.55f);
         toggle.onClick.AddListener(() => { if (panel != null) Close(); else Open(); });
+    }
+
+    /// <summary>Açılış (Intro) sahnesinde DEV düğmesi görünmez; DevMenu sahneler arası kalır, diğer sahnelerde davranış aynı.</summary>
+    private void Update()
+    {
+        if (canvasRoot == null) return;
+        bool show = SceneManager.GetActiveScene().name != "Intro";
+        if (canvasRoot.activeSelf != show) canvasRoot.SetActive(show);
     }
 
     private void Close()
