@@ -1161,3 +1161,11 @@ Kapsam: UI_DEGISIKLIK §4, §6; D106–D108 yaklaşımı aynen: `MiniEmpireUiCat
 - **Ses:** açılışta `AudioManager.Instance?.PlaySfx(won ? "victory" : "defeat")`, butonlarda `PlaySfx("click")`; yeni ses sistemi yok.
 - **Font:** tüm TMP'ler ReferenceUiVisuals.Text/ApplyFont (D124). Yeni sprite gerekmez.
 - **Test:** `IslandResultUiTests` 3 oran: kart safe içinde, taşma yok, eksik glif yok, buton hiyerarşisi, ödül metni = LastReward, 0.5 sn unscaled sonra ölçek 1. Görüntüler `Docs/playtest/ui2/is4-zafer-{9x16,4x3,9x21}.png`, `is4-yenilgi-{9x16,4x3}.png`.
+
+## D128 — Kahraman canı 300+50×seviye (kullanıcı isteği)
+- **Kural:** Savaşçı (Balta) azami canı = `300 + 50 × seviye` (Sv1 350, Sv2 400, Sv3 450 … Sv15 1050). Tek kaynak: `Progression.HeroMaxHealth(level)` (`Data/GameData.cs`); `HeroData.ApplyLevelStats` Balta dalı bunu kullanır. Eski: `200 × (1 + 0,15 × (seviye−1))`.
+- **Kapsam:** HeroController (sefer savaşı, ada akını kahramanı değil: ada okçusu ayrı sistemdir), Ana Üs kahraman paneli (`BaseWorldUI`, artık kayıttaki eski `maxHealth` yerine `ApplyLevelStats` ile türetilir). Savaş kartı `HeroHealth` çarpanı aynen taban değere uygulanır. Mızrak/Yay (kullanılmayan) formülleri değişmedi.
+- **Çırak:** `ApprenticeProgressionData.Health` eski Balta tabanını (`Progression.ApprenticeAxeBaseHealth = 200`) kullanmaya devam eder; çırak canı aynı.
+- **Kayıt:** `maxHealth/currentHealth` kayıtta türetilmiş değerdir, her savaş başında/ekranda yeniden hesaplanır; eski kayıt otomatik yeni maksimuma geçer, kayıt biçimi değişmedi.
+- **Ana Üs kahraman görseli ×0,85** (`HeroLook.BaseSceneScale`, yalnız `HeroMovementController.FitWarriorScale`; çarpışma yarıçapı ve görev işareti ofseti aynı oranda; savaş/ada değişmedi).
+- **Ada ANA ÜS düğmesi kök nedeni:** `MiniEmpireTopBarSkin.ApplyIsland` TopBar'ı ilk kardeş yaptığı için tam ekran `TouchSurface` (sonra çizilen) ışını önce yakalıyordu; `TouchSurface` artık ilk kardeş. Dev menü `Intro` sahnesinde gizlenir.

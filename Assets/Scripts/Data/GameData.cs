@@ -164,11 +164,11 @@ public class HeroData
         switch (weaponType)
         {
             case WeaponType.Axe:
-                // Tek kahraman (Warrior): taban can 130'dan 200'e çıktı (çok çabuk ölüyordu).
+                // Tek kahraman (Warrior): can D128'den beri Progression.HeroMaxHealth (300 + 50 × seviye).
                 damage = 15f * levelMultiplier;
                 attackRange = 1.5f;
                 attackSpeed = 0.8f;
-                maxHealth = 200f * levelMultiplier;
+                maxHealth = Progression.HeroMaxHealth(level);
                 moveSpeed = 2.5f;
                 break;
 
@@ -341,6 +341,12 @@ public class BuildingData
 public static class Progression
 {
     public const int MaxLevel = 15;
+
+    /// <summary>D128: Savaşçı (Balta) azami canı = 300 + 50 × seviye (Sv1 350, Sv2 400, Sv3 450 ...). Tek kaynak; savaş ve Ana Üs ekranı buradan okur.</summary>
+    public static float HeroMaxHealth(int level) => 300f + 50f * Mathf.Clamp(level, 1, MaxLevel);
+
+    /// <summary>Çırak canı için eski Balta taban canı (kahraman 200 iken; D128 çırağı değiştirmez).</summary>
+    public const float ApprenticeAxeBaseHealth = 200f;
 
     // ---- Savaş dengesi (Docs/design/balance_v1.md) ----
     /// <summary>

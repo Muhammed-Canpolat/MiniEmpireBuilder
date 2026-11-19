@@ -18,6 +18,28 @@ public class ProgressionTests
         type.GetMethod(method, BindingFlags.Public | BindingFlags.Static).Invoke(null, args);
 
     [Test]
+    public void HeroMaxHealthIs300Plus50PerLevel()
+    {
+        var heroType = Type("HeroData");
+        var axe = Enum.Parse(Type("WeaponType"), "Axe");
+        foreach (var (level, expected) in new[] { (1, 350f), (2, 400f), (3, 450f), (15, 1050f) })
+        {
+            var hero = Activator.CreateInstance(heroType);
+            heroType.GetField("weaponType").SetValue(hero, axe);
+            heroType.GetField("level").SetValue(hero, level);
+            heroType.GetField("maxHealth").SetValue(hero, 200f);   // eski kayıttan kalan değer: türetilir, ezilir
+            heroType.GetMethod("ApplyLevelStats").Invoke(hero, null);
+            Assert.AreEqual(expected, (float)heroType.GetField("maxHealth").GetValue(hero), 0.01f, "azami can Sv" + level);
+            Assert.AreEqual(expected, (float)heroType.GetField("currentHealth").GetValue(hero), 0.01f, "can maksimuma kısıtlı Sv" + level);
+            Assert.AreEqual(expected, (float)Call(Type("Progression"), "HeroMaxHealth", level), 0.01f);
+        }
+        // Çırak canı değişmez: eski Balta tabanı 200 × 0,5 × çarpan (Sv1 → 100).
+        var data = ScriptableObject.CreateInstance(Type("ApprenticeProgressionData"));
+        Assert.AreEqual(100, (int)data.GetType().GetMethod("Health").Invoke(data, new object[] { axe, 1 }), "çırak Sv1 canı aynı");
+        Assert.AreEqual(130, (int)data.GetType().GetMethod("Health").Invoke(data, new object[] { axe, 2 }), "çırak Sv2 canı aynı");
+    }
+
+    [Test]
     public void HeroShieldAndBalanceMatchDesign()
     {
         // Kalkan: 1. seviye %10, seviye başına +%2, 15. seviye %38.
@@ -27,12 +49,12 @@ public class ProgressionTests
                 "kalkan seviye " + level);
         Assert.AreEqual(0.38f, (float)Call(heroType, "ShieldForLevel", 99), 0.0001f, "tavan 15. seviye");
 
-        // Tek kahraman (Warrior): taban can 200, kalkan veride.
+        // Tek kahraman (Warrior): can 300 + 50 × seviye (D128; Sv1 350), kalkan veride.
         var hero = Activator.CreateInstance(heroType);
         heroType.GetField("weaponType").SetValue(hero, Enum.Parse(Type("WeaponType"), "Axe"));
         heroType.GetField("level").SetValue(hero, 1);
         heroType.GetMethod("ApplyLevelStats").Invoke(hero, null);
-        Assert.AreEqual(200f, (float)heroType.GetField("maxHealth").GetValue(hero), 0.01f);
+        Assert.AreEqual(350f, (float)heroType.GetField("maxHealth").GetValue(hero), 0.01f);
         Assert.AreEqual(0.10f, (float)heroType.GetField("shield").GetValue(hero), 0.0001f);
 
         // Düşman hasarı aşama başına %6, canı %8,5 artar.

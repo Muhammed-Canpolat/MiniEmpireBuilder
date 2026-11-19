@@ -16,7 +16,9 @@ public sealed class ApprenticeProgressionData : ScriptableObject
     {
         var hero = new HeroData { weaponType = weapon, level = 1 };
         hero.ApplyLevelStats();
-        return Mathf.RoundToInt(hero.maxHealth * healthFraction * Multiplier(level));
+        // D128: kahraman canı değişti; çırak eski Balta tabanından (200) hesaplanmaya devam eder.
+        float baseHealth = weapon == WeaponType.Axe ? Progression.ApprenticeAxeBaseHealth : hero.maxHealth;
+        return Mathf.RoundToInt(baseHealth * healthFraction * Multiplier(level));
     }
 
     public int Damage(WeaponType weapon, int level)

@@ -607,6 +607,7 @@ public class BaseWorldUI : MonoBehaviour
         if (heroLevelText != null && fancyHero == null)
             heroLevelText.text = L.T("Seviye ", "Level ") + hero.level;
 
+        hero.ApplyLevelStats();   // D128: kayıttaki eski can değeri yerine güncel formül gösterilir (türetilmiş değer)
         if (fancyHero != null)
         {
             var nextHero = new HeroData { weaponType = hero.weaponType,
