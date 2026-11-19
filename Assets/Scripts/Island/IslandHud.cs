@@ -91,6 +91,9 @@ public sealed class IslandHud : MonoBehaviour
         touch.Tapped = screen => setup.HandleScreenTap(screen);
 
         BuildTopBar();
+        // Kök neden (ANA ÜS ölü düğme): ApplyIsland TopBar'ı SetAsFirstSibling yapar; TouchSurface ondan sonra çizilip
+        // ışını önce yakalıyordu. Dünya dokunuş yüzeyi her zaman en arkada (ilk kardeş).
+        surface.transform.SetAsFirstSibling();
         BuildRaidBadge();
         BuildDock();
         BuildStaffButton();
@@ -198,8 +201,9 @@ public sealed class IslandHud : MonoBehaviour
         var home = (RectTransform)homeButton.transform;
         home.anchorMin = home.anchorMax = new Vector2(0f, 0f);
         home.pivot = new Vector2(0f, 1f);
-        home.sizeDelta = new Vector2(88f, 26f);
+        home.sizeDelta = new Vector2(HomeButtonWidth, HomeButtonHeight);
         home.anchoredPosition = new Vector2(8f, -5f);
+        StyleHomeButton();
         namePlate = nameRect;
         nameRect.anchorMin = nameRect.anchorMax = new Vector2(0.5f, 0f);
         nameRect.pivot = new Vector2(0.5f, 1f);
@@ -209,6 +213,43 @@ public sealed class IslandHud : MonoBehaviour
     }
 
     private const float NamePlateWidth = 150f, NamePlateRaidWidth = 176f;
+    private const float HomeButtonWidth = 92f, HomeButtonHeight = 44f;   // >= 44 ref birim dokunma alanı
+
+    /// <summary>ANA ÜS düğmesi: MiniEmpireUI etiket plakası + kale simgesi + kontur yazı (düğme alanı plaka kadar; dokunma davranışı aynı).</summary>
+    private void StyleHomeButton()
+    {
+        var c = MiniEmpireUiCatalog.Instance;
+        var image = homeButton.GetComponent<Image>();
+        if (c != null && c.labelPlate != null)
+        {
+            image.sprite = c.labelPlate;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = MiniEmpireTopBarSkin.SliceMultiplier;
+            image.color = Color.white;
+        }
+        image.raycastTarget = true;
+        float textLeft = 6f;
+        if (c != null && c.towerSmallClosed != null)
+        {
+            var icon = ReferenceUiVisuals.Image(homeButton.transform, "Icon", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                new Vector2(7f, -15f), new Vector2(31f, 15f), Color.white);
+            icon.sprite = c.towerSmallClosed;
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            textLeft = 33f;
+        }
+        homeLabel.rectTransform.offsetMin = new Vector2(textLeft, 0f);
+        homeLabel.rectTransform.offsetMax = new Vector2(-6f, 0f);
+        homeLabel.alignment = TextAlignmentOptions.Center;
+        homeLabel.enableAutoSizing = true;
+        homeLabel.fontSizeMin = 8f;
+        homeLabel.fontSizeMax = 13f;
+        homeLabel.characterSpacing = 0.4f;
+        homeLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        homeLabel.outlineWidth = 0.22f;
+        homeLabel.outlineColor = new Color32(0x14, 0x11, 0x0D, 0xFF);
+        homeLabel.raycastTarget = false;
+    }
 
     /// <summary>Üst çubuktaki ada adına dokunma: yeniden adlandırma (bedel gösterilir). Akın/yerleştirme sırasında kapalı.</summary>
     public void OpenRename()
