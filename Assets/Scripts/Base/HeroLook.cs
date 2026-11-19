@@ -30,6 +30,9 @@ public static class HeroLook
     /// </summary>
     public const float ScreenHeightFraction = 0.1372f;
 
+    /// <summary>D128 (kullanıcı isteği): yalnız Ana Üs sahnesindeki kahraman görseli %15 küçük (savaş/ada aynı kalır; WarriorScaleFor değişmez).</summary>
+    public const float BaseSceneScale = 0.85f;
+
     /// <summary>Verilen kamera ortografik boyutunda kahramanın (Warrior) kök ölçeği.</summary>
     public static float WarriorScaleFor(float orthographicSize)
         => ScreenHeightFraction * 2f * Mathf.Max(0.01f, orthographicSize) / WarriorFrameHeight;

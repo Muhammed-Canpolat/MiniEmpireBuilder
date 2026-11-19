@@ -61,7 +61,7 @@ public class HeroMovementController : MonoBehaviour
             // Bug 34: ölçek HeroLook'taki ekran oranından (kamera ortho'suna göre); kadraj oturunca yeniden uygulanır.
             fitWarrior = true;
             var circle = GetComponent<CircleCollider2D>();
-            colliderWorldRadius = circle != null ? circle.radius * transform.localScale.x : 0f;
+            colliderWorldRadius = circle != null ? circle.radius * transform.localScale.x * HeroLook.BaseSceneScale : 0f;   // çarpışma görselle birlikte küçülür
             FitWarriorScale();
             StartCoroutine(RefitWarrior());
         }
@@ -91,7 +91,7 @@ public class HeroMovementController : MonoBehaviour
         var cam = Camera.main;
         if (!fitWarrior || cam == null) return;
         fittedOrtho = cam.orthographicSize;
-        float scale = HeroLook.WarriorScaleFor(fittedOrtho);
+        float scale = HeroLook.WarriorScaleFor(fittedOrtho) * HeroLook.BaseSceneScale;
         transform.localScale = new Vector3(scale, scale, 1f);
         var circle = GetComponent<CircleCollider2D>();
         if (circle != null && colliderWorldRadius > 0f) circle.radius = colliderWorldRadius / scale;

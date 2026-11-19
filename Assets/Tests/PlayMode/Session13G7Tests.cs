@@ -126,7 +126,13 @@ public class Session13G7Tests
         float baseRatio = HeroRatio(cam, hero.transform);
         Debug.Log($"G7 base hero ratio {baseRatio:F4} ortho {cam.orthographicSize:F2} localScale {hero.transform.localScale.x:F4}");
         float fraction = (float)T("HeroLook").GetField("ScreenHeightFraction").GetValue(null);
-        Assert.AreEqual(fraction, baseRatio, fraction * 0.05f, "ana üs kahraman oranı");
+        float baseScale = (float)T("HeroLook").GetField("BaseSceneScale").GetValue(null);
+        Assert.AreEqual(0.85f, baseScale, 1e-4f, "ana üs kahraman görseli %15 küçük (D128)");
+        Assert.AreEqual(fraction * baseScale, baseRatio, fraction * 0.05f, "ana üs kahraman oranı (×0.85)");
+        var heroCircle = hero.GetComponent<CircleCollider2D>();
+        Assert.NotNull(heroCircle);
+        Assert.Less(heroCircle.radius * hero.transform.lossyScale.x, 1.2f, "çarpışma yarıçapı görselle birlikte küçük");
+        UiAnaUsCapture.ShootFramed(1080, 1920, Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Docs/playtest/ui2/kahraman-boyut-9x16.png")));
 
         UiAnaUsCapture.ShootFramed(1080, 1920, Path.Combine(OutDir, "g7_ana_us.png"));
         PlayerPrefs.DeleteKey("MEB_BaseBarOpen");

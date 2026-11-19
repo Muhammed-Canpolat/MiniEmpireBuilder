@@ -48,7 +48,7 @@ public sealed class BuilderTaskMarker : MonoBehaviour
         GameObject building = null;
         // 6. oturum (2.2): kahraman yükseltmesinin sayacı kahramanın başında (kahraman yürür).
         if (task.slotId == GameManager.HeroTaskSlot && HeroMovementController.Instance != null)
-            return HeroMovementController.Instance.transform.position + new Vector3(0f, 2.1f, 0f);
+            return HeroMovementController.Instance.transform.position + new Vector3(0f, 2.1f * HeroLook.BaseSceneScale, 0f);
         if (!string.IsNullOrEmpty(task.slotId) && BaseMapManager.Instance != null)
             building = BaseMapManager.Instance.GetMapObjectBySlot(task.slotId)?.gameObject;
         if (building == null)
