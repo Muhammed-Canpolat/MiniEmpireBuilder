@@ -10,6 +10,14 @@ Dokunulmayan commit'siz dosyalar (önceden vardı): `IslandTerrain.prefab`, `Dra
 | 3 Ada üst barı ana üs stilinde | BİTTİ | 8301524 | D126: ortak MiniEmpireTopBarSkin (PlacePills + ApplyIsland), ana üs barı değişmedi (bar bölgesinde %0,4 piksel farkı, animasyon). KIYI KALESİ kalkanı + IslandSession.KeepLevel(). ANA ÜS butonu sol altta, ada adı/yeniden adlandırma kalkan altı plakada, akında aynı plaka AKIN N · DALGA x/y, kum saati yerinde, dişli barda. İnşaatçı yuvası gerçek Ada Ustası (1/1 / 0/1). IslandTopBar_MatchesBaseStyle geçti; 142 testte 137, 5 kırmızı değişiklik öncesinde de kırmızı (IslandPhaseCTests, Nov13Feedback IslandFrame, UiNightTests ×3). Not: kalkan alt yazısı telefonda küçük (ana üste de öyle). |
 | 4 Ada Zafer/Yenilgi ekranları | BİTTİ | 751d9e2 | D127: menuFrame kart (içerik boyutlu), altın/kırmızı/koyu kurdele, Akın N temizlendi, altın/odun/et (+elmas) ikonlu satırlar, çekiçli onarım satırı, zaferde SONRAKİ AKIN altın; yenilgide TEKRAR altın ve üstte. Buton işlevleri/görünürlük aynı. IslandResultUiTests 2/2; ada testlerinde yalnız bilinen 2 kırmızı. **Sonraki iş:** sefer (ana üs savaşı) sonuç ekranı ayrı kod (VictoryReferenceView), dokunulmadı; aynı tasarım diline getirilmeli. |
 
+### Ek kullanıcı istekleri (19 Kasım 2026)
+| İstek | Durum | Commit | Not |
+|---|---|---|---|
+| Ada ANA ÜS butonu çalışmıyor + güzelleştir | BİTTİ | 33938e2 | Kök neden (testle kanıtlı): İş 3'te TopBar SetAsFirstSibling oldu, tam ekran TouchSurface butonun önüne geçip dokunuşu yuttu. TouchSurface en arkaya; buton kule ikonlu MiniEmpireUI plakası 92x44. IslandHomeButtonTests 3/3 (dokunuş → BaseScene, akında onay). Cihazda DOĞRULANMADI. |
+| Intro'da DEV butonu | BİTTİ | 2aecd56 | Yalnız Intro'da gizli; diğer sahneler aynı; release build'de DevMenu zaten derlenmiyor. |
+| Kahraman canı 300+50×seviye | BİTTİ | 9bd11d1 | D128. Sefer savaşı + Ana Üs paneli; ada akınında ayrı kahraman canı yok. Çırak canı aynı. Kayıt biçimi değişmedi. Denge botu (Session7/8BalanceTests, Explicit) Unity'yi çökertti → bot dengesi ölçülmedi (DOĞRULANMADI; savaşlar kolaylaşır). |
+| Ana Üs kahramanı %15 küçük | BİTTİ | 78bc27d | HeroLook.BaseSceneScale 0.85; çarpışma ve görev işareti orantılı; savaş/ada aynı. |
+
 ### Kabul listesi (UI_DUZELTMELER_2.md) — son QA + yönetici kontrolü
 | Madde | Durum | Kanıt |
 |---|---|---|
